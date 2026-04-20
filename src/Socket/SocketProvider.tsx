@@ -10,6 +10,7 @@ import { clearAcceptedRide } from "../redux/rideSlice";
 import { useAlert } from "../context/AlertContext";
 import { StackActions } from "@react-navigation/native";
 import audioService from "../utils/audioService";
+import { setUser } from "../redux/userSlice";
 
 interface Props {
     children: React.ReactNode;
@@ -97,6 +98,21 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
         socketService.on("rider_cancelled", handleGlobalCancellation);
         socketService.on("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
 
+        // 🛡️ Account Status Update Listener (Block/Suspend)
+        socketService.on("ACCOUNT_STATUS_UPDATE", (data: any) => {
+            console.log('[SocketProvider] Account status update received:', data);
+            // data = { status: 'blocked', status_reason: '...', status_updated_at: '...' }
+            dispatch(setUser({
+                status: data.status,
+                status_reason: data.status_reason,
+                status_updated_at: data.status_updated_at
+            }));
+
+            if (data.status === 'blocked' || data.status === 'suspended') {
+                audioService.speak('Your account status has been updated. Please check the app for details.');
+            }
+        });
+
         return () => {
             socketService.removeConnectionListener(connectionListener);
             socketService.off("receiveChatMessage");
@@ -104,6 +120,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             socketService.off("TRIP_CANCELLED", handleGlobalCancellation);
             socketService.off("rider_cancelled", handleGlobalCancellation);
             socketService.off("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
+            socketService.off("ACCOUNT_STATUS_UPDATE");
             // Do NOT disconnect the service here as it might be used globally
         };
     }, [driverId, role]);

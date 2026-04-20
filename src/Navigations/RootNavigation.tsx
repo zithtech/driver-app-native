@@ -27,6 +27,7 @@ import {
   DropMapScreen_Nav,
   ChatScreen_Nav,
   ScheduledRides_Nav,
+  Blocked_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -73,6 +74,7 @@ import AddressDetails from '../Screens/Auth/AddressDetails';
 import VehicleVerificationScreen from '../Screens/Requests/VehicleVerificationScreen';
 import NavigationScreen from '../Screens/Navigation/NavigationScreen';
 import ChatScreen from '../Screens/Chatscreen';
+import BlockedScreen from '../Screens/Auth/BlockedScreen';
 
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
@@ -227,9 +229,6 @@ const RootNavigation = () => {
   // Determine initial route based on authentication and onboarding progress
   let initialRoute = Auth_Nav;
   if (isAuthenticated) {
-    // 🛡️ NAVIGATION GUARDRAILS (For New/Incomplete Users)
-    // Even if status is "ACTIVE", a missing name or address implies signup isn't finished.
-    // Profile picture is NOT checked here — it's collected during document upload.
     const hasIdentity = !!(user?.first_name?.trim() && user?.last_name?.trim());
     const hasAddress = !!(user?.address?.street?.trim() && user?.address?.city?.trim());
 
@@ -245,10 +244,13 @@ const RootNavigation = () => {
       console.log('[RootNav] Address check:', { street: !!user?.address?.street, city: !!user?.address?.city, hasAddress });
     }
 
-    // 🛡️ 1. TRIP RECOVERY (ABSOLUTE HIGHEST PRIORITY)
-    // If there's an active trip in Redux, jump straight to the correct screen, 
-    // bypassing all onboarding/dashboard checks.
-    if (currentRide) {
+    // 🛡️ 0. ACCOUNT STATUS GUARD (HIGHEST PRIORITY)
+    // If account is blocked or suspended, stay on Blocked screen
+    if (user?.status === 'blocked' || user?.status === 'suspended') {
+        initialRoute = Blocked_Nav;
+    } 
+    // 🛡️ 1. TRIP RECOVERY
+    else if (currentRide) {
       const rawStatus = (currentRide.trip_status || (currentRide as any).status || '').toUpperCase();
       const isScheduled = (currentRide as any)?.booking_type === 'SCHEDULED' || (currentRide as any)?.is_scheduled;
 
@@ -350,6 +352,9 @@ const RootNavigation = () => {
           <Stack.Screen name="PaymentCollectionScreen" component={PaymentCollectionScreen} />
           <Stack.Screen name="NavigationScreen" component={NavigationScreen} />
           <Stack.Screen name={ChatScreen_Nav} component={ChatScreen} />
+
+          {/* -------- ACCOUNT STATUS -------- */}
+          <Stack.Screen name={Blocked_Nav} component={BlockedScreen} options={{ gestureEnabled: false }} />
         </>
       )}
     </Stack.Navigator>

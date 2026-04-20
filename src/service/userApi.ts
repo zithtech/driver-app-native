@@ -56,7 +56,7 @@ export const userApi = createApi({
 
     /* ─────────── SUBSCRIPTIONS (/subscriptions) ─────────── */
 
-    createSubscriptionOrder: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month' }>({
+    createSubscriptionOrder: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month'; promo_code?: string }>({
       query: (body) => ({
         url: '/subscriptions/create-order',
         method: 'POST',
@@ -81,6 +81,20 @@ export const userApi = createApi({
     getSubscriptionPlans: builder.query<any, void>({
       query: () => '/subscriptions',
       providesTags: ['Subscription'],
+    }),
+
+    /* ─────────── PROMOS (/promos) ─────────── */
+
+    validatePromo: builder.mutation<any, { code: string; amount: number }>({
+      query: (body) => ({
+        url: '/promos/validate',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    getAvailablePromos: builder.query<any, void>({
+      query: () => '/promos/available',
     }),
 
     /* ─────────── TRIPS (/trip) ─────────── */
@@ -115,7 +129,7 @@ export const userApi = createApi({
 
     /* ─────────── PAYMENTS (/payment) ─────────── */
 
-    createPaymentOrder: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month' }>({
+    createPaymentOrder: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month'; promo_code?: string }>({
       query: (body) => ({
         url: '/payment/create-order',
         method: 'POST',
@@ -159,6 +173,11 @@ export const {
   useLazyGetMySubscriptionQuery,
   useGetSubscriptionPlansQuery,
   useLazyGetSubscriptionPlansQuery,
+
+  // Promos
+  useValidatePromoMutation,
+  useGetAvailablePromosQuery,
+  useLazyGetAvailablePromosQuery,
 
   // Trips
   useGetTripsQuery,

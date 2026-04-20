@@ -37,6 +37,8 @@ export interface UserState {
 
   role?: string;
   status?: 'active' | 'pending' | 'blocked' | string;
+  status_reason?: string;
+  status_updated_at?: string;
   rating?: number;
   total_trips?: number;
 

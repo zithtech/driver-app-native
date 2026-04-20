@@ -138,21 +138,17 @@ export const useLocation = () => {
             ...optionsOverride
         };
 
-        // Request permission before starting watch
-        requestLocationPermission().then(hasPermission => {
-            if (!hasPermission) {
-                onError({ code: 1, message: 'Permission denied' } as Geolocation.GeoError);
-                return;
-            }
-        });
-
         return Geolocation.watchPosition(
             onSuccess,
             (err) => {
                 console.error('DEBUG_LOCATION: Watch error', err);
                 onError(err);
             },
-            { ...options, interval: 5000, fastestInterval: 2000 }
+            { 
+                ...options, 
+                interval: 5000, 
+                fastestInterval: 2000 
+            }
         );
     }, []);
 

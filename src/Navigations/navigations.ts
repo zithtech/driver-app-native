@@ -48,4 +48,5 @@ export const EmergencySupport_Nav = 'EmergencySupportScreen';
 export const LegalAgreements_Nav = 'LegalAgreementsScreen';
 export const NavigationScreen_Nav = 'NavigationScreen'; 
 export const ChatScreen_Nav = 'ChatScreen'; 
+export const Blocked_Nav = 'BlockedScreen'; 
 

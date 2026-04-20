@@ -134,6 +134,8 @@ export const useLocationTracker = ({
     [onLocationError],
   );
 
+  const permissionRequested = useRef(false);
+
   // Stop all foreground tracking
   const stopForegroundTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
@@ -275,6 +277,8 @@ export const useLocationTracker = ({
         );
         return;
       }
+      
+      permissionRequested.current = true;
 
       // Only start foreground tracking if app is in foreground
       if (AppState.currentState === 'active') {
