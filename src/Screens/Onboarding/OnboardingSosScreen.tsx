@@ -7,6 +7,8 @@ import {
   ScrollView,
   Platform,
   PermissionsAndroid,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useAppTheme } from '../../context/ThemeContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -18,12 +20,18 @@ import LinearGradient from 'react-native-linear-gradient';
 import { selectContactPhone } from 'react-native-select-contact';
 import { 
   PremiumInfoBanner, 
-  RelationshipPicker, 
-  Input, 
   ConfirmationModal 
 } from '../../Components';
 import { ms, vs } from '../../lib/scale';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+
+const RELATIONSHIPS = [
+  { key: 'Family', icon: 'home-outline' },
+  { key: 'Friend', icon: 'people-outline' },
+  { key: 'Spouse', icon: 'heart-outline' },
+  { key: 'Work', icon: 'briefcase-outline' },
+  { key: 'Other', icon: 'ellipsis-horizontal-circle-outline' },
+];
 
 const OnboardingSosScreen = ({ navigation, route }: any) => {
   const { t } = useTranslation();
@@ -120,7 +128,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
       const payload = { 
         name: name.trim(), 
         phone: cleanInputPhone,
-        relationship // Added relationship to payload
+        relationship
       };
       const response = await axiosInstance.post('/sos/contacts', payload);
       
@@ -175,13 +183,18 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const textPrimary = isDark ? '#FFFFFF' : '#111827';
+  const textPrimary = isDark ? '#FFFFFF' : '#1F2937';
   const textSecondary = isDark ? '#9CA3AF' : '#6B7280';
+  const textMuted = isDark ? '#6B7280' : '#9CA3AF';
   const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+  const inputBg = isDark ? '#111827' : '#F9FAFB';
+  const inputBorder = isDark ? '#374151' : '#E5E7EB';
+  const dividerColor = isDark ? '#374151' : '#F3F4F6';
+  const isFormValid = name.trim().length > 0 && phone.trim().length > 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#111827' : '#F3F4F6' }]} edges={['top', 'bottom']}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: vs(120) }]} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* HERO BANNER */}
         <Animated.View entering={FadeInUp.duration(600)}>
@@ -191,65 +204,168 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
           />
         </Animated.View>
 
-        {/* INPUT SECTION */}
+        {/* ── ADD CONTACT CARD ── */}
         <Animated.View 
           entering={FadeInDown.delay(200).duration(600)}
-          style={[styles.section, { backgroundColor: cardBg, shadowColor: isDark ? '#000' : '#CBD5E1' }]}
+          style={[styles.addCard, { backgroundColor: cardBg, shadowColor: isDark ? '#000' : '#94A3B8' }]}
         >
-          <Pressable 
-            style={[styles.chooseContactBtn, { backgroundColor: isDark ? '#374151' : '#F3F4F6', borderColor: colors.primary }]}
+          {/* Card Header */}
+          <View style={styles.addCardHeader}>
+            <View style={[styles.addCardIconBox, { backgroundColor: isDark ? '#1E3A5F' : '#EFF6FF' }]}>
+              <Ionicons name="person-add" size={ms(18)} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.addCardTitle, { color: textPrimary }]}>{t('add_new_contact') || 'Add New Contact'}</Text>
+            </View>
+          </View>
+
+          {/* Import from Contacts Button */}
+          <Pressable
             onPress={handleChooseContact}
+            style={({ pressed }) => [
+              styles.importBtn,
+              {
+                backgroundColor: isDark ? '#111827' : '#F9FAFB',
+                borderColor: isDark ? '#374151' : '#E5E7EB',
+                opacity: pressed ? 0.7 : 1,
+              }
+            ]}
           >
-            <Ionicons name="people" size={ms(20)} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.chooseContactText, { color: colors.primary }]}>Choose from Contacts</Text>
+            <View style={[styles.importIconBox, { backgroundColor: isDark ? '#1E3A5F' : '#DBEAFE' }]}>
+              <Ionicons name="phone-portrait-outline" size={ms(16)} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.importTitle, { color: textPrimary }]}>
+                {t('import_from_contacts') || 'Import from Contacts'}
+              </Text>
+              <Text style={[styles.importSubtitle, { color: textMuted }]}>
+                {t('auto_fill_details') || 'Auto-fill name & number from phonebook'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={ms(16)} color={textMuted} />
           </Pressable>
-          
-          <View style={styles.dividerRow}>
-            <View style={[styles.dividerLine, { backgroundColor: isDark ? '#4B5563' : '#E5E7EB' }]} />
-            <Text style={[styles.dividerText, { color: textSecondary }]}>or enter manually</Text>
-            <View style={[styles.dividerLine, { backgroundColor: isDark ? '#4B5563' : '#E5E7EB' }]} />
+
+          {/* Divider with "or" */}
+          <View style={styles.orDividerRow}>
+            <View style={[styles.orDividerLine, { backgroundColor: dividerColor }]} />
+            <Text style={[styles.orDividerText, { color: textMuted }]}>{t('or') || 'or'}</Text>
+            <View style={[styles.orDividerLine, { backgroundColor: dividerColor }]} />
           </View>
 
-          <Input 
-            label={t('contact_name') || 'Contact Name'}
-            placeholder="e.g. John Doe"
-            value={name}
-            onChangeText={setName}
-            LeadingAccessory={<Ionicons name="person-outline" size={ms(20)} color={textSecondary} style={{ marginRight: 10 }} />}
-            containerStyle={{ marginBottom: vs(20) }}
-          />
-
-          <Input 
-            label={t('phone_number') || 'Phone Number'}
-            placeholder="e.g. 9876543210"
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            LeadingAccessory={<Ionicons name="call-outline" size={ms(20)} color={textSecondary} style={{ marginRight: 10 }} />}
-            containerStyle={{ marginBottom: vs(20) }}
-          />
-
-          <RelationshipPicker 
-            selected={relationship}
-            onSelect={setRelationship}
-          />
-
-          <View style={styles.addBtnContainer}>
-            <Pressable 
-              onPress={handleAddContact} 
-              disabled={loading}
-              style={({ pressed }) => [{ opacity: pressed || loading ? 0.9 : 1 }]}
-            >
-              <LinearGradient
-                colors={loading ? ['#9CA3AF', '#6B7280'] : [colors.primary, '#1E3A8A']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.addBtn}
-              >
-                <Ionicons name={loading ? "sync" : "add-circle-outline"} size={ms(22)} color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.addBtnText}>{loading ? t('saving') : t('save_contact') || 'Save Contact'}</Text>
-              </LinearGradient>
-            </Pressable>
+          {/* Name Input */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('contact_name') || 'Contact Name'}</Text>
+            <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: name ? colors.primary : inputBorder }]}>
+              <Ionicons name="person-outline" size={ms(18)} color={name ? colors.primary : textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, { color: textPrimary }]}
+                placeholder={t('enter_name') || 'e.g. John Doe'}
+                placeholderTextColor={textMuted}
+                value={name}
+                onChangeText={setName}
+              />
+              {name.length > 0 && (
+                <Pressable onPress={() => setName('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={ms(18)} color={textMuted} />
+                </Pressable>
+              )}
+            </View>
           </View>
+
+          {/* Phone Input */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('phone_number') || 'Phone Number'}</Text>
+            <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: phone ? colors.primary : inputBorder }]}>
+              <Ionicons name="call-outline" size={ms(18)} color={phone ? colors.primary : textMuted} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, { color: textPrimary }]}
+                placeholder={t('enter_phone') || 'e.g. 9876543210'}
+                placeholderTextColor={textMuted}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+              />
+              {phone.length > 0 && (
+                <Pressable onPress={() => setPhone('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={ms(18)} color={textMuted} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* Relationship Chips */}
+          <View style={[styles.inputGroup, { marginBottom: vs(20) }]}>
+            <Text style={[styles.inputLabel, { color: textSecondary }]}>
+              {t('relationship') || 'Relationship'}
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.chipsRow}>
+                {RELATIONSHIPS.map(({ key, icon }) => {
+                  const isSelected = relationship === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      onPress={() => setRelationship(key)}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected ? colors.primary : isDark ? '#111827' : '#F3F4F6',
+                          borderColor: isSelected ? colors.primary : inputBorder,
+                        }
+                      ]}
+                    >
+                      <Ionicons
+                        name={icon}
+                        size={ms(15)}
+                        color={isSelected ? '#FFFFFF' : textMuted}
+                        style={{ marginRight: ms(6) }}
+                      />
+                      <Text style={[
+                        styles.chipText,
+                        { color: isSelected ? '#FFFFFF' : textSecondary }
+                      ]}>
+                        {t(key.toLowerCase()) || key}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Save Button */}
+          <Pressable
+            onPress={handleAddContact}
+            disabled={loading || !isFormValid}
+            style={({ pressed }) => [
+              styles.saveBtn,
+              {
+                backgroundColor: !isFormValid
+                  ? (isDark ? '#374151' : '#E5E7EB')
+                  : colors.primary,
+                opacity: pressed ? 0.85 : loading ? 0.6 : 1,
+              }
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Ionicons
+                  name="shield-checkmark"
+                  size={ms(18)}
+                  color={!isFormValid ? textMuted : '#FFFFFF'}
+                  style={{ marginRight: ms(8) }}
+                />
+                <Text style={[
+                  styles.saveBtnText,
+                  { color: !isFormValid ? textMuted : '#FFFFFF' }
+                ]}>
+                  {t('save_contact') || 'Save Contact'}
+                </Text>
+              </>
+            )}
+          </Pressable>
         </Animated.View>
       </ScrollView>
 
@@ -262,7 +378,6 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
           <Text style={styles.continueSetupBtnText}>
             {contactsAddedCount > 0 ? t('continue_setup') || 'Continue' : 'Skip for now'}
           </Text>
-          <Ionicons name={contactsAddedCount > 0 ? "checkmark" : "arrow-forward"} size={ms(20)} color="#FFF" style={{ marginLeft: ms(8) }} />
         </Pressable>
       </View>
 
@@ -287,63 +402,143 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    padding: ms(16),
+    paddingBottom: vs(120),
+  },
+  // ── Add Contact Card ──
+  addCard: {
+    borderRadius: ms(20),
     padding: ms(20),
-    paddingTop: vs(20),
+    marginBottom: vs(28),
+    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
   },
-  section: {
-    padding: ms(24),
-    borderRadius: ms(24),
-    elevation: 4,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    marginBottom: vs(20),
-  },
-  chooseContactBtn: {
+  addCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  addCardIconBox: {
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(12),
     justifyContent: 'center',
-    height: vs(54),
-    borderWidth: 1.5,
-    borderRadius: ms(16),
-    borderStyle: 'dashed',
-    marginBottom: vs(24),
+    alignItems: 'center',
+    marginRight: ms(12),
   },
-  chooseContactText: {
-    fontSize: ms(15),
+  addCardTitle: {
+    fontSize: ms(16),
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
-  dividerRow: {
+
+  // ── Import from Contacts ──
+  importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: vs(24),
+    padding: ms(14),
+    borderRadius: ms(14),
+    borderWidth: 1,
+    marginTop: vs(16),
   },
-  dividerLine: {
+  importIconBox: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: ms(12),
+  },
+  importTitle: {
+    fontSize: ms(14),
+    fontWeight: '600',
+  },
+  importSubtitle: {
+    fontSize: ms(11),
+    fontWeight: '500',
+    marginTop: vs(2),
+  },
+
+  // ── Or Divider ──
+  orDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: vs(18),
+  },
+  orDividerLine: {
     flex: 1,
     height: 1,
   },
-  dividerText: {
+  orDividerText: {
     paddingHorizontal: ms(12),
-    fontSize: ms(13),
+    fontSize: ms(12),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+
+  // ── Inputs ──
+  inputGroup: {
+    marginBottom: vs(14),
+  },
+  inputLabel: {
+    fontSize: ms(11),
+    fontWeight: '600',
+    marginBottom: vs(8),
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: vs(48),
+    borderWidth: 1,
+    borderRadius: ms(14),
+    paddingHorizontal: ms(14),
+  },
+  inputIcon: {
+    marginRight: ms(10),
+  },
+  textInput: {
+    flex: 1,
+    fontSize: ms(15),
     fontWeight: '500',
+    height: '100%',
+    paddingVertical: 0,
   },
-  addBtnContainer: {
-    marginTop: vs(8),
-    borderRadius: ms(16),
-    overflow: 'hidden',
+
+  // ── Chips ──
+  chipsRow: {
+    flexDirection: 'row',
+    gap: ms(8),
   },
-  addBtn: {
-    height: vs(56),
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ms(14),
+    paddingVertical: vs(8),
+    borderRadius: ms(10),
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: ms(13),
+    fontWeight: '600',
+  },
+
+  // ── Save Button ──
+  saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    height: vs(50),
+    borderRadius: ms(14),
   },
-  addBtnText: {
-    color: '#fff',
-    fontSize: ms(16),
+  saveBtnText: {
+    fontSize: ms(15),
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
+
   onboardingFooter: {
     position: 'absolute',
     bottom: 0,
@@ -368,3 +563,4 @@ const styles = StyleSheet.create({
 });
 
 export default OnboardingSosScreen;
+

@@ -31,14 +31,14 @@ import { useRideFeed, RideItem } from '../../hooks/useRideFeed';
 import { useDashboardMap } from '../../hooks/useDashboardMap';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
 import { useGetMySubscriptionQuery } from '../../service/userApi';
-import { 
-  useGetEarningsSummaryQuery as useGetDriverEarningsSummaryQuery, 
-  useGetWalletBalanceQuery, 
-  useGetEarningsTransactionsQuery, 
+import {
+  useGetEarningsSummaryQuery as useGetDriverEarningsSummaryQuery,
+  useGetWalletBalanceQuery,
+  useGetEarningsTransactionsQuery,
   useGetRideActivityQuery,
   useGetDriverPerformanceQuery,
-  useGoOnlineMutation, 
-  useGoOfflineMutation, 
+  useGoOnlineMutation,
+  useGoOfflineMutation,
   useAcceptTripMutation,
   useArrivingTripMutation,
   useGetTodayOverviewQuery,
@@ -114,7 +114,7 @@ const DriverDashboard = () => {
     { driverId: user?.driverId || '', period: 'today' },
     { skip: !user?.driverId }
   );
-  
+
   const { data: todayOverviewResult, refetch: refetchTodayOverview } = useGetTodayOverviewQuery(user?.driverId || '', { skip: !user?.driverId });
   const todayOverview = todayOverviewResult?.data;
 
@@ -139,7 +139,7 @@ const DriverDashboard = () => {
 
   // 🕒 Scheduled Rides for Countdown Widget
   const { data: scheduledTripsResult, refetch: refetchScheduled } = useGetIncomingTripsQuery('SCHEDULED', {
-    pollingInterval: 30000, 
+    pollingInterval: 30000,
   });
 
   const extractArray = useCallback((result: any) => {
@@ -154,27 +154,27 @@ const DriverDashboard = () => {
     const trips = extractArray(scheduledTripsResult);
     if (!trips.length) return null;
 
-    const myAcceptedRides = trips.filter((t: any) => 
+    const myAcceptedRides = trips.filter((t: any) =>
       (t.trip_id === myAcceptedRideId || t.id === myAcceptedRideId) &&
       (t.status === 'ACCEPTED' || t.trip_status === 'ACCEPTED' || t.status === 'ARRIVING' || t.trip_status === 'ARRIVING')
     );
-    
+
     if (!myAcceptedRides.length) return null;
 
     // Map and Sort to find the soonest one
     const mapped = myAcceptedRides.map((tripData: any) => {
-        const timeVal = tripData.scheduled_start_time || tripData.startTime || new Date().toISOString();
-        return {
-            ...tripData,
-            trip_id: tripData.trip_id || tripData.id,
-            scheduled_start_time: timeVal,
-            startTime: new Date(timeVal).getTime(),
-            customer: {
-              name: tripData.passenger_name || tripData.customer?.name || 'Customer',
-              ratingGiven: tripData.rating || tripData.user_rating || tripData.trip_rating || undefined,
-              comment: tripData.feedback || tripData.comment || tripData.user_feedback || '',
-            },
-        };
+      const timeVal = tripData.scheduled_start_time || tripData.startTime || new Date().toISOString();
+      return {
+        ...tripData,
+        trip_id: tripData.trip_id || tripData.id,
+        scheduled_start_time: timeVal,
+        startTime: new Date(timeVal).getTime(),
+        customer: {
+          name: tripData.passenger_name || tripData.customer?.name || 'Customer',
+          ratingGiven: tripData.rating || tripData.user_rating || tripData.trip_rating || undefined,
+          comment: tripData.feedback || tripData.comment || tripData.user_feedback || '',
+        },
+      };
     });
 
     mapped.sort((a: any, b: any) => a.startTime - b.startTime);
@@ -191,7 +191,7 @@ const DriverDashboard = () => {
   }, 0);
   const computedCancellations = todayOverview?.cancellations !== undefined ? todayOverview.cancellations : todayRides.filter((ride: any) => ride.status === 'Cancelled' || ride.trip_status === 'CANCELLED').length;
   const computedCompletedRides = todayOverview?.tripsCompleted !== undefined ? todayOverview.tripsCompleted : todayRides.filter((ride: any) => ride.status === 'Completed' || ride.trip_status === 'COMPLETED').length;
-  
+
   // Format online time from performance (assume it's in hours for now, as seen in performance screen)
   const onlineHoursFromBackend = todayOverview?.onlineMinutes !== undefined ? todayOverview.onlineMinutes / 60 : (todayPerformanceResult?.data?.onlineHours || 0);
   const onlineSecondsFromBackend = todayOverview?.onlineMinutes !== undefined ? todayOverview.onlineMinutes * 60 : Math.floor(onlineHoursFromBackend * 3600);
@@ -219,6 +219,7 @@ const DriverDashboard = () => {
   const lastTripRating = useSelector((state: RootState) => state.ride.lastTripRating);
 
   const [sosContactsCount, setSosContactsCount] = useState<number | null>(null);
+  const [isSosDismissed, setIsSosDismissed] = useState(false);
 
   // ── Alert Modal State ──
   const [alertModalVisible, setAlertModalVisible] = useState(false);
@@ -231,11 +232,11 @@ const DriverDashboard = () => {
     onConfirm: () => setAlertModalVisible(false),
   });
 
-  const showAlert = useCallback((title: string, message: string, options?: { 
-    icon?: string, 
-    isDestructive?: boolean, 
+  const showAlert = useCallback((title: string, message: string, options?: {
+    icon?: string,
+    isDestructive?: boolean,
     singleButton?: boolean,
-    onConfirm?: () => void 
+    onConfirm?: () => void
   }) => {
     setAlertModalConfig({
       title,
@@ -356,9 +357,9 @@ const DriverDashboard = () => {
     if (allHistoryResult?.data && user?.driverId) {
       const rides = extractArray(allHistoryResult.data);
       const newRating = calculateAverageRating(rides);
-      
+
       if (newRating !== null) {
-        
+
         // Update only if if it's significant or different
         if (Math.abs((user.rating || 0) - newRating) > 0.001) {
           updateDriver({
@@ -381,9 +382,9 @@ const DriverDashboard = () => {
     if (!isOnline || !user?.driverId) return;
 
     const handleRating = (tripData: any) => {
-      dispatch(setLastTripRating({ 
-        rating: tripData.rating || tripData.user_rating || tripData.trip_rating, 
-        feedback: tripData.feedback || tripData.comment || tripData.user_feedback || '' 
+      dispatch(setLastTripRating({
+        rating: tripData.rating || tripData.user_rating || tripData.trip_rating,
+        feedback: tripData.feedback || tripData.comment || tripData.user_feedback || ''
       }));
       setRatingModalVisible(true);
     };
@@ -471,45 +472,12 @@ const DriverDashboard = () => {
 
       {/* ── FLOATING BANNERS CONTAINER ── */}
       <View style={{ position: 'absolute', top: vs(110) + insets.top, left: 0, right: 0, zIndex: 95, paddingHorizontal: s(16), gap: vs(10) }}>
-        {/* ── SOS WARNING BANNER ── */}
-        {sosContactsCount === 0 && (
-          <Animated.View 
-            entering={FadeInDown.duration(600)}
-            style={[
-              styles.sosBanner, 
-              { 
-                position: 'relative', left: 0, right: 0, top: 0, // override absolute
-                backgroundColor: isDark ? '#450a0a' : '#FEF2F2', 
-                borderColor: isDark ? '#ef4444' : '#FCA5A5',
-              }
-            ]}
-          >
-            <TouchableOpacity 
-              style={styles.sosBannerTouchable}
-              onPress={() => navigation.navigate('SosContactsScreen')}
-            >
-              <View style={styles.sosBannerIcon}>
-                <Ionicons name="shield-checkmark" size={ms(24)} color={isDark ? '#ef4444' : '#DC2626'} />
-              </View>
-              <View style={styles.sosBannerContent}>
-                <Text style={[styles.sosBannerTitle, { color: isDark ? '#fecaca' : '#991B1B' }]}>
-                  {t('sos_banner_title') || 'Your safety matters!'}
-                </Text>
-                <Text style={[styles.sosBannerDesc, { color: isDark ? '#fca5a5' : '#DC2626' }]}>
-                  {t('sos_banner_desc') || 'Please add at least one SOS Trusted Contact.'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={ms(20)} color={isDark ? '#fca5a5' : '#DC2626'} />
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
         {/* ── LOCATION ERROR BANNER ── */}
         {locationError && isOnline && (
-          <Animated.View 
+          <Animated.View
             entering={FadeInDown.duration(600)}
             style={[
-              styles.errorBanner, 
+              styles.errorBanner,
               { position: 'relative', marginHorizontal: 0, marginTop: 0, marginBottom: 0, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
               isDark && { backgroundColor: '#450a0a', borderLeftColor: '#ef4444' }
             ]}
@@ -538,6 +506,36 @@ const DriverDashboard = () => {
           isOnline={isOnline}
           routeCoordinates={route}
         />
+
+        {/* ── SOS SAFETY TOOLKIT CARD ── */}
+        {sosContactsCount !== null && sosContactsCount < 3 && !isSosDismissed && (
+          <Animated.View entering={FadeInDown.duration(600)} style={[styles.inlineSosCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+            <View style={styles.sosCardHeader}>
+              <View style={styles.sosCardLeft}>
+                <View style={styles.sosCardIconRing}>
+                  <Ionicons name="shield-checkmark" size={ms(26)} color={theme.colors.primary} />
+                </View>
+                <View style={styles.sosCardTextGroup}>
+                  <Text style={[styles.sosCardTitle, { color: theme.colors.text }]}>Safety Toolkit</Text>
+                  <Text style={[styles.sosCardSubtitle, isDark && { color: '#94A3B8' }]}>{sosContactsCount}/3 Recommended Contacts</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setIsSosDismissed(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={ms(20)} color={isDark ? '#94A3B8' : '#64748B'} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sosCardActionRow}>
+              <Text style={[styles.sosCardActionText, isDark && { color: '#CBD5E1' }]}>Add trusted contacts for emergency alerts.</Text>
+              <TouchableOpacity
+                style={[styles.sosCardButton, { backgroundColor: theme.colors.primary }]}
+                onPress={() => navigation.navigate('SosContactsScreen')}
+              >
+                <Text style={styles.sosCardButtonText}>Setup Now</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
 
         {/* ── TODAY'S OVERVIEW ── */}
         <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('todays_overview')}</Text>
@@ -579,7 +577,7 @@ const DriverDashboard = () => {
       {
         rideQueue.length > 0 && (
           <View style={styles.rideOverlay}>
-            <ScrollView 
+            <ScrollView
               style={{ width: '100%' }}
               contentContainerStyle={styles.rideScrollContent}
               showsVerticalScrollIndicator={false}
@@ -691,11 +689,11 @@ const DriverDashboard = () => {
                     dispatch(setOnlineStatus(false));
                   } catch (e: any) {
                     console.error('[Dashboard] Go Offline Error:', e);
-                    
+
                     // Extract specific error message if available from RTK Query / Backend
-                    const errorMessage = 
-                      e?.data?.message || 
-                      e?.message || 
+                    const errorMessage =
+                      e?.data?.message ||
+                      e?.message ||
                       (typeof e?.data === 'string' ? e.data : null) ||
                       t('failed_to_go_offline') || 'Failed to go offline';
 
@@ -738,8 +736,8 @@ const DriverDashboard = () => {
               {acceptedRide?.booking_type === 'SCHEDULED' ? t('ride_scheduled', 'Ride Scheduled!') : t('ride_accepted', 'Ride Accepted!')}
             </Text>
             <Text style={[styles.confirmModalSub, isDark && { color: '#94A3B8' }]}>
-              {acceptedRide?.booking_type === 'SCHEDULED' 
-                ? t('scheduled_success_msg', 'You can find this ride in your upcoming list.') 
+              {acceptedRide?.booking_type === 'SCHEDULED'
+                ? t('scheduled_success_msg', 'You can find this ride in your upcoming list.')
                 : t('navigating_to_pickup', 'Navigating to pickup location...')}
             </Text>
 
@@ -750,14 +748,14 @@ const DriverDashboard = () => {
                   showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
                   return;
                 }
-                
+
                 try {
                   const isScheduled = acceptedRide?.booking_type === 'SCHEDULED';
-                  
+
                   if (acceptedRide && !isScheduled) {
                     // 1. Transition status to ARRIVING for live rides
                     await arrivingTrip(acceptedRide.trip_id).unwrap();
-                    
+
                     // 2. Hide modal and navigate
                     setShowConfirmModal(false);
                     navigation.navigate('PickupMapScreen', { ride: acceptedRide });
@@ -955,44 +953,74 @@ const styles = StyleSheet.create({
     fontSize: ms(16),
     fontWeight: '700',
   },
-  sosBanner: {
-    position: 'absolute',
-    left: s(16),
-    right: s(16),
-    zIndex: 1000,
-    borderRadius: ms(20),
-    borderWidth: 1.5,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 10,
-    overflow: 'hidden',
+  inlineSosCard: {
+    marginHorizontal: s(16),
+    marginTop: vs(16),
+    borderRadius: ms(16),
+    padding: s(16),
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.1)',
   },
-  sosBannerTouchable: {
+  sosCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  sosCardLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: s(16),
+    flex: 1,
   },
-  sosBannerIcon: {
-    width: s(40),
-    height: s(40),
-    borderRadius: ms(20),
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  sosCardIconRing: {
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: s(12),
   },
-  sosBannerContent: {
+  sosCardTextGroup: {
     flex: 1,
   },
-  sosBannerTitle: {
-    fontSize: ms(15),
-    fontWeight: '800',
+  sosCardTitle: {
+    fontSize: ms(16),
+    fontWeight: '700',
     marginBottom: vs(2),
   },
-  sosBannerDesc: {
+  sosCardSubtitle: {
     fontSize: ms(13),
+    color: '#64748B',
     fontWeight: '500',
+  },
+  sosCardActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: vs(16),
+  },
+  sosCardActionText: {
+    flex: 1,
+    fontSize: ms(13),
+    color: '#475569',
+    marginRight: s(12),
+    lineHeight: ms(18),
+  },
+  sosCardButton: {
+    paddingVertical: vs(8),
+    paddingHorizontal: s(16),
+    borderRadius: ms(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sosCardButtonText: {
+    color: '#fff',
+    fontSize: ms(13),
+    fontWeight: '700',
   },
 });

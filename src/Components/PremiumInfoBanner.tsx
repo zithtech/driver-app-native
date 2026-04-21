@@ -11,10 +11,10 @@ interface PremiumInfoBannerProps {
   icon?: string;
 }
 
-const PremiumInfoBanner: React.FC<PremiumInfoBannerProps> = ({ 
-  title, 
-  description, 
-  icon = 'shield-checkmark' 
+const PremiumInfoBanner: React.FC<PremiumInfoBannerProps> = ({
+  title,
+  description,
+  icon = 'shield-checkmark'
 }) => {
   const { isDark } = useAppTheme();
 

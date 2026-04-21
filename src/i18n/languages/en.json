@@ -1199,5 +1199,6 @@
   "confirm_payment_received": "Confirm Payment Received",
   "completing_trip": "Completing Trip...",
   "payment_collection_title": "Payment Collection",
-  "payment_back_restriction": "You cannot go back at this stage. Please collect the fare and finish the trip."
+  "payment_back_restriction": "You cannot go back at this stage. Please collect the fare and finish the trip.",
+  "offline_map_hint": "Slide below to start accepting rides"
 }

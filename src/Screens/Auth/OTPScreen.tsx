@@ -249,6 +249,7 @@ const OTPScreen = ({ navigation }: any) => {
     }
   }, [user?.phone_number, otp, deviceId, verifyOtp, t, buttonScale, successScale, successOpacity, iconRotate, triggerHaptic, triggerShake, dispatch]);
 
+
   /* ================= AUTO-VERIFY ================= */
   useEffect(() => {
     // 🛡️ Guard against infinite loops: Only auto-verify if not loading, no current error, and not locked.

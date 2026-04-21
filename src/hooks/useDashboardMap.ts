@@ -88,13 +88,31 @@ export const useDashboardMap = ({ isOnline }: UseDashboardMapProps) => {
             });
     }, [getCurrentLocation, watchLocation, updateAddress, stopLocationUpdates]);
 
+    // Always fetch initial location on mount (so map is contextual even offline)
+    useEffect(() => {
+        if (!userLocation) {
+            getCurrentLocation()
+                .then((pos: Geolocation.GeoPosition) => {
+                    if (!isMounted.current) return;
+                    const { latitude, longitude, heading } = pos.coords;
+                    setUserLocation({ latitude, longitude, heading });
+                    updateAddress(latitude, longitude);
+                })
+                .catch(() => {
+                    // Silent — no location available yet
+                });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useEffect(() => {
         if (isOnline) {
             startLocationUpdates();
         } else {
             stopLocationUpdates();
-            // Do not reset to a specific city when offline
-            // setUserLocation(null); // Optional: keep last known location or set to null
+            // Retain last known location — do NOT reset to null
+            // This keeps the map showing the driver's last position (dimmed) when offline
+            setLocationError(null);
         }
         return () => stopLocationUpdates();
     }, [isOnline, startLocationUpdates, stopLocationUpdates]);

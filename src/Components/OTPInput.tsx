@@ -1,5 +1,5 @@
-import { StyleSheet, TextInput, View, ViewStyle } from 'react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, TextInput, View, ViewStyle, Text, Pressable, Platform } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
 import { Styles } from '../lib/styles';
 import { useTheme } from '@react-navigation/native';
 
@@ -9,7 +9,7 @@ interface OTPInputProps {
   value?: string;
   containerStyle?: ViewStyle | ViewStyle[];
   hasError?: boolean;
-  autoFocus?: boolean; // ✅ ADD
+  autoFocus?: boolean;
 }
 
 const OTPInput: React.FC<OTPInputProps> = ({
@@ -20,87 +20,110 @@ const OTPInput: React.FC<OTPInputProps> = ({
   hasError = false,
   autoFocus = false,
 }) => {
-  const [valueArray, setValueArray] = useState<string[]>([]);
-  const { colors, fonts } = useTheme();
-  const inputs = useRef<(TextInput | null)[]>([]);
+  const { colors, fonts } = useTheme() as any;
+  const inputRef = useRef<TextInput>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
+  // Auto-focus on mount if prop is set
   useEffect(() => {
-    setValueArray(value.split(''));
-  }, [value]);
-
-  const handleChange = (text: string, index: number) => {
-    const newCode = [...valueArray];
-
-    if (text) {
-      newCode[index] = text;
-      onChangeText(newCode.join(''));
-
-      if (index < numberOfDigits - 1) {
-        inputs.current[index + 1]?.focus();
-      }
-    } else {
-      newCode.splice(index, 1);
-      onChangeText(newCode.join(''));
-
-      if (index > 0) {
-        inputs.current[index - 1]?.focus();
-      }
+    if (autoFocus) {
+      const timeout = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 500); // Small delay to ensure layout is ready
+      return () => clearTimeout(timeout);
     }
+  }, [autoFocus]);
+
+  const handlePress = () => {
+    inputRef.current?.focus();
+  };
+
+  const codeDigitsArray = new Array(numberOfDigits).fill('');
+
+  const renderDigit = (_: any, index: number) => {
+    const digit = value[index] || '';
+    const isCurrentDigit = index === value.length;
+    const isLastDigit = index === numberOfDigits - 1;
+    const isCodeFull = value.length === numberOfDigits;
+    const isFocusedDigit = isFocused && (isCurrentDigit || (isCodeFull && isLastDigit));
+
+    return (
+      <View
+        key={index}
+        style={[
+          Styles.bw1,
+          Styles.br2,
+          styles.box,
+          {
+            borderColor: hasError
+              ? '#EF4444'
+              : isFocusedDigit
+                ? colors.primary
+                : colors.border || colors.primary + '40',
+            backgroundColor: isFocusedDigit ? colors.primary + '05' : 'transparent',
+          },
+          index !== numberOfDigits - 1 && styles.gap,
+        ]}
+      >
+        <Text style={[fonts.medium, Styles.fs16, { color: colors.text }]}>
+          {digit}
+        </Text>
+      </View>
+    );
   };
 
   return (
-    <View
-      style={[
-        styles.container, // ✅ FIXED LAYOUT
-        containerStyle,
-      ]}
-    >
-      {Array(numberOfDigits)
-        .fill('')
-        .map((_x, i) => (
-          <TextInput
-            key={i}
-            value={valueArray[i] || ''}
-            style={[
-              Styles.bw1,
-              Styles.br2,
-              fonts.medium,
-              Styles.fs16,
-              styles.box,
-              {
-                borderColor: hasError
-                  ? '#EF4444'
-                  : colors.primary,
-                color: colors.text,
-              },
-              i !== numberOfDigits - 1 && styles.gap, // ✅ GAP
-            ]}
-            textAlign="center"
-            keyboardType="number-pad"
-            maxLength={1}
-            underlineColorAndroid="transparent"
-            onChangeText={text =>
-              handleChange(text.replace(/[^0-9]/g, ''), i)
-            }
-            autoFocus={i === 0 && autoFocus}
-            ref={ref => { inputs.current[i] = ref; }}
-          />
-        ))}
+    <View style={[styles.container, containerStyle]}>
+      <Pressable style={styles.inputsContainer} onPress={handlePress}>
+        {codeDigitsArray.map(renderDigit)}
+      </Pressable>
+      <TextInput
+        ref={inputRef}
+        value={value}
+        onChangeText={(text) => {
+          // Only allow numbers and limit length
+          const cleanedText = text.replace(/[^0-9]/g, '').slice(0, numberOfDigits);
+          onChangeText(cleanedText);
+        }}
+        maxLength={numberOfDigits}
+        keyboardType="number-pad"
+        returnKeyType="done"
+        textContentType="oneTimeCode" // iOS SMS Auto-fill
+        autoComplete={Platform.OS === 'android' ? 'sms-otp' : 'one-time-code'} // Android/iOS Auto-fill
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        style={styles.hiddenInput}
+        caretHidden={true}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputsContainer: {
     flexDirection: 'row',
-    justifyContent: 'center', // ✅ CENTERED
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   box: {
     height: 48,
     width: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gap: {
-    marginRight: 12, // ✅ PERFECT OTP GAP
+    marginRight: 12,
+  },
+  hiddenInput: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    opacity: 0,
   },
 });
 

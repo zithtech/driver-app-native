@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useAppTheme } from '../context/ThemeContext';
 import { ms, vs } from '../lib/scale';
 import { useTranslation } from 'react-i18next';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 interface RelationshipPickerProps {
   selected: string;
@@ -10,11 +11,11 @@ interface RelationshipPickerProps {
 }
 
 const RELATIONSHIPS = [
-  'Family',
-  'Friend',
-  'Spouse',
-  'Work',
-  'Other'
+  { label: 'Family', icon: 'people-outline', activeIcon: 'people' },
+  { label: 'Friend', icon: 'person-outline', activeIcon: 'person' },
+  { label: 'Spouse', icon: 'heart-outline', activeIcon: 'heart' },
+  { label: 'Work', icon: 'briefcase-outline', activeIcon: 'briefcase' },
+  { label: 'Other', icon: 'ellipsis-horizontal-outline', activeIcon: 'ellipsis-horizontal' },
 ];
 
 const RelationshipPicker: React.FC<RelationshipPickerProps> = ({ selected, onSelect }) => {
@@ -26,32 +27,38 @@ const RelationshipPicker: React.FC<RelationshipPickerProps> = ({ selected, onSel
       <Text style={[styles.label, { color: isDark ? '#FFFFFF' : '#111827' }]}>
         {t('relationship') || 'Relationship'}
       </Text>
-      <ScrollView 
-        horizontal 
+      <ScrollView
+        horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
         {RELATIONSHIPS.map((item) => {
-          const isSelected = selected === item;
+          const isSelected = selected === item.label;
           return (
             <Pressable
-              key={item}
-              onPress={() => onSelect(item)}
+              key={item.label}
+              onPress={() => onSelect(item.label)}
               style={[
                 styles.chip,
                 {
-                  backgroundColor: isSelected 
-                    ? theme.colors.primary 
+                  backgroundColor: isSelected
+                    ? theme.colors.primary
                     : isDark ? '#374151' : '#F3F4F6',
                   borderColor: isSelected ? theme.colors.primary : 'transparent'
                 }
               ]}
             >
+              <Ionicons 
+                name={isSelected ? item.activeIcon : item.icon} 
+                size={ms(16)} 
+                color={isSelected ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'} 
+                style={{ marginRight: ms(6) }}
+              />
               <Text style={[
                 styles.chipText,
                 { color: isSelected ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280' }
               ]}>
-                {t(item.toLowerCase()) || item}
+                {t(item.label.toLowerCase()) || item.label}
               </Text>
             </Pressable>
           );
@@ -75,9 +82,11 @@ const styles = StyleSheet.create({
     paddingRight: ms(20),
   },
   chip: {
-    paddingHorizontal: ms(16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ms(14),
     paddingVertical: vs(10),
-    borderRadius: ms(12),
+    borderRadius: ms(14),
     borderWidth: 1.5,
     marginRight: ms(10),
   },
@@ -88,3 +97,4 @@ const styles = StyleSheet.create({
 });
 
 export default RelationshipPicker;
+
