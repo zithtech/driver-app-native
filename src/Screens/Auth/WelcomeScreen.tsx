@@ -8,6 +8,10 @@ import {
   Image,
   ActivityIndicator,
   StyleSheet,
+  Pressable,
+  Alert,
+  Modal,
+  TouchableOpacity,
 } from 'react-native';
 import Reanimated, {
   FadeInDown,
@@ -21,20 +25,24 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useHaptic } from '../../hooks/useHaptic';
-// import LinearGradient from 'react-native-linear-gradient';
+import i18n from '../../i18n/i18n';
 
-import { Input } from '../../Components';
+import { Input, LanguageSelector } from '../../Components';
 import Button from '../../Components/Button';
 
 import vdriveImg from '../../assets/images/wee.png';
 
 import { OTPScreen_Nav } from '../../Navigations/navigations';
 import { setUser } from '../../redux/userSlice';
+import { RootState } from '../../redux/store';
 import { useSendOtpMutation } from '../../service/userApi';
+import { useApplyReferralCodeMutation } from '../../service/driverApi';
 import { getDeviceId } from '../../service/utils/device';
 import { Logo } from '../../assets/svg';
 import AppStatusBar from '../../Components/AppStatusBar';
@@ -58,20 +66,27 @@ const DecorativeBackground = ({ colors }: { colors: any }) => (
 
 
 const WelcomeScreen = ({ navigation }: any) => {
-  const { colors, fonts } = useTheme() as any;
+  const { colors, fonts, dark } = useTheme() as any;
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { triggerHaptic } = useHaptic();
+
 
   /* ================= STATE ================= */
   const [mobileNumber, setMobileNumber] = useState('');
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
+  const [referralError, setReferralError] = useState('');
+  const [referralMessage, setReferralMessage] = useState('');
+
+  const [referralCodeStatus, setReferralCodeStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
 
   const buttonScale = useSharedValue(1);
 
   const [sendOtp, { isLoading }] = useSendOtpMutation();
+  const [applyReferralCode, { isLoading: isCheckingReferral }] = useApplyReferralCodeMutation();
 
   /* ================= DEVICE ID ================= */
   useEffect(() => {
@@ -111,6 +126,35 @@ const WelcomeScreen = ({ navigation }: any) => {
     backgroundColor: '#FFFFFF',
   }));
 
+  const handleCheckReferral = async () => {
+    if (!referralCode || referralCode.length < 3) return;
+    
+    setReferralCodeStatus('loading');
+    setReferralError('');
+    setReferralMessage('');
+    triggerHaptic(HapticFeedbackTypes.impactLight);
+    
+    try {
+      const result = await applyReferralCode({ code: referralCode }).unwrap();
+      
+      // result.success is the API wrapper's status
+      // result.data.valid is the actual referral code validity
+      if (result.success && result.data?.valid) {
+        setReferralCodeStatus('valid');
+        setReferralMessage(result.data.message || t('referral_applied'));
+        triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+      } else {
+        setReferralCodeStatus('invalid');
+        setReferralError(result.data?.message || t('invalid_referral_code'));
+        triggerHaptic(HapticFeedbackTypes.notificationWarning);
+      }
+    } catch (err: any) {
+      setReferralCodeStatus('invalid');
+      setReferralError(err?.data?.message || t('invalid_referral_code'));
+      triggerHaptic(HapticFeedbackTypes.notificationError);
+    }
+  };
+
   /* ================= HANDLERS ================= */
   const handleContinue = async () => {
     buttonScale.value = withSequence(withSpring(0.95), withSpring(1));
@@ -123,7 +167,7 @@ const WelcomeScreen = ({ navigation }: any) => {
     }
 
     if (!deviceId) {
-      // ToastAndroid.show(t('device_initializing'), ToastAndroid.SHORT);
+      Alert.alert(t('error') || 'Error', t('device_initializing') || 'Device is initializing. Please wait.');
       return;
     }
 
@@ -135,7 +179,7 @@ const WelcomeScreen = ({ navigation }: any) => {
         allow_new_device: true,
       }).unwrap();
 
-      dispatch(setUser({ phone_number: mobileNumber }));
+      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined }));
       // ToastAndroid.show(t('otp_sent_success'), ToastAndroid.SHORT);
 
       setTimeout(() => {
@@ -143,18 +187,27 @@ const WelcomeScreen = ({ navigation }: any) => {
       }, OTP_NAVIGATION_DELAY);
 
     } catch (err: any) {
-      /* ToastAndroid.show(
-        err?.data?.message || t('otp_send_fail'),
-        ToastAndroid.LONG
-      ); */
+      Alert.alert(
+        t('otp_send_fail'),
+        err?.data?.message || err?.message || t('something_went_wrong')
+      );
     }
   };
 
   /* ================= UI COMPONENTS ================= */
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <AppStatusBar />
       <DecorativeBackground colors={colors} />
+
+      {/* LANGUAGE SELECTOR BUTTON */}
+      <Reanimated.View 
+        entering={FadeInDown.delay(100).duration(600)}
+        style={styles.languageSelectorWrapper}
+      >
+        <LanguageSelector variant={dark ? 'dark' : 'light'} />
+      </Reanimated.View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -183,10 +236,18 @@ const WelcomeScreen = ({ navigation }: any) => {
             entering={FadeInDown.delay(400).duration(600)}
             style={{ alignItems: 'center', marginTop: 10 }}
           >
-            <Text style={[fonts.bold, { fontSize: 26, color: colors.text, textAlign: 'center' }]}>
+            <Text 
+              adjustsFontSizeToFit
+              numberOfLines={2}
+              style={[fonts.bold, { fontSize: 26, color: colors.text, textAlign: 'center' }]}
+            >
               {t('lets_get_on_road')}
             </Text>
-            <Text style={{ fontSize: 15, opacity: 0.6, color: colors.text, marginTop: 4 }}>
+            <Text 
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              style={{ fontSize: 15, opacity: 0.6, color: colors.text, marginTop: 4 }}
+            >
               {t('start_earning')}
             </Text>
           </Reanimated.View>
@@ -281,6 +342,96 @@ const WelcomeScreen = ({ navigation }: any) => {
             )}
           </Reanimated.View>
 
+          {/* REFERRAL CODE (ALWAYS SHOW) */}
+          <Reanimated.View 
+            entering={FadeInDown.delay(900).duration(600)} 
+            style={{ marginTop: 24, alignItems: 'center' }}
+          >
+            <Text style={[fonts.medium, { fontSize: 16, marginBottom: 8, color: colors.text, textAlign: 'center' }]}>
+              {t('have_referral_code')}
+            </Text>
+            
+            <View style={{ width: '92%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <Reanimated.View
+                entering={FadeInDown.duration(300)}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: referralCodeStatus === 'valid' ? '#10B981' : referralCodeStatus === 'invalid' ? '#EF4444' : colors.primary + '40',
+                  borderRadius: 16,
+                  paddingHorizontal: 16,
+                  backgroundColor: '#FFFFFF',
+                  height: 52,
+                  flex: 1,
+                  justifyContent: 'center',
+                }}
+              >
+                <Input
+                  value={referralCode}
+                  placeholder={t('referral_code_placeholder')}
+                  autoCapitalize="characters"
+                  maxLength={20}
+                  onChangeText={(text: string) => {
+                    setReferralCode(text.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                    setReferralCodeStatus('idle');
+                    setReferralError('');
+                    setReferralMessage('');
+                  }}
+                  containerStyle={{ backgroundColor: 'transparent', width: '100%' }}
+                  inputContainerStyle={{ borderWidth: 0, backgroundColor: 'transparent', height: '100%', paddingHorizontal: 0 }}
+                  style={{
+                    color: colors.text,
+                    fontSize: 16,
+                    fontWeight: '600',
+                    letterSpacing: 2,
+                    backgroundColor: 'transparent',
+                    paddingVertical: 0,
+                    textAlign: 'center',
+                  }}
+                  placeholderTextColor={colors.text + '40'}
+                />
+              </Reanimated.View>
+
+              <Pressable
+                onPress={handleCheckReferral}
+                disabled={isCheckingReferral || !referralCode}
+                style={{
+                  marginLeft: 12,
+                  backgroundColor: referralCodeStatus === 'valid' ? '#10B981' : colors.primary,
+                  paddingHorizontal: 16,
+                  height: 52,
+                  borderRadius: 16,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: (!referralCode || isCheckingReferral) ? 0.6 : 1,
+                }}
+              >
+                {isCheckingReferral ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text 
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                    style={{ color: '#FFF', fontWeight: 'bold' }}
+                  >
+                    {referralCodeStatus === 'valid' ? '✓' : t('check')}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+
+            {referralCodeStatus === 'invalid' && (
+              <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 4 }}>
+                {referralError || t('invalid_referral_code')}
+              </Text>
+            )}
+
+            {referralCodeStatus === 'valid' && (
+              <Text style={{ color: '#10B981', fontSize: 12, marginTop: 4 }}>
+                {referralMessage || t('referral_applied')}
+              </Text>
+            )}
+          </Reanimated.View>
+
           {/* BUTTON */}
           <Reanimated.View entering={FadeInUp.delay(1000).duration(600)}>
             <Reanimated.View style={btnAnimatedStyle}>
@@ -302,7 +453,13 @@ const WelcomeScreen = ({ navigation }: any) => {
                 {isLoading ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                    <Text style={[fonts.bold, { color: '#FFF', fontSize: 20 }]}>{t('get_otp')}</Text>
+                    <Text 
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[fonts.bold, { color: '#FFF', fontSize: 20 }]}
+                    >
+                      {t('get_otp')}
+                    </Text>
                 )}
               </Button>
             </Reanimated.View>
@@ -322,6 +479,8 @@ const WelcomeScreen = ({ navigation }: any) => {
           </Reanimated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+
     </SafeAreaView>
   );
 };
@@ -361,8 +520,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 13,
     color: '#6B7280',
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    lineHeight: 22,
+    paddingHorizontal: 16,
+  },
+  languageSelectorWrapper: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
   },
 });
 

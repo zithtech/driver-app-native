@@ -10,8 +10,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
+import { useTranslation } from 'react-i18next';
 
 const Page1 = () => {
+  const { t } = useTranslation();
+
   return (
     <ScrollView
       style={styles.container}
@@ -35,17 +38,20 @@ const Page1 = () => {
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
         style={styles.title}
+        adjustsFontSizeToFit
+        numberOfLines={1}
       >
-        About VDrive
+        {t('ob_about_vdrive')}
       </Animated.Text>
 
       {/* DESCRIPTION */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(300)}
         style={styles.desc}
+        adjustsFontSizeToFit
+        numberOfLines={3}
       >
-        VDrive is a technology-driven ride platform helping drivers earn safely
-        and efficiently with transparent operations.
+        {t('ob_about_vdrive_desc')}
       </Animated.Text>
 
       {/* ICON ROW */}
@@ -55,17 +61,17 @@ const Page1 = () => {
       >
         <View style={styles.iconBox}>
           <Icon name="cpu" size={mS(22)} color="#64B5F6" />
-          <Text style={styles.iconLabel}>Tech-Driven</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.iconLabel}>{t('ob_tech_driven')}</Text>
         </View>
 
         <View style={styles.iconBox}>
           <MCIcon name="shield-check" size={mS(22)} color="#64B5F6" />
-          <Text style={styles.iconLabel}>Safe & Secure</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.iconLabel}>{t('ob_safe_secure')}</Text>
         </View>
 
         <View style={styles.iconBox}>
           <MCIcon name="map-marker-radius" size={mS(22)} color="#64B5F6" />
-          <Text style={styles.iconLabel}>Wide Coverage</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.iconLabel}>{t('ob_wide_coverage')}</Text>
         </View>
       </Animated.View>
 
@@ -75,23 +81,23 @@ const Page1 = () => {
         style={styles.grid}
       >
         <View style={styles.card}>
-          <Text style={styles.cardValue}>10,000+</Text>
-          <Text style={styles.cardText}>Active Drivers</Text>
+          <Text style={styles.cardValue}>{t('stat_active_drivers')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_active_drivers')}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardValue}>24/7</Text>
-          <Text style={styles.cardText}>Driver Support</Text>
+          <Text style={styles.cardValue}>{t('stat_support')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_driver_support')}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardValue}>Daily</Text>
-          <Text style={styles.cardText}>Payouts</Text>
+          <Text style={styles.cardValue}>{t('stat_payouts')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_payouts')}</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardValue}>100%</Text>
-          <Text style={styles.cardText}>Transparency</Text>
+          <Text style={styles.cardValue}>{t('stat_transparency')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_transparency')}</Text>
         </View>
       </Animated.View>
     </ScrollView>

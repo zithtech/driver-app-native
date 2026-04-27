@@ -92,7 +92,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const dispatch = useDispatch();
   const { colors, fonts } = useTheme() as any;
   const { showAlert } = useAlert();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { triggerHaptic } = useHaptic();
   const user = useSelector((state: RootState) => state.userSlice.user);
 
@@ -240,6 +240,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
         country: 'India',
         pincode,
       },
+      language: user?.language || i18n.language || 'en', // Maintain language persistence on backend
     };
 
     try {
@@ -316,8 +317,20 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
             <View style={styles.headerRow}>
               <PremiumAddressIcon size={60} />
               <View style={styles.titleContainer}>
-                <Text style={styles.title}>{t('confirm_address_title')}</Text>
-                <Text style={styles.subtitle}>{t('confirm_address_subtitle')}</Text>
+                <Text 
+                  adjustsFontSizeToFit 
+                  numberOfLines={1} 
+                  style={styles.title}
+                >
+                  {t('confirm_address_title')}
+                </Text>
+                <Text 
+                  adjustsFontSizeToFit 
+                  numberOfLines={2} 
+                  style={styles.subtitle}
+                >
+                  {t('confirm_address_subtitle')}
+                </Text>
               </View>
             </View>
 
@@ -350,7 +363,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                     ) : (
                       <Ionicons name="locate" size={20} color={colors.primary} />
                     )}
-                    <Text style={[styles.locationBtnText, { color: colors.primary }]}>
+                    <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.locationBtnText, { color: colors.primary }]}>
                       {locationLoading ? t('fetching_location') : t('use_current_location')}
                     </Text>
                   </Animated.View>
@@ -359,6 +372,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 <Input
                   label={t('street')}
                   value={street}
+                  scrollable={true}
                   autoCapitalize="words"
                   onChangeText={setStreet}
                   onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
@@ -383,6 +397,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                       <Input
                         label={t('city')}
                         value={city}
+                        scrollable={true}
                         placeholder={t('select_city')}
                         editable={false}
                         LeadingAccessory={<Ionicons name="business-outline" size={20} color="#9CA3AF" />}
@@ -411,6 +426,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                       <Input
                         label={t('state')}
                         value={stateName}
+                        scrollable={true}
                         placeholder={t('select_state')}
                         editable={false}
                         LeadingAccessory={<Ionicons name="map-outline" size={20} color="#9CA3AF" />}
@@ -461,11 +477,19 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 (isSubmitting || isLoading) && styles.ctaDisabled,
               ]}
             >
-              <Text style={styles.ctaText}>
+              <Text 
+                adjustsFontSizeToFit 
+                numberOfLines={1} 
+                style={styles.ctaText}
+              >
                 {isSubmitting || isLoading ? <DotLoader /> : t('complete_registration')}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.footerInfo}>
+            <Text 
+              adjustsFontSizeToFit 
+              numberOfLines={2} 
+              style={styles.footerInfo}
+            >
               <Ionicons name="shield-checkmark" size={12} color="#6B7280" /> {t('footer_encrypted')}
             </Text>
           </View>
@@ -679,6 +703,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  stateCol: {
+    flex: 2,
+  },
+  pinCol: {
+    flex: 1,
+  },
   root: {
     flex: 1,
   },
@@ -725,16 +759,16 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#6B7280',
-    marginTop: 2,
-    lineHeight: 18,
+    marginTop: 4,
+    lineHeight: 22,
   },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 24,
-    padding: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: 24,
+    marginBottom: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -743,12 +777,12 @@ const styles = StyleSheet.create({
   helper: {
     fontSize: 12,
     color: '#9CA3AF',
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 2,
+    marginBottom: 2,
     marginLeft: 4,
   },
   mt4: {
-    marginTop: 16,
+    marginTop: 12,
   },
   footer: {
     position: 'absolute',

@@ -29,6 +29,7 @@ const AppStatusBar: React.FC<AppStatusBarProps> = ({
 
     return (
         <StatusBar
+            animated={false}
             barStyle={barStyle}
             backgroundColor="transparent"
             translucent={true}

@@ -76,7 +76,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             pickup: data?.pickup_address||data?.pickup || 'Pickup Location',
             drop: data?.drop_address||data?.drop || 'Drop Location',
             price: data?.fare? `₹${data.fare}` : data?.total_fare ? `₹${data.total_fare}` : '₹--',
-            remaining: 15,
+            remaining: (data?.trip_status === 'ASSIGNED' || data?.trip_status === TripStatus.ASSIGNED) ? 99999 : 15,
             distance: data?.distance_km ? `${data.distance_km} km` : data?.distanceToUser ? `${data.distanceToUser} m` : '--',
             eta: data?.trip_duration_minutes ? `${data.trip_duration_minutes} min` : data?.eta ? `${data.eta} min` : '--',
             passenger: data?.passenger_details?.name || data?.passenger || data?.passengerName || data?.passenger_name || data?.customer?.name || 'Passenger',
@@ -131,7 +131,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                 if (AppState.currentState !== 'active' || isBlocked) return;
 
                 // Check if this is a ride request
-                if (remoteMessage.data?.type === 'ride_request' || remoteMessage.data?.type === 'SCHEDULED_REMINDER') {
+                if (remoteMessage.data?.type === 'ride_request' || remoteMessage.data?.type === 'assigned_ride' || remoteMessage.data?.type === 'SCHEDULED_REMINDER') {
                     console.log('FCM Ride Request Received:', remoteMessage.data);
                     handleIncomingRide(remoteMessage.data);
                 }
@@ -150,7 +150,8 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
     useEffect(() => {
         const timer = setInterval(() => {
             setRideQueue(prev =>
-                prev.map(r => ({ ...r, remaining: r.remaining - 1 })).filter(r => r.remaining > 0)
+                prev.map(r => (r.trip_status === 'ASSIGNED' || r.trip_status === TripStatus.ASSIGNED ? r : { ...r, remaining: r.remaining - 1 }))
+                    .filter(r => r.remaining > 0)
             );
         }, 1000);
         return () => clearInterval(timer);
@@ -189,11 +190,13 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         };
 
         socketService.on('NEW_TRIP_REQUEST', onNewTripRequest);
+        socketService.on('TRIP_ASSIGNED', onNewTripRequest); // Use same handler
         socketService.on('TRIP_REMOVED', onTripRemoved);
 
         return () => {
             console.log('[useRideFeed] Cleaning up socket listeners');
             socketService.off('NEW_TRIP_REQUEST');
+            socketService.off('TRIP_ASSIGNED');
             socketService.off('TRIP_REMOVED');
         };
     }, [isOnline, user?.driverId, showConfirmModal, acceptedRide, handleIncomingRide]);

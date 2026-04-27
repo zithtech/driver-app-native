@@ -87,13 +87,25 @@ const ProfileSettingsScreen = () => {
         bottomSheetModalRef.current?.present();
     }, [triggerHaptic]);
 
-    const handleLanguageSelect = useCallback((lang: string) => {
+    const handleLanguageSelect = useCallback(async (lang: string) => {
         triggerHaptic(HapticFeedbackTypes.notificationSuccess);
         dispatch(setUser({ language: lang }));
         i18n.changeLanguage(lang);
         bottomSheetModalRef.current?.dismiss();
         showSuccessPopup(t('language_changed'));
-    }, [dispatch, triggerHaptic, showSuccessPopup, t]);
+
+        // Persist to backend
+        if (user?.driverId) {
+            try {
+                await updateDriver({
+                    id: user.driverId,
+                    data: { language: lang }
+                }).unwrap();
+            } catch (err) {
+                console.error('[Settings] Failed to persist language:', err);
+            }
+        }
+    }, [dispatch, triggerHaptic, showSuccessPopup, t, user?.driverId, updateDriver]);
 
     const toggleVibration = useCallback(async (value: boolean) => {
         triggerHaptic(HapticFeedbackTypes.impactMedium);

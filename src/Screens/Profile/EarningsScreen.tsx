@@ -12,9 +12,10 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  InteractionManager,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { useGetEarningsSummaryQuery, useGetEarningsTransactionsQuery } from '../../service/driverApi';
@@ -41,6 +42,7 @@ import { useAlert } from '../../context/AlertContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNPrint from 'react-native-print';
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
 
 /* ================= SCREEN ================= */
 
@@ -52,6 +54,8 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
   const user = useSelector((state: RootState) => state.userSlice.user);
   const { triggerHaptic } = useHaptic();
   const driverId = user?.driverId || '';
+  const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] =
     useState<'today' | 'week' | 'month'>('today'); 
@@ -93,23 +97,16 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
   const transactions = transactionsResult?.data || [];
 
   const isLoading = isSummaryLoading || isTransactionsLoading;
-  const isRefreshing = isSummaryFetching || isTransactionsFetching;
+  const [isManualRefresh, setIsManualRefresh] = useState(false);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
-    refetchSummary();
-    refetchTransactions();
+    setIsManualRefresh(true);
+    await Promise.all([refetchSummary(), refetchTransactions()]);
+    setIsManualRefresh(false);
   }, [refetchSummary, refetchTransactions, triggerHaptic]);
 
-  // Sync data on focus
-  useFocusEffect(
-    useCallback(() => {
-      if (driverId) {
-        refetchSummary();
-        refetchTransactions();
-      }
-    }, [driverId, refetchSummary, refetchTransactions])
-  );
+  // Sync data on focus removed to prevent layout glitches on back navigation
 
   const handleTransactionPress = (item: Transaction) => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
@@ -269,9 +266,10 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      {isFocused && <AppStatusBar />}
       {/* ================= HEADER ================= */}
-      <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
         <Pressable onPress={handleBack}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
         </Pressable>
@@ -296,7 +294,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
           <RefreshControl
-            refreshing={isRefreshing}
+            refreshing={isManualRefresh}
             onRefresh={onRefresh}
             colors={[colors.primary]}
             tintColor={colors.primary}
@@ -555,7 +553,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 

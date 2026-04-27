@@ -8,9 +8,10 @@ import {
   Alert,
   RefreshControl,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import { useSelector } from 'react-redux';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { RootState } from '../../redux/store';
 import { useGetWalletBalanceQuery, useGetWalletTransactionsQuery } from '../../service/driverApi';
 import { useTheme } from '@react-navigation/native';
@@ -57,6 +58,7 @@ const WalletScreen = ({ navigation }: any) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const user = useSelector((state: RootState) => state.userSlice.user);
   const driverId = user?.driverId || '';
+  const isFocused = useIsFocused();
 
   // API Hooks
   const {
@@ -75,7 +77,6 @@ const WalletScreen = ({ navigation }: any) => {
   const transactions = transactionsResult?.data || [];
 
   // const isLoading = isBalanceLoading || isTransactionsLoading;
-  const refreshing = isBalanceFetching || isTransactionsFetching;
 
   const [banks, setBanks] = useState<BankAccount[]>(INITIAL_BANKS);
 
@@ -95,20 +96,13 @@ const WalletScreen = ({ navigation }: any) => {
 
   /* ================= ACTIONS ================= */
 
-  const onRefresh = useCallback(() => {
-    refetchBalance();
-    refetchTransactions();
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await Promise.all([refetchBalance(), refetchTransactions()]);
+    setIsRefreshing(false);
   }, [refetchBalance, refetchTransactions]);
 
-  // Sync data on focus
-  useFocusEffect(
-    useCallback(() => {
-      if (driverId) {
-        refetchBalance();
-        refetchTransactions();
-      }
-    }, [driverId, refetchBalance, refetchTransactions])
-  );
+  // Sync data on focus removed to prevent layout glitches on back navigation
 
   const confirmWithdraw = () => {
     const amount = Number(withdrawAmount);
@@ -211,7 +205,7 @@ const WalletScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <AppStatusBar forceLight={!isDark} />
+      {isFocused && <AppStatusBar />}
       <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
         <Pressable onPress={() => navigation.goBack()} style={[styles.backButton, isDark && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
@@ -225,7 +219,7 @@ const WalletScreen = ({ navigation }: any) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 40 }]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
         ListHeaderComponent={
           <>

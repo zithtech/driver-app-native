@@ -5,7 +5,7 @@ import {
     Text,
     StyleSheet,
     Pressable,
-    StatusBar,
+    // StatusBar removed — using AppStatusBar
     Alert,
     ScrollView,
     Dimensions,
@@ -13,6 +13,7 @@ import {
     BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { 
@@ -218,7 +219,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
     if (isFinished) {
         return (
             <View style={[styles.successContainer, { backgroundColor: '#f8f9fa' }]}>
-                <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+                <AppStatusBar forceDark />
                 
                 <Animated.View entering={FadeIn.delay(200)} style={styles.successContent}>
                     <View style={[styles.checkBadge, { backgroundColor: theme.colors.success || '#34a853', shadowColor: theme.colors.success }]}>
@@ -256,7 +257,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
 
     return (
         <View style={[styles.container, { backgroundColor: '#f8f9fa' }]}>
-            <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+            <AppStatusBar forceDark />
 
 
             <SafeAreaView style={styles.safeArea}>

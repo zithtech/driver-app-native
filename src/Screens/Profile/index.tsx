@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
+import { useIsFocused } from '@react-navigation/native';
 import { RootState } from '../../redux/store';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -22,6 +23,7 @@ import {
   ContactSupport_Nav,
   AboutApp_Nav,
   SosContacts_Nav,
+  ReferEarn_Nav,
 } from '../../Navigations/navigations';
 
 /* ================= BANNER LIST ================= */
@@ -41,6 +43,7 @@ const ProfileScreen = ({ navigation }: any) => {
   const user = useSelector((state: RootState) => state.userSlice.user);
   const bannerIndex = user?.bannerIndex ?? 0;
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
 
   const [showBannerPicker, setShowBannerPicker] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -64,7 +67,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      <AppStatusBar />
+      {isFocused && <AppStatusBar />}
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* ================= HEADER ================= */}
         <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
@@ -186,6 +189,13 @@ const ProfileScreen = ({ navigation }: any) => {
             icon="cash-outline"
             title={t('earnings')}
             onPress={() => navigation.navigate('EarningsScreen')}
+            isDark={isDark}
+          />
+
+          <MenuItem
+            icon="gift-outline"
+            title={t('refer_earn') || 'Refer & Earn'}
+            onPress={() => navigation.navigate(ReferEarn_Nav)}
             isDark={isDark}
           />
 

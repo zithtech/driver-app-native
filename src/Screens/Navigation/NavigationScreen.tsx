@@ -266,7 +266,7 @@ const NavigationScreen: React.FC<{ route: any }> = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <StatusBar animated={false} barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
       
       <MapView
         ref={mapRef}

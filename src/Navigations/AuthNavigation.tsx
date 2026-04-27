@@ -3,7 +3,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { useTheme } from '@react-navigation/native';
 
 import {
-  LanguageScreen_Nav,
   WelcomeScreen_Nav,
   PersonalDetails_Nav,
   AddressDetails_Nav,
@@ -11,7 +10,6 @@ import {
   DocumentUploadScreen_Nav,
 } from './navigations';
 
-import LanguageScreen from '../Screens/Auth/LanguageScreen';
 import WelcomeScreen from '../Screens/Auth/WelcomeScreen';
 import OTPScreen from '../Screens/Auth/OTPScreen';
 import PersonalDetails from '../Screens/Auth/PersonalDetails';
@@ -46,12 +44,6 @@ const AuthNavigation = () => {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {/* LANGUAGE */}
-      <Stack.Screen
-        name={LanguageScreen_Nav}
-        component={LanguageScreen}
-      />
-
       {/* WELCOME */}
       <Stack.Screen
         name={WelcomeScreen_Nav}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,11 @@ import {
   Modal,
   Animated,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { RootState } from '../../redux/store';
 import {
   useGetRideActivityQuery,
@@ -19,12 +20,14 @@ import {
   useGetDriverPerformanceQuery
 } from '../../service/driverApi';
 import LinearGradient from 'react-native-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import colors from '../../constant/colors';
 import { formatCurrency } from '../../lib/currency';
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
+import { calculateAverageRating } from '../../utils/ratingUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -61,6 +64,7 @@ export interface RideItem {
 
 const RideActivityScreen = ({ navigation, route }: any) => {
   const { theme, isDark } = useAppTheme();
+  const isFocused = useIsFocused();
   const { t } = useTranslation();
   const user = useSelector((state: RootState) => state.userSlice.user);
   const driverId = user?.driverId || '';
@@ -81,11 +85,11 @@ const RideActivityScreen = ({ navigation, route }: any) => {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
-  // API Hook
+  const insets = useSafeAreaInsets();
+
   const {
     data: activityResult,
     isLoading: isFirstLoading,
-    isFetching: isRefreshing,
     refetch,
   } = useGetRideActivityQuery(
     {
@@ -97,19 +101,26 @@ const RideActivityScreen = ({ navigation, route }: any) => {
     { skip: !driverId }
   );
 
-  const { data: earningsSummary, refetch: refetchSummary } = useGetEarningsSummaryQuery({ driverId }, { skip: !driverId });
+  const { data: earningsSummary, refetch: refetchSummary } = useGetEarningsSummaryQuery(
+    { 
+      driverId,
+      from: fromDate.toISOString().split('T')[0],
+      to: toDate.toISOString().split('T')[0],
+    }, 
+    { skip: !driverId }
+  );
   const { data: performanceMetrics, refetch: refetchPerformance } = useGetDriverPerformanceQuery({ driverId }, { skip: !driverId });
 
   // Sync data on focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (driverId) {
-        refetch();
-        refetchSummary();
-        refetchPerformance();
-      }
-    }, [driverId, refetch, refetchSummary, refetchPerformance])
-  );
+  const [isManualRefresh, setIsManualRefresh] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setIsManualRefresh(true);
+    await Promise.all([refetch(), refetchSummary(), refetchPerformance()]);
+    setIsManualRefresh(false);
+  }, [refetch, refetchSummary, refetchPerformance]);
+
+  // Sync data on focus removed to prevent layout glitches on back navigation
 
   // Map backend trip object to RideItem format
   const extractTripObject = (result: any) => {
@@ -199,6 +210,13 @@ const RideActivityScreen = ({ navigation, route }: any) => {
   const rides = rawRides.map(mapTripToRideItem);
   const isLoading = isFirstLoading;
 
+  const avgRating = React.useMemo(() => {
+    const periodRating = calculateAverageRating(rawRides);
+    if (periodRating !== null) return periodRating.toFixed(1);
+    if (user?.rating) return Number(user.rating).toFixed(1);
+    return '0.0';
+  }, [rawRides, user?.rating]);
+
   /* ================= QUICK FILTERS ================= */
 
   const applyToday = () => {
@@ -227,9 +245,10 @@ const RideActivityScreen = ({ navigation, route }: any) => {
   const filteredRides = rides; // Backend handles filtering now
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      {isFocused && <AppStatusBar />}
       {/* ================= HEADER ================= */}
-      <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
         <Pressable onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
         </Pressable>
@@ -313,7 +332,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
         <View style={[styles.statItem, { backgroundColor: theme.colors.card }]}>
           <Ionicons name="star" size={22} color="#EAB308" style={{ marginBottom: 4 }} />
           <Text style={[styles.statValue, { color: '#EAB308' }]}>
-            {Number(performanceMetrics?.data?.rating || '4.8').toFixed(1)}
+            {avgRating}
           </Text>
           <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
             {t('avg_rating')}
@@ -328,8 +347,8 @@ const RideActivityScreen = ({ navigation, route }: any) => {
         </View>
       ) : (
         <FlatList
-          onRefresh={() => refetch()}
-          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          refreshing={isManualRefresh}
           data={filteredRides}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -517,7 +536,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -25,6 +25,7 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import { PickupMapScreen_Nav } from '../../Navigations/navigations';
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { useAlert } from '../../context/AlertContext';
 import { hS as s, vS as vs, mS as ms } from '../../lib/scale';
 import RideSkeleton from './components/RideSkeleton';
@@ -1128,6 +1129,7 @@ const ScheduledRidesScreen = () => {
       style={[styles.container, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}
       edges={['top']}
     >
+      <AppStatusBar />
       {/* OFFLINE BANNERS */}
       {!isConnected ? (
         <View style={[styles.offlineBanner, { backgroundColor: '#EF4444' }]}>

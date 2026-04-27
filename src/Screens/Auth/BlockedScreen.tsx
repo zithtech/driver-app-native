@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, SafeAreaView, TouchableOpacity, Image } from 'react-native';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { Text } from '../../Components';
@@ -22,6 +23,7 @@ const BlockedScreen = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            <AppStatusBar forceDark />
             <View style={styles.content}>
                 <View style={[styles.iconContainer, { backgroundColor: isBlocked ? '#FEF2F2' : '#FFF7ED' }]}>
                     <Ionicons 

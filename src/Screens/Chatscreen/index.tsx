@@ -21,6 +21,7 @@ import { ChatMessage } from '../../Socket/socket.types';
 import { useSocket } from '../../Socket/SocketContext';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { useHaptic } from '../../hooks/useHaptic';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import moment from 'moment';
@@ -517,6 +518,7 @@ const ChatScreen = ({ route, navigation }: any) => {
             paddingRight: insets.right,
             backgroundColor: theme.colors.background
         }]}>
+            <AppStatusBar />
             {/* Header */}
             <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
                 <TouchableOpacity 

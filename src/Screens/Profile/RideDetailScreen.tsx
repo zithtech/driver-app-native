@@ -22,12 +22,15 @@ import { useAlert } from '../../context/AlertContext';
 import { useHaptic } from '../../hooks/useHaptic';
 import { formatCurrency } from '../../lib/currency';
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
+import { useIsFocused } from '@react-navigation/native';
 import { useGetTripByIdQuery } from '../../service/driverApi';
 
 const { width } = Dimensions.get('window');
 
 const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   const { theme, isDark } = useAppTheme();
+  const isFocused = useIsFocused();
   const { showAlert } = useAlert();
   const { t } = useTranslation();
   const { ride: initialRide } = route.params;
@@ -209,6 +212,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      {isFocused && <AppStatusBar />}
       <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? '#374151' : '#F3F4F6' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#1F2937'} />

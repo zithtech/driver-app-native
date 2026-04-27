@@ -9,8 +9,11 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
+import { useTranslation } from 'react-i18next';
 
 const Page3 = () => {
+  const { t } = useTranslation();
+
   return (
     <ScrollView
       style={styles.container}
@@ -35,16 +38,19 @@ const Page3 = () => {
         <Animated.Text
           entering={FadeInDown.duration(600).delay(200)}
           style={styles.title}
+          adjustsFontSizeToFit
+          numberOfLines={1}
         >
-          Recharge & Subscription Plans
+          {t('ob_recharge_plans')}
         </Animated.Text>
 
         <Animated.Text
           entering={FadeInDown.duration(600).delay(300)}
           style={styles.desc}
+          adjustsFontSizeToFit
+          numberOfLines={3}
         >
-          Choose flexible daily or weekly plans. No hidden charges. Full
-          transparency for better earnings.
+          {t('ob_recharge_plans_desc')}
         </Animated.Text>
 
         <Animated.View
@@ -53,14 +59,14 @@ const Page3 = () => {
         >
           <View style={styles.card}>
             <MCIcon name="calendar-today" size={mS(20)} color="#64B5F6" />
-            <Text style={styles.cardTitle}>Daily Plans</Text>
-            <Text style={styles.cardSub}>Flexible daily options</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_daily_plans')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_flexible_options')}</Text>
           </View>
 
           <View style={styles.card}>
             <MCIcon name="shield-check" size={mS(20)} color="#64B5F6" />
-            <Text style={styles.cardTitle}>No Hidden Fees</Text>
-            <Text style={styles.cardSub}>Full transparency</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_no_hidden_fees')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_full_transparency')}</Text>
           </View>
 
           <View style={styles.card}>
@@ -69,14 +75,14 @@ const Page3 = () => {
               size={mS(20)}
               color="#64B5F6"
             />
-            <Text style={styles.cardTitle}>Easy Payment</Text>
-            <Text style={styles.cardSub}>Multiple methods</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_easy_payment')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_multiple_methods')}</Text>
           </View>
 
           <View style={styles.card}>
             <MCIcon name="autorenew" size={mS(20)} color="#64B5F6" />
-            <Text style={styles.cardTitle}>Auto-Renewal</Text>
-            <Text style={styles.cardSub}>Never miss a day</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_auto_renewal')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_never_miss_day')}</Text>
           </View>
         </Animated.View>
       </View>
@@ -130,6 +136,7 @@ const styles = StyleSheet.create({
     lineHeight: mS(20),
   },
 
+  /* GRID */
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

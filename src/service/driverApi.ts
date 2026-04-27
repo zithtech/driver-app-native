@@ -9,7 +9,7 @@ import { baseQueryWithReauth } from './baseQueryWithReauth';
 export const driverApi = createApi({
   reducerPath: 'driverApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Driver', 'Documents', 'TripVerification'],
+  tagTypes: ['Driver', 'Documents', 'TripVerification', 'Referral'],
 
   endpoints: (builder) => ({
 
@@ -319,6 +319,26 @@ export const driverApi = createApi({
         body,
       }),
     }),
+
+    /* ─────────── REFERRAL (/drivers/referral) ─────────── */
+
+    getMyReferralCode: builder.query<any, void>({
+      query: () => '/drivers/referral/code',
+      providesTags: ['Referral'],
+    }),
+
+    getMyReferralStats: builder.query<any, void>({
+      query: () => '/drivers/referral/stats',
+      providesTags: ['Referral'],
+    }),
+
+    applyReferralCode: builder.mutation<any, { code: string }>({
+      query: (body) => ({
+        url: '/drivers/referral/apply',
+        method: 'POST',
+        body,
+      }),
+    }),
   }),
 });
 
@@ -397,5 +417,12 @@ export const {
 
   // SOS
   useTriggerSosMutation,
+
+  // Referral
+  useGetMyReferralCodeQuery,
+  useLazyGetMyReferralCodeQuery,
+  useGetMyReferralStatsQuery,
+  useLazyGetMyReferralStatsQuery,
+  useApplyReferralCodeMutation,
 } = driverApi;
 

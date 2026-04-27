@@ -10,8 +10,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
+import { useTranslation } from 'react-i18next';
 
 const Page6 = () => {
+  const { t } = useTranslation();
+
   return (
     <ScrollView
       style={styles.container}
@@ -35,14 +38,18 @@ const Page6 = () => {
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
         style={styles.title}
+        adjustsFontSizeToFit
+        numberOfLines={1}
       >
-        Important Guidelines
+        {t('ob_important_guidelines')}
       </Animated.Text>
       <Animated.Text
         entering={FadeInDown.duration(600).delay(300)}
         style={styles.desc}
+        adjustsFontSizeToFit
+        numberOfLines={1}
       >
-        Essential information to help you succeed
+        {t('ob_important_guidelines_sub')}
       </Animated.Text>
 
       {/* GRID */}
@@ -52,26 +59,26 @@ const Page6 = () => {
       >
         <View style={styles.card}>
           <Icon name="phone-call" size={mS(22)} color="#EF9A9A" />
-          <Text style={styles.cardTitle}>Emergency Support</Text>
-          <Text style={styles.cardSub}>24/7 help when you need it</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_emergency_support')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_emergency_support_sub')}</Text>
         </View>
 
         <View style={styles.card}>
           <MCIcon name="wallet-outline" size={mS(22)} color="#81C784" />
-          <Text style={styles.cardTitle}>Wallet Recharge</Text>
-          <Text style={styles.cardSub}>Easy top-up options</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_wallet_recharge')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_wallet_recharge_sub')}</Text>
         </View>
 
         <View style={styles.card}>
           <MCIcon name="headphones" size={mS(22)} color="#90CAF9" />
-          <Text style={styles.cardTitle}>Support Center</Text>
-          <Text style={styles.cardSub}>Get answers to your questions</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_support_center')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_support_center_sub')}</Text>
         </View>
 
         <View style={styles.card}>
           <MCIcon name="shield-check" size={mS(22)} color="#A5D6A7" />
-          <Text style={styles.cardTitle}>Safety Features</Text>
-          <Text style={styles.cardSub}>SOS button, ride sharing</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_safety_features')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_safety_features_sub')}</Text>
         </View>
 
         <View style={styles.card}>
@@ -80,14 +87,14 @@ const Page6 = () => {
             size={mS(22)}
             color="#FFF59D"
           />
-          <Text style={styles.cardTitle}>Issue Reporting</Text>
-          <Text style={styles.cardSub}>Report problems easily</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_issue_reporting')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_issue_reporting_sub')}</Text>
         </View>
 
         <View style={styles.card}>
           <MCIcon name="update" size={mS(22)} color="#81C784" />
-          <Text style={styles.cardTitle}>App Updates</Text>
-          <Text style={styles.cardSub}>Stay current with features</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_app_updates')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_app_updates_sub')}</Text>
         </View>
       </Animated.View>
     </ScrollView>

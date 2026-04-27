@@ -123,7 +123,7 @@ const SplashScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#050B18' : '#FFFFFF' }]} edges={['top', 'bottom']}>
-      <StatusBar translucent backgroundColor="transparent" barStyle={themeColors.statusBar as any} />
+      <StatusBar animated={false} translucent backgroundColor="transparent" barStyle={themeColors.statusBar as any} />
 
       {/* Premium Gradient Background */}
       <LinearGradient

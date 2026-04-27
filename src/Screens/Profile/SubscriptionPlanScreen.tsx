@@ -12,9 +12,10 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  InteractionManager,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme, useFocusEffect } from '@react-navigation/native';
+import { useTheme, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useAlert } from '../../context/AlertContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -225,8 +226,10 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+  const [useRewardBalance, setUseRewardBalance] = useState(false);
 
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const { triggerHaptic } = useHaptic();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -235,6 +238,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   useEffect(() => {
     setAppliedPromoCode(null);
     setDiscountAmount(0);
+    setUseRewardBalance(false);
   }, [selectedTierId, selectedDuration]);
 
   const handleApplyPromo = async (codeOverride?: string) => {
@@ -304,12 +308,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     setRefreshing(false);
   }, [refetchSub]);
 
-  // Sync sub data on focus
-  useFocusEffect(
-    React.useCallback(() => {
-      refetchSub();
-    }, [refetchSub])
-  );
+  // Sync sub data on focus removed to prevent layout glitches on back navigation
 
   // Helper to map backend JSON features to translated display items
   const getDisplayFeatures = (plan: any, duration: Duration): PlanFeature[] => {
@@ -468,6 +467,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         plan_id: selectedTierId,
         billing_cycle: getBillingCycle(selectedDuration),
         promo_code: appliedPromoCode || undefined,
+        use_reward_balance: useRewardBalance,
       }).unwrap();
 
       const options = {
@@ -531,7 +531,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   if (isPlansLoading || isSubLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom', 'left', 'right']}>
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        {isFocused && <AppStatusBar forceLight={true} />}
  
         <ScrollView
           contentContainerStyle={styles.scrollView}
@@ -577,7 +577,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      {isFocused && <AppStatusBar forceLight={true} />}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -756,6 +756,51 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 )}
               </Pressable>
             </View>
+
+            {/* Wallet Rewards Section */}
+            {Number(user?.credit?.balance || 0) > 0 && (
+              <View style={[
+                styles.rewardSection, 
+                { 
+                  backgroundColor: isDark ? '#0F172A' : '#F0F9FF',
+                  borderColor: useRewardBalance ? '#0EA5E9' : (isDark ? '#1E293B' : '#E0F2FE')
+                }
+              ]}>
+                <View style={styles.rewardHeader}>
+                  <View style={styles.rewardIconWrapper}>
+                    <Ionicons name="gift" size={20} color="#0EA5E9" />
+                  </View>
+                  <View style={styles.rewardInfo}>
+                    <Text style={[styles.rewardTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>Referral Rewards</Text>
+                    <Text style={[styles.rewardSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                      Available: <Text style={{ fontWeight: '800', color: '#0EA5E9' }}>₹{user?.credit?.balance || 0}</Text>
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => {
+                       triggerHaptic(HapticFeedbackTypes.impactLight);
+                       setUseRewardBalance(!useRewardBalance);
+                    }}
+                    style={[
+                      styles.rewardApplyBtn,
+                      { backgroundColor: useRewardBalance ? '#0EA5E9' : 'transparent', borderWidth: useRewardBalance ? 0 : 1, borderColor: '#0EA5E9' }
+                    ]}
+                  >
+                    <Text style={[styles.rewardApplyText, { color: useRewardBalance ? '#FFF' : '#0EA5E9' }]}>
+                      {useRewardBalance ? 'Applied' : 'Apply'}
+                    </Text>
+                  </Pressable>
+                </View>
+                {useRewardBalance && (
+                  <View style={styles.rewardCalculation}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.rewardCalcText}>
+                      Extra ₹{Math.min(user?.credit?.balance || 0, currentPrice - discountAmount)} discount applied!
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {/* Selected Plan Details */}
@@ -783,9 +828,11 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 )}
                 
                 <View style={styles.mainPriceRow}>
-                  {discountAmount > 0 ? (
+                  { (discountAmount > 0 || useRewardBalance) ? (
                     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                      <Text style={[styles.mainPriceText, { color: isDark ? '#FFFFFF' : '#111827' }]}>₹{currentPrice - discountAmount}</Text>
+                      <Text style={[styles.mainPriceText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        ₹{Math.max(0, currentPrice - discountAmount - (useRewardBalance ? Number(user?.credit?.balance || 0) : 0))}
+                      </Text>
                       <Text style={[styles.originalPriceText, { color: isDark ? '#6B7280' : '#9CA3AF', textDecorationLine: 'line-through', marginLeft: 8, fontSize: 16 }]}>₹{currentPrice}</Text>
                     </View>
                   ) : (
@@ -847,7 +894,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             >
               <Ionicons name="lock-closed" size={20} color="white" style={styles.lockIcon} />
               <Text style={styles.subscribeText}>
-                {isActivePlan ? 'Current Active Plan' : `Subscribe Now • ₹${currentPrice}`}
+                {isActivePlan ? 'Current Active Plan' : `Subscribe Now • ₹${Math.max(0, currentPrice - discountAmount - (useRewardBalance ? Number(user?.credit?.balance || 0) : 0))}`}
               </Text>
             </Pressable>
 
@@ -1365,6 +1412,60 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 1.5,
+  },
+  rewardSection: {
+    marginTop: 15,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    marginHorizontal: 18,
+  },
+  rewardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rewardIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(14, 165, 233, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  rewardInfo: {
+    flex: 1,
+  },
+  rewardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rewardSubtitle: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  rewardApplyBtn: {
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  rewardApplyText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  rewardCalculation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(14, 165, 233, 0.1)',
+  },
+  rewardCalcText: {
+    fontSize: 11,
+    color: '#10B981',
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });
 

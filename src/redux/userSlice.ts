@@ -105,6 +105,18 @@ export interface UserState {
 
   /* ⭐ DOCUMENT STORAGE */
   documents?: Record<string, DocumentState>;
+  
+  /* Referral */
+  referred_by?: string;
+  
+  /* Credit / Wallet */
+  credit?: {
+    limit: number;
+    balance: number;
+    totalRecharged: number;
+    totalUsed: number;
+    lastRechargeAt?: string | null;
+  };
 }
 
 /* ================= REQUEST STATUS ================= */

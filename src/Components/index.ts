@@ -17,3 +17,4 @@ export { default as Toast } from './Toast';
 export { default as AlertModal } from './AlertModal';
 export { default as ConnectionStatus } from './ConnectionStatus';
 export { default as MapConnectionStatus } from './MapConnectionStatus';
+export { default as LanguageSelector } from './LanguageSelector';

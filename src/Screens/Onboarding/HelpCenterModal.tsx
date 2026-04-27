@@ -25,13 +25,15 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 
-/* ================= FAQ DATA ================= */
-
+import { useTheme } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+
+/* ================= FAQ DATA ================= */
 
 /* ================= COMPONENT ================= */
 
 const FaqItem = ({ item, isExpanded, onPress, searchQuery }: any) => {
+  const { colors, fonts }: any = useTheme();
   const [contentHeight, setContentHeight] = useState(0);
   const { triggerHaptic } = useHaptic();
 
@@ -55,11 +57,11 @@ const FaqItem = ({ item, isExpanded, onPress, searchQuery }: any) => {
       const parts = text.split(regex);
       return parts.map((part, i) =>
         part.toLowerCase() === query.toLowerCase() ? (
-          <Text key={i} style={styles.highlightText}>
+          <Text key={i} style={[styles.highlightText, { color: colors.primary }]}>
             {part}
           </Text>
         ) : (
-          <Text key={i}>{part}</Text>
+          <Text key={i} style={{ color: colors.text }}>{part}</Text>
         )
       );
     } catch (e) {
@@ -77,14 +79,14 @@ const FaqItem = ({ item, isExpanded, onPress, searchQuery }: any) => {
           onPress();
         }}
       >
-        <Text style={[styles.faqQuestion, isExpanded && styles.faqQuestionActive]}>
+        <Text style={[styles.faqQuestion, { color: colors.text, ...fonts.medium }, isExpanded && { color: colors.primary }]}>
           {highlightText(item.q, searchQuery)}
         </Text>
         <Animated.View style={arrowStyle}>
           <Ionicons
             name="chevron-down"
             size={20}
-            color={isExpanded ? '#2563EB' : '#6B7280'}
+            color={isExpanded ? colors.primary : colors.text}
           />
         </Animated.View>
       </TouchableOpacity>
@@ -94,7 +96,7 @@ const FaqItem = ({ item, isExpanded, onPress, searchQuery }: any) => {
           style={styles.faqAnswerWrapper}
           onLayout={(e) => setContentHeight(e.nativeEvent.layout.height)}
         >
-          <Text style={styles.faqAnswer}>
+          <Text style={[styles.faqAnswer, { color: colors.text, opacity: 0.8, ...fonts.regular }]}>
             {highlightText(item.a, searchQuery)}
           </Text>
         </View>
@@ -104,6 +106,7 @@ const FaqItem = ({ item, isExpanded, onPress, searchQuery }: any) => {
 };
 
 const HelpCenterModal = ({ visible, onClose }: any) => {
+  const { colors, fonts, dark }: any = useTheme();
   const { t } = useTranslation();
   const { triggerHaptic } = useHaptic();
   const insets = useSafeAreaInsets();
@@ -270,13 +273,8 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
         {...props}
         disappearsOnIndex={-1}
         appearsOnIndex={0}
-        opacity={1}
-      >
-        <Animated.View
-          entering={FadeIn}
-          style={styles.backdropBlur}
-        />
-      </BottomSheetBackdrop>
+        opacity={0.6}
+      />
     ),
     []
   );
@@ -291,22 +289,22 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
     {
       labelKey: 'email_support',
       icon: 'mail',
-      color: '#1E3A8A',
-      bg: '#DBEAFE',
+      color: dark ? '#60A5FA' : '#1E3A8A',
+      bg: dark ? 'rgba(96, 165, 250, 0.15)' : '#DBEAFE',
       action: () => Linking.openURL('mailto:support@vdrive.com'),
     },
     {
       labelKey: 'whatsapp_support',
       icon: 'logo-whatsapp',
-      color: '#16A34A',
-      bg: '#DCFCE7',
+      color: dark ? '#4ADE80' : '#16A34A',
+      bg: dark ? 'rgba(74, 222, 128, 0.15)' : '#DCFCE7',
       action: () => Linking.openURL('https://wa.me/919876543210'),
     },
     {
       labelKey: 'call_support',
       icon: 'call',
-      color: '#2563EB',
-      bg: '#E0E7FF',
+      color: colors.primary,
+      bg: dark ? `${colors.primary}20` : '#E0E7FF',
       action: () => Linking.openURL('tel:+919876543210'),
     },
   ];
@@ -314,7 +312,7 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
   const renderFooter = useCallback(
     (props: any) => (
       <BottomSheetFooter {...props} bottomInset={0}>
-        <View style={[styles.footerContainer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+        <View style={[styles.footerContainer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, 20) }]}>
           <View style={styles.supportOptionsRow}>
             {supportOptions.map((item, index) => (
               <TouchableOpacity
@@ -326,10 +324,10 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.supportIconBox, { backgroundColor: item.bg }]}>
+                <View style={[styles.supportIconBox, { backgroundColor: item.bg, shadowColor: dark ? 'transparent' : '#000' }]}>
                   <Ionicons name={item.icon} size={22} color={item.color} />
                 </View>
-                <Text style={styles.supportLabel}>{t(item.labelKey)}</Text>
+                <Text adjustsFontSizeToFit numberOfLines={2} style={[styles.supportLabel, { color: colors.text, ...fonts.medium }]}>{t(item.labelKey)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -347,7 +345,7 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
       onChange={handleSheetChanges}
       backdropComponent={renderBackdrop}
       footerComponent={renderFooter}
-      backgroundStyle={styles.bottomSheetBackground}
+      backgroundStyle={[styles.bottomSheetBackground, { backgroundColor: colors.background }]}
       handleIndicatorStyle={styles.handleIndicator}
       keyboardBehavior="extend"
       keyboardBlurBehavior="restore"
@@ -358,15 +356,15 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.heading}>{t('help_center')}</Text>
-          <Text style={styles.subHeading}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.heading, { color: colors.text, ...fonts.bold }]}>{t('help_center')}</Text>
+          <Text style={[styles.subHeading, { color: colors.text, opacity: 0.6, ...fonts.regular }]}>
             {t('help_modal_subtitle')}
           </Text>
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={20} color="#9CA3AF" />
+        <View style={[styles.searchBox, { backgroundColor: dark ? colors.card : '#F9FAFB', borderColor: colors.border, shadowColor: dark ? 'transparent' : '#000' }]}>
+          <Ionicons name="search" size={20} color={colors.text} style={{ opacity: 0.5 }} />
           <BottomSheetTextInput
             placeholder={t('search_help')}
             value={search}
@@ -374,12 +372,12 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
               setSearch(text);
               setOpenIndex(null);
             }}
-            style={styles.searchInput}
-            placeholderTextColor="#9CA3AF"
+            style={[styles.searchInput, { color: colors.text, ...fonts.medium }]} 
+            placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : '#9CA3AF'}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={20} color={colors.text} style={{ opacity: 0.5 }} />
             </TouchableOpacity>
           )}
         </View>
@@ -396,7 +394,7 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
             return (
               <TouchableOpacity
                 key={idx}
-                style={[styles.categoryPill, isActive && styles.categoryActive]}
+                style={[styles.categoryPill, { backgroundColor: dark ? colors.card : '#E5E7EB' }, isActive && { backgroundColor: colors.primary }]}
                 onPress={() => {
                   triggerHaptic(HapticFeedbackTypes.selection);
                   setCategory(cat.key);
@@ -406,6 +404,7 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
                 <Text
                   style={[
                     styles.categoryText,
+                    { color: dark ? '#E5E7EB' : '#4B5563', ...fonts.medium },
                     isActive && styles.categoryTextActive,
                   ]}
                 >
@@ -419,14 +418,14 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
         {/* Contact Support Pinned to Footer */}
 
         {/* FAQ Section */}
-        <Text style={styles.sectionTitle}>{t('common_questions')}</Text>
+        <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.sectionTitle, { color: colors.text, ...fonts.bold }]}>{t('common_questions')}</Text>
 
-        <View style={styles.faqCard}>
+        <View style={[styles.faqCard, { backgroundColor: colors.card, borderColor: colors.border, shadowColor: dark ? 'transparent' : '#000' }]}>
           {filteredFaqs.length === 0 ? (
             <Animated.View style={styles.emptyState}>
-              <View style={styles.magnifyingGlassContainer}>
+              <View style={[styles.magnifyingGlassContainer, { backgroundColor: dark ? colors.background : '#F3F4F6' }]}>
                 <Animated.View style={magnifyingGlassStyle}>
-                  <Ionicons name="search" size={48} color="#D1D5DB" />
+                  <Ionicons name="search" size={48} color={dark ? 'rgba(255,255,255,0.2)' : "#D1D5DB"} />
                 </Animated.View>
                 <Animated.View style={[styles.floatingSparkle, sparkleStyle1]}>
                   <Ionicons name="sparkles" size={16} color="#60A5FA" />
@@ -435,8 +434,8 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
                   <Ionicons name="sparkles" size={12} color="#FBBF24" />
                 </Animated.View>
               </View>
-              <Text style={styles.emptyTitle}>{t('no_results_title')}</Text>
-              <Text style={styles.emptyText}>{t('no_results_desc', { search: search })}</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text, ...fonts.bold }]}>{t('no_results_title')}</Text>
+              <Text style={[styles.emptyText, { color: colors.text, opacity: 0.6, ...fonts.regular }]}>{t('no_results_desc', { search: search })}</Text>
             </Animated.View>
           ) : (
             filteredFaqs.map((item, index) => (
@@ -448,7 +447,7 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
                   onPress={() => toggleFAQ(index)}
                 />
                 {index < filteredFaqs.length - 1 && (
-                  <View style={styles.divider} />
+                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
                 )}
               </View>
             ))

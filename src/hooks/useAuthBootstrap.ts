@@ -94,7 +94,17 @@ export const useAuthBootstrap = () => {
     }, [reduxToken]);
 
     // Profile rehydration logic
-    const driverIdFromRedux = useSelector((state: RootState) => state.userSlice.user?.driverId);
+    const user = useSelector((state: RootState) => state.userSlice.user);
+    const driverIdFromRedux = user?.driverId;
+    const existingLanguage = user?.language;
+    
+    // 🛡️ Track current language in a Ref to avoid dependency loops in profile effects
+    const languageRef = useRef(existingLanguage);
+    useEffect(() => {
+        if (existingLanguage) {
+            languageRef.current = existingLanguage;
+        }
+    }, [existingLanguage]);
 
     // 🛡️ Log only once per mount/change to reduce console noise
     useEffect(() => {
@@ -184,7 +194,11 @@ export const useAuthBootstrap = () => {
             console.log('[AuthBootstrap] /auth/me normalized:', JSON.stringify(normalized));
 
             if (normalized.driverId) {
-                dispatch(setUser(normalized));
+                // 🛡️ Ensure we don't overwrite a locally selected language with a backend default during onboarding
+                dispatch(setUser({ 
+                    ...normalized, 
+                    language: languageRef.current || normalized.language 
+                }));
                 if (!driverIdFromRedux) {
                     storage.setDriverId(normalized.driverId);
                 }
@@ -206,7 +220,11 @@ export const useAuthBootstrap = () => {
             const normalized = normalizeProfile(data.data);
             console.log('[AuthBootstrap] ✅ Profile normalized → driverId:', normalized.driverId, '| status:', normalized.onboarding_status);
 
-            dispatch(setUser(normalized));
+            // 🛡️ Ensure we don't overwrite a locally selected language with a backend default during onboarding
+            dispatch(setUser({ 
+                ...normalized, 
+                language: languageRef.current || normalized.language 
+            }));
 
             if (normalized.driverId) {
                 storage.setDriverId(normalized.driverId);

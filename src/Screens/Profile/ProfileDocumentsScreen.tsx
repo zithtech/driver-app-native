@@ -12,6 +12,7 @@ import { useAlert } from '../../context/AlertContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
 
 /* ================= TYPES ================= */
 
@@ -116,6 +117,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+      <AppStatusBar />
       {/* ================= HEADER ================= */}
       <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>

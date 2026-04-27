@@ -1,6 +1,5 @@
 export const Auth_Nav = 'AuthNavigation';
 
-export const LanguageScreen_Nav = 'LanguageScreen';
 export const WelcomeScreen_Nav = 'WelcomeScreen';
 export const OTPScreen_Nav = 'OTPScreen';
 
@@ -49,4 +48,5 @@ export const LegalAgreements_Nav = 'LegalAgreementsScreen';
 export const NavigationScreen_Nav = 'NavigationScreen'; 
 export const ChatScreen_Nav = 'ChatScreen'; 
 export const Blocked_Nav = 'BlockedScreen'; 
+export const ReferEarn_Nav = 'ReferEarnScreen';
 

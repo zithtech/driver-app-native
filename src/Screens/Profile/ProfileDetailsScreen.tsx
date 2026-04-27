@@ -14,10 +14,12 @@ import {
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { useAppTheme } from '../../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import LinearGradient from 'react-native-linear-gradient';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { ms, vs } from '../../lib/scale';
 
 const CardSection = ({ title, icon, children, s, headerIconColor }: any) => (
@@ -43,6 +45,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
 
   const [isEditModalVisible, setEditModalVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const isFocused = useIsFocused();
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -410,7 +413,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={s.safeArea} edges={['bottom', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      {isFocused && <AppStatusBar forceLight={true} />}
       <Pressable onPress={() => navigation.goBack()} style={s.backButton}>
         <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
       </Pressable>

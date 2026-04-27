@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Animated, FlatList, Dimensions, TouchableOpacity, Platform, Modal, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppStatusBar from '../../Components/AppStatusBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
@@ -14,6 +15,7 @@ import {
 
 import HelpCenterModal from './HelpCenterModal';
 import OnboardingBackground from './components/OnboardingBackground';
+import { useTranslation } from 'react-i18next';
 
 import Page1 from './pages/Page1';
 import Page2 from './pages/Page2';
@@ -57,6 +59,7 @@ const Onboarding = ({ navigation }: any) => {
   const [helpVisible, setHelpVisible] = useState(false);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
   const { colors } = useTheme() as any;
+  const { t } = useTranslation();
 
   // Pulse animation for brand text
   const pulseValue = useSharedValue(1);
@@ -151,12 +154,15 @@ const Onboarding = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
+      <AppStatusBar forceDark />
       <OnboardingBackground>
         <View style={styles.container}>
           {/* HEADER */}
           <View style={styles.headerContainer}>
+
+
             <View style={styles.titleWrapper}>
-              <Text style={styles.title}>Welcome to </Text>
+              <Text style={styles.title}>{t('welcome_to', 'Welcome to ')}</Text>
               <AnimatedReanimated.View
                 entering={BounceIn.duration(1000).delay(200)}
                 style={styles.brandWrapper}
@@ -177,8 +183,10 @@ const Onboarding = ({ navigation }: any) => {
             <AnimatedReanimated.Text
               entering={FadeInDown.duration(800).delay(500)}
               style={styles.tagline}
+              adjustsFontSizeToFit
+              numberOfLines={2}
             >
-              Your trusted platform to earn, drive, and grow with confidence.
+              {t('onboarding_tagline', 'Your trusted platform to earn, drive, and grow with confidence.')}
             </AnimatedReanimated.Text>
 
             <AnimatedReanimated.View
@@ -191,7 +199,7 @@ const Onboarding = ({ navigation }: any) => {
                 onPress={() => setHelpVisible(true)}
               >
                 <Ionicons name="headset-outline" size={mS(14)} color="#4B5563" style={{ marginRight: hS(6) }} />
-                <Text style={styles.helpText}>Help Center</Text>
+                <Text style={styles.helpText}>{t('help_center', 'Help Center')}</Text>
               </TouchableOpacity>
             </AnimatedReanimated.View>
           </View>
@@ -263,8 +271,8 @@ const Onboarding = ({ navigation }: any) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
-                <Text style={styles.premiumButtonText}>
-                  Skip to Dashboard
+                <Text adjustsFontSizeToFit numberOfLines={1} style={styles.premiumButtonText}>
+                  {t('skip_to_dashboard', 'Skip to Dashboard')}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -305,12 +313,12 @@ const Onboarding = ({ navigation }: any) => {
                   </AnimatedReanimated.View>
                 </View>
 
-                <Text style={[styles.congratsTitle, { color: colors.text }]}>
-                  Registration Finished!
+                <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.congratsTitle, { color: colors.text }]}>
+                  {t('registration_finished', 'Registration Finished!')}
                 </Text>
 
-                <Text style={[styles.congratsSubtitle, { color: colors.text + '99' }]}>
-                  Your profile details are saved. The final step to start earning is to upload your documents for verification.
+                <Text adjustsFontSizeToFit numberOfLines={3} style={[styles.congratsSubtitle, { color: colors.text + '99' }]}>
+                  {t('registration_finished_desc', 'Your profile details are saved. The final step to start earning is to upload your documents for verification.')}
                 </Text>
 
                 <TouchableOpacity
@@ -320,8 +328,8 @@ const Onboarding = ({ navigation }: any) => {
                     navigation.navigate(DocumentScreen_Nav);
                   }}
                 >
-                  <Text style={styles.verifyButtonText}>
-                    Start Verification
+                  <Text adjustsFontSizeToFit numberOfLines={1} style={styles.verifyButtonText}>
+                    {t('start_verification', 'Start Verification')}
                   </Text>
                   <Ionicons name="arrow-forward" size={20} color="#FFF" />
                 </TouchableOpacity>

@@ -7,10 +7,11 @@ import {
   Dimensions,
   ScrollView,
   RefreshControl,
+  InteractionManager,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
@@ -237,6 +238,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
   // Get current user from Redux
   const user = useSelector((state: RootState) => state.userSlice.user);
   const driverId = user?.driverId || '';
+  const isFocused = useIsFocused();
 
   // RTK Query for performance data (keeping this for backend-only stats like Tier/Points)
   const { data, isLoading: isPerfLoading, refetch: refetchPerf, error } = useGetDriverPerformanceQuery(
@@ -270,7 +272,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
   const dateRange = getDatesForPeriod(period);
 
   // Fetch real ride activity for dynamic metrics
-  const { data: activityResult, isLoading: isActivityLoading, isFetching, refetch: refetchActivity } = useGetRideActivityQuery(
+  const { data: activityResult, isLoading: isActivityLoading, refetch: refetchActivity } = useGetRideActivityQuery(
     { 
       driverId, 
       from: dateRange.from, 
@@ -279,18 +281,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
     { skip: !driverId }
   );
 
-  // Sync data on focus
-  useFocusEffect(
-    useCallback(() => {
-      if (driverId) {
-        refetchPerf();
-        refetchActivity();
-      }
-      if (driverId && period === 'Today') {
-        refetchTodayOverview();
-      }
-    }, [driverId, period, refetchPerf, refetchActivity, refetchTodayOverview])
-  );
+  // Sync data on focus removed to prevent layout glitches on back navigation
 
   const isLoading = isPerfLoading || isActivityLoading;
 
@@ -339,9 +330,13 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
     getDynamicPerformanceInsights(dynamicMetrics, t),
   [dynamicMetrics, t]);
 
+  const [isManualRefresh, setIsManualRefresh] = useState(false);
+
   const onRefresh = useCallback(async () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
+    setIsManualRefresh(true);
     await Promise.all([refetchPerf(), refetchActivity()]);
+    setIsManualRefresh(false);
   }, [refetchPerf, refetchActivity, triggerHaptic]);
 
   const handlePeriodChange = (p: Period) => {
@@ -358,7 +353,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: isDark ? '#111827' : '#F9FAFB' }]}>
-      <AppStatusBar forceLight={!isDark} />
+      {isFocused && <AppStatusBar />}
       <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: isDark ? '#1F2937' : '#FFF' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
@@ -374,7 +369,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         onScroll={(e) => { scrollY.value = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={isFetching} onRefresh={onRefresh} tintColor="#2563EB" />
+          <RefreshControl refreshing={isManualRefresh} onRefresh={onRefresh} tintColor="#2563EB" />
         }
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
       >

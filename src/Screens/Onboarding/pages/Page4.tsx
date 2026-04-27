@@ -10,8 +10,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
+import { useTranslation } from 'react-i18next';
 
 const Page4 = () => {
+  const { t } = useTranslation();
+
   return (
     <ScrollView
       style={styles.container}
@@ -35,8 +38,10 @@ const Page4 = () => {
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
         style={styles.title}
+        adjustsFontSizeToFit
+        numberOfLines={1}
       >
-        Rules & Regulations
+        {t('ob_rules_regulations')}
       </Animated.Text>
 
       {/* RULE LIST */}
@@ -50,7 +55,7 @@ const Page4 = () => {
             size={mS(20)}
             color="#FFD54F"
           />
-          <Text style={styles.itemText}>Follow traffic rules</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemText}>{t('ob_rule_traffic')}</Text>
           <Icon
             name="check-circle"
             size={mS(18)}
@@ -64,8 +69,8 @@ const Page4 = () => {
             size={mS(20)}
             color="#64B5F6"
           />
-          <Text style={styles.itemText}>
-            Maintain professional behavior
+          <Text adjustsFontSizeToFit numberOfLines={2} style={styles.itemText}>
+            {t('ob_rule_professional')}
           </Text>
           <Icon
             name="check-circle"
@@ -80,8 +85,8 @@ const Page4 = () => {
             size={mS(20)}
             color="#64B5F6"
           />
-          <Text style={styles.itemText}>
-            Keep documents updated
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemText}>
+            {t('ob_rule_documents')}
           </Text>
           <Icon
             name="check-circle"
@@ -96,8 +101,8 @@ const Page4 = () => {
             size={mS(20)}
             color="#64B5F6"
           />
-          <Text style={styles.itemText}>
-            Drive safely and responsibly
+          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemText}>
+            {t('ob_rule_safe_drive')}
           </Text>
           <Icon
             name="check-circle"

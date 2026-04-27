@@ -35,6 +35,7 @@ import LinearGradient from 'react-native-linear-gradient';
 // import { interpolate, Extrapolate } from 'react-native-reanimated';
 
 import { useAppTheme } from '../../context/ThemeContext';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { useAlert } from '../../context/AlertContext';
 import { vS as vs, mS as ms } from '../../lib/scale';
 import { RootState } from '../../redux/store';
@@ -393,6 +394,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: bgColor }]} edges={['top']}>
+      <AppStatusBar />
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.delay(100).springify()}>
           <Header

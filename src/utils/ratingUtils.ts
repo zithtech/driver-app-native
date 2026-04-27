@@ -26,7 +26,7 @@ export const calculateAverageRating = (rides: any[]): number | null => {
   }
 
   const totalRating = ratedRides.reduce((sum: number, ride: any) => {
-    const rating = parseFloat(ride.rating || ride.user_rating);
+    const rating = parseFloat(ride.rating || ride.user_rating || ride.trip_rating);
     return sum + rating;
   }, 0);
 

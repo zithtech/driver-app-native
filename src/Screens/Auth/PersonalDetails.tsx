@@ -12,6 +12,7 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -160,6 +161,8 @@ const GenderOption = ({ option, index: _index, active, onPress, t }: any) => {
           color={active ? '#2563EB' : '#9CA3AF'}
         />
         <Text
+          adjustsFontSizeToFit
+          numberOfLines={1}
           style={[
             styles.genderText,
             { color: active ? '#2563EB' : '#9CA3AF' },
@@ -291,7 +294,7 @@ const PremiumWheelPicker = ({
 
 const PersonalDetails = ({ navigation }: any) => {
   const { colors } = useTheme();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showAlert } = useAlert();
   const dispatch = useDispatch();
   const { triggerHaptic } = useHaptic();
@@ -376,6 +379,8 @@ const PersonalDetails = ({ navigation }: any) => {
       full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
       date_of_birth: dobDate.toISOString(),
       gender,
+      referred_by: user?.referred_by,
+      language: user?.language || i18n.language || 'en', // Persist language selection to backend
     };
 
     // Only include email if user entered a valid one
@@ -452,7 +457,7 @@ const PersonalDetails = ({ navigation }: any) => {
     const yyyy = date.getFullYear();
     setDobText(`${dd}/${mm}/${yyyy}`);
     setDobDate(date);
-    setDobError(isAgeValid(date) ? null : t('must_be_18_plus'));
+    setDobError(isAgeValid(date) ? null : 'must_be_18_plus');
   };
 
   const handleDateTextChange = (text: string) => {
@@ -485,10 +490,10 @@ const PersonalDetails = ({ navigation }: any) => {
         parsedDate.getDate() === day
       ) {
         setDobDate(parsedDate);
-        setDobError(isAgeValid(parsedDate) ? null : t('must_be_18_plus'));
+        setDobError(isAgeValid(parsedDate) ? null : 'must_be_18_plus');
       } else {
         setDobDate(null);
-        setDobError(t('invalid_date'));
+        setDobError('invalid_date');
       }
     } else {
       setDobDate(null);
@@ -551,8 +556,20 @@ const PersonalDetails = ({ navigation }: any) => {
                 </View>
               </View>
               <View style={styles.titleContainer}>
-                <Text style={styles.title}>{t('personal_details')}</Text>
-                <Text style={styles.subtitle}>{t('tell_us_about_yourself')}</Text>
+                <Text 
+                  adjustsFontSizeToFit 
+                  numberOfLines={1} 
+                  style={styles.title}
+                >
+                  {t('personal_details')}
+                </Text>
+                <Text 
+                  adjustsFontSizeToFit 
+                  numberOfLines={2} 
+                  style={styles.subtitle}
+                >
+                  {t('tell_us_about_yourself')}
+                </Text>
               </View>
             </View>
 
@@ -626,7 +643,7 @@ const PersonalDetails = ({ navigation }: any) => {
                   placeholder={t('dob_placeholder', 'DD/MM/YYYY')}
                   keyboardType="numeric"
                   maxLength={10}
-                  error={dobError || undefined}
+                  error={dobError ? t(dobError) : undefined}
                   TailingAccessory={
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       {dobDate && isAgeValid(dobDate) ? <SuccessIcon /> : null}
@@ -672,24 +689,71 @@ const PersonalDetails = ({ navigation }: any) => {
                 pressed && styles.ctaPressed,
               ]}
             >
-              <Text style={styles.ctaText}>
+              <Text 
+                adjustsFontSizeToFit 
+                numberOfLines={1} 
+                style={styles.ctaText}
+              >
                 {(isSubmitting || isUpdating) ? <DotLoader /> : t('next_arrow')}
               </Text>
             </Pressable>
-            <Text style={styles.footerInfo}>
+            <Text 
+              adjustsFontSizeToFit 
+              numberOfLines={2} 
+              style={styles.footerInfo}
+            >
               <Ionicons name="shield-checkmark" size={12} color="#6B7280" /> {t('info_safe_verification')}
             </Text>
           </View>
         </KeyboardAvoidingView>
 
         {showDatePicker && (
-          <PremiumWheelPicker
-            tempDate={tempDate}
-            setShowDatePicker={setShowDatePicker}
-            setAndFormatDate={setAndFormatDate}
-            triggerHaptic={triggerHaptic}
-            t={t}
-          />
+          Platform.OS === 'ios' ? (
+            <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
+              <Pressable style={styles.modalOverlay} onPress={() => setShowDatePicker(false)} />
+              <Animated.View
+                entering={FadeInDown.springify().damping(15)}
+                exiting={FadeOut.duration(200)}
+                style={styles.pickerContainer}
+              >
+                <View style={styles.pickerHeader}>
+                  <Text style={styles.pickerTitle}>{t('date_of_birth')}</Text>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.doneBtn}>
+                    <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.doneGradient}>
+                      <Text style={styles.doneText}>{t('continue')}</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+                <DateTimePicker
+                  value={dobDate || new Date(2000, 0, 1)}
+                  mode="date"
+                  display="spinner"
+                  maximumDate={new Date()}
+                  onChange={(_event, selectedDate) => {
+                    if (selectedDate) {
+                      triggerHaptic(HapticFeedbackTypes.selection);
+                      setAndFormatDate(selectedDate);
+                    }
+                  }}
+                  style={{ height: 200, width: '100%' }}
+                />
+              </Animated.View>
+            </View>
+          ) : (
+            <DateTimePicker
+              value={dobDate || new Date(2000, 0, 1)}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (event.type === 'set' && selectedDate) {
+                  triggerHaptic(HapticFeedbackTypes.selection);
+                  setAndFormatDate(selectedDate);
+                }
+              }}
+            />
+          )
         )}
       </SafeAreaView>
     </View >
@@ -766,6 +830,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'left',
     marginTop: 4,
+    lineHeight: 22,
   },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.8)',

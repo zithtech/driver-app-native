@@ -7,6 +7,7 @@ import {
   TextInputProps,
   ViewStyle,
   TextStyle,
+  ScrollView,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { Styles } from '../lib/styles';
@@ -19,6 +20,7 @@ interface InputProps extends TextInputProps {
   LeadingAccessory?: React.ReactNode;
   TailingAccessory?: React.ReactNode;
   error?: string;
+  scrollable?: boolean;
 }
 
 const Input = forwardRef<TextInput, InputProps>(
@@ -32,6 +34,7 @@ const Input = forwardRef<TextInput, InputProps>(
       TailingAccessory,
       error,
       style: customStyle,
+      scrollable,
       ...textInputProps
     },
     ref
@@ -42,6 +45,8 @@ const Input = forwardRef<TextInput, InputProps>(
       <View style={[containerStyle, { backgroundColor: 'transparent' }]}>
         {label && (
           <Text
+            adjustsFontSizeToFit
+            numberOfLines={1}
             style={[
               fonts.medium,
               Styles.mb2,
@@ -66,18 +71,34 @@ const Input = forwardRef<TextInput, InputProps>(
           ]}
         >
           {LeadingAccessory}
-          <TextInput
-            ref={ref}
-            style={[
-              Styles.flex,
-              styles.textInput,
-              { color: colors.text, backgroundColor: 'transparent' },
-              customStyle,
-            ]}
-            placeholderTextColor={colors.border}
-            underlineColorAndroid="transparent"
-            {...textInputProps}
-          />
+          {scrollable ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={Styles.flex} contentContainerStyle={{ flexGrow: 1, alignItems: 'center' }}>
+              <TextInput
+                ref={ref}
+                style={[
+                  styles.textInput,
+                  { color: colors.text, backgroundColor: 'transparent', minWidth: '100%' },
+                  customStyle,
+                ]}
+                placeholderTextColor={colors.border}
+                underlineColorAndroid="transparent"
+                {...textInputProps}
+              />
+            </ScrollView>
+          ) : (
+            <TextInput
+              ref={ref}
+              style={[
+                Styles.flex,
+                styles.textInput,
+                { color: colors.text, backgroundColor: 'transparent' },
+                customStyle,
+              ]}
+              placeholderTextColor={colors.border}
+              underlineColorAndroid="transparent"
+              {...textInputProps}
+            />
+          )}
           {TailingAccessory}
         </View>
 

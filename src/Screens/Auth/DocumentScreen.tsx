@@ -22,6 +22,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setUser } from '../../redux/userSlice';
 import { ActivityIndicator, Modal, RefreshControl, ScrollView } from 'react-native';
 import AppStatusBar from '../../Components/AppStatusBar';
+import { useTranslation } from 'react-i18next';
 
 import {
   AadharCard,
@@ -37,76 +38,72 @@ import {
 
 /* ================= TYPES ================= */
 
-
-
 interface DocumentItem {
   key: 'Driving_License' | 'Pan_Card' | 'Aadhar_Card' | 'Police_Verification' | 'Profile_Selfie';
   backendType: 'driving_license' | 'pan_card' | 'aadhaar_card' | 'police_verification' | 'profile_selfie';
-  label: string;
+  labelKey: string;
   Logo: React.ComponentType<any>;
-  type: string;
-  hint: string;
+  typeKey: string;
+  hintKey: string;
   side: ('front' | 'back')[];
 }
-
-/* ================= DOCUMENT CONFIG ================= */
-
-const DOCUMENTS: DocumentItem[] = [
-  {
-    key: 'Driving_License',
-    backendType: 'driving_license',
-    label: 'Driving License',
-    Logo: DrivingLicence,
-    type: 'Front & Back',
-    hint: 'Must be valid and clearly visible',
-    side: ['front', 'back'],
-  },
-  {
-    key: 'Pan_Card',
-    backendType: 'pan_card',
-    label: 'PAN Card',
-    Logo: PanCard,
-    type: 'Front photo',
-    hint: 'Name should match profile',
-    side: ['front'],
-  },
-  {
-    key: 'Aadhar_Card',
-    backendType: 'aadhaar_card',
-    label: 'Aadhar Card',
-    Logo: AadharCard,
-    type: 'Front & Back',
-    hint: 'Avoid glare & blur',
-    side: ['front', 'back'],
-  },
-  {
-    key: 'Police_Verification',
-    backendType: 'police_verification',
-    label: 'Police Verification',
-    Logo: PoliceVerification,
-    type: 'Certificate',
-    hint: 'Recent document only',
-    side: ['front'],
-  },
-  {
-    key: 'Profile_Selfie',
-    backendType: 'profile_selfie',
-    label: 'Profile Selfie',
-    Logo: () => <Ionicons name="person-circle-outline" size={34} color="#1D4ED8" />,
-    type: 'Head-shot photo',
-    hint: 'Clear face without sunglasses',
-    side: ['front'],
-  },
-];
 
 /* ================= SCREEN ================= */
 
 const DocumentScreen = ({ navigation }: any) => {
-  const { colors, fonts } = useTheme();
-  // const insets = useSafeAreaInsets();
-  //  const { theme, isDark } = useAppTheme();
+  const { colors, fonts } = useTheme() as any;
   const { showAlert } = useAlert();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+
+  /* ================= DOCUMENT CONFIG ================= */
+  const DOCUMENTS: DocumentItem[] = useMemo(() => [
+    {
+      key: 'Driving_License',
+      backendType: 'driving_license',
+      labelKey: 'driving_license',
+      Logo: DrivingLicence,
+      typeKey: 'docs_front_back',
+      hintKey: 'docs_hint_dl',
+      side: ['front', 'back'],
+    },
+    {
+      key: 'Pan_Card',
+      backendType: 'pan_card',
+      labelKey: 'pan_card',
+      Logo: PanCard,
+      typeKey: 'docs_front_only',
+      hintKey: 'docs_hint_pan',
+      side: ['front'],
+    },
+    {
+      key: 'Aadhar_Card',
+      backendType: 'aadhaar_card',
+      labelKey: 'aadhar_card',
+      Logo: AadharCard,
+      typeKey: 'docs_front_back',
+      hintKey: 'docs_hint_aadhar',
+      side: ['front', 'back'],
+    },
+    {
+      key: 'Police_Verification',
+      backendType: 'police_verification',
+      labelKey: 'police_verification',
+      Logo: PoliceVerification,
+      typeKey: 'docs_certificate',
+      hintKey: 'docs_hint_police',
+      side: ['front'],
+    },
+    {
+      key: 'Profile_Selfie',
+      backendType: 'profile_selfie',
+      labelKey: 'profile_selfie',
+      Logo: () => <Ionicons name="person-circle-outline" size={34} color="#1D4ED8" />,
+      typeKey: 'docs_headshot',
+      hintKey: 'docs_hint_selfie',
+      side: ['front'],
+    },
+  ], []);
 
   const [submitDocuments, { isLoading: isSubmitting }] = useSubmitDocumentsMutation();
 
@@ -121,19 +118,16 @@ const DocumentScreen = ({ navigation }: any) => {
 
   /* ---------------- PROGRESS ---------------- */
 
-  // Merge Local Redux Uploads with Backend States
   const getDocState = React.useCallback((doc: DocumentItem) => {
-    // 1. Check Backend first — safely extract array from response
     const docsArray = Array.isArray(remoteDocs) ? remoteDocs : (remoteDocs?.data ?? []);
     const remoteDoc = docsArray.find((d: any) => d.document_type === doc.backendType);
     if (remoteDoc) {
       return {
-        status: remoteDoc.status, // 'pending', 'verified', 'rejected'
-        preview: remoteDoc.document_url?.front || remoteDoc.document_url, // simplify preview
+        status: remoteDoc.status, 
+        preview: remoteDoc.document_url?.front || remoteDoc.document_url,
         rejection_reason: remoteDoc.rejection_reason || remoteDoc.remarks,
       };
     }
-    // 2. Fallback to Local Redux
     const docs = user?.documents || {};
     return docs?.[doc.key] || {};
   }, [remoteDocs, user?.documents]);
@@ -143,7 +137,7 @@ const DocumentScreen = ({ navigation }: any) => {
       const state = getDocState(doc);
       return state.status === 'UPLOADED' || state.status === 'pending' || state.status === 'verified';
     }).length;
-  }, [getDocState]);
+  }, [getDocState, DOCUMENTS]);
 
   const progress = Math.round(
     (uploadedCount / DOCUMENTS.length) * 100
@@ -156,12 +150,10 @@ const DocumentScreen = ({ navigation }: any) => {
 
     try {
       await submitDocuments(user.driverId).unwrap();
-
-      // Update local state and navigate
       dispatch(setUser({ onboarding_status: 'DOCS_SUBMITTED' }));
       showAlert({
-        title: 'Success',
-        message: 'Documents submitted for verification.',
+        title: t('success'),
+        message: t('docs_submit_success'),
         singleButton: true,
         icon: 'checkmark-circle-outline',
         onConfirm: () => {
@@ -170,10 +162,9 @@ const DocumentScreen = ({ navigation }: any) => {
       });
     } catch (error: any) {
       console.error('Failed to submit docs:', error);
-      // setIsSubmitting(false); // Assuming setIsSubmitting is part of a useState hook
       showAlert({
-        title: 'Submission Failed',
-        message: error?.data?.message || 'Please make sure all mandatory documents are uploaded.',
+        title: t('docs_submit_failed'),
+        message: error?.data?.message || t('docs_mandatory_error'),
         singleButton: true,
         icon: 'alert-circle-outline',
       });
@@ -192,274 +183,172 @@ const DocumentScreen = ({ navigation }: any) => {
       <Modal visible={isWaitingForAdmin} animationType="slide">
         <View style={styles.waitingContainer}>
           <Ionicons name="time-outline" size={80} color={colors.primary} />
-          <Text style={[fonts.bold, styles.waitingTitle]}>Documents Under Review</Text>
-          <Text style={[fonts.regular, styles.waitingText]}>
-            We have received your documents successfully. Our team is verifying your details. This process usually takes 24-48 hours.
+          <Text 
+            adjustsFontSizeToFit 
+            numberOfLines={1} 
+            style={[fonts.bold, styles.waitingTitle]}
+          >
+            {t('docs_under_review')}
           </Text>
-          <Button onPress={refetch} disabled={isFetching} style={{ width: '80%', marginTop: 30 }}>
-            {isFetching ? <ActivityIndicator color="#fff" /> : 'Refresh Status'}
+          <Text style={styles.waitingDesc}>
+            {t('docs_review_desc')}
+          </Text>
+          <Button 
+            style={{ width: '80%', marginTop: 30 }} 
+            onPress={() => navigation.replace(Dashboard_Nav)}
+          >
+            {t('skip_to_dashboard')}
           </Button>
         </View>
       </Modal>
 
-      <ScrollView
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={isFetching} onRefresh={refetch} />
-        }
+      <ScrollView 
+        contentContainerStyle={{ padding: 20 }}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
       >
-        <Text style={[fonts.regular, styles.step]}>
-          Step 4 of 4 • Documents
-        </Text>
-
-        <Text style={[fonts.bold, styles.title, { color: colors.primary }]}>
-          Upload documents
-        </Text>
-
-        <Text style={[fonts.regular, styles.subtitle]}>
-          Clear images help faster verification
-        </Text>
-
-        {/* Progress */}
-        <View style={styles.progressTrack}>
-          <View
-            style={[styles.progressFill, { width: `${progress}%` }]}
-          />
-        </View>
-
-        <Text style={styles.progressText}>
-          {uploadedCount} / {DOCUMENTS.length} uploaded
-        </Text>
-
-        {/* Document Cards */}
-        <View style={{ marginTop: 16, paddingBottom: 20 }}>
-          {DOCUMENTS.map(doc => {
-            const docData = getDocState(doc);
-            const status = docData.status || 'NONE';
-            const preview = docData.preview;
-            const rejectionReason = docData.rejection_reason;
-
-            const isUploadedLocal = status === 'UPLOADED';
-            const isPendingRemote = status === 'pending';
-            const isVerifiedRemote = status === 'verified';
-            const isRejectedRemote = status === 'rejected';
-
-            // If it's pending or verified, we lock it so user can't click
-            const isLocked = isPendingRemote || isVerifiedRemote;
-
-            // Re-upload logic
-            const showRed = isRejectedRemote;
-            const showGreen = isUploadedLocal || isPendingRemote || isVerifiedRemote;
-
-            return (
-              <TouchableOpacity
-                key={doc.key}
-                disabled={isLocked}
-                style={[
-                  styles.card,
-                  {
-                    borderColor: showRed ? '#DC2626' : showGreen ? '#2E7D32' : '#E5E7EB',
-                    opacity: isLocked ? 0.7 : 1,
-                  },
-                ]}
-                activeOpacity={0.85}
-                onPress={() =>
-                  navigation.navigate(DocumentUploadScreen_Nav, {
-                    label: doc.key,
-                    backendType: doc.backendType,
-                    side: doc.side,
-                  })
-                }
-              >
-                {/* ICON / PREVIEW */}
-                <View style={styles.iconWrap}>
-                  {preview ? (
-                    <Image
-                      source={{ uri: preview }}
-                      style={styles.preview}
-                    />
-                  ) : (
-                    <doc.Logo />
-                  )}
-                </View>
-
-                {/* TEXT */}
-                <View style={{ flex: 1 }}>
-                  <Text style={[fonts.medium, styles.docTitle, showRed && { color: '#DC2626' }]}>
-                    {doc.label} {isLocked && <Ionicons name="lock-closed" size={14} color="#9CA3AF" />}
-                  </Text>
-                  <Text style={[styles.docType, showRed && { color: '#DC2626' }]}>{doc.type}</Text>
-
-                  {showRed && rejectionReason ? (
-                    <Text style={styles.errorHint}>{rejectionReason}</Text>
-                  ) : (
-                    <Text style={styles.docHint}>{doc.hint}</Text>
-                  )}
-                </View>
-
-                {/* STATUS */}
-                <View style={styles.statusWrap}>
-                  <Ionicons
-                    name={
-                      isVerifiedRemote ? 'shield-checkmark' :
-                        showRed ? 'alert-circle' :
-                          showGreen ? 'checkmark-circle' : 'cloud-upload-outline'
-                    }
-                    size={22}
-                    color={
-                      showRed ? '#DC2626' :
-                        showGreen ? '#2E7D32' :
-                          colors.primary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: showRed ? '#DC2626' : showGreen ? '#2E7D32' : colors.primary },
-                    ]}
-                  >
-                    {isVerifiedRemote ? 'Verified' :
-                      isRejectedRemote ? 'Rejected' :
-                        isPendingRemote ? 'In Review' :
-                          isUploadedLocal ? 'Uploaded' : 'Upload'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Footer */}
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingTop: 10,
-          paddingBottom: 20,
-          backgroundColor: colors.background,
-          borderTopWidth: 1,
-          borderColor: colors.border + '22',
-        }}
-      >
-        <View style={styles.secureRow}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={16}
-            color={colors.border}
-          />
-          <Text style={styles.secureText}>
-            Your documents are encrypted and secure
+        <View style={{ marginBottom: 25 }}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, { fontSize: 28, color: colors.text }]}>
+            {t('docs_title')}
+          </Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 16, color: colors.text, opacity: 0.6, marginTop: 5 }}>
+            {t('docs_subtitle')}
           </Text>
         </View>
+
+        {/* PROGRESS BAR */}
+        <View style={styles.progressCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Text style={[fonts.medium, { color: colors.text }]}>
+              {uploadedCount} / {DOCUMENTS.length} {t('uploaded')}
+            </Text>
+            <Text style={[fonts.bold, { color: colors.primary }]}>{progress}%</Text>
+          </View>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: colors.primary }]} />
+          </View>
+        </View>
+
+        {/* LIST */}
+        {DOCUMENTS.map((doc) => {
+          const state = getDocState(doc);
+          const isDone = state.status === 'UPLOADED' || state.status === 'pending' || state.status === 'verified';
+          const isRejected = state.status === 'rejected' || state.status === 'REJECTED';
+
+          return (
+            <TouchableOpacity
+              key={doc.key}
+              onPress={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
+              style={[
+                styles.docItem,
+                { borderColor: isRejected ? '#F87171' : isDone ? '#10B981' : colors.border }
+              ]}
+            >
+              <View style={styles.docIconBox}>
+                <doc.Logo width={30} height={30} />
+              </View>
+
+              <View style={{ flex: 1, marginLeft: 15 }}>
+                <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, { fontSize: 16, color: colors.text }]}>
+                  {t(doc.labelKey)}
+                </Text>
+                <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 12, color: colors.text, opacity: 0.5 }}>
+                  {t(doc.typeKey)} • {t(doc.hintKey)}
+                </Text>
+
+                {isRejected && state.rejection_reason && (
+                  <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '600' }}>
+                    {t('rejected')}: {state.rejection_reason}
+                  </Text>
+                )}
+              </View>
+
+              <View style={[styles.statusBadge, { backgroundColor: isRejected ? '#FEE2E2' : isDone ? '#D1FAE5' : '#F3F4F6' }]}>
+                <Ionicons
+                  name={isRejected ? 'close-circle' : isDone ? 'checkmark-circle' : 'chevron-forward'}
+                  size={18}
+                  color={isRejected ? '#EF4444' : isDone ? '#10B981' : '#9CA3AF'}
+                />
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
         <Button
           disabled={!allUploaded || isSubmitting}
+          loading={isSubmitting}
           onPress={handleSubmit}
+          style={{ marginTop: 20, height: 56, borderRadius: 16 }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : 'Verify Documents'}
+          {t('submit_for_verification')}
         </Button>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 export default DocumentScreen;
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  step: { fontSize: 12, opacity: 0.6, marginBottom: 6 },
-  title: { fontSize: 24 },
-  subtitle: { fontSize: 14, opacity: 0.7, marginBottom: 16 },
-
-  progressTrack: {
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: '#E5E7EB',
+  progressCard: {
+    padding: 15,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  progressBarBg: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
     overflow: 'hidden',
   },
-  progressFill: {
+  progressBarFill: {
     height: '100%',
-    backgroundColor: '#1D4ED8',
+    borderRadius: 4,
   },
-
-  progressText: {
-    fontSize: 13,
-    marginTop: 6,
-    opacity: 0.7,
+  docItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 15,
+    borderWidth: 1,
   },
-
+  docIconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    backgroundColor: '#F3F7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   waitingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 24,
+    padding: 30,
+    backgroundColor: '#FFFFFF',
   },
-
   waitingTitle: {
-    fontSize: 22,
+    fontSize: 24,
     marginTop: 20,
-    marginBottom: 10,
     textAlign: 'center',
+    color: '#111827',
   },
-
-  waitingText: {
-    fontSize: 15,
+  waitingDesc: {
+    fontSize: 16,
     textAlign: 'center',
-    color: '#6B7280',
-    lineHeight: 22,
-  },
-
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 12,
-    backgroundColor: '#fff',
-  },
-
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    overflow: 'hidden',
-  },
-
-  preview: {
-    width: '100%',
-    height: '100%',
-  },
-
-  docTitle: { fontSize: 15 },
-  docType: { fontSize: 13, opacity: 0.7 },
-  docHint: { fontSize: 12, opacity: 0.6 },
-
-  errorHint: {
-    fontSize: 12,
-    color: '#DC2626',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-
-  statusWrap: { alignItems: 'center' },
-  statusText: { fontSize: 11, marginTop: 2 },
-
-  secureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-
-  secureText: {
-    fontSize: 13,
-    marginLeft: 6,
-    opacity: 0.7,
+    color: '#4B5563',
+    marginTop: 15,
+    lineHeight: 24,
   },
 });

@@ -10,8 +10,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
+import { useTranslation } from 'react-i18next';
 
 const Page5 = () => {
+  const { t } = useTranslation();
+
   return (
     <ScrollView
       style={styles.container}
@@ -35,8 +38,10 @@ const Page5 = () => {
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
         style={styles.title}
+        adjustsFontSizeToFit
+        numberOfLines={1}
       >
-        How to Register
+        {t('ob_how_to_register')}
       </Animated.Text>
 
       {/* STEPS */}
@@ -49,9 +54,9 @@ const Page5 = () => {
             <Text style={styles.circleText}>1</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Enter Personal Details</Text>
-            <Text style={styles.itemSub}>
-              Fill in your basic information
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_personal')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+              {t('ob_step_personal_sub')}
             </Text>
           </View>
           <Icon name="user" size={mS(20)} color="#64B5F6" />
@@ -62,9 +67,9 @@ const Page5 = () => {
             <Text style={styles.circleText}>2</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Upload Documents</Text>
-            <Text style={styles.itemSub}>
-              License, ID, and vehicle docs
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_documents')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+              {t('ob_step_documents_sub')}
             </Text>
           </View>
           <Icon name="file-text" size={mS(20)} color="#64B5F6" />
@@ -75,9 +80,9 @@ const Page5 = () => {
             <Text style={styles.circleText}>3</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Complete Verification</Text>
-            <Text style={styles.itemSub}>
-              Quick verification process
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_verify')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+              {t('ob_step_verify_sub')}
             </Text>
           </View>
           <Icon name="check-circle" size={mS(20)} color="#64B5F6" />
@@ -88,9 +93,9 @@ const Page5 = () => {
             <Text style={styles.circleText}>4</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text style={styles.itemTitle}>Start Accepting Rides</Text>
-            <Text style={styles.itemSub}>
-              Go online and earn
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_accept')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+              {t('ob_step_accept_sub')}
             </Text>
           </View>
           <MCIcon
@@ -128,6 +133,7 @@ const styles = StyleSheet.create({
     height: vS(200),
   },
 
+  /* TITLE */
   title: {
     fontSize: mS(22),
     fontWeight: '700',

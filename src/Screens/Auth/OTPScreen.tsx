@@ -170,6 +170,7 @@ const OTPScreen = ({ navigation }: any) => {
         otp,
         device_id: deviceId,
         allow_new_device: true,
+        referred_by: user.referred_by, // Pass the referral code from Redux
       }).unwrap();
 
       // 🛡️ Robust Response Parsing: Handle both nested { data: { ... } } and flat response structures
@@ -216,6 +217,8 @@ const OTPScreen = ({ navigation }: any) => {
               isLoggedIn: true,
               isOnline: false,
               driverStatus: 'OFFLINE' as const,
+              // 🛡️ PRESERVE LANGUAGE: Prioritize locally selected language if backend has none or default
+              language: user?.language || responseData.userData?.language,
             })
           );
         }, 1500);
@@ -247,7 +250,7 @@ const OTPScreen = ({ navigation }: any) => {
     } finally {
       processingRef.current = false;
     }
-  }, [user?.phone_number, otp, deviceId, verifyOtp, t, buttonScale, successScale, successOpacity, iconRotate, triggerHaptic, triggerShake, dispatch]);
+  }, [user, otp, deviceId, verifyOtp, t, buttonScale, successScale, successOpacity, iconRotate, triggerHaptic, triggerShake, dispatch]);
 
 
   /* ================= AUTO-VERIFY ================= */
@@ -324,7 +327,11 @@ const OTPScreen = ({ navigation }: any) => {
           <Reanimated.View>
             {showSuccess ? (
               <Reanimated.View style={[{ alignItems: 'center' }, successTextStyle]}>
-                <Text style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: '#10B981' }]}>
+                <Text 
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                  style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: '#10B981' }]}
+                >
                   {t('otp_verified')}
                 </Text>
                 <Text style={{ marginTop: 12, opacity: 0.8, textAlign: 'center', color: colors.text, fontSize: 16 }}>
@@ -333,7 +340,11 @@ const OTPScreen = ({ navigation }: any) => {
               </Reanimated.View>
             ) : (
               <>
-                <Text style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: colors.text }]}>
+                <Text 
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                  style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: colors.text }]}
+                >
                   {t('verify_otp')}
                 </Text>
 
@@ -441,7 +452,11 @@ const OTPScreen = ({ navigation }: any) => {
                         disabled={otp.length !== 6 || isLoading}
                       >
                         {isLoading ? <ActivityIndicator color="#FFF" /> : (
-                          <Text style={[fonts.bold, { color: '#FFF', fontSize: 18 }]}>
+                          <Text 
+                            adjustsFontSizeToFit
+                            numberOfLines={1}
+                            style={[fonts.bold, { color: '#FFF', fontSize: 18 }]}
+                          >
                             {t('verify_continue')}
                           </Text>
                         )}
@@ -455,7 +470,11 @@ const OTPScreen = ({ navigation }: any) => {
                     {canResend ? (
                       <TouchableOpacity onPress={handleResend} disabled={isResending} style={styles.resendButton}>
                         <MaterialCommunityIcons name="refresh" size={20} color={colors.primary} style={{ marginRight: 6 }} />
-                        <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}>
+                        <Text 
+                          adjustsFontSizeToFit
+                          numberOfLines={1}
+                          style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}
+                        >
                           {isResending ? t('sending') : t('resend_otp')}
                         </Text>
                       </TouchableOpacity>
@@ -574,11 +593,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   disclaimerText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#6B7280',
     marginLeft: 6,
     textAlign: 'left',
     opacity: 0.8,
+    flexShrink: 1,
   },
   errorText: {
     color: '#EF4444',
@@ -621,8 +641,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 13,
     color: '#6B7280',
-    lineHeight: 20,
-    paddingHorizontal: 20,
+    lineHeight: 22,
+    paddingHorizontal: 16,
   },
   lockoutCard: {
     backgroundColor: '#EF444410',

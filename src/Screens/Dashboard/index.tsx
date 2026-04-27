@@ -17,7 +17,7 @@ import {
 import { calculateAverageRating } from '../../utils/ratingUtils';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, NavigationProp, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, NavigationProp, useFocusEffect, useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -53,6 +53,8 @@ import TodayOverview from './dashComponents/TodayOverview';
 import RechargeCard from './dashComponents/SubscriptionCard';
 import SettingsModal from './dashComponents/SettingsModal';
 import RideAlertCard from './dashComponents/RideAlertCard';
+import AssignedRideCard from './dashComponents/AssignedRideCard';
+import { TripStatus } from '../../types/trip';
 import SwipeButton from './dashComponents/SwipeButton';
 import DashboardSkeleton from './dashComponents/DashboardSkeleton';
 import RecentActivity from './dashComponents/RecentActivity';
@@ -63,6 +65,7 @@ import ConfirmationModal from '../../Components/ConfirmationModal';
 import { parseOnlineTimeToSeconds, formatOnlineTime } from '../../utils/timeUtils';
 import socketService from '../../service/socketService';
 import RatingReceivedModal from '../../Components/RatingReceivedModal';
+import AppStatusBar from '../../Components/AppStatusBar';
 import { setLastTripRating } from '../../redux/rideSlice';
 import axiosInstance from '../../api/axiosInstance';
 // Use RideItem from the hook
@@ -76,6 +79,7 @@ import axiosInstance from '../../api/axiosInstance';
 const DriverDashboard = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
   const { t } = useTranslation();
   const { theme, isDark } = useAppTheme();
   const user = useSelector((state: RootState) => state.userSlice?.user);
@@ -449,6 +453,7 @@ const DriverDashboard = () => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
+      {isFocused && <AppStatusBar />}
       <View style={{ zIndex: 100 }}>
         {/* ── FIXED HEADER ── */}
         <DashboardProfileHeader
@@ -582,25 +587,40 @@ const DriverDashboard = () => {
               contentContainerStyle={styles.rideScrollContent}
               showsVerticalScrollIndicator={false}
             >
-              {rideQueue.map((item, index) => (
-                <RideAlertCard
-                  key={item.id || `ride-${index}`}
-                  item={item}
-                  onAccept={async () => {
-                    try {
-                      await acceptTripApi({ tripId: item.trip_id.toString(), driverId: user?.driverId || '' }).unwrap();
-                      setAcceptedRide(item);
-                      acceptRide(item.id);
-                      dispatch(setDriverStatus(item.booking_type === 'SCHEDULED' ? 'HAS_UPCOMING_SCHEDULED' : 'ON_TRIP'));
-                      refetchScheduled();
-                      setShowConfirmModal(true);
-                    } catch (e: any) {
-                      showAlert('Cannot Accept Ride', e?.data?.message || 'Failed to accept trip.', { icon: 'close-circle-outline', isDestructive: true });
-                    }
-                  }}
-                  onReject={() => rejectRide(item.id)}
-                />
-              ))}
+              {rideQueue.map((item, index) => {
+                const onAccept = async () => {
+                  try {
+                    await acceptTripApi({ tripId: item.trip_id.toString(), driverId: user?.driverId || '' }).unwrap();
+                    setAcceptedRide(item);
+                    acceptRide(item.id);
+                    dispatch(setDriverStatus(item.booking_type === 'SCHEDULED' ? 'HAS_UPCOMING_SCHEDULED' : 'ON_TRIP'));
+                    refetchScheduled();
+                    setShowConfirmModal(true);
+                  } catch (e: any) {
+                    showAlert('Cannot Accept Ride', e?.data?.message || 'Failed to accept trip.', { icon: 'close-circle-outline', isDestructive: true });
+                  }
+                };
+
+                if (item.trip_status === 'ASSIGNED' || item.trip_status === TripStatus.ASSIGNED) {
+                  return (
+                    <AssignedRideCard
+                      key={item.id || `ride-${index}`}
+                      item={item}
+                      onAccept={onAccept}
+                      onReject={() => rejectRide(item.id)}
+                    />
+                  );
+                }
+
+                return (
+                  <RideAlertCard
+                    key={item.id || `ride-${index}`}
+                    item={item}
+                    onAccept={onAccept}
+                    onReject={() => rejectRide(item.id)}
+                  />
+                );
+              })}
             </ScrollView>
           </View>
         )
