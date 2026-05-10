@@ -97,6 +97,14 @@ const Page6 = () => {
           <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_app_updates_sub')}</Text>
         </View>
       </Animated.View>
+
+      {/* FOOTER TEXT */}
+      <Animated.Text
+        entering={FadeInDown.duration(600).delay(500)}
+        style={styles.footerText}
+      >
+        {t('guidelines_footer')}
+      </Animated.Text>
     </ScrollView>
   );
 };
@@ -117,24 +125,24 @@ const styles = StyleSheet.create({
   heroWrapper: {
     width: '100%',
     alignItems: 'center',
-    marginVertical: vS(18),
+    marginVertical: vS(8),
   },
 
   heroImage: {
     width: '100%',
-    height: vS(180),
+    height: vS(160),
   },
 
   /* TITLE */
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '700',
     color: '#111827',
     marginTop: vS(1),
   },
 
   desc: {
-    fontSize: mS(14),
+    fontSize: mS(12),
     color: '#4B5563',
     marginTop: vS(1),
     textAlign: 'center',
@@ -146,17 +154,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginTop: vS(6),
+    marginTop: vS(4),
   },
 
   card: {
     width: '48%',
     backgroundColor: '#FFFFFF',
-    borderRadius: mS(14),
-    paddingVertical: vS(2),
-    paddingHorizontal: hS(6),
+    borderRadius: mS(12),
+    paddingVertical: vS(4),
+    paddingHorizontal: hS(4),
     alignItems: 'center',
-    marginBottom: vS(2),
+    marginBottom: vS(6),
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
@@ -167,17 +175,26 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    fontSize: mS(13),
+    fontSize: mS(12),
     color: '#111827',
     fontWeight: '700',
-    marginTop: vS(2),
+    marginTop: vS(1),
     textAlign: 'center',
   },
 
   cardSub: {
-    fontSize: mS(11),
+    fontSize: mS(9),
     textAlign: 'center',
     color: '#6B7280',
-    marginTop: vS(2),
+    marginTop: vS(1),
+  },
+  footerText: {
+    fontSize: mS(11),
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: vS(12),
+    paddingHorizontal: hS(10),
+    lineHeight: mS(16),
+    fontStyle: 'italic',
   },
 });

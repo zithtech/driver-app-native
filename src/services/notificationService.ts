@@ -297,8 +297,8 @@ getInitialNotification(getMessaging())
 
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
-        // Emit after a short delay to ensure app navigation and listeners (like useRideFeed) are ready
-        if (isValidRideNotification(remoteMessage.data as Record<string, string>)) {
+        // Emit after a short delay to ensure app navigation and listeners are ready
+        if (isValidRideNotification(remoteMessage.data as Record<string, string>) || type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER') {
             setTimeout(() => {
                 // 🛡️ Prevent duplicate processing: Only emit if it hasn't been consumed directly by a hook
                 if (cachedInitialNotification) {
@@ -315,23 +315,38 @@ getInitialNotification(getMessaging())
 export function setupNotificationOpenedHandler(
     navigate: (screen: string, params?: any) => void,
 ) {
-    // 1. App is running in background, user taps notification
-    const unsubscribe = onNotificationOpenedApp(getMessaging(), remoteMessage => {
-        console.log('✅ [Background→Foreground] Notification opened:', JSON.stringify(remoteMessage.data));
+    const handleNotificationAction = (data: any) => {
+        const type = getNotificationType(data as Record<string, string>);
+        console.log('🔔 Handling notification action for type:', type);
 
-        const type = getNotificationType(remoteMessage.data as Record<string, string>);
-
-        if (isValidRideNotification(remoteMessage.data as Record<string, string>)) {
+        if (isValidRideNotification(data as Record<string, string>)) {
             // Emit so useRideFeed can verify the trip and show the card
-            globalEmitter.emit(EVENTS.NOTIFICATION_OPENED, remoteMessage.data);
+            globalEmitter.emit(EVENTS.NOTIFICATION_OPENED, data);
         } else if (type === 'SCHEDULED_REMINDER') {
             navigate('ScheduledRides');
+        } else if (type === 'PLAN_EXPIRY_REMINDER') {
+            navigate('RechargePlanScreen');
         }
-        // All other notification types: app just opens normally
+    };
+
+    // 1. App is running in background, user taps notification
+    const unsubscribeFCM = onNotificationOpenedApp(getMessaging(), remoteMessage => {
+        console.log('✅ [Background→Foreground] Notification opened:', JSON.stringify(remoteMessage.data));
+        handleNotificationAction(remoteMessage.data);
     });
 
-    // NOTE: getInitialNotification (cold-start) is handled at module-scope
-    // (line 259) to avoid race conditions. Do NOT call it again here.
+    // 2. App was cold-started (getInitialNotification emitted this via globalEmitter)
+    const unsubscribeEmitter = globalEmitter.on(EVENTS.NOTIFICATION_OPENED, (data) => {
+        const type = getNotificationType(data as Record<string, string>);
+        // Only handle non-ride notifications here to avoid conflict with useRideFeed
+        if (type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER') {
+            console.log('✅ [Emitter] Handling cold-start navigation for:', type);
+            handleNotificationAction(data);
+        }
+    });
 
-    return unsubscribe;
+    return () => {
+        unsubscribeFCM();
+        unsubscribeEmitter();
+    };
 }

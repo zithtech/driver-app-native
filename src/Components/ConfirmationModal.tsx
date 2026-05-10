@@ -6,9 +6,11 @@ import {
     Modal,
     TouchableOpacity,
     Dimensions,
+    Platform,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
+import { BlurView } from '@react-native-community/blur';
 import Animated, {
     FadeIn,
     FadeOut,
@@ -87,6 +89,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 style={styles.overlay}
                 onLayout={() => setLayoutReady(true)}
             >
+                {Platform.OS === 'ios' ? (
+                    <BlurView
+                        style={StyleSheet.absoluteFill}
+                        blurType="dark"
+                        blurAmount={10}
+                        reducedTransparencyFallbackColor="black"
+                    />
+                ) : (
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.7)' }]} />
+                )}
+
                 <TouchableOpacity
                     style={StyleSheet.absoluteFill}
                     activeOpacity={1}
@@ -95,37 +108,43 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 
                 {layoutReady && (
                     <Animated.View
-                        entering={ZoomIn.springify().mass(1).stiffness(100).damping(12)}
+                        entering={ZoomIn.springify().mass(1).stiffness(100).damping(15)}
                         exiting={ZoomOut.duration(200)}
                         style={[
                             styles.modalContainer,
                             {
-                                backgroundColor: theme.colors.card,
-                                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                                backgroundColor: isDark ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+                                borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)',
                             }
                         ]}
                     >
-                        {/* Icon Header */}
-                        <View style={[
-                            styles.iconWrapper,
-                            {
-                                backgroundColor: isDestructive 
-                                    ? 'rgba(239, 68, 68, 0.1)' 
-                                    : isDark ? 'rgba(255, 255, 255, 0.05)' : theme.colors.primary + '10',
-                            }
-                        ]}>
-                            <Ionicons
-                                name={icon}
-                                size={ms(32)}
-                                color={isDestructive ? '#EF4444' : theme.colors.primary}
-                            />
+                        {/* Status Icon with Glow */}
+                        <View style={styles.iconContainer}>
+                            <View style={[
+                                styles.iconGlow,
+                                { backgroundColor: isDestructive ? '#EF4444' : theme.colors.primary }
+                            ]} />
+                            <View style={[
+                                styles.iconWrapper,
+                                {
+                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                                    borderColor: isDestructive ? 'rgba(239, 68, 68, 0.2)' : 'rgba(37, 99, 235, 0.1)',
+                                    borderWidth: 1,
+                                }
+                            ]}>
+                                <Ionicons
+                                    name={icon}
+                                    size={ms(34)}
+                                    color={isDestructive ? '#EF4444' : theme.colors.primary}
+                                />
+                            </View>
                         </View>
 
                         {/* Content */}
                         <Text style={[styles.title, { color: theme.colors.text }]}>
                             {title}
                         </Text>
-                        <Text style={[styles.message, { color: isDark ? '#9CA3AF' : theme.colors.paragraphText }]}>
+                        <Text style={[styles.message, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
                             {message}
                         </Text>
 
@@ -138,7 +157,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                         styles.button,
                                         styles.cancelButton,
                                         {
-                                            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6',
+                                            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6',
                                         }
                                     ]}
                                 >
@@ -153,9 +172,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                 style={styles.confirmButtonWrapper}
                             >
                                 <LinearGradient
-                                    colors={isDestructive ? ['#EF4444', '#DC2626'] : ['#1e40af', '#1e3a8a']}
+                                    colors={isDestructive ? ['#EF4444', '#DC2626'] : ['#2563EB', '#1D4ED8']}
                                     start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
                                     style={styles.button}
                                 >
                                     <Text style={styles.confirmText}>
@@ -193,13 +212,33 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 20,
     },
+    iconContainer: {
+        width: ms(72),
+        height: ms(72),
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: vs(20),
+        position: 'relative',
+    },
+    iconGlow: {
+        position: 'absolute',
+        width: ms(40),
+        height: ms(40),
+        borderRadius: ms(20),
+        opacity: 0.15,
+        transform: [{ scale: 1.8 }],
+    },
     iconWrapper: {
         width: ms(64),
         height: ms(64),
         borderRadius: ms(32),
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: vs(16),
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
     },
     title: {
         fontSize: ms(20),

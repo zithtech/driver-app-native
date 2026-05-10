@@ -38,7 +38,7 @@ const ContactSupportScreen: React.FC = ({ navigation }: any) => {
     // const insets = useSafeAreaInsets();
 
     const handleCall = () => {
-        Linking.openURL('tel:1800123456');
+        Linking.openURL('tel:+919043522612');
     };
 
     const handleEmail = async () => {
@@ -61,7 +61,7 @@ const ContactSupportScreen: React.FC = ({ navigation }: any) => {
     };
 
     const handleWhatsApp = () => {
-        Linking.openURL('whatsapp://send?phone=919876543210&text=Hi, I need help with...');
+        Linking.openURL('whatsapp://send?phone=919043522612&text=Hi, I need help with...');
     };
 
     return (
@@ -90,7 +90,7 @@ const ContactSupportScreen: React.FC = ({ navigation }: any) => {
                         index={1}
                         icon="call-outline"
                         title={t('call_support', 'Call Support')}
-                        subtitle="1800-123-456"
+                        subtitle="+91 90435 22612"
                         color="#2563EB"
                         onPress={handleCall}
                         theme={theme}
@@ -108,7 +108,7 @@ const ContactSupportScreen: React.FC = ({ navigation }: any) => {
                         index={3}
                         icon="logo-whatsapp"
                         title={t('whatsapp_support', 'WhatsApp Support')}
-                        subtitle="+91 98765 43210"
+                        subtitle="+91 90435 22612"
                         color="#16A34A"
                         onPress={handleWhatsApp}
                         theme={theme}

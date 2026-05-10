@@ -47,29 +47,41 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'light' }
       <TouchableOpacity
         style={[
           styles.languageBtn,
-          { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }
+          { 
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            elevation: isDark ? 0 : 2,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+          }
         ]}
         onPress={() => {
           triggerHaptic(HapticFeedbackTypes.impactLight);
           setShowLanguageModal(true);
         }}
       >
-        <Text style={{ fontSize: 18, marginRight: 6 }}>{currentLangObj.icon}</Text>
-        <Text style={[fonts.bold, { color: isDark ? '#FFFFFF' : colors.text, fontSize: 14 }]}>
+        <Ionicons 
+          name="globe-outline" 
+          size={18} 
+          color={colors.primary} 
+          style={{ marginRight: 6 }} 
+        />
+        <Text style={[fonts.bold, { color: isDark ? '#FFFFFF' : colors.text, fontSize: 13, marginRight: 4 }]}>
           {currentLangObj.nativeName}
         </Text>
         <MaterialIcons
           name="keyboard-arrow-down"
-          size={20}
-          color={isDark ? '#FFFFFF' : colors.text}
-          style={{ marginLeft: 2 }}
+          size={18}
+          color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
         />
       </TouchableOpacity>
 
       <Modal
         visible={showLanguageModal}
         transparent={true}
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowLanguageModal(false)}
       >
         <TouchableOpacity
@@ -78,37 +90,68 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'light' }
           onPress={() => setShowLanguageModal(false)}
         >
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            {/* GRABBER */}
+            <View style={[styles.grabber, { backgroundColor: colors.text + '20' }]} />
+
             <View style={styles.modalHeader}>
-              <Text style={[fonts.bold, { fontSize: 18, color: colors.text }]}>{t('choose_language')}</Text>
-              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+              <View>
+                <Text style={[fonts.bold, { fontSize: 20, color: colors.text }]}>
+                  {t('choose_language')}
+                </Text>
+                <Text style={{ color: colors.text, opacity: 0.5, fontSize: 13, marginTop: 2 }}>
+                  {t('select_preferred_language')}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={[styles.closeBtn, { backgroundColor: colors.text + '10' }]} 
+                onPress={() => setShowLanguageModal(false)}
+              >
+                <Ionicons name="close" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
-            {languagesList.map((item) => (
-              <TouchableOpacity
-                key={item.value}
-                style={[
-                  styles.languageItem,
-                  {
-                    backgroundColor: i18n.language === item.value ? colors.primary + '15' : 'transparent',
-                    borderColor: i18n.language === item.value ? colors.primary : 'transparent'
-                  }
-                ]}
-                onPress={() => handleLanguageSelect(item.value)}
-              >
-                <View style={styles.langItemLeft}>
-                  <Text style={{ fontSize: 24, marginRight: 12 }}>{item.icon}</Text>
-                  <View>
-                    <Text style={[fonts.bold, { color: colors.text, fontSize: 16 }]}>{item.nativeName}</Text>
-                    <Text style={{ color: colors.text, opacity: 0.6, fontSize: 13 }}>{item.label}</Text>
-                  </View>
-                </View>
-                {i18n.language === item.value && (
-                  <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
+            <View style={{ marginTop: 8 }}>
+              {languagesList.map((item) => {
+                const isSelected = (savedLanguage || i18n.language) === item.value;
+                return (
+                  <TouchableOpacity
+                    key={item.value}
+                    style={[
+                      styles.languageItem,
+                      {
+                        backgroundColor: isSelected ? colors.primary + '10' : colors.text + '05',
+                        borderColor: isSelected ? colors.primary : 'transparent',
+                        borderWidth: 1.5,
+                      }
+                    ]}
+                    onPress={() => handleLanguageSelect(item.value)}
+                  >
+                    <View style={styles.langItemLeft}>
+                      <View style={[styles.iconWrapper, { backgroundColor: isSelected ? '#FFFFFF' : colors.text + '10' }]}>
+                        <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+                      </View>
+                      <View style={{ marginLeft: 14 }}>
+                        <Text style={[fonts.bold, { color: isSelected ? colors.primary : colors.text, fontSize: 16 }]}>
+                          {item.nativeName}
+                        </Text>
+                        <Text style={{ color: colors.text, opacity: 0.5, fontSize: 12 }}>
+                          {item.label}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[
+                      styles.radioCircle, 
+                      { borderColor: isSelected ? colors.primary : colors.text + '30' }
+                    ]}>
+                      {isSelected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            
+            {/* BOTTOM SPACING FOR SAFE AREA */}
+            <View style={{ height: 20 }} />
           </View>
         </TouchableOpacity>
       </Modal>
@@ -123,46 +166,80 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     width: '100%',
-    borderRadius: 24,
-    padding: 20,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  grabber: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 4,
   },
   languageItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 8,
-    borderWidth: 1.5,
+    padding: 12,
+    borderRadius: 20,
+    marginBottom: 12,
   },
   langItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  iconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  radioCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 });

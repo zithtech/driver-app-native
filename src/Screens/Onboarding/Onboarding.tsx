@@ -198,7 +198,7 @@ const Onboarding = ({ navigation }: any) => {
                 activeOpacity={0.8}
                 onPress={() => setHelpVisible(true)}
               >
-                <Ionicons name="headset-outline" size={mS(14)} color="#4B5563" style={{ marginRight: hS(6) }} />
+                <Ionicons name="headset-outline" size={mS(12)} color="#4B5563" style={{ marginRight: hS(4) }} />
                 <Text style={styles.helpText}>{t('help_center', 'Help Center')}</Text>
               </TouchableOpacity>
             </AnimatedReanimated.View>
@@ -254,7 +254,7 @@ const Onboarding = ({ navigation }: any) => {
               <Text style={styles.verificationButtonText}>
                 {t('verify_docs_to_start', 'Verify Documents to Start Earning')}
               </Text>
-              <Ionicons name="shield-checkmark" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+              <Ionicons name="shield-checkmark" size={15} color="#FFF" style={{ marginLeft: 8 }} />
             </TouchableOpacity>
           </View>
 
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
 
   /* HEADER */
   headerContainer: {
-    paddingTop: vS(10),
+    paddingTop: vS(8),
     paddingHorizontal: hS(20),
     alignItems: 'center',
     justifyContent: 'center',
@@ -364,29 +364,29 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '600',
     textAlign: 'center',
     color: '#4B5563',
   },
   brand: {
-    fontSize: mS(28),
+    fontSize: mS(22),
     fontWeight: '800',
     color: '#2563EB',
     textAlign: 'left', // Left align inside the fixed-width wrapper
   },
   subtitle: {
-    fontSize: mS(16),
+    fontSize: mS(14),
     textAlign: 'center',
     color: '#1F2937',
-    marginTop: vS(4),
+    marginTop: vS(2),
   },
   tagline: {
-    marginTop: vS(6),
+    marginTop: vS(4),
     textAlign: 'center',
     color: '#6B7280',
-    fontSize: mS(14),
-    marginBottom: vS(10),
+    fontSize: mS(12),
+    marginBottom: vS(6),
   },
   helpButton: {
     alignSelf: 'flex-end',
@@ -398,12 +398,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: hS(14),
     paddingVertical: vS(6),
     borderRadius: mS(20),
-    marginTop: vS(5),
+    marginTop: vS(4),
   },
   helpText: {
     color: '#4B5563',
     fontWeight: '600',
-    fontSize: mS(12),
+    fontSize: mS(10),
   },
 
   /* PAGES */
@@ -419,10 +419,10 @@ const styles = StyleSheet.create({
     marginTop: vS(5),
   },
   dot: {
-    width: mS(10),
-    height: mS(10),
-    borderRadius: mS(6),
-    marginHorizontal: hS(4),
+    width: mS(8),
+    height: mS(8),
+    borderRadius: mS(4),
+    marginHorizontal: hS(3),
   },
 
   /* BOTTOM */
@@ -507,9 +507,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: vS(16),
-    paddingHorizontal: hS(24),
-    borderRadius: mS(16),
-    width: '100%',
+    paddingHorizontal: hS(20),
+    borderRadius: mS(12),
+    width: 320,
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -519,8 +519,8 @@ const styles = StyleSheet.create({
   },
   verificationButtonText: {
     color: '#FFF',
-    fontSize: mS(16),
-    fontWeight: '700',
+    fontSize: mS(13),
+    fontWeight: '500',
   },
   premiumButtonWrapper: {
     marginTop: vS(12),

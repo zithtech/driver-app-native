@@ -44,6 +44,14 @@ const Page4 = () => {
         {t('ob_rules_regulations')}
       </Animated.Text>
 
+      {/* RULES DESCRIPTION / FOOTER */}
+      <Animated.Text
+        entering={FadeInDown.duration(600).delay(250)}
+        style={styles.footerText}
+      >
+        {t('rules_footer')}
+      </Animated.Text>
+
       {/* RULE LIST */}
       <Animated.View
         entering={FadeInDown.duration(600).delay(300)}
@@ -111,6 +119,7 @@ const Page4 = () => {
           />
         </View>
       </Animated.View>
+
     </ScrollView>
   );
 };
@@ -140,7 +149,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
@@ -156,9 +165,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingVertical: vS(9),
-    paddingHorizontal: hS(14),
-    borderRadius: mS(14),
+    paddingVertical: vS(8),
+    paddingHorizontal: hS(12),
+    borderRadius: mS(12),
     marginBottom: vS(8),
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -171,9 +180,18 @@ const styles = StyleSheet.create({
 
   itemText: {
     flex: 1,
-    marginHorizontal: hS(10),
-    fontSize: mS(13),
+    marginHorizontal: hS(8),
+    fontSize: mS(12),
     color: '#4B5563',
     fontWeight: '500',
+  },
+  footerText: {
+    fontSize: mS(11),
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: vS(4),
+    paddingHorizontal: hS(10),
+    lineHeight: mS(15),
+    marginBottom: vS(8),
   },
 });

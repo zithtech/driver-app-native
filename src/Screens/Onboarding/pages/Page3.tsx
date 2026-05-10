@@ -85,6 +85,14 @@ const Page3 = () => {
             <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_never_miss_day')}</Text>
           </View>
         </Animated.View>
+
+        {/* FOOTER TEXT */}
+        <Animated.Text
+          entering={FadeInDown.duration(600).delay(500)}
+          style={styles.footerText}
+        >
+          {t('recharge_footer')}
+        </Animated.Text>
       </View>
     </ScrollView>
   );
@@ -121,7 +129,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
@@ -130,10 +138,10 @@ const styles = StyleSheet.create({
 
   desc: {
     textAlign: 'center',
-    fontSize: mS(14),
+    fontSize: mS(12),
     color: '#4B5563',
-    marginTop: vS(2),
-    lineHeight: mS(20),
+    marginTop: vS(8),
+    lineHeight: mS(18),
   },
 
   /* GRID */
@@ -142,16 +150,16 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: vS(20),
+    marginTop: vS(12),
   },
 
   card: {
     width: '48%',
     backgroundColor: '#FFFFFF',
-    borderRadius: mS(14),
+    borderRadius: mS(12),
     alignItems: 'center',
-    paddingVertical: vS(3),
-    marginBottom: vS(8),
+    paddingVertical: vS(4),
+    marginBottom: vS(14),
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
@@ -162,17 +170,26 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    marginTop: vS(6),
-    fontSize: mS(13),
+    marginTop: vS(4),
+    fontSize: mS(12),
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
   },
 
   cardSub: {
+    fontSize: mS(9),
+    color: '#6B7280',
+    marginTop: vS(1),
+    textAlign: 'center',
+  },
+  footerText: {
     fontSize: mS(11),
     color: '#6B7280',
-    marginTop: vS(2),
     textAlign: 'center',
+    marginTop: vS(2),
+    paddingHorizontal: hS(10),
+    lineHeight: mS(16),
+    fontStyle: 'italic',
   },
 });

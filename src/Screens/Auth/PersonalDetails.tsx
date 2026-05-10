@@ -119,11 +119,7 @@ const DotLoader = () => {
 
 const GenderOption = ({ option, index: _index, active, onPress, t }: any) => {
   const scale = useSharedValue(1);
-  const icons = {
-    male: 'male-outline',
-    female: 'female-outline',
-    other: 'transgender-outline',
-  };
+
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -137,42 +133,54 @@ const GenderOption = ({ option, index: _index, active, onPress, t }: any) => {
     onPress();
   };
 
+  const icons = {
+    male: 'man-outline',
+    female: 'woman-outline',
+    other: 'ellipsis-horizontal-outline',
+  };
+
+  const getGenderColor = (opt: string, active: boolean) => {
+    if (!active) return '#6B7280';
+    if (opt === 'male') return '#2563EB';
+    if (opt === 'female') return '#DB2777';
+    return '#111827';
+  };
+
+  const getGenderBg = (opt: string, active: boolean) => {
+    if (!active) return 'transparent';
+    if (opt === 'male') return '#EFF6FF';
+    if (opt === 'female') return '#FDF2F8';
+    return '#FFFFFF';
+  };
+
+  const activeColor = getGenderColor(option, active);
+  const activeBg = getGenderBg(option, active);
+
   return (
     <Animated.View style={[{ flex: 1 }, animatedStyle]}>
       <TouchableOpacity
         activeOpacity={0.8}
         style={[
           styles.genderBtn,
-          active && styles.genderActive,
+          active && { backgroundColor: activeBg, shadowOpacity: 0.1, elevation: 2 },
         ]}
         onPress={handlePress}
       >
-        {active && (
-          <LinearGradient
-            colors={['#EFF6FF', '#DBEAFE']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-        )}
         <Ionicons
           name={icons[option as keyof typeof icons] as any}
-          size={24}
-          color={active ? '#2563EB' : '#9CA3AF'}
+          size={22}
+          color={activeColor}
         />
         <Text
           adjustsFontSizeToFit
           numberOfLines={1}
           style={[
             styles.genderText,
-            { color: active ? '#2563EB' : '#9CA3AF' },
+            { color: activeColor },
           ]}
         >
           {t(option)}
         </Text>
-        {active && (
-          <View style={styles.activeDot} />
-        )}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -418,6 +426,7 @@ const PersonalDetails = ({ navigation }: any) => {
       showAlert({
         title: t('update_failed'),
         message: error?.data?.message || t('failed_to_update_personal_details'),
+        confirmText: t('try_again'),
         singleButton: true,
         icon: 'alert-circle-outline',
       });
@@ -518,10 +527,7 @@ const PersonalDetails = ({ navigation }: any) => {
   return (
     <View style={styles.container}>
       <AppStatusBar />
-      <LinearGradient
-        colors={['#E0E7FF', '#F3F4F6', '#FFFFFF']}
-        style={StyleSheet.absoluteFill}
-      />
+
 
       <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
         {/* PROGRESS HEADER */}
@@ -529,47 +535,68 @@ const PersonalDetails = ({ navigation }: any) => {
           style={styles.progressHeader}
         >
           <View style={styles.progressContainer}>
-            <View style={[styles.progressBar, { width: '50%' }]} />
+            {[1, 2, 3, 4].map((i) => (
+              <View
+                key={i}
+                style={[
+                  styles.progressBar,
+                  { backgroundColor: i <= 2 ? '#2563EB' : '#E5E7EB' }
+                ]}
+              />
+            ))}
           </View>
-          <Text style={styles.progressText}>{t('step_2_of_4')}</Text>
+          <View style={styles.progressLabelRow}>
+            <Text style={styles.progressText}>
+              {t('step_profile_label')} <Text style={styles.activeProgressText}>• {t('step_2_of_4')}</Text>
+            </Text>
+          </View>
         </Animated.View>
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
         >
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[styles.scroll, { flexGrow: 1 }]}
             keyboardShouldPersistTaps="handled"
           >
             {/* HEADER SECTION */}
             <View style={styles.headerSection}>
-              <View style={styles.iconRow}>
-                <PremiumUserIcon size={64} />
-                <View style={styles.greetingContainer}>
-                  {firstName.trim().length > 0 && (
-                    <Text style={styles.greetingText}>
-                      {t('welcome_name', { name: firstName.trim() })}
-                    </Text>
-                  )}
+              <View style={styles.profileRow}>
+                <View style={styles.avatarContainer}>
+                  <LinearGradient
+                    colors={['#2563EB', '#60A5FA']}
+                    style={styles.avatarGradient}
+                  >
+                    <View style={styles.avatarInner}>
+                      <PremiumUserIcon size={44} />
+                    </View>
+                  </LinearGradient>
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="checkmark-sharp" size={10} color="#FFFFFF" />
+                  </View>
                 </View>
-              </View>
-              <View style={styles.titleContainer}>
-                <Text 
-                  adjustsFontSizeToFit 
-                  numberOfLines={1} 
-                  style={styles.title}
-                >
-                  {t('personal_details')}
-                </Text>
-                <Text 
-                  adjustsFontSizeToFit 
-                  numberOfLines={2} 
-                  style={styles.subtitle}
-                >
-                  {t('tell_us_about_yourself')}
-                </Text>
+                <View style={styles.greetingContent}>
+                  <View style={styles.helloRow}>
+                    <Text style={styles.greetingLabel}>{t('hello')}</Text>
+                    <View style={styles.divider} />
+                    <View style={styles.subtitleRow}>
+                      <Ionicons name="shield-checkmark" size={12} color="#10B981" style={{ marginRight: 4 }} />
+                      <Text
+                        adjustsFontSizeToFit
+                        numberOfLines={1}
+                        style={styles.smallSubtitle}
+                      >
+                        {t('tell_us_about_yourself')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.greetingName}>
+                    {firstName.trim().length > 0 ? firstName.trim() : t('driver')}
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -689,17 +716,17 @@ const PersonalDetails = ({ navigation }: any) => {
                 pressed && styles.ctaPressed,
               ]}
             >
-              <Text 
-                adjustsFontSizeToFit 
-                numberOfLines={1} 
+              <Text
+                adjustsFontSizeToFit
+                numberOfLines={1}
                 style={styles.ctaText}
               >
                 {(isSubmitting || isUpdating) ? <DotLoader /> : t('next_arrow')}
               </Text>
             </Pressable>
-            <Text 
-              adjustsFontSizeToFit 
-              numberOfLines={2} 
+            <Text
+              adjustsFontSizeToFit
+              numberOfLines={2}
               style={styles.footerInfo}
             >
               <Ionicons name="shield-checkmark" size={12} color="#6B7280" /> {t('info_safe_verification')}
@@ -777,68 +804,123 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   progressHeader: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   progressContainer: {
-    height: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 3,
-    overflow: 'hidden',
+    flexDirection: 'row',
+    gap: 6,
+    height: 4,
   },
   progressBar: {
+    flex: 1,
     height: '100%',
-    backgroundColor: '#2563EB',
-    borderRadius: 3,
+    borderRadius: 2,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
   },
   progressText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginTop: 8,
-    textAlign: 'right',
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  activeProgressText: {
+    color: '#2563EB',
   },
   scroll: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingBottom: 120,
   },
   headerSection: {
-    marginVertical: 4,
+    marginVertical: 12,
   },
-  iconRow: {
+  profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
-    gap: 12,
+    gap: 16,
+    marginBottom: 12,
   },
-  greetingContainer: {
-    height: 24,
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarGradient: {
+    padding: 2,
+    borderRadius: 28,
+  },
+  avatarInner: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 26,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#10B981',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
     justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
-  titleContainer: {
-    alignItems: 'flex-start',
+  greetingContent: {
+    flex: 1,
   },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#111827',
-    textAlign: 'left',
-  },
-  subtitle: {
-    fontSize: 15,
+  greetingLabel: {
+    fontSize: 14,
     color: '#6B7280',
-    textAlign: 'left',
-    marginTop: 4,
-    lineHeight: 22,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
+  helloRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  divider: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 6,
+  },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 4,
+  },
+  smallSubtitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '400',
+    flexShrink: 1,
+  },
+  greetingName: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#2563EB',
+    letterSpacing: -0.5,
+  },
+
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    paddingVertical: 0,
   },
+
   row: {
     flexDirection: 'row',
     gap: 12,
@@ -861,25 +943,27 @@ const styles = StyleSheet.create({
   },
   genderRow: {
     flexDirection: 'row',
-    gap: 10,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    padding: 4,
+    marginTop: 0,
   },
   genderBtn: {
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    flex: 1,
+    height: 46,
+    borderRadius: 16,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'center',
+    flexDirection: 'row',
     gap: 8,
-    overflow: 'hidden',
-    position: 'relative',
   },
   genderActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
-    shadowColor: '#2563EB',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-
+    shadowRadius: 4,
+    elevation: 3,
   },
   activeDot: {
     position: 'absolute',
@@ -891,8 +975,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
   },
   greetingText: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
   },
   genderText: {
     fontSize: 13,
@@ -903,13 +988,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 24,
+    padding: 16,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
   ctaButton: {
-    height: 58,
+    height: 56,
     borderRadius: 20,
     backgroundColor: '#000',
     justifyContent: 'center',

@@ -100,6 +100,14 @@ const Page1 = () => {
           <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_transparency')}</Text>
         </View>
       </Animated.View>
+
+      {/* FOOTER TEXT */}
+      <Animated.Text
+        entering={FadeInDown.duration(600).delay(600)}
+        style={styles.footerText}
+      >
+        {t('about_footer')}
+      </Animated.Text>
     </ScrollView>
   );
 };
@@ -125,23 +133,23 @@ const styles = StyleSheet.create({
 
   heroImage: {
     width: '100%',
-    height: vS(180),
+    height: vS(200),
   },
 
   /* TEXT */
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '700',
     color: '#111827',
-    marginTop: vS(6),
+    marginTop: vS(8),
   },
 
   desc: {
-    marginTop: vS(6),
-    fontSize: mS(14),
+    marginTop: vS(8),
+    fontSize: mS(12),
     color: '#4B5563',
     textAlign: 'center',
-    lineHeight: mS(20),
+    lineHeight: mS(18),
   },
 
   /* ICON ROW */
@@ -149,7 +157,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: vS(8),
+    marginTop: vS(12),
   },
 
   iconBox: {
@@ -158,7 +166,7 @@ const styles = StyleSheet.create({
   },
 
   iconLabel: {
-    fontSize: mS(12),
+    fontSize: mS(10),
     marginTop: vS(2),
     color: '#6B7280',
   },
@@ -174,7 +182,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: '48%',
-    height: vS(44),
+    height: vS(50),
     backgroundColor: '#FFFFFF',
     borderRadius: mS(12),
     alignItems: 'center',
@@ -190,15 +198,24 @@ const styles = StyleSheet.create({
   },
 
   cardValue: {
-    fontSize: mS(16),
+    fontSize: mS(14),
     fontWeight: '700',
     color: '#111827',
   },
 
   cardText: {
-    marginTop: vS(4),
-    fontSize: mS(11),
+    marginTop: vS(2),
+    fontSize: mS(9),
     color: '#6B7280',
     fontWeight: '600',
+  },
+  footerText: {
+    fontSize: mS(11),
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: vS(12),
+    paddingHorizontal: hS(10),
+    lineHeight: mS(16),
+    fontStyle: 'italic',
   },
 });

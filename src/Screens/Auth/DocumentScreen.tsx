@@ -274,7 +274,7 @@ const DocumentScreen = ({ navigation }: any) => {
           </View>
           <TouchableOpacity 
             style={styles.contactSupportBtn}
-            onPress={() => Linking.openURL('tel:+919876543210')}
+            onPress={() => Linking.openURL('tel:+919043522612')}
           >
             <Ionicons name="call-outline" size={18} color={colors.primary} />
             <Text style={[fonts.medium, { color: colors.primary, marginLeft: 8 }]}>
@@ -284,8 +284,28 @@ const DocumentScreen = ({ navigation }: any) => {
         </View>
       </Modal>
 
+      {/* PROGRESS HEADER */}
+      <View style={styles.progressHeader}>
+        <View style={styles.progressContainer}>
+          {[1, 2, 3, 4].map((i) => (
+            <View
+              key={i}
+              style={[
+                styles.progressBar,
+                { backgroundColor: i <= 4 ? '#2563EB' : '#E5E7EB' }
+              ]}
+            />
+          ))}
+        </View>
+        <View style={styles.progressLabelRow}>
+          <Text style={styles.progressText}>
+            {t('step_docs_label')} <Text style={styles.activeProgressText}>• {t('step_4_of_4')}</Text>
+          </Text>
+        </View>
+      </View>
+
       <ScrollView 
-        contentContainerStyle={{ padding: 20 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 10 }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
       >
         <View style={{ marginBottom: 25 }}>
@@ -312,18 +332,7 @@ const DocumentScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        {/* PROGRESS BAR */}
-        <View style={styles.progressCard}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-            <Text style={[fonts.medium, { color: colors.text }]}>
-              {uploadedCount} / {requiredDocuments.length} {t('uploaded')}
-            </Text>
-            <Text style={[fonts.bold, { color: colors.primary }]}>{progress}%</Text>
-          </View>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: colors.primary }]} />
-          </View>
-        </View>
+
 
         {/* LIST */}
         {DOCUMENTS.map((doc) => {
@@ -387,23 +396,36 @@ const DocumentScreen = ({ navigation }: any) => {
 export default DocumentScreen;
 
 const styles = StyleSheet.create({
-  progressCard: {
-    padding: 15,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+  progressHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
-  progressBarBg: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#F3F4F6',
-    overflow: 'hidden',
+  progressContainer: {
+    flexDirection: 'row',
+    gap: 6,
+    height: 4,
   },
-  progressBarFill: {
+  progressBar: {
+    flex: 1,
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 2,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  progressText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  activeProgressText: {
+    color: '#2563EB',
   },
   docItem: {
     flexDirection: 'row',

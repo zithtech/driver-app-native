@@ -44,6 +44,14 @@ const Page5 = () => {
         {t('ob_how_to_register')}
       </Animated.Text>
 
+      {/* REGISTRATION DESCRIPTION / FOOTER */}
+      <Animated.Text
+        entering={FadeInDown.duration(600).delay(250)}
+        style={styles.footerText}
+      >
+        {t('registration_footer')}
+      </Animated.Text>
+
       {/* STEPS */}
       <Animated.View
         entering={FadeInDown.duration(600).delay(300)}
@@ -105,6 +113,7 @@ const Page5 = () => {
           />
         </View>
       </Animated.View>
+
     </ScrollView>
   );
 };
@@ -135,7 +144,7 @@ const styles = StyleSheet.create({
 
   /* TITLE */
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '700',
     color: '#111827',
     marginTop: vS(2),
@@ -143,17 +152,17 @@ const styles = StyleSheet.create({
 
   list: {
     width: '100%',
-    marginTop: vS(10),
+    marginTop: vS(8),
   },
 
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingVertical: vS(6),
-    paddingHorizontal: hS(16),
-    borderRadius: mS(14),
-    marginBottom: vS(5),
+    paddingVertical: vS(4),
+    paddingHorizontal: hS(12),
+    borderRadius: mS(12),
+    marginBottom: vS(8),
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
@@ -164,9 +173,9 @@ const styles = StyleSheet.create({
   },
 
   circle: {
-    width: mS(28),
-    height: mS(28),
-    borderRadius: mS(28),
+    width: mS(24),
+    height: mS(24),
+    borderRadius: mS(24),
     backgroundColor: '#81C784',
     justifyContent: 'center',
     alignItems: 'center',
@@ -175,7 +184,7 @@ const styles = StyleSheet.create({
   circleText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: mS(12),
+    fontSize: mS(10),
   },
 
   itemContent: {
@@ -184,14 +193,23 @@ const styles = StyleSheet.create({
   },
 
   itemTitle: {
-    fontSize: mS(13),
+    fontSize: mS(12),
     fontWeight: '700',
     color: '#111827',
   },
 
   itemSub: {
+    fontSize: mS(9),
+    color: '#6B7280',
+    marginTop: vS(1),
+  },
+  footerText: {
     fontSize: mS(11),
     color: '#6B7280',
-    marginTop: vS(2),
+    textAlign: 'center',
+    marginTop: vS(4),
+    paddingHorizontal: hS(10),
+    lineHeight: mS(15),
+    marginBottom: vS(8),
   },
 });

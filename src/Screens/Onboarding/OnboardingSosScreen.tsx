@@ -281,7 +281,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
               <Ionicons name="call-outline" size={ms(18)} color={phone ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
                 style={[styles.textInput, { color: textPrimary }]}
-                placeholder={t('enter_phone') || 'e.g. 9876543210'}
+                placeholder={t('enter_phone') || 'e.g. 9043522612'}
                 placeholderTextColor={textMuted}
                 value={phone}
                 onChangeText={setPhone}

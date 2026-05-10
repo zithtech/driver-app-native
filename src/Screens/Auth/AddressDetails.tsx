@@ -96,21 +96,52 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const { triggerHaptic } = useHaptic();
   const user = useSelector((state: RootState) => state.userSlice.user);
 
+  const handleCityChange = (text: string) => {
+    setCity(text);
+    if (text.length > 1) {
+      const filtered = ALL_CITIES.filter(c => 
+        c.toLowerCase().includes(text.toLowerCase())
+      ).slice(0, 5); // Show top 5 suggestions
+      setCitySuggestions(filtered);
+    } else {
+      setCitySuggestions([]);
+    }
+  };
+
+  const handleStateChange = (text: string) => {
+    setStateName(text);
+    if (text.length > 0) {
+      const filtered = ALL_STATES.filter(s => 
+        s.toLowerCase().includes(text.toLowerCase())
+      ).slice(0, 5);
+      setStateSuggestions(filtered);
+    } else {
+      setStateSuggestions([]);
+    }
+  };
+
+  const selectCitySuggestion = (suggestion: string) => {
+    setCity(suggestion);
+    setCitySuggestions([]);
+    triggerHaptic(HapticFeedbackTypes.impactLight);
+  };
+
+  const selectStateSuggestion = (suggestion: string) => {
+    setStateName(suggestion);
+    setStateSuggestions([]);
+    triggerHaptic(HapticFeedbackTypes.impactLight);
+  };
   /* ---------------- STATE ---------------- */
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [stateName, setStateName] = useState('Tamil Nadu');
+  const [stateSuggestions, setStateSuggestions] = useState<string[]>([]);
   const [pincode, setPincode] = useState('');
-  const [showCityModal, setShowCityModal] = useState(false);
-  const [citySearch, setCitySearch] = useState('');
-  const [showStateModal, setShowStateModal] = useState(false);
-  const [stateSearch, setStateSearch] = useState('');
-
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /* ---------------- REFS (AUTO FOCUS) ---------------- */
-  const cityRef = useRef<any>(null);
-  const stateRef = useRef<any>(null);
+  /* ---------------- REFS ---------------- */
   const pinRef = useRef<any>(null);
 
   /* ---------------- SYNC WITH REDUX ---------------- */
@@ -130,6 +161,11 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
 
   const [updateDriver, { isLoading }] = useUpdateDriverMutation();
   const { getCurrentLocation, getAddressFromCoords, loading: locationLoading } = useLocation();
+
+  const isFormValid = street.trim().length > 0 && 
+                      city.trim().length > 0 && 
+                      stateName.trim().length > 0 && 
+                      pincode.trim().length === 6;
 
   const triggerShake = () => {
     triggerHaptic(HapticFeedbackTypes.notificationError);
@@ -174,31 +210,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     }
   };
 
-  /* ---------------- CITY SELECTION ---------------- */
-  const filteredCities = ALL_CITIES.filter(c =>
-    c.toLowerCase().includes(citySearch.toLowerCase())
-  );
 
-  const showCustomCityOption = citySearch.trim().length > 0 &&
-    !filteredCities.some(c => c.toLowerCase() === citySearch.toLowerCase());
-
-  const handleSelectCity = (selectedCity: string) => {
-    setCity(selectedCity);
-    setShowCityModal(false);
-    setCitySearch('');
-    triggerHaptic(HapticFeedbackTypes.selection);
-  };
-
-  const filteredStates = ALL_STATES.filter(s =>
-    s.toLowerCase().includes(stateSearch.toLowerCase())
-  );
-
-  const handleSelectState = (selectedState: string) => {
-    setStateName(selectedState);
-    setShowStateModal(false);
-    setStateSearch('');
-    triggerHaptic(HapticFeedbackTypes.selection);
-  };
 
 
   /* ---------------- SUBMIT ---------------- */
@@ -290,405 +302,225 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <AppStatusBar />
-      <LinearGradient
-        colors={['#E0E7FF', '#F3F4F6', '#FFFFFF']}
-        style={StyleSheet.absoluteFill}
-      />
+
 
       <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
+          {/* PROGRESS */}
+          <Animated.View
+            style={styles.progressHeader}
+          >
+            <View style={styles.progressContainer}>
+              {[1, 2, 3, 4].map((i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.progressBar,
+                    { backgroundColor: i <= 3 ? '#2563EB' : '#E5E7EB' }
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.progressLabelRow}>
+              <Text style={styles.progressText}>
+                {t('step_address_label', 'Address Details')} <Text style={styles.activeProgressText}>• {t('step_3_of_4')}</Text>
+              </Text>
+            </View>
+          </Animated.View>
+
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
-            {/* PROGRESS */}
-            <Animated.View entering={FadeInDown.delay(200).duration(800)} style={styles.progressHeader}>
-              <View style={styles.progressContainer}>
-                <View style={[styles.progressBar, { width: '75%' }]} />
-              </View>
-              <Text style={styles.progressText}>{t('step_3_of_4')}</Text>
-            </Animated.View>
 
-            {/* HEADER SECTION */}
-            <View style={styles.headerRow}>
-              <PremiumAddressIcon size={60} />
-              <View style={styles.titleContainer}>
-                <Text 
-                  adjustsFontSizeToFit 
-                  numberOfLines={1} 
-                  style={styles.title}
-                >
-                  {t('confirm_address_title')}
-                </Text>
-                <Text 
-                  adjustsFontSizeToFit 
-                  numberOfLines={2} 
-                  style={styles.subtitle}
-                >
-                  {t('confirm_address_subtitle')}
-                </Text>
-              </View>
+            {/* HEADER */}
+            <View style={styles.headerSection}>
+              <Text style={styles.title}>
+                {t('address_title_line1', 'What is your')}
+              </Text>
+              <Text style={styles.titleItalic}>
+                {t('address_title_line2', 'Home address?')}
+              </Text>
+              <Text style={styles.subtitle}>
+                {t('address_subtitle', "This helps us verify your profile and connect with us for security purposes.")}
+              </Text>
             </View>
 
-            <Animated.View entering={FadeInDown.delay(400).duration(800)}>
-              <Animated.View
-                style={[
-                  styles.card,
-                  animatedShakeStyle,
-                ]}
-              >
-                {/* PREMIUM LOCATION BUTTON */}
-                <Pressable
-                  onPress={handleGetCurrentLocation}
-                  disabled={locationLoading}
-                  onPressIn={() => {
-                    triggerHaptic(HapticFeedbackTypes.impactLight);
-                    locationScale.value = withSpring(0.96);
-                  }}
-                  onPressOut={() => {
-                    locationScale.value = withSpring(1);
-                  }}
-                >
-                  <Animated.View style={[
-                    styles.locationBtn,
-                    locationAnimatedStyle,
-                    { backgroundColor: colors.primary + '0A', borderColor: colors.primary + '20' }
-                  ]}>
-                    {locationLoading ? (
-                      <ActivityIndicator size="small" color={colors.primary} />
-                    ) : (
-                      <Ionicons name="locate" size={20} color={colors.primary} />
-                    )}
-                    <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.locationBtnText, { color: colors.primary }]}>
-                      {locationLoading ? t('fetching_location') : t('use_current_location')}
-                    </Text>
-                  </Animated.View>
-                </Pressable>
+            {/* LOCATION CARD */}
+            <Pressable
+              onPress={handleGetCurrentLocation}
+              disabled={locationLoading}
+              onPressIn={() => {
+                triggerHaptic(HapticFeedbackTypes.impactLight);
+                locationScale.value = withSpring(0.97);
+              }}
+              onPressOut={() => { locationScale.value = withSpring(1); }}
+            >
+              <Animated.View style={[styles.locationCard, locationAnimatedStyle]}>
+                <View style={styles.locationIconCircle}>
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color="#D97706" />
+                  ) : (
+                    <Ionicons name="locate" size={22} color="#D97706" />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.locationTitle}>{t('use_current_location')}</Text>
+                  <Text style={styles.locationSubtitle}>{t('auto_fills_gps', 'Auto-fills the form via GPS')}</Text>
+                </View>
+                <Text style={styles.locationAllow}>{locationLoading ? '' : t('allow', 'Allow')}</Text>
+              </Animated.View>
+            </Pressable>
 
+            {/* DIVIDER */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>{t('or_enter_manually', 'OR ENTER MANUALLY')}</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* FORM FIELDS */}
+            <Animated.View style={animatedShakeStyle}>
+              {/* STREET */}
+              <View style={styles.fieldBox}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="home-outline" size={17} color="#111827" />
+                  <Text style={styles.fieldLabel}>{t('street').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
+                </View>
                 <Input
-                  label={t('street')}
                   value={street}
                   scrollable={true}
                   autoCapitalize="words"
+                  placeholder="House no, building, street"
                   onChangeText={setStreet}
                   onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                  onBlur={() => {
-                    if (!street.trim()) triggerShake();
-                  }}
-                  LeadingAccessory={<Ionicons name="home-outline" size={20} color="#9CA3AF" />}
-                  TailingAccessory={street.trim().length > 0 ? <SuccessIcon /> : null}
+                  containerStyle={styles.flatInputContainer}
+                  inputContainerStyle={styles.flatInputInner}
+                  style={styles.flatInput}
+                  placeholderTextColor="#6B7280"
                 />
-                <Text style={styles.helper}>{t('street_helper')}</Text>
+              </View>
 
-                <View style={styles.mt4}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setCitySearch(city);
-                      setShowCityModal(true);
-                      triggerHaptic(HapticFeedbackTypes.impactLight);
-                    }}
-                  >
-                    <View pointerEvents="none">
-                      <Input
-                        label={t('city')}
-                        value={city}
-                        scrollable={true}
-                        placeholder={t('select_city')}
-                        editable={false}
-                        LeadingAccessory={<Ionicons name="business-outline" size={20} color="#9CA3AF" />}
-                        TailingAccessory={
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            {city.trim().length > 0 && <SuccessIcon />}
-                            <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{ marginLeft: 8 }} />
-                          </View>
-                        }
-                      />
+              {/* CITY / TOWN */}
+              <View style={[styles.fieldBox, { zIndex: 100 }]}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="business-outline" size={17} color="#111827" />
+                  <Text style={styles.fieldLabel}>{t('city').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
+                </View>
+                <Input
+                  value={city}
+                  scrollable={true}
+                  placeholder="e.g. Bengaluru"
+                  onChangeText={handleCityChange}
+                  onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
+                  containerStyle={styles.flatInputContainer}
+                  inputContainerStyle={styles.flatInputInner}
+                  style={styles.flatInput}
+                  placeholderTextColor="#6B7280"
+                />
+                
+                {citySuggestions.length > 0 && (
+                  <View style={styles.suggestionBox}>
+                    {citySuggestions.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.suggestionItem}
+                        onPress={() => selectCitySuggestion(item)}
+                      >
+                        <Text style={styles.suggestionText}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* STATE + PINCODE ROW */}
+              <View style={styles.row}>
+                <View style={[styles.fieldBox, { flex: 1, zIndex: 90 }]}>
+                  <View style={styles.fieldLabelRow}>
+                    <Ionicons name="map-outline" size={17} color="#111827" />
+                    <Text style={styles.fieldLabel}>{t('state').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
+                  </View>
+                  <Input
+                    value={stateName}
+                    scrollable={true}
+                    placeholder="State"
+                    onChangeText={handleStateChange}
+                    onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
+                    containerStyle={styles.flatInputContainer}
+                    inputContainerStyle={styles.flatInputInner}
+                    style={styles.flatInput}
+                    placeholderTextColor="#6B7280"
+                  />
+                  
+                  {stateSuggestions.length > 0 && (
+                    <View style={styles.suggestionBox}>
+                      {stateSuggestions.map((item, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.suggestionItem}
+                          onPress={() => selectStateSuggestion(item)}
+                        >
+                          <Text style={styles.suggestionText}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
-                  </TouchableOpacity>
-                  <Text style={styles.helper}>{t('city_helper')}</Text>
+                  )}
                 </View>
 
-                <View style={styles.mt4}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      setStateSearch(stateName);
-                      setShowStateModal(true);
-                      triggerHaptic(HapticFeedbackTypes.impactLight);
-                    }}
-                  >
-                    <View pointerEvents="none">
-                      <Input
-                        label={t('state')}
-                        value={stateName}
-                        scrollable={true}
-                        placeholder={t('select_state')}
-                        editable={false}
-                        LeadingAccessory={<Ionicons name="map-outline" size={20} color="#9CA3AF" />}
-                        TailingAccessory={
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            {stateName.trim().length > 0 && <SuccessIcon />}
-                            <Ionicons name="chevron-down" size={20} color="#9CA3AF" style={{ marginLeft: 8 }} />
-                          </View>
-                        }
-                      />
-                    </View>
-                  </TouchableOpacity>
-                  <Text style={styles.helper}>{t('state_helper')}</Text>
-                </View>
-
-                <View style={styles.mt4}>
+                <View style={[styles.fieldBox, { flex: 1 }]}>
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={[styles.hashIcon, { fontSize: 17, color: '#111827' }]}>#</Text>
+                    <Text style={styles.fieldLabel}>{t('pincode').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
+                  </View>
                   <Input
                     ref={pinRef}
-                    label={t('pincode')}
                     value={pincode}
                     keyboardType="number-pad"
                     maxLength={6}
+                    placeholder="e.g. 560001"
                     onChangeText={v => setPincode(v.replace(/[^0-9]/g, ''))}
                     onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                    onBlur={() => {
-                      if (pincode.length !== 6) triggerShake();
-                    }}
-                    LeadingAccessory={<Ionicons name="location-outline" size={20} color="#9CA3AF" />}
-                    TailingAccessory={pincode.length === 6 ? <SuccessIcon /> : null}
+                    containerStyle={styles.flatInputContainer}
+                    inputContainerStyle={styles.flatInputInner}
+                    style={styles.flatInput}
+                    placeholderTextColor="#6B7280"
                   />
                   {pincode.length > 0 && pincode.length < 6 && (
                     <Text style={styles.errorText}>{t('enter_valid_pincode')}</Text>
                   )}
                 </View>
-              </Animated.View>
+              </View>
             </Animated.View>
           </ScrollView>
 
           {/* FOOTER */}
-          <View style={[styles.footer, { backgroundColor: colors.background }]}>
+          <View style={styles.footer}>
             <TouchableOpacity
               onPress={handleSubmit}
-              disabled={isSubmitting || isLoading}
+              disabled={!isFormValid || isSubmitting || isLoading}
               activeOpacity={0.8}
               style={[
                 styles.ctaButton,
-                { backgroundColor: colors.primary, shadowColor: colors.primary },
-                (isSubmitting || isLoading) && styles.ctaDisabled,
+                isFormValid && { backgroundColor: colors.primary },
+                (!isFormValid || isSubmitting || isLoading) && styles.ctaDisabled,
               ]}
             >
-              <Text 
-                adjustsFontSizeToFit 
-                numberOfLines={1} 
-                style={styles.ctaText}
-              >
-                {isSubmitting || isLoading ? <DotLoader /> : t('complete_registration')}
+              <Text style={styles.ctaText}>
+                {isSubmitting || isLoading ? <DotLoader /> : t('verify_and_continue', 'Verify & Continue')}
               </Text>
             </TouchableOpacity>
-            <Text 
-              adjustsFontSizeToFit 
-              numberOfLines={2} 
-              style={styles.footerInfo}
-            >
-              <Ionicons name="shield-checkmark" size={12} color="#6B7280" /> {t('footer_encrypted')}
+            <Text style={styles.securityNote}>
+              {t('footer_encrypted', '🔒 Your details are encrypted and used for verification only')}
             </Text>
           </View>
         </KeyboardAvoidingView>
 
-        <Modal
-          visible={showCityModal}
-          animationType="slide"
-          transparent={true}
-          onShow={() => {
-            setTimeout(() => {
-              cityRef.current?.focus();
-            }, 600);
-          }}
-          onRequestClose={() => setShowCityModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <Animated.View
-              entering={FadeIn.duration(300)}
-              exiting={FadeOut.duration(200)}
-              style={styles.modalBackdrop}
-            >
-              <TouchableOpacity
-                activeOpacity={1}
-                style={{ flex: 1 }}
-                onPress={() => setShowCityModal(false)}
-              />
-            </Animated.View>
 
-            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHandle} />
-                <Text style={[styles.modalTitle, { color: colors.text, ...fonts.bold }]}>
-                  {t('select_city')}
-                </Text>
-              </View>
-
-              <View style={styles.searchContainer}>
-                <Input
-                  ref={cityRef}
-                  placeholder={t('search_city_placeholder')}
-                  value={citySearch}
-                  onChangeText={setCitySearch}
-                  LeadingAccessory={<Ionicons name="search" size={20} color="#9CA3AF" />}
-                  TailingAccessory={
-                    citySearch.length > 0 ? (
-                      <TouchableOpacity onPress={() => setCitySearch('')}>
-                        <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    ) : null
-                  }
-                />
-              </View>
-
-              <FlatList
-                data={filteredCities}
-                keyExtractor={(item) => item}
-                keyboardShouldPersistTaps="handled"
-                ListHeaderComponent={
-                  showCustomCityOption ? (
-                    <TouchableOpacity
-                      style={[styles.cityItem, { borderBottomColor: colors.border + '20' }]}
-                      onPress={() => handleSelectCity(citySearch)}
-                    >
-                      <View style={[styles.customCityIcon, { backgroundColor: colors.primary + '15' }]}>
-                        <Ionicons name="add" size={20} color={colors.primary} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.cityText, { color: colors.text, ...fonts.medium }]}>
-                          {t('use_custom_city')} "{citySearch}"
-                        </Text>
-                        <Text style={[styles.citySubtext, { color: colors.text + '60' }]}>
-                          {t('manual_entry')}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ) : null
-                }
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.cityItem, { borderBottomColor: colors.border + '20' }]}
-                    onPress={() => handleSelectCity(item)}
-                  >
-                    <Ionicons
-                      name={city === item ? 'radio-button-on' : 'radio-button-off'}
-                      size={20}
-                      color={city === item ? colors.primary : '#9CA3AF'}
-                    />
-                    <Text style={[
-                      styles.cityText,
-                      { color: colors.text },
-                      city === item ? fonts.bold : fonts.regular
-                    ]}>
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  !showCustomCityOption ? (
-                    <View style={styles.emptyContainer}>
-                      <Ionicons name="search-outline" size={48} color="#D1D5DB" />
-                      <Text style={[styles.emptyText, { color: colors.text + '60' }]}>
-                        {t('no_cities_found')}
-                      </Text>
-                    </View>
-                  ) : null
-                }
-                contentContainerStyle={{ paddingBottom: 40 }}
-              />
-            </View>
-          </View>
-        </Modal>
-
-        <Modal
-          visible={showStateModal}
-          animationType="slide"
-          transparent={true}
-          onShow={() => {
-            setTimeout(() => {
-              stateRef.current?.focus();
-            }, 600);
-          }}
-          onRequestClose={() => setShowStateModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <Animated.View
-              entering={FadeIn.duration(300)}
-              exiting={FadeOut.duration(200)}
-              style={styles.modalBackdrop}
-            >
-              <TouchableOpacity
-                activeOpacity={1}
-                style={{ flex: 1 }}
-                onPress={() => setShowStateModal(false)}
-              />
-            </Animated.View>
-
-            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-              <View style={styles.modalHeader}>
-                <View style={styles.modalHandle} />
-                <Text style={[styles.modalTitle, { color: colors.text, ...fonts.bold }]}>
-                  {t('select_state')}
-                </Text>
-              </View>
-
-              <View style={styles.searchContainer}>
-                <Input
-                  ref={stateRef}
-                  placeholder={t('search_state_placeholder')}
-                  value={stateSearch}
-                  onChangeText={setStateSearch}
-                  LeadingAccessory={<Ionicons name="search" size={20} color="#9CA3AF" />}
-                  TailingAccessory={
-                    stateSearch.length > 0 ? (
-                      <TouchableOpacity onPress={() => setStateSearch('')}>
-                        <Ionicons name="close-circle" size={20} color="#9CA3AF" />
-                      </TouchableOpacity>
-                    ) : null
-                  }
-                />
-              </View>
-
-              <FlatList
-                data={filteredStates}
-                keyExtractor={(item) => item}
-                keyboardShouldPersistTaps="handled"
-                initialNumToRender={20}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.cityItem, { borderBottomColor: colors.border + '20' }]}
-                    onPress={() => handleSelectState(item)}
-                  >
-                    <Ionicons
-                      name={stateName === item ? 'radio-button-on' : 'radio-button-off'}
-                      size={20}
-                      color={stateName === item ? colors.primary : '#9CA3AF'}
-                    />
-                    <Text style={[
-                      styles.cityText,
-                      { color: colors.text },
-                      stateName === item ? fonts.bold : fonts.regular
-                    ]}>
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  <View style={styles.emptyContainer}>
-                    <Ionicons name="search-outline" size={48} color="#D1D5DB" />
-                    <Text style={[styles.emptyText, { color: colors.text + '60' }]}>
-                      {t('no_results')}
-                    </Text>
-                  </View>
-                }
-                contentContainerStyle={{ paddingBottom: 40 }}
-              />
-            </View>
-          </View>
-        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -717,133 +549,220 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 120,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 10,
   },
   progressHeader: {
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    marginBottom: 4,
   },
   progressContainer: {
-    height: 6,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 8,
+    flexDirection: 'row',
+    gap: 6,
+    height: 4,
   },
   progressBar: {
+    flex: 1,
     height: '100%',
-    backgroundColor: '#2563EB',
-    borderRadius: 3,
+    borderRadius: 2,
+  },
+  progressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 6,
   },
   progressText: {
     fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '600',
-    textAlign: 'right',
+    fontWeight: '700',
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
+  activeProgressText: {
+    color: '#2563EB',
   },
-  titleContainer: {
-    flex: 1,
+  headerSection: {
+    marginBottom: 14,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '700',
     color: '#111827',
+    lineHeight: 32,
+  },
+  titleItalic: {
+    fontSize: 26,
+    fontWeight: '700',
+    fontStyle: 'italic',
+    color: '#111827',
+    lineHeight: 32,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-    lineHeight: 22,
-  },
-  card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 24,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: 22,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10
-  },
-  helper: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#9CA3AF',
-    marginTop: 2,
-    marginBottom: 2,
-    marginLeft: 4,
+    lineHeight: 19,
   },
-  mt4: {
-    marginTop: 12,
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 16,
+    gap: 12,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  ctaButton: {
-    height: 58,
+  locationIconCircle: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
+    backgroundColor: '#FEF3C7',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
+  },
+  locationTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  locationSubtitle: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 1,
+  },
+  locationAllow: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    letterSpacing: 1.5,
+  },
+  fieldBox: {
+    marginBottom: 18,
+    width: '100%',
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  requiredStar: {
+    color: '#D97706',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  hashIcon: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginTop: -1,
+  },
+  flatInputContainer: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    width: '100%',
+  },
+  flatInputInner: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 54,
+  },
+  flatInput: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '500',
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+  },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  ctaButton: {
+    height: 50,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#D1D5DB',
   },
   ctaDisabled: {
-    backgroundColor: '#9CA3AF',
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: '#D1D5DB',
+    opacity: 0.7,
   },
   ctaText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-  },
-  footerInfo: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 16,
   },
   errorText: {
     fontSize: 12,
     color: '#EF4444',
-    marginTop: 4,
+    marginTop: 2,
     marginLeft: 4,
+    marginBottom: 4,
   },
-  locationBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 16,
+  securityNote: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  suggestionBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginTop: 4,
     borderWidth: 1,
-    marginBottom: 20,
-    gap: 10,
+    borderColor: '#E5E7EB',
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-
   },
-  locationBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
   },
   loaderContainer: {
     flexDirection: 'row',

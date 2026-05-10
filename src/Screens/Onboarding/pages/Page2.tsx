@@ -83,6 +83,14 @@ const Page2 = () => {
           <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_all_rides_one')}</Text>
         </View>
       </Animated.View>
+
+      {/* FOOTER TEXT */}
+      <Animated.Text
+        entering={FadeInDown.duration(600).delay(500)}
+        style={styles.footerText}
+      >
+        {t('app_helps_footer')}
+      </Animated.Text>
     </ScrollView>
   );
 };
@@ -113,7 +121,7 @@ const styles = StyleSheet.create({
 
   /* TEXT */
   title: {
-    fontSize: mS(22),
+    fontSize: mS(18),
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
@@ -122,10 +130,10 @@ const styles = StyleSheet.create({
 
   desc: {
     textAlign: 'center',
-    fontSize: mS(14),
+    fontSize: mS(12),
     color: '#4B5563',
-    marginTop: vS(2),
-    lineHeight: mS(20),
+    marginTop: vS(12),
+    lineHeight: mS(18),
   },
 
   /* GRID */
@@ -134,7 +142,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: vS(10),
+    marginTop: vS(14),
   },
 
   card: {
@@ -142,8 +150,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: mS(14),
     alignItems: 'center',
-    paddingVertical: vS(2),
-    marginBottom: vS(6),
+    paddingVertical: vS(6),
+    marginBottom: vS(16),
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
@@ -155,16 +163,25 @@ const styles = StyleSheet.create({
 
   cardTitle: {
     marginTop: vS(2),
-    fontSize: mS(13),
+    fontSize: mS(12),
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
   },
 
   cardSub: {
+    fontSize: mS(9),
+    color: '#6B7280',
+    marginTop: vS(1),
+    textAlign: 'center',
+  },
+  footerText: {
     fontSize: mS(11),
     color: '#6B7280',
-    marginTop: vS(2),
     textAlign: 'center',
+    marginTop: vS(8),
+    paddingHorizontal: hS(10),
+    lineHeight: mS(16),
+    fontStyle: 'italic',
   },
 });
