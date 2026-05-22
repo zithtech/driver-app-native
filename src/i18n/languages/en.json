@@ -926,7 +926,6 @@
   "reason_rider_asked_to_cancel": "Rider asked to cancel",
   "reason_technical_issue": "Network / app issue",
   "reason_other": "Other",
-  "tell_us_more": "Tell us more",
   "reason_other_placeholder": "Describe your reason here...",
   "reason_min_length": "Please enter at least 5 characters",
   "reason_chip_traffic": "Heavy traffic ahead",
