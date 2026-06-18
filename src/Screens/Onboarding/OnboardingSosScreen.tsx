@@ -217,7 +217,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
               <Ionicons name="person-add" size={ms(18)} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.addCardTitle, { color: textPrimary }]}>{t('add_new_contact') || 'Add New Contact'}</Text>
+              <Text style={[styles.addCardTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('add_new_contact') || 'Add New Contact'}</Text>
             </View>
           </View>
 
@@ -237,7 +237,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
               <Ionicons name="phone-portrait-outline" size={ms(16)} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.importTitle, { color: textPrimary }]}>
+              <Text style={[styles.importTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t('import_from_contacts') || 'Import from Contacts'}
               </Text>
               <Text style={[styles.importSubtitle, { color: textMuted }]}>
@@ -250,13 +250,13 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
           {/* Divider with "or" */}
           <View style={styles.orDividerRow}>
             <View style={[styles.orDividerLine, { backgroundColor: dividerColor }]} />
-            <Text style={[styles.orDividerText, { color: textMuted }]}>{t('or') || 'or'}</Text>
+            <Text style={[styles.orDividerText, { color: textMuted }]} numberOfLines={1} adjustsFontSizeToFit>{t('or') || 'or'}</Text>
             <View style={[styles.orDividerLine, { backgroundColor: dividerColor }]} />
           </View>
 
           {/* Name Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('contact_name') || 'Contact Name'}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_name') || 'Contact Name'}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: name ? colors.primary : inputBorder }]}>
               <Ionicons name="person-outline" size={ms(18)} color={name ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -276,7 +276,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
 
           {/* Phone Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('phone_number') || 'Phone Number'}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('phone_number') || 'Phone Number'}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: phone ? colors.primary : inputBorder }]}>
               <Ionicons name="call-outline" size={ms(18)} color={phone ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -297,7 +297,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
 
           {/* Relationship Chips */}
           <View style={[styles.inputGroup, { marginBottom: vs(20) }]}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]}>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('relationship') || 'Relationship'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -377,7 +377,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
           style={[styles.continueSetupBtn, { backgroundColor: contactsAddedCount > 0 ? '#10B981' : colors.primary }]}
           onPress={handleContinue}
         >
-          <Text style={styles.continueSetupBtnText}>
+          <Text style={styles.continueSetupBtnText} numberOfLines={1} adjustsFontSizeToFit>
             {contactsAddedCount > 0 ? t('continue_setup') || 'Continue' : 'Skip for now'}
           </Text>
         </Pressable>

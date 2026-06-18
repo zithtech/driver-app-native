@@ -280,10 +280,10 @@ const PremiumWheelPicker = ({
         style={styles.pickerContainer}
       >
         <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle}>{t('date_of_birth')}</Text>
+          <Text style={styles.pickerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
           <TouchableOpacity onPress={handleConfirm} style={styles.doneBtn}>
             <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.doneGradient}>
-              <Text style={styles.doneText}>{t('continue')}</Text>
+              <Text style={styles.doneText} numberOfLines={1} adjustsFontSizeToFit>{t('continue')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -316,6 +316,7 @@ const PersonalDetails = ({ navigation }: any) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [alternateContact, setAlternateContact] = useState('');
 
   const [dobText, setDobText] = useState('');
   const [dobDate, setDobDate] = useState<Date | null>(null);
@@ -332,6 +333,7 @@ const PersonalDetails = ({ navigation }: any) => {
       if (user.first_name) setFirstName(user.first_name);
       if (user.last_name) setLastName(user.last_name);
       if (user.email) setEmail(user.email);
+      if (user.alternate_contact) setAlternateContact(user.alternate_contact);
       if (user.gender) setGender(user.gender as any);
       if (user.date_of_birth) {
         const date = new Date(user.date_of_birth);
@@ -360,7 +362,13 @@ const PersonalDetails = ({ navigation }: any) => {
 
   /* ---------- CONTINUE ---------- */
   const handleContinue = async () => {
-    if (!firstName.trim() || !lastName.trim() || !dobDate || !isAgeValid(dobDate)) {
+    if (
+      !firstName.trim() ||
+      !lastName.trim() ||
+      !dobDate ||
+      !isAgeValid(dobDate) ||
+      (alternateContact.trim() && !isValidAlternateContact(alternateContact.trim()))
+    ) {
       showAlert({
         title: t('validation_error'),
         message: t('please_fill_all_required_fields'),
@@ -389,6 +397,7 @@ const PersonalDetails = ({ navigation }: any) => {
       gender,
       referred_by: user?.referred_by,
       language: user?.language || i18n.language || 'en', // Persist language selection to backend
+      alternate_contact: alternateContact.trim() ? alternateContact.trim() : null,
     };
 
     // Only include email if user entered a valid one
@@ -440,10 +449,16 @@ const PersonalDetails = ({ navigation }: any) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
   };
 
+  const isValidAlternateContact = (text: string) => {
+    if (!text) return true;
+    return /^[0-9]{10}$/.test(text);
+  };
+
   const isFormValid =
     firstName.trim().length > 0 &&
     lastName.trim().length > 0 &&
     (email.trim() === '' || isValidEmail(email)) &&
+    (alternateContact.trim() === '' || isValidAlternateContact(alternateContact.trim())) &&
     dobDate !== null &&
     isAgeValid(dobDate);
 
@@ -661,8 +676,28 @@ const PersonalDetails = ({ navigation }: any) => {
                 />
               </View>
 
+              {/* ALTERNATIVE PHONE NUMBER */}
+              <View style={Styles.mt4}>
+                <Input
+                  label={t('alternative_phone_number_optional')}
+                  value={alternateContact}
+                  keyboardType="numeric"
+                  maxLength={10}
+                  onChangeText={(text) => setAlternateContact(text.replace(/[^0-9]/g, ''))}
+                  onFocus={() => {
+                    triggerHaptic(HapticFeedbackTypes.impactLight);
+                  }}
+                  onBlur={() => {
+                    if (alternateContact.trim() && !isValidAlternateContact(alternateContact)) triggerShake();
+                  }}
+                  placeholder={t('placeholder_alternative_phone')}
+                  error={alternateContact.length > 0 && !isValidAlternateContact(alternateContact) ? t('invalid_alternative_phone') : undefined}
+                  TailingAccessory={alternateContact.length > 0 && isValidAlternateContact(alternateContact) ? <SuccessIcon /> : null}
+                />
+              </View>
+
               {/* DOB */}
-              <Text style={styles.sectionTitle}>{t('date_of_birth')}</Text>
+              <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
               <View style={{ position: 'relative' }}>
                 <Input
                   value={dobText}
@@ -683,7 +718,7 @@ const PersonalDetails = ({ navigation }: any) => {
               </View>
 
               {/* GENDER */}
-              <Text style={styles.sectionTitle}>{t('gender')}</Text>
+              <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit>{t('gender')}</Text>
               <View style={styles.genderRow}>
                 {(['male', 'female', 'other'] as const).map((option, index) => (
                   <GenderOption
@@ -744,10 +779,10 @@ const PersonalDetails = ({ navigation }: any) => {
                 style={styles.pickerContainer}
               >
                 <View style={styles.pickerHeader}>
-                  <Text style={styles.pickerTitle}>{t('date_of_birth')}</Text>
+                  <Text style={styles.pickerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
                   <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.doneBtn}>
                     <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.doneGradient}>
-                      <Text style={styles.doneText}>{t('continue')}</Text>
+                      <Text style={styles.doneText} numberOfLines={1} adjustsFontSizeToFit>{t('continue')}</Text>
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>

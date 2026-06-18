@@ -28,6 +28,7 @@ import {
   ReferEarn_Nav,
 } from '../../Navigations/navigations';
 import ImageZoomModal from '../../Components/ImageZoomModal';
+import { resolveImageUrl } from '../../utils/imageUtils';
 
 /* ================= BANNER LIST ================= */
 const BANNERS = [
@@ -62,16 +63,8 @@ const ProfileScreen = ({ navigation }: any) => {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [showProfileImage, setShowProfileImage] = useState(false);
-  const [stableImgUrl, setStableImgUrl] = useState(user?.profile_picture);
 
-  // Sync stable image URL whenever it's valid
-  React.useEffect(() => {
-    if (user?.profile_picture && user.profile_picture.trim() !== '') {
-      setStableImgUrl(user.profile_picture);
-    }
-  }, [user?.profile_picture]);
-
-  // Reset error when image URL changes
+  // Reset error when the actual photo changes (e.g. new selfie uploaded)
   React.useEffect(() => {
     setImgError(false);
   }, [user?.profile_picture]);
@@ -137,14 +130,14 @@ const ProfileScreen = ({ navigation }: any) => {
             <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
           </Pressable>
 
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('my_profile')}</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_profile')}</Text>
 
           <Pressable
             style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#374151' }]}
             onPress={() => setShowHelpModal(true)}
           >
             <Ionicons name="headset-outline" size={18} color={isDark ? '#FFFFFF' : '#000'} />
-            <Text style={[styles.helpText, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('help')}</Text>
+            <Text style={[styles.helpText, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
           </Pressable>
         </View>
 
@@ -164,7 +157,7 @@ const ProfileScreen = ({ navigation }: any) => {
         <Pressable
           style={styles.avatarWrapper}
           onPress={() => {
-            if (stableImgUrl && !imgError) {
+            if (user?.profile_picture && !imgError) {
               setShowProfileImage(true);
             }
           }}
@@ -179,10 +172,10 @@ const ProfileScreen = ({ navigation }: any) => {
               })()}
             </Text>
 
-            {stableImgUrl && !imgError && (
+            {user?.profile_picture && !imgError && (
               <Image
                 source={{
-                  uri: stableImgUrl.startsWith('http') ? stableImgUrl : 'file://' + stableImgUrl,
+                  uri: resolveImageUrl(user.profile_picture),
                 }}
                 style={[styles.avatar, { position: 'absolute', top: 0, left: 0 }]}
                 fadeDuration={0}
@@ -303,7 +296,7 @@ const ProfileScreen = ({ navigation }: any) => {
       {showBannerPicker && (
         <View style={styles.overlay}>
           <View style={[styles.bannerModal, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('choose_banner')}</Text>
+            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('choose_banner')}</Text>
 
             <View style={styles.bannerGrid}>
               {BANNERS.map((img, index) => (
@@ -323,7 +316,7 @@ const ProfileScreen = ({ navigation }: any) => {
               style={styles.closeBtn}
               onPress={() => setShowBannerPicker(false)}
             >
-              <Text style={[styles.closeText, isDark && { color: '#60A5FA' }]}>{t('cancel')}</Text>
+              <Text style={[styles.closeText, isDark && { color: '#60A5FA' }]} numberOfLines={1} adjustsFontSizeToFit>{t('cancel')}</Text>
             </Pressable>
           </View>
         </View>
@@ -339,7 +332,7 @@ const ProfileScreen = ({ navigation }: any) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.helpModalContent, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.modalDragHandle, isDark && { backgroundColor: '#4B5563' }]} />
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('help_center_title') || 'Support & Services'}</Text>
+            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center_title') || 'Support & Services'}</Text>
 
             <View style={styles.helpMenu}>
               <HelpItem
@@ -392,7 +385,7 @@ const ProfileScreen = ({ navigation }: any) => {
               style={[styles.modalCloseBtn, isDark && { backgroundColor: '#374151' }]}
               onPress={() => setShowHelpModal(false)}
             >
-              <Text style={[styles.modalCloseBtnText, isDark && { color: '#FFFFFF' }]}>{t('close')}</Text>
+              <Text style={[styles.modalCloseBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
             </Pressable>
           </View>
         </View>
@@ -400,7 +393,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
       <ImageZoomModal
         visible={showProfileImage}
-        imageUris={stableImgUrl ? [stableImgUrl] : []}
+        imageUris={user?.profile_picture ? [resolveImageUrl(user.profile_picture) || ''] : []}
         onClose={() => setShowProfileImage(false)}
       />
 
@@ -416,7 +409,7 @@ const MenuItem = ({ icon, title, onPress, isDark }: any) => (
   <Pressable style={styles.menuItem} onPress={onPress}>
     <View style={styles.menuLeft}>
       <Ionicons name={icon} size={20} color={isDark ? '#FFFFFF' : '#000'} />
-      <Text style={[styles.menuText, { color: isDark ? '#FFFFFF' : '#111827' }]}>{title}</Text>
+      <Text style={[styles.menuText, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
     </View>
     <Ionicons name="chevron-forward" size={20} color={isDark ? '#6B7280' : '#9CA3AF'} />
   </Pressable>
@@ -439,7 +432,7 @@ const HelpItem = ({ icon, title, subtitle, color, colors, onPress, isDark }: any
       <Ionicons name={icon} size={22} color="#FFFFFF" />
     </LinearGradient>
     <View style={styles.helpTextContainer}>
-      <Text style={[styles.helpMenuText, isDark && { color: '#F3F4F6' }]}>{title}</Text>
+      <Text style={[styles.helpMenuText, isDark && { color: '#F3F4F6' }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
       {subtitle && <Text style={styles.helpMenuSubtitle}>{subtitle}</Text>}
     </View>
     <Ionicons name="chevron-forward" size={18} color={isDark ? '#4B5563' : '#D1D5DB'} />
@@ -453,8 +446,8 @@ const StatCard = ({ icon, iconColor, value, label, isDark, theme }: any) => (
     </View>
 
     <View style={styles.statTextWrap}>
-      <Text style={[styles.statValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>{value}</Text>
-      <Text style={[styles.statLabel, isDark && { color: '#9CA3AF' }]}>{label}</Text>
+      <Text style={[styles.statValue, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={[styles.statLabel, isDark && { color: '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
     </View>
   </View>
 );

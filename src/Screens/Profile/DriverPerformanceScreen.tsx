@@ -141,36 +141,82 @@ const StatCard = ({ label, value, icon, color, loading }: { label: string; value
 /**
  * Premium Tier Roadmap with Glassmorphism
  */
-const TierRoadmap = ({ currentPoints = 0, metrics }: { currentPoints: number; metrics: PerformanceMetrics | null }) => {
+const TierRoadmap = ({ period, metrics }: { period: 'Today' | 'Week' | 'Month'; metrics: PerformanceMetrics | null }) => {
   const { t } = useTranslation();
   const { isDark } = useAppTheme();
   
   const roadmap = useMemo(() => 
-    getTierRoadmapData(currentPoints, metrics, t), 
-  [currentPoints, metrics, t]);
+    getTierRoadmapData(period, metrics, t), 
+  [period, metrics, t]);
 
-  const { currentTier, nextTier, progress, tasks, ratingPlan } = roadmap;
+  const { currentTier, nextTier, progress, tasks, ratingPlan, ridesNeeded } = roadmap;
+
+  const tierUIConfig = useMemo(() => {
+    const name = currentTier.name.toUpperCase();
+    if (name.includes('SILVER')) {
+      return {
+        colors: isDark ? ['#334155', '#1E293B'] : ['#94A3B8', '#475569'],
+        glowColor: 'rgba(203, 213, 225, 0.4)',
+        icon: 'medal-outline',
+        accentColor: '#CBD5E1',
+        textColor: '#FFFFFF',
+      };
+    } else if (name.includes('GOLD')) {
+      return {
+        colors: isDark ? ['#78350F', '#451A03'] : ['#D97706', '#92400E'],
+        glowColor: 'rgba(251, 191, 36, 0.5)',
+        icon: 'trophy-outline',
+        accentColor: '#FBBF24',
+        textColor: '#FFFFFF',
+      };
+    } else if (name.includes('PLATINUM')) {
+      return {
+        colors: isDark ? ['#1E3A8A', '#0F172A'] : ['#2563EB', '#1D4ED8'],
+        glowColor: 'rgba(96, 165, 250, 0.6)',
+        icon: 'shield-checkmark-outline',
+        accentColor: '#60A5FA',
+        textColor: '#FFFFFF',
+      };
+    } else {
+      return {
+        colors: isDark ? ['#1E293B', '#0F172A'] : ['#64748B', '#334155'],
+        glowColor: 'rgba(148, 163, 184, 0.3)',
+        icon: 'ribbon-outline',
+        accentColor: '#94A3B8',
+        textColor: '#FFFFFF',
+      };
+    }
+  }, [currentTier, isDark]);
 
   return (
     <View style={styles.tierContainer}>
       <LinearGradient
-        colors={isDark ? ['#1F2937', '#111827'] : [currentTier.color, currentTier.color + 'EE']}
-        style={[styles.tierCard, isDark && styles.glassCard]}
+        colors={tierUIConfig.colors}
+        style={[
+          styles.tierCard,
+          {
+            shadowColor: tierUIConfig.glowColor,
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.3,
+            shadowRadius: 15,
+            elevation: 8,
+          },
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.tierHeader}>
           <View>
             <View style={styles.tierNameRow}>
-              <Ionicons name="ribbon" size={24} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.tierTitle}>{currentTier.name}</Text>
+              <Ionicons name={tierUIConfig.icon} size={26} color={tierUIConfig.accentColor} style={{ marginRight: 8 }} />
+              <Text style={[styles.tierTitle, { color: tierUIConfig.textColor }]}>{currentTier.name}</Text>
             </View>
             <Text style={styles.tierLevel}>{t('driver_level', { level: currentTier.name })}</Text>
           </View>
           {nextTier && (
-            <View style={styles.pointsBadge}>
-              <Text style={styles.pointsNeeded}>{roadmap.pointsNeeded}</Text>
-              <Text style={styles.pointsLabel}>{t('pts_to_next', 'PTS TO NEXT')}</Text>
+            <View style={[styles.pointsBadge, { backgroundColor: 'rgba(0, 0, 0, 0.3)', borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1 }]}>
+              <Text style={styles.pointsNeeded}>{ridesNeeded}</Text>
+              <Text style={styles.pointsLabel}>{t('rides_to_next', 'RIDES TO NEXT')}</Text>
             </View>
           )}
         </View>
@@ -179,8 +225,8 @@ const TierRoadmap = ({ currentPoints = 0, metrics }: { currentPoints: number; me
           {nextTier ? (
             <>
               <View style={styles.roadmapProgress}>
-                <View style={[styles.progressBarBg, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                  <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: '#FFF' }]} />
+                <View style={[styles.progressBarBg, { backgroundColor: 'rgba(0, 0, 0, 0.25)' }]}>
+                  <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: tierUIConfig.accentColor }]} />
                 </View>
                 <View style={styles.roadmapLabels}>
                   <Text style={styles.roadmapLabel}>{currentTier.name}</Text>
@@ -188,27 +234,29 @@ const TierRoadmap = ({ currentPoints = 0, metrics }: { currentPoints: number; me
                 </View>
               </View>
 
-              <View style={styles.missionCard}>
-                <Text style={styles.missionTitle}>{t('road_to', { tier: nextTier.name })}</Text>
+              <View style={[styles.missionCard, { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                <Text style={styles.missionTitle}>
+                  {t('remaining_rides_to_tier', '🔥 {{count}} rides to {{tier}}!', { count: ridesNeeded, tier: nextTier.name })}
+                </Text>
                 {tasks.map((task, idx) => (
                   <View key={idx} style={styles.missionItem}>
-                    <Ionicons name="checkmark-circle" size={16} color="rgba(255, 255, 255, 0.7)" />
+                    <Ionicons name="checkmark-circle" size={16} color={tierUIConfig.accentColor} />
                     <Text style={styles.missionText}>{task}</Text>
                   </View>
                 ))}
               </View>
 
               {/* Dynamic Growth Plan based on Rating */}
-              <View style={[styles.missionCard, { marginTop: 10, backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+              <View style={[styles.missionCard, { marginTop: 10, backgroundColor: 'rgba(0, 0, 0, 0.15)', borderColor: 'rgba(255, 255, 255, 0.05)' }]}>
                 <Text style={styles.missionTitle}>{t('performance_plan', 'Growth Plan')}</Text>
                 <View style={styles.missionItem}>
                   <Ionicons name="bulb" size={16} color="#FBBF24" />
-                  <Text style={[styles.missionText, { fontWeight: '700' }]}>{ratingPlan}</Text>
+                  <Text style={[styles.missionText, { fontWeight: '700', color: '#FFF' }]}>{ratingPlan}</Text>
                 </View>
               </View>
             </>
           ) : (
-            <View style={styles.maxTierBox}>
+            <View style={[styles.maxTierBox, { backgroundColor: 'rgba(255, 255, 255, 0.12)', borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 }]}>
               <Ionicons name="trophy" size={32} color="#FBBF24" />
               <Text style={styles.maxTierText}>{t('highest_tier_reached', 'Highest Tier Reached!')}</Text>
             </View>
@@ -358,7 +406,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('driver_performance', 'Driver Performance')}</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('driver_performance', 'Driver Performance')}</Text>
         <Pressable style={styles.infoBtn}>
           <Ionicons name="information-circle-outline" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
@@ -397,7 +445,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         <Animated.View style={[styles.heroSection, headerStyle, { backgroundColor: isDark ? '#1F2937' : '#FFF' }]}>
           <PerformanceGauge value={metrics.completionRate} loading={isLoading} />
           <View style={styles.heroSummary}>
-            <Text style={[styles.summaryTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('overall_performance', 'Overall Performance')}</Text>
+            <Text style={[styles.summaryTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('overall_performance', 'Overall Performance')}</Text>
             <Text style={[styles.summarySub, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
               {error ? t('performance_load_error', 'Could not load your performance data.') : t('performance_period_desc', { period: t(period.toLowerCase()) })}
             </Text>
@@ -406,7 +454,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
         {/* Level & Gamification */}
         {!isLoading && (
-          <TierRoadmap currentPoints={metrics.points} metrics={dynamicMetrics} />
+          <TierRoadmap period={period} metrics={dynamicMetrics} />
         )}
 
         {/* Main Metrics Grid */}
@@ -443,7 +491,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
         {/* Insight Section */}
         <View style={styles.insightSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('performance_insights', 'Performance Insights')}</Text>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('performance_insights', 'Performance Insights')}</Text>
           <View style={[styles.insightCard, { backgroundColor: isDark ? '#1F2937' : '#FFF', borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
             {dynamicInsights.map((insight, index) => (
               <View key={index} style={styles.insightRow}>
@@ -458,7 +506,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
         {/* Footer Info */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('updated_just_now', 'Updated: Just Now')}</Text>
+          <Text style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('updated_just_now', 'Updated: Just Now')}</Text>
         </View>
       </ScrollView>
     </View>

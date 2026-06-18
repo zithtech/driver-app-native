@@ -178,7 +178,7 @@ const ProfileSettingsScreen = () => {
                     >
                         <Ionicons name="chevron-back" size={ms(24)} color="#FFFFFF" />
                     </TouchableOpacity>
-                    <Text style={styles.premiumHeaderTitle}>{t('settings')}</Text>
+                    <Text style={styles.premiumHeaderTitle} numberOfLines={1} adjustsFontSizeToFit>{t('settings')}</Text>
                     <View style={{ width: ms(40) }} />
                 </View>
             </LinearGradient>
@@ -398,6 +398,7 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
                         { color: isDark ? '#FFFFFF' : theme.colors.text },
                         danger && { color: '#EF4444', fontWeight: '600' },
                     ]}
+                    adjustsFontSizeToFit
                 >
                     {label}
                 </Text>
@@ -435,6 +436,7 @@ const SwitchItem = ({ icon, label, value, onChange, theme, isDark }: any) => (
                     numberOfLines={1} 
                     ellipsizeMode="tail"
                     style={[styles.itemText, { color: isDark ? '#FFFFFF' : theme.colors.text }]}
+                    adjustsFontSizeToFit
                 >
                     {label}
                 </Text>

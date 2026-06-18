@@ -96,7 +96,7 @@ const AnimatedTips = ({ t, fonts }: { t: any; fonts: any }) => {
     <Animated.View style={[styles.tipsContainer, { opacity: fadeAnim }]}>
       <View style={styles.tipsHeader}>
         <Ionicons name="bulb" size={18} color="#F59E0B" />
-        <Text style={[fonts.bold, styles.tipsTitle]}>{t('docs_tips_title')}</Text>
+        <Text style={[fonts.bold, styles.tipsTitle]} numberOfLines={1} adjustsFontSizeToFit>{t('docs_tips_title')}</Text>
       </View>
       <View style={styles.tipsList}>
         {TIPS.map((tip, index) => (
@@ -118,7 +118,7 @@ const AnimatedTips = ({ t, fonts }: { t: any; fonts: any }) => {
             ]}
           >
             <Ionicons name={tip.icon} size={16} color="#6B7280" />
-            <Text style={styles.tipText}>{t(tip.key)}</Text>
+            <Text style={styles.tipText} numberOfLines={1} adjustsFontSizeToFit>{t(tip.key)}</Text>
           </Animated.View>
         ))}
       </View>
@@ -478,7 +478,7 @@ const DocumentScreen = ({ navigation }: any) => {
     >
       <AppStatusBar />
       {/* --- WAITING MODAL (No skip allowed) --- */}
-      <Modal visible={isWaitingForAdmin} animationType="fade">
+      <Modal visible={isWaitingForAdmin} animationType="fade" transparent={true} statusBarTranslucent={true}>
         <LinearGradient
           colors={['#FFFFFF', '#F5F7FF', '#EEF2FF']}
           style={styles.waitingContainer}
@@ -525,7 +525,7 @@ const DocumentScreen = ({ navigation }: any) => {
                 }}
               >
                 <Ionicons name="refresh-outline" size={20} color="#FFFFFF" />
-                <Text style={[fonts.bold, styles.checkStatusText]}>
+                <Text style={[fonts.bold, styles.checkStatusText]} numberOfLines={1} adjustsFontSizeToFit>
                   {t('check_status_btn') || 'Check My Status'}
                 </Text>
               </TouchableOpacity>
@@ -655,7 +655,7 @@ const DocumentScreen = ({ navigation }: any) => {
                       />
                     </View>
                   </TouchableOpacity>
-                  <Text style={[fonts.bold, styles.profileLabel]}>{t('profile_selfie')}</Text>
+                  <Text style={[fonts.bold, styles.profileLabel]} numberOfLines={1} adjustsFontSizeToFit>{t('profile_selfie')}</Text>
                 </View>
               );
             })()}
@@ -726,7 +726,7 @@ const DocumentScreen = ({ navigation }: any) => {
                           style={styles.actionBtn}
                         >
                           <Ionicons name="camera-outline" size={14} color="#6B7280" />
-                          <Text style={[styles.actionText, { color: '#6B7280' }]}>{t('retake') || 'Retake'}</Text>
+                          <Text style={[styles.actionText, { color: '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
                         </TouchableOpacity>
                       </View>
                     )}

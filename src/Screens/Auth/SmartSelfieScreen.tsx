@@ -166,11 +166,11 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
           <View style={styles.previewActions}>
             <TouchableOpacity style={[styles.actionBtn, styles.retakeBtn]} onPress={retakePhoto}>
               <Ionicons name="refresh" size={20} color="#FFF" />
-              <Text style={styles.actionText}>Retake</Text>
+              <Text style={styles.actionText} numberOfLines={1} adjustsFontSizeToFit>Retake</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionBtn, styles.confirmBtn]} onPress={confirmPhoto}>
               <Ionicons name="checkmark" size={20} color="#FFF" />
-              <Text style={styles.actionText}>Confirm</Text>
+              <Text style={styles.actionText} numberOfLines={1} adjustsFontSizeToFit>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>

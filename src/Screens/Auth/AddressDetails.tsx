@@ -369,8 +369,8 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.locationTitle}>{t('use_current_location')}</Text>
-                  <Text style={styles.locationSubtitle}>{t('auto_fills_gps', 'Auto-fills the form via GPS')}</Text>
+                  <Text style={styles.locationTitle} numberOfLines={1} adjustsFontSizeToFit>{t('use_current_location')}</Text>
+                  <Text style={styles.locationSubtitle} numberOfLines={1} adjustsFontSizeToFit>{t('auto_fills_gps', 'Auto-fills the form via GPS')}</Text>
                 </View>
                 <Text style={styles.locationAllow}>{locationLoading ? '' : t('allow', 'Allow')}</Text>
               </Animated.View>
@@ -379,7 +379,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
             {/* DIVIDER */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t('or_enter_manually', 'OR ENTER MANUALLY')}</Text>
+              <Text style={styles.dividerText} numberOfLines={1} adjustsFontSizeToFit>{t('or_enter_manually', 'OR ENTER MANUALLY')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -510,11 +510,11 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 (!isFormValid || isSubmitting || isLoading) && styles.ctaDisabled,
               ]}
             >
-              <Text style={styles.ctaText}>
+              <Text style={styles.ctaText} numberOfLines={1} adjustsFontSizeToFit>
                 {isSubmitting || isLoading ? <DotLoader /> : t('verify_and_continue', 'Verify & Continue')}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.securityNote}>
+            <Text style={styles.securityNote} numberOfLines={1} adjustsFontSizeToFit>
               {t('footer_encrypted', '🔒 Your details are encrypted and used for verification only')}
             </Text>
           </View>

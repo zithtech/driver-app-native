@@ -28,7 +28,7 @@ const LegalCard = ({ title, content, icon, color, index, theme }: any) => (
             <View style={[styles.cardIconBox, { backgroundColor: color + '15' }]}>
                 <Ionicons name={icon} size={s(20)} color={color} />
             </View>
-            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{title}</Text>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
         </View>
         <Text style={[styles.cardParagraph, { color: theme.colors.paragraphText }]}>{content}</Text>
     </Animated.View>
@@ -37,7 +37,7 @@ const LegalCard = ({ title, content, icon, color, index, theme }: any) => (
 const PrivacyContent = ({ t, theme, isDark }: any) => (
     <Animated.View entering={FadeIn.duration(400)}>
         <Animated.View entering={FadeInDown.delay(100)} style={[styles.tldrCard, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-            <Text style={[styles.tldrTitle, { color: theme.colors.text }]}>✨ {t('privacy_highlights', 'Policy Highlights')}</Text>
+            <Text style={[styles.tldrTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>✨ {t('privacy_highlights', 'Policy Highlights')}</Text>
             <HighlightItem icon="shield-checkmark" text={t('highlight_1', 'Your data is encrypted and secure.')} color="#10B981" theme={theme} />
             <HighlightItem icon="location" text={t('highlight_2', 'Location is only tracked while you are online.')} color="#2563EB" theme={theme} />
             <HighlightItem icon="eye-off" text={t('highlight_3', 'We never sell your personal information.')} color="#F59E0B" theme={theme} />
@@ -52,7 +52,7 @@ const PrivacyContent = ({ t, theme, isDark }: any) => (
         <View style={styles.controlsSection}>
             <Text style={[styles.sectionLabel, { color: theme.colors.paragraphText }]}>{t('privacy_tools', 'PRIVACY TOOLS')}</Text>
             <TouchableOpacity style={[styles.controlItem, { borderColor: theme.colors.border }]}>
-                <Text style={[styles.controlText, { color: theme.colors.primary }]}>{t('download_data', 'Download My Data')}</Text>
+                <Text style={[styles.controlText, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{t('download_data', 'Download My Data')}</Text>
                 <Ionicons name="download-outline" size={s(18)} color={theme.colors.primary} />
             </TouchableOpacity>
         </View>
@@ -64,7 +64,7 @@ const TermsContent = ({ t, theme, isDark }: any) => (
         <Animated.View entering={FadeInDown.delay(100)} style={[styles.agreementCard, { backgroundColor: isDark ? '#1E293B' : '#ECFDF5', borderColor: '#A7F3D0' }]}>
             <View style={styles.agreementHeader}>
                 <Ionicons name="document-text" size={s(20)} color="#059669" />
-                <Text style={[styles.agreementTitle, { color: '#065F46' }]}>{t('terms_summary_title', 'Agreement Summary')}</Text>
+                <Text style={[styles.agreementTitle, { color: '#065F46' }]} numberOfLines={1} adjustsFontSizeToFit>{t('terms_summary_title', 'Agreement Summary')}</Text>
             </View>
             <Text style={[styles.agreementText, { color: '#047857' }]}>
                 {t('terms_summary_desc', 'By using VDrive, you agree to follow our safety rules and maintain valid documentation.')}
@@ -98,7 +98,7 @@ const LegalAgreementsScreen = ({ navigation }: any) => {
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={s(24)} color={theme.colors.text} />
                 </Pressable>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('legal_agreements', 'Legal Agreements')}</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('legal_agreements', 'Legal Agreements')}</Text>
                 <View style={{ width: s(24) }} />
             </View>
 
@@ -108,13 +108,13 @@ const LegalAgreementsScreen = ({ navigation }: any) => {
                         onPress={() => setActiveTab('privacy')}
                         style={[styles.tab, activeTab === 'privacy' && [styles.activeTab, { backgroundColor: theme.colors.background }]]}
                     >
-                        <Text style={[styles.tabText, { color: activeTab === 'privacy' ? theme.colors.text : theme.colors.paragraphText }]}>{t('privacy', 'Privacy')}</Text>
+                        <Text style={[styles.tabText, { color: activeTab === 'privacy' ? theme.colors.text : theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>{t('privacy', 'Privacy')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => setActiveTab('terms')}
                         style={[styles.tab, activeTab === 'terms' && [styles.activeTab, { backgroundColor: theme.colors.background }]]}
                     >
-                        <Text style={[styles.tabText, { color: activeTab === 'terms' ? theme.colors.text : theme.colors.paragraphText }]}>{t('terms', 'Terms')}</Text>
+                        <Text style={[styles.tabText, { color: activeTab === 'terms' ? theme.colors.text : theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>{t('terms', 'Terms')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

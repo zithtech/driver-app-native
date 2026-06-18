@@ -118,12 +118,18 @@ const VehicleVerificationScreen = ({ route }: any) => {
     }, [navigation])
   );
   const [vehiclePhotos, setVehiclePhotos] = useState<Record<string, boolean>>({
-    car_image: false,
+    front: false,
+    back: false,
+    left: false,
+    right: false,
   });
 
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [vehicleUris, setVehicleUris] = useState<Record<string, string | null>>({
-    car_image: null,
+    front: null,
+    back: null,
+    left: null,
+    right: null,
   });
 
   const [status, setStatus] = useState<Status>('COLLECTING');
@@ -179,8 +185,8 @@ const VehicleVerificationScreen = ({ route }: any) => {
         }
         if (v.car_image_status === 'rejected') {
           rejectedImages.push(`Car Image (${v.car_image_remarks || 'No reason provided'})`);
-          setVehiclePhotos((prev) => ({ ...prev, car_image: false }));
-          setVehicleUris((prev) => ({ ...prev, car_image: null }));
+          setVehiclePhotos((prev) => ({ ...prev, front: false, back: false, left: false, right: false }));
+          setVehicleUris((prev) => ({ ...prev, front: null, back: null, left: null, right: null }));
         }
 
         if (rejectedImages.length > 0) {
@@ -218,8 +224,8 @@ const VehicleVerificationScreen = ({ route }: any) => {
         }
         if (data.car_image_status === 'rejected') {
           rejectedImages.push(`Car Image (${data.car_image_remarks})`);
-          setVehiclePhotos((prev) => ({ ...prev, car_image: false }));
-          setVehicleUris((prev) => ({ ...prev, car_image: null }));
+          setVehiclePhotos((prev) => ({ ...prev, front: false, back: false, left: false, right: false }));
+          setVehicleUris((prev) => ({ ...prev, front: null, back: null, left: null, right: null }));
         }
 
         showAlert({
@@ -273,8 +279,8 @@ const VehicleVerificationScreen = ({ route }: any) => {
 
   /* ================= HELPERS ================= */
 
-  const vehicleCount = vehiclePhotos.car_image ? 1 : 0;
-  const totalSteps = 2; // Selfie + 1 Car Image
+  const vehicleCount = Object.values(vehiclePhotos).filter(Boolean).length;
+  const totalSteps = 5; // Selfie + 4 Car Images
   const completedSteps = (selfieTaken ? 1 : 0) + vehicleCount;
   const donePercent = Math.round((completedSteps / totalSteps) * 100);
   const canSubmit = completedSteps === totalSteps && status === 'COLLECTING';
@@ -398,7 +404,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
     if (!canSubmit) {
       const missing = [];
       if (!selfieTaken) missing.push('Driver Selfie');
-      if (vehicleCount < 1) missing.push(`Car Image`);
+      if (vehicleCount < 4) missing.push(`All 4 sides of vehicle`);
       showAlert({
         title: t('common.incomplete'),
         message: `${t('complete_all_steps')}\n- ${missing.join('\n- ')}`,
@@ -416,18 +422,22 @@ const VehicleVerificationScreen = ({ route }: any) => {
       // 1. Upload Selfie
       const selfieS3Url = await uploadFile(selfieUri!, 'trip_selfie');
 
-      // 2. Upload Vehicle Photo
-      let carImageS3Url = '';
-      if (vehicleUris.car_image) {
-          carImageS3Url = await uploadFile(vehicleUris.car_image, `vehicle_car_image`);
+      // 2. Upload Vehicle Photos
+      const carImagesS3Urls: string[] = [];
+      const vehicleKeys = ['front', 'back', 'left', 'right'];
+      for (const key of vehicleKeys) {
+        if (vehicleUris[key]) {
+          const s3Url = await uploadFile(vehicleUris[key] as string, `vehicle_car_image_${key}`);
+          if (s3Url) carImagesS3Urls.push(s3Url);
+        }
       }
 
       // 3. Submit to backend
       await submitTripPhotos({
         driverId: user.driverId,
         selfie_url: selfieS3Url,
-        car_image_url: carImageS3Url, // Use granular string parameter
-        car_images: [], // Deprecated fallback
+        car_image_url: carImagesS3Urls[0] || '', // Fallback to first image
+        car_images: carImagesS3Urls,
         trip_id: ride?.trip_id,
       }).unwrap();
       console.log('[VehicleVerification] Submission to backend successful');
@@ -534,8 +544,8 @@ const VehicleVerificationScreen = ({ route }: any) => {
                 <Ionicons name="timer-outline" size={ms(24)} color={textPrimary} />
               </View>
               <View style={styles.timerTextCol}>
-                <Text style={[styles.timerLabel, { color: textSecondary }]}>{t('time_remaining')}</Text>
-                <Text style={[styles.timerValue, { color: textPrimary }]}>{formatTime(timeLeft)}</Text>
+                <Text style={[styles.timerLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('time_remaining')}</Text>
+                <Text style={[styles.timerValue, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{formatTime(timeLeft)}</Text>
               </View>
             </View>
           </Animated.View>
@@ -554,7 +564,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.stepTitle, { color: textPrimary }]}>{t('driver_selfie')}</Text>
+                    <Text style={[styles.stepTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('driver_selfie')}</Text>
                     <Text style={[styles.stepSubtitle, { color: textSecondary }]}>{t('confirm_selfie_desc')}</Text>
                   </View>
                   {selfieTaken && (
@@ -575,7 +585,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
                       )}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.successCaptureTitle}>{t('selfie_captured')}</Text>
+                      <Text style={styles.successCaptureTitle} numberOfLines={1} adjustsFontSizeToFit>{t('selfie_captured')}</Text>
                       <Text style={[styles.successCaptureSubtitle, { color: textSecondary }]}>{t('tap_to_retake')}</Text>
                     </View>
                   </TouchableOpacity>
@@ -584,7 +594,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
                     <View style={[styles.innerCameraIconBg, { backgroundColor: dividerColor }]}>
                       <Ionicons name="camera" size={ms(40)} color={textSecondary} />
                     </View>
-                    <Text style={[styles.innerActionText, { color: textPrimary }]}>{t('tap_to_take_selfie')}</Text>
+                    <Text style={[styles.innerActionText, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('tap_to_take_selfie')}</Text>
                     <Text style={[styles.innerSubtitleText, { color: textSecondary }]}>{t('make_sure_face_visible')}</Text>
                   </TouchableOpacity>
                 )}
@@ -600,20 +610,20 @@ const VehicleVerificationScreen = ({ route }: any) => {
               {/* STEP 2: VEHICLE PHOTOS */}
               <Animated.View style={[styles.stepSection, { backgroundColor: cardBg, borderColor: borderColorTheme }, selfieTaken && vehicleCount < 4 && styles.stepActive, selfieTaken && vehicleCount < 4 && glowStyle]}>
                 <View style={styles.stepHeader}>
-                  <View style={[styles.stepNumber, { backgroundColor: borderColorTheme }, vehicleCount === 1 && { backgroundColor: SCREENSHOT_GREEN }]}>
-                    {vehicleCount === 1 ? (
+                  <View style={[styles.stepNumber, { backgroundColor: borderColorTheme }, vehicleCount === 4 && { backgroundColor: SCREENSHOT_GREEN }]}>
+                    {vehicleCount === 4 ? (
                       <Ionicons name="checkmark" size={ms(16)} color="#FFF" />
                     ) : (
                       <Text style={[styles.stepNumberText, { color: textPrimary }]}>2</Text>
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.stepTitle, { color: textPrimary }]}>{t('vehicle_photos')}</Text>
+                    <Text style={[styles.stepTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('vehicle_photos')}</Text>
                     <Text style={[styles.stepSubtitle, { color: textSecondary }]}>
                       {selfieTaken ? t('Live car photo') : t('complete_selfie_first')}
                     </Text>
                   </View>
-                  {vehicleCount === 1 && (
+                  {vehicleCount === 4 && (
                     <View style={[styles.donePillBadge, { backgroundColor: borderColorTheme }]}>
                       <Ionicons name="checkmark" size={ms(12)} color={SCREENSHOT_GREEN} />
                       <Text style={styles.donePillText}>Done</Text>
@@ -624,18 +634,48 @@ const VehicleVerificationScreen = ({ route }: any) => {
                 {!selfieTaken ? (
                   <View style={[styles.pillLockBox, { backgroundColor: subBg }]}>
                     <Ionicons name="lock-closed" size={ms(18)} color={textSecondary} />
-                    <Text style={[styles.pillLockText, { color: textSecondary }]}>{t('take_selfie_unlock')}</Text>
+                    <Text style={[styles.pillLockText, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('take_selfie_unlock')}</Text>
                   </View>
                 ) : (
                   <View style={styles.gridContainer}>
                     <View style={styles.gridRow}>
                       <PhotoItem
-                        label={t('front_view')}
-                        icon="car-connected"
+                        label={t('front_view') || 'Front'}
+                        icon="car"
                         lib="MCI"
-                        success={vehiclePhotos.car_image}
-                        photoUri={vehicleUris.car_image}
-                        onPress={() => captureVehicle('car_image')}
+                        success={vehiclePhotos.front}
+                        photoUri={vehicleUris.front}
+                        onPress={() => captureVehicle('front')}
+                        isDark={isDark}
+                      />
+                      <PhotoItem
+                        label={t('back_view') || 'Back'}
+                        icon="car"
+                        lib="MCI"
+                        success={vehiclePhotos.back}
+                        photoUri={vehicleUris.back}
+                        onPress={() => captureVehicle('back')}
+                        isDark={isDark}
+                      />
+                    </View>
+                    <View style={styles.gridRow}>
+                      <PhotoItem
+                        label={t('left_side') || 'Left'}
+                        icon="car-side"
+                        lib="MCI"
+                        success={vehiclePhotos.left}
+                        photoUri={vehicleUris.left}
+                        onPress={() => captureVehicle('left')}
+                        scaleX={-1}
+                        isDark={isDark}
+                      />
+                      <PhotoItem
+                        label={t('right_side') || 'Right'}
+                        icon="car-side"
+                        lib="MCI"
+                        success={vehiclePhotos.right}
+                        photoUri={vehicleUris.right}
+                        onPress={() => captureVehicle('right')}
                         isDark={isDark}
                       />
                     </View>
@@ -651,7 +691,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
               <View style={styles.tipsIconWrapper}>
                 <Ionicons name="bulb" size={ms(18)} color="#F59E0B" />
               </View>
-              <Text style={[styles.tipsTextTitle, { color: textPrimary }]}>{t('tips_for_faster_approval')}</Text>
+              <Text style={[styles.tipsTextTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('tips_for_faster_approval')}</Text>
             </TouchableOpacity>
           </Animated.View>
 
@@ -682,7 +722,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
                 <Ionicons name="bulb-outline" size={ms(20)} color="#F59E0B" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.modalTitle, { color: textPrimary }]}>{t('photo_guidelines')}</Text>
+                <Text style={[styles.modalTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('photo_guidelines')}</Text>
                 <Text style={[styles.modalSubtitle, { color: textSecondary }]}>{t('follow_for_instant_approval')}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowGuidelines(false)} style={styles.closeModalBtn}>
@@ -694,21 +734,21 @@ const VehicleVerificationScreen = ({ route }: any) => {
               <View style={[styles.guideRow, { backgroundColor: subBg }]}>
                 <View style={[styles.guideIconMain, { backgroundColor: cardBg }]}><Ionicons name="sunny-outline" size={ms(20)} color="#F59E0B" /></View>
                 <View>
-                  <Text style={[styles.guideLabelText, { color: textPrimary }]}>{t('good_lighting')}</Text>
+                  <Text style={[styles.guideLabelText, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('good_lighting')}</Text>
                   <Text style={[styles.guideInfoText, { color: textSecondary }]}>{t('natural_daylight')}</Text>
                 </View>
               </View>
               <View style={[styles.guideRow, { backgroundColor: subBg }]}>
                 <View style={[styles.guideIconMain, { backgroundColor: cardBg }]}><Ionicons name="scan-outline" size={ms(20)} color="#3B82F6" /></View>
                 <View>
-                  <Text style={[styles.guideLabelText, { color: textPrimary }]}>{t('stay_steady')}</Text>
+                  <Text style={[styles.guideLabelText, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('stay_steady')}</Text>
                   <Text style={[styles.guideInfoText, { color: textSecondary }]}>{t('hold_still_blur')}</Text>
                 </View>
               </View>
               <View style={[styles.guideRow, { backgroundColor: subBg }]}>
                 <View style={[styles.guideIconMain, { backgroundColor: cardBg }]}><Ionicons name="car-outline" size={ms(20)} color={SCREENSHOT_GREEN} /></View>
                 <View>
-                  <Text style={[styles.guideLabelText, { color: textPrimary }]}>{t('full_vehicle')}</Text>
+                  <Text style={[styles.guideLabelText, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('full_vehicle')}</Text>
                   <Text style={[styles.guideInfoText, { color: textSecondary }]}>{t('capture_entire_car')}</Text>
                 </View>
               </View>
@@ -733,7 +773,7 @@ const Header = ({ cardBg, textPrimary, textSecondary, donePercent, completedStep
         <Ionicons name="shield-checkmark" size={ms(24)} color="#FFF" />
       </View>
       <View style={styles.headerTextCol}>
-        <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('vehicle_check')}</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('vehicle_check')}</Text>
         <Text style={[styles.headerSubtitle, { color: textSecondary }]}>{t('quick_verification_subtitle')}</Text>
       </View>
       <View style={[styles.stepBadge, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
@@ -784,7 +824,7 @@ const VerifyingView = ({ _isDark, bgColor, textPrimary, textSecondary, subBg, bo
       <Animated.View entering={ZoomIn.duration(800)} style={[styles.bigShieldSquare, { backgroundColor: SCREENSHOT_GREEN }]}>
         <Ionicons name="shield-checkmark" size={ms(48)} color="#FFF" />
       </Animated.View>
-      <Text style={[styles.verifyMainTitle, { color: textPrimary }]}>{t('verifying_photos')}</Text>
+      <Text style={[styles.verifyMainTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('verifying_photos')}</Text>
       <Text style={[styles.verifySubText, { color: textSecondary }]}>{t('verifying_subtext')}</Text>
 
       <View style={styles.loadingDotsContainer}>
@@ -801,7 +841,7 @@ const VerifyingView = ({ _isDark, bgColor, textPrimary, textSecondary, subBg, bo
 
       <View style={[styles.encryptionBadge, { backgroundColor: cardBg, borderColor: borderColorTheme }]}>
         <MaterialCommunityIcons name="fingerprint" size={ms(18)} color={SCREENSHOT_GREEN} />
-        <Text style={[styles.encryptionText, { color: textSecondary }]}>{t('secured_encryption')}</Text>
+        <Text style={[styles.encryptionText, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('secured_encryption')}</Text>
       </View>
     </View>
   );
@@ -817,16 +857,16 @@ const VerifiedView = ({ startTripAction, isDark, bgColor, textPrimary, textSecon
         </View>
       </Animated.View>
 
-      <Text style={[styles.verifyMainTitle, { color: textPrimary }]}>{t('youve_been_verified')}</Text>
+      <Text style={[styles.verifyMainTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('youve_been_verified')}</Text>
       <Text style={[styles.verifySubText, { color: textSecondary }]}>{t('verified_ready_subtext')}</Text>
 
       <View style={styles.summaryStatsRow}>
         <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: borderColorTheme }]}>
-          <Text style={[styles.statValue, { color: textPrimary }]}>2</Text>
+          <Text style={[styles.statValue, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>5</Text>
           <Text style={[styles.statLabel, { color: textSecondary }]}>{t('photos_stat')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: borderColorTheme }]}>
-          <Text style={[styles.statValue, { color: textPrimary }]}>3s</Text>
+          <Text style={[styles.statValue, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>3s</Text>
           <Text style={[styles.statLabel, { color: textSecondary }]}>{t('verified_stat')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: cardBg, borderColor: borderColorTheme }]}>
@@ -836,7 +876,7 @@ const VerifiedView = ({ startTripAction, isDark, bgColor, textPrimary, textSecon
       </View>
 
       <TouchableOpacity onPress={startTripAction} style={styles.startTripBtn}>
-        <Text style={styles.startTripBtnText}>{t('start_trip')}</Text>
+        <Text style={styles.startTripBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('start_trip')}</Text>
         <Ionicons name="arrow-forward" size={ms(20)} color="#FFF" />
       </TouchableOpacity>
     </View>
@@ -903,7 +943,7 @@ const GlassFooter = ({ isDark, submitAction, _canSubmit, status, _completedSteps
         ) : (
           <View style={styles.btnContentRow}>
             <Ionicons name="shield-checkmark" size={ms(20)} color={'#FFF'} style={{ marginRight: ms(10) }} />
-            <Text style={[styles.submitBtnText, { color: '#FFF' }]}>
+            <Text style={[styles.submitBtnText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('verify_and_submit')}
             </Text>
             {<Ionicons name="arrow-forward" size={ms(20)} color="#FFF" style={{ marginLeft: ms(10) }} />}

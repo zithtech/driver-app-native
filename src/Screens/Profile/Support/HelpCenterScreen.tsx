@@ -19,6 +19,7 @@ import { useAppTheme } from '../../../context/ThemeContext';
 import { Text, Input } from '../../../Components';
 import AppStatusBar from '../../../Components/AppStatusBar';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
+import FaqChatbotModal from '../../Onboarding/FaqChatbotModal';
 
 /* ================= TYPES ================= */
 interface FAQ {
@@ -106,13 +107,23 @@ const AccordionItem = ({ item, isExpanded, onPress }: { item: FAQ, isExpanded: b
     );
 };
 
-const HelpCenterScreen = ({ navigation }: any) => {
+const HelpCenterScreen = ({ navigation, route }: any) => {
     const { t } = useTranslation();
     const { theme, isDark } = useAppTheme();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [chatVisible, setChatVisible] = useState(false);
+
+    // Handle deep link parameter to automatically open the chat
+    React.useEffect(() => {
+        if (route.params?.openChat) {
+            setChatVisible(true);
+            // Clear the param so it doesn't reopen if the user navigates back and forth
+            navigation.setParams({ openChat: undefined });
+        }
+    }, [route.params?.openChat, navigation]);
 
     const filteredFAQs = useMemo(() => {
         return FAQ_DATA.filter(faq => {
@@ -135,7 +146,7 @@ const HelpCenterScreen = ({ navigation }: any) => {
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={s(24)} color={theme.colors.text} />
                 </Pressable>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('help_center')}</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center')}</Text>
                 <View style={{ width: s(24) }} />
             </View>
 
@@ -146,7 +157,7 @@ const HelpCenterScreen = ({ navigation }: any) => {
             >
                 {/* Search Bar Container */}
                 <View style={styles.searchSection}>
-                    <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{t('how_can_we_help', 'How can we help?')}</Text>
+                    <Text style={[styles.heroTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('how_can_we_help', 'How can we help?')}</Text>
                     <Input
                         placeholder={t('search_help_placeholder', 'Search questions...')}
                         value={searchQuery}
@@ -213,7 +224,7 @@ const HelpCenterScreen = ({ navigation }: any) => {
                 {/* Contact Footer */}
                 <View style={[styles.footerCard, { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' }]}>
                     <View style={styles.footerInfo}>
-                        <Text style={[styles.footerTitle, { color: isDark ? '#60A5FA' : '#1E40AF' }]}>{t('still_need_help', 'Still need help?')}</Text>
+                        <Text style={[styles.footerTitle, { color: isDark ? '#60A5FA' : '#1E40AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('still_need_help', 'Still need help?')}</Text>
                         <Text style={[styles.footerDesc, { color: isDark ? '#94A3B8' : '#3B82F6' }]}>
                             {t('contact_support_desc', 'Our support team is available 24/7 to assist you.')}
                         </Text>
@@ -221,18 +232,20 @@ const HelpCenterScreen = ({ navigation }: any) => {
                     <View style={styles.footerActions}>
                         <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }]} onPress={handleCallSupport}>
                             <Ionicons name="call" size={s(18)} color="#FFFFFF" />
-                            <Text style={styles.actionBtnText}>{t('call_us', 'Call Us')}</Text>
+                            <Text style={styles.actionBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('call_us', 'Call Us')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: isDark ? '#334155' : '#FFFFFF', borderWidth: 1, borderColor: '#3B82F6' }]}
-                            onPress={() => navigation.navigate('ContactSupportScreen')}
+                            onPress={() => setChatVisible(true)}
                         >
                             <Ionicons name="chatbubbles" size={s(18)} color="#3B82F6" />
-                            <Text style={[styles.actionBtnText, { color: '#3B82F6' }]}>{t('chat_now', 'Chat Now')}</Text>
+                            <Text style={[styles.actionBtnText, { color: '#3B82F6' }]} numberOfLines={1} adjustsFontSizeToFit>{t('chat_now', 'Chat Now')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
+
+            <FaqChatbotModal visible={chatVisible} onClose={() => setChatVisible(false)} />
         </SafeAreaView>
     );
 };

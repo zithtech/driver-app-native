@@ -33,7 +33,7 @@ const DashboardProfileHeader: React.FC<Props> = ({
     const { t } = useTranslation();
     const [imgError, setImgError] = React.useState(false);
 
-    // Reset error when image URL changes
+    // Reset error when the actual photo changes (e.g. new selfie uploaded)
     React.useEffect(() => {
         setImgError(false);
     }, [profileImage]);
@@ -125,7 +125,7 @@ const DashboardProfileHeader: React.FC<Props> = ({
                 </View>
 
                 <View style={{ marginLeft: s(14), flex: 1 }}>
-                    <Text style={[styles.greeting, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>
+                    <Text style={[styles.greeting, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1} adjustsFontSizeToFit>
                         {getGreeting()}, <Text style={[styles.userName, isDark && { color: '#9CA3AF' }]}>{driverName}</Text>
                     </Text>
                     <View style={styles.metaRow}>
@@ -137,7 +137,7 @@ const DashboardProfileHeader: React.FC<Props> = ({
 
                         <View style={[styles.badge, { marginLeft: s(10), backgroundColor: currentTier.bg }]}>
                             <Ionicons name={currentTier.icon} size={ms(12)} color={currentTier.color} style={{ marginRight: s(4) }} />
-                            <Text style={[styles.badgeText, { color: currentTier.color }]}>{currentTier.label}</Text>
+                            <Text style={[styles.badgeText, { color: currentTier.color }]} numberOfLines={1} adjustsFontSizeToFit>{currentTier.label}</Text>
                         </View>
                     </View>
 

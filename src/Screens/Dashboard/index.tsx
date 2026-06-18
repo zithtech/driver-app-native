@@ -91,16 +91,25 @@ const DriverDashboard = () => {
 
   // ── VERIFICATION GUARD ──
   // Redirect unapproved drivers back to DocumentScreen
-  const APPROVED_STATUSES = ['DOCUMENTS_APPROVED', 'DOCUMENTS_VERIFIED', 'SUBSCRIPTION_ACTIVE', 'ACTIVE'];
+  const APPROVED_STATUSES = ['DOCUMENTS_APPROVED', 'DOCUMENTS_VERIFIED', 'ONBOARDING_COMPLETED', 'SUBSCRIPTION_ACTIVE', 'ACTIVE'];
   useEffect(() => {
     const status = user?.onboarding_status;
-    if (user && status && !APPROVED_STATUSES.includes(status)) {
+    const accountStatus = user?.status;
+    const kycStatus = user?.kyc_status;
+    const kycStatusStr = typeof kycStatus === 'object' ? kycStatus?.overallStatus : kycStatus;
+
+    const isApproved = 
+      (status && APPROVED_STATUSES.includes(status)) || 
+      accountStatus === 'active' || 
+      kycStatusStr === 'verified';
+
+    if (user && !isApproved) {
       navigation.reset({
         index: 0,
         routes: [{ name: 'DocumentScreen' }],
       });
     }
-  }, [user?.onboarding_status]);
+  }, [user?.onboarding_status, user?.status, user?.kyc_status, navigation]);
 
   const [goOnline] = useGoOnlineMutation();
   const [goOffline] = useGoOfflineMutation();

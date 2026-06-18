@@ -107,7 +107,7 @@ const GoOfflineTab: React.FC<GoOfflineTabProps> = React.memo(({ onPress }) => {
                 </View>
                 <View style={[styles.contentOverlay, { width: topWidth, height }]}>
                     <View style={styles.content}>
-                        <Animated.Text style={[styles.text, { opacity: pulseOpacity }]}>
+                        <Animated.Text style={[styles.text, { opacity: pulseOpacity }]} numberOfLines={1} adjustsFontSizeToFit>
                             {t('go_offline').toUpperCase()}
                         </Animated.Text>
                     </View>

@@ -555,7 +555,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
               <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </Pressable>
-              <Text style={styles.premiumTitle}>Subscription Plan</Text>
+              <Text style={styles.premiumTitle} numberOfLines={1} adjustsFontSizeToFit>Subscription Plan</Text>
             </View>
           </LinearGradient>
           <RechargeSkeleton />
@@ -669,7 +669,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   <Text style={[
                     styles.tierNameText,
                     { color: selectedTierId === tier.id ? '#FFFFFF' : (isDark ? '#E5E7EB' : '#1E3A8A') }
-                  ]} numberOfLines={1}>
+                  ]} numberOfLines={1} adjustsFontSizeToFit>
                     {tier.name}
                   </Text>
                 </LinearGradient>
@@ -691,7 +691,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 <Text style={[
                   styles.durationTabText,
                   selectedDuration === dur.key && styles.selectedDurationTabText
-                ]}>
+                ]} numberOfLines={1} adjustsFontSizeToFit>
                   {dur.label}
                 </Text>
               </Pressable>
@@ -750,7 +750,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 {isValidatingPromo ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.applyPromoText}>
+                  <Text style={styles.applyPromoText} numberOfLines={1} adjustsFontSizeToFit>
                     {appliedPromoCode ? 'Applied' : 'Apply'}
                   </Text>
                 )}
@@ -771,7 +771,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                     <Ionicons name="gift" size={20} color="#0EA5E9" />
                   </View>
                   <View style={styles.rewardInfo}>
-                    <Text style={[styles.rewardTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]}>Referral Rewards</Text>
+                    <Text style={[styles.rewardTitle, { color: isDark ? '#F1F5F9' : '#0F172A' }]} numberOfLines={1} adjustsFontSizeToFit>Referral Rewards</Text>
                     <Text style={[styles.rewardSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
                       Available: <Text style={{ fontWeight: '800', color: '#0EA5E9' }}>₹{user?.credit?.balance || 0}</Text>
                     </Text>
@@ -786,7 +786,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                       { backgroundColor: useRewardBalance ? '#0EA5E9' : 'transparent', borderWidth: useRewardBalance ? 0 : 1, borderColor: '#0EA5E9' }
                     ]}
                   >
-                    <Text style={[styles.rewardApplyText, { color: useRewardBalance ? '#FFF' : '#0EA5E9' }]}>
+                    <Text style={[styles.rewardApplyText, { color: useRewardBalance ? '#FFF' : '#0EA5E9' }]} numberOfLines={1} adjustsFontSizeToFit>
                       {useRewardBalance ? 'Applied' : 'Apply'}
                     </Text>
                   </Pressable>
@@ -815,12 +815,12 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             <View style={styles.planCardHeader}>
               <View style={[styles.planTitleContainer, { backgroundColor: (currentTier?.color || '#2563EB') + '15', marginBottom: 0, borderWidth: 1, borderColor: (currentTier?.color || '#2563EB') + '30' }]}>
                 <Ionicons name={currentTier?.icon || 'shield-outline'} size={14} color={currentTier?.color || '#2563EB'} style={{ marginRight: 6 }} />
-                <Text style={[styles.mainPlanName, { color: currentTier?.color || '#2563EB' }]}>{(currentTier?.name || '').toUpperCase()}</Text>
+                <Text style={[styles.mainPlanName, { color: currentTier?.color || '#2563EB' }]} numberOfLines={1} adjustsFontSizeToFit>{(currentTier?.name || '').toUpperCase()}</Text>
               </View>
 
               {currentTier?.savings && (
                 <View style={[styles.saveBadge, { backgroundColor: isDark ? '#1E3A8A' : '#EBF2FF' }]}>
-                  <Text style={[styles.saveBadgeText, { color: isDark ? '#60A5FA' : '#2563EB' }]}>
+                  <Text style={[styles.saveBadgeText, { color: isDark ? '#60A5FA' : '#2563EB' }]} numberOfLines={1} adjustsFontSizeToFit>
                     SAVE {currentTier?.savings}%
                   </Text>
                 </View>
@@ -853,7 +853,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
 
             <View style={styles.featuresSection}>
-              <Text style={styles.featuresTitle}>WHAT'S INCLUDED</Text>
+              <Text style={styles.featuresTitle} numberOfLines={1} adjustsFontSizeToFit>WHAT'S INCLUDED</Text>
               <View style={styles.featuresGrid}>
                 {(currentTier?.features || []).map((feature: any, idx) => (
                   <View
@@ -881,7 +881,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                       styles.featureLineText,
                       { color: isDark ? '#E5E7EB' : '#334155' },
                       feature.isBlocked && { textDecorationLine: 'line-through', color: '#9CA3AF' }
-                    ]} numberOfLines={1}>
+                    ]} numberOfLines={1} adjustsFontSizeToFit>
                       {getFeatureLabel(feature.key)}
                     </Text>
                   </View>
@@ -901,7 +901,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
               ]}
             >
               <Ionicons name="lock-closed" size={20} color="white" style={styles.lockIcon} />
-              <Text style={styles.subscribeText}>
+              <Text style={styles.subscribeText} numberOfLines={1} adjustsFontSizeToFit>
                 {isActivePlan ? 'Current Active Plan' : `Subscribe Now • ₹${Math.max(0, currentPrice - discountAmount - (useRewardBalance ? Number(user?.credit?.balance || 0) : 0))}`}
               </Text>
             </Pressable>

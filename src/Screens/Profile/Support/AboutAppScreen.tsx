@@ -20,7 +20,7 @@ const AboutAppScreen = ({ navigation }: any) => {
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={s(24)} color={theme.colors.text} />
                 </Pressable>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('about_app', 'About App')}</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('about_app', 'About App')}</Text>
                 <View style={{ width: s(24) }} />
             </View>
 
@@ -29,8 +29,8 @@ const AboutAppScreen = ({ navigation }: any) => {
                     <View style={[styles.logoBox, { backgroundColor: theme.colors.primary }]}>
                         <Ionicons name="car-sport" size={s(50)} color="#FFFFFF" />
                     </View>
-                    <Text style={[styles.appName, { color: theme.colors.text }]}>{t('app_name', 'VDrive')}</Text>
-                    <Text style={[styles.version, { color: theme.colors.paragraphText }]}>{t('version', 'Version')} 1.0.4 (Production)</Text>
+                    <Text style={[styles.appName, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('app_name', 'VDrive')}</Text>
+                    <Text style={[styles.version, { color: theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>{t('version', 'Version')} 1.0.4 (Production)</Text>
                 </Animated.View>
 
                 <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.contentSection}>

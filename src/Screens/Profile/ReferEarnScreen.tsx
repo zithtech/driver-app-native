@@ -85,7 +85,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
         <Pressable onPress={() => navigation.goBack()} hitSlop={12}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFF' : '#000'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFF' : '#111827' }]}>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
           {t('refer_earn') || 'Refer & Earn'}
         </Text>
         <View style={{ width: 24 }} />
@@ -104,7 +104,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
             style={styles.heroCard}
           >
             <Ionicons name="gift" size={48} color="#FFF" style={{ opacity: 0.9 }} />
-            <Text style={styles.heroTitle}>
+            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>
               {t('refer_hero_title') || 'Invite Friends, Earn Rewards!'}
             </Text>
             <Text style={styles.heroSubtitle}>
@@ -116,7 +116,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
         {/* ─── REFERRAL CODE CARD ─── */}
         <Reanimated.View entering={FadeInDown.delay(200).duration(500)}>
           <View style={[styles.codeCard, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.codeLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+            <Text style={[styles.codeLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('refer_your_code') || 'Your Referral Code'}
             </Text>
 
@@ -151,7 +151,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
                 onPress={handleShare}
               >
                 <Ionicons name="logo-whatsapp" size={22} color="#FFF" />
-                <Text style={styles.shareBtnText}>WhatsApp</Text>
+                <Text style={styles.shareBtnText} numberOfLines={1} adjustsFontSizeToFit>WhatsApp</Text>
               </Pressable>
 
               <Pressable
@@ -159,7 +159,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
                 onPress={handleShare}
               >
                 <Ionicons name="share-social-outline" size={22} color="#FFF" />
-                <Text style={styles.shareBtnText}>{t('refer_share') || 'Share'}</Text>
+                <Text style={styles.shareBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('refer_share') || 'Share'}</Text>
               </Pressable>
             </View>
           </View>
@@ -168,7 +168,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
         {/* ─── STATS CARD ─── */}
         <Reanimated.View entering={FadeInDown.delay(300).duration(500)}>
           <View style={[styles.statsCard, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFF' : '#111827' }]}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('refer_your_stats') || 'Your Referral Stats'}
             </Text>
 
@@ -218,7 +218,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
           <View style={[styles.couponsCard, { backgroundColor: theme.colors.card }]}>
             {/* Section Header with count badge */}
             <View style={styles.couponHeader}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFF' : '#111827', marginBottom: 0 }]}>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFF' : '#111827', marginBottom: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t('refer_your_coupons') || 'Your Reward Coupons'}
               </Text>
               {earnedCoupons.length > 0 && (
@@ -237,7 +237,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
                 <View style={[styles.emptyIconWrap, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
                   <Ionicons name="ticket-outline" size={32} color={isDark ? '#6B7280' : '#9CA3AF'} />
                 </View>
-                <Text style={[styles.emptyTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                <Text style={[styles.emptyTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
                   {t('refer_no_coupons') || 'No coupons yet'}
                 </Text>
                 <Text style={[styles.emptyDesc, { color: isDark ? '#6B7280' : '#9CA3AF' }]}>
@@ -320,6 +320,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
                                 styles.couponCopyText,
                                 { color: isCopied ? '#FFF' : (isDark ? '#D1D5DB' : '#374151') },
                               ]}
+                              numberOfLines={1} adjustsFontSizeToFit
                             >
                               {isCopied ? (t('refer_copied') || 'Copied!') : (t('refer_copy') || 'Copy')}
                             </Text>
@@ -337,7 +338,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
         {/* ─── HOW IT WORKS ─── */}
         <Reanimated.View entering={FadeInUp.delay(400).duration(500)}>
           <View style={[styles.howItWorks, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFF' : '#111827' }]}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('refer_how_it_works') || 'How It Works'}
             </Text>
 

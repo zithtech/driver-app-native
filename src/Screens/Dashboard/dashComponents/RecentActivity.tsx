@@ -26,7 +26,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ items }) => {
     return (
         <View style={[styles.activityCard, { backgroundColor: theme.colors.card }]}>
             <View style={styles.activityHeader}>
-                <Text style={[styles.activityTitle, { color: theme.colors.text }]}>{t('recent_activity')}</Text>
+                <Text style={[styles.activityTitle, { color: theme.colors.text, flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t('recent_activity')}</Text>
                 <Pressable onPress={() => navigation.navigate('Profile', { screen: 'RideActivityScreen' })}>
                     <Text style={[styles.seeAllText, isDark && { color: '#60A5FA' }]}>{t('see_all')}</Text>
                 </Pressable>

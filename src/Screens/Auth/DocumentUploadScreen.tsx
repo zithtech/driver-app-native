@@ -456,7 +456,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                             style={styles.errorRetryBtn}
                             onPress={() => handleContinue()}
                           >
-                            <Text style={styles.errorRetryText}>{t('retry') || 'Retry'}</Text>
+                            <Text style={styles.errorRetryText} numberOfLines={1} adjustsFontSizeToFit>{t('retry') || 'Retry'}</Text>
                           </TouchableOpacity>
                         </View>
                       )}
@@ -478,7 +478,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                             activeOpacity={0.8}
                           >
                             <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
-                            <Text style={styles.actionButtonText}>{t('retake') || 'Retake'}</Text>
+                            <Text style={styles.actionButtonText} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
                           </TouchableOpacity>
                         </View>
                       )}
@@ -512,7 +512,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                               style={isSelfie && { opacity: 0.8 }}
                             />
                           </Animated.View>
-                          <Text style={styles.placeholderText}>
+                          <Text style={styles.placeholderText} numberOfLines={1} adjustsFontSizeToFit>
                             {isSelfie ? t('profile_selfie') : t('tap_to_upload')}
                           </Text>
                         </>
@@ -545,7 +545,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
             size={16}
             color={colors.border}
           />
-          <Text style={[styles.secureText, { color: colors.text }]}>
+          <Text style={[styles.secureText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
             {t('docs_secure_note')}
           </Text>
         </View>

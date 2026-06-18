@@ -159,7 +159,7 @@ const SwipeButton: React.FC<Props> = ({
               }),
             }}
           >
-            <Text style={{ color: isDark ? theme.colors.text : '#FFF', fontSize: 16, fontWeight: '700' }}>
+            <Text style={{ color: isDark ? theme.colors.text : '#FFF', fontSize: 16, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>
               {title}
             </Text>
           </Animated.View>

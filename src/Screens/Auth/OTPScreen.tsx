@@ -397,7 +397,7 @@ const OTPScreen = ({ navigation }: any) => {
                     }}
                     style={[styles.retryButton, { marginTop: 24, backgroundColor: colors.primary + '15', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 }]}
                   >
-                    <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                    <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>
                       {t('try_again', 'Try Again')}
                     </Text>
                   </TouchableOpacity>
@@ -523,9 +523,9 @@ const OTPScreen = ({ navigation }: any) => {
         >
           <Text style={styles.footerText}>
             {t('agree_terms_prefix')}
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('terms')}</Text>
+            <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('terms')}</Text>
             {t('and')}
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('privacy_policy')}</Text>
+            <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('privacy_policy')}</Text>
           </Text>
         </Reanimated.View>
       </View>

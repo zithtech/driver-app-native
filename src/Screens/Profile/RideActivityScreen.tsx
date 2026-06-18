@@ -253,7 +253,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
         </Pressable>
 
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('ride_activity')}</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('ride_activity')}</Text>
 
         <Pressable onPress={() => setShowDateFilter(true)}>
           <Ionicons name="calendar-outline" size={22} color={isDark ? '#FFFFFF' : '#000'} />
@@ -287,6 +287,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
                   isDark && statusFilter !== item && { color: '#9CA3AF' },
                   statusFilter === item && styles.activeTabText,
                 ]}
+                numberOfLines={1} adjustsFontSizeToFit
               >
                 {t(item.toLowerCase())}
               </Text>
@@ -314,7 +315,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           <Text style={[styles.statValue, { color: theme.colors.text }]}>
             {earningsSummary?.data?.tripsCompleted || 0}
           </Text>
-          <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
             {t('trips_completed')}
           </Text>
         </View>
@@ -324,7 +325,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           <Text style={[styles.statValue, { color: theme.colors.primary }]}>
             {formatCurrency(earningsSummary?.data?.totalEarnings || 0)}
           </Text>
-          <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
             {t('total_earnings')}
           </Text>
         </View>
@@ -334,7 +335,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           <Text style={[styles.statValue, { color: '#EAB308' }]}>
             {avgRating}
           </Text>
-          <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
             {t('avg_rating')}
           </Text>
         </View>
@@ -375,12 +376,12 @@ const RideActivityScreen = ({ navigation, route }: any) => {
                   size={18}
                   color={isDark ? '#34D399' : '#16A34A'}
                 />
-                <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]}>{item.pickup}</Text>
+                <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{item.pickup}</Text>
               </View>
 
               <View style={styles.routeRow}>
                 <Ionicons name="location" size={18} color="#DC2626" />
-                <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]}>{item.drop}</Text>
+                <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{item.drop}</Text>
               </View>
 
               <View style={[styles.divider, isDark && { backgroundColor: '#374151' }]} />
@@ -443,11 +444,11 @@ const RideActivityScreen = ({ navigation, route }: any) => {
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <Ionicons name="funnel-outline" size={20} color={isDark ? '#FFFFFF' : '#111827'} />
-              <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#111827', marginBottom: 0 }]}>{t('filter_trips')}</Text>
+              <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#111827', marginBottom: 0 }]} numberOfLines={1} adjustsFontSizeToFit>{t('filter_trips')}</Text>
             </View>
 
             {/* QUICK RANGES */}
-            <Text style={[styles.sectionLabel, isDark && { color: '#D1D5DB' }]}>{t('quick_range')}</Text>
+            <Text style={[styles.sectionLabel, isDark && { color: '#D1D5DB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('quick_range')}</Text>
             <View style={styles.quickRow}>
               <Pressable style={[styles.quickChip, isDark && { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]} onPress={applyToday}>
                 <Ionicons name="today-outline" size={14} color={isDark ? '#60A5FA' : colors.primary} />
@@ -466,7 +467,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
             </View>
 
             {/* DATE RANGE */}
-            <Text style={[styles.sectionLabel, isDark && { color: '#D1D5DB' }]}>{t('custom_range')}</Text>
+            <Text style={[styles.sectionLabel, isDark && { color: '#D1D5DB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('custom_range')}</Text>
 
             <Pressable
               style={[styles.dateRow, isDark && { backgroundColor: '#374151' }]}
@@ -474,7 +475,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
             >
               <Ionicons name="calendar-outline" size={18} color={isDark ? '#FFFFFF' : '#000'} />
               <View>
-                <Text style={[styles.dateLabel, isDark && { color: '#9CA3AF' }]}>{t('from')}</Text>
+                <Text style={[styles.dateLabel, isDark && { color: '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('from')}</Text>
                 <Text style={[styles.dateValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                   {fromDate.toDateString()}
                 </Text>
@@ -487,7 +488,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
             >
               <Ionicons name="calendar-outline" size={18} color={isDark ? '#FFFFFF' : '#000'} />
               <View>
-                <Text style={[styles.dateLabel, isDark && { color: '#9CA3AF' }]}>{t('to')}</Text>
+                <Text style={[styles.dateLabel, isDark && { color: '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('to')}</Text>
                 <Text style={[styles.dateValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                   {toDate.toDateString()}
                 </Text>
@@ -499,14 +500,14 @@ const RideActivityScreen = ({ navigation, route }: any) => {
               style={styles.applyBtn}
               onPress={() => setShowDateFilter(false)}
             >
-              <Text style={styles.applyText}>{t('apply_filter')}</Text>
+              <Text style={styles.applyText} numberOfLines={1} adjustsFontSizeToFit>{t('apply_filter')}</Text>
             </Pressable>
 
             <Pressable
               style={styles.cancelBtn}
               onPress={() => setShowDateFilter(false)}
             >
-              <Text style={[styles.cancelText, isDark && { color: '#60A5FA' }]}>{t('cancel')}</Text>
+              <Text style={[styles.cancelText, isDark && { color: '#60A5FA' }]} numberOfLines={1} adjustsFontSizeToFit>{t('cancel')}</Text>
             </Pressable>
           </View>
         </View>

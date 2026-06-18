@@ -137,7 +137,7 @@ const VerificationRoadmap = ({ status, t, isDark }: { status: string | undefined
   
   return (
     <View style={[styles.roadmapContainer, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
-      <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827', marginTop: 0 }]}>
+      <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
         {t('verification_plan') || 'Verification Roadmap'}
       </Text>
       <View style={styles.roadmapRow}>
@@ -189,7 +189,7 @@ const SmartSuggestions = ({ t, isDark }: { t: any; isDark: boolean }) => (
       <View style={[styles.bulbBg, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF' }]}>
         <Ionicons name="bulb" size={18} color="#3B82F6" />
       </View>
-      <Text style={[styles.suggestionsTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>{t('smart_suggestions') || 'Tips for Fast Approval'}</Text>
+      <Text style={[styles.suggestionsTitle, { color: isDark ? '#F3F4F6' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('smart_suggestions') || 'Tips for Fast Approval'}</Text>
     </View>
     <View style={styles.suggestionsList}>
       {SUGGESTIONS.map((s, i) => (
@@ -351,7 +351,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('documents')}</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('documents')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -361,7 +361,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
       >
         <VerificationRoadmap status={displayStatus} t={t} isDark={isDark} />
         
-        <Text style={[styles.sectionLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('identity_documents') || 'Identity & Verification'}</Text>
+        <Text style={[styles.sectionLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('identity_documents') || 'Identity & Verification'}</Text>
 
         {DOCUMENTS_CONFIG.map((doc) => {
           const { status, previews, reason } = getDocStatusData(doc.backendType, doc.key);
@@ -448,7 +448,7 @@ const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDa
         </View>
 
         <View style={styles.docInfo}>
-          <Text style={[styles.docTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+          <Text style={[styles.docTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
             {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
           </Text>
           <Text style={[styles.docSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
@@ -490,14 +490,14 @@ const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDa
 
       {!isDone && (
         <Pressable onPress={onUpload} style={styles.actionFooter}>
-          <Text style={styles.actionFooterText}>{t('tap_to_upload') || 'Tap to Upload'}</Text>
+          <Text style={styles.actionFooterText} numberOfLines={1} adjustsFontSizeToFit>{t('tap_to_upload') || 'Tap to Upload'}</Text>
           <Ionicons name="chevron-forward" size={14} color="#2563EB" />
         </Pressable>
       )}
       
       {isRejected && (
         <Pressable onPress={onUpload} style={[styles.actionFooter, { borderTopColor: '#FEE2E2' }]}>
-          <Text style={[styles.actionFooterText, { color: '#DC2626' }]}>{t('reupload') || 'Re-upload Document'}</Text>
+          <Text style={[styles.actionFooterText, { color: '#DC2626' }]} numberOfLines={1} adjustsFontSizeToFit>{t('reupload') || 'Re-upload Document'}</Text>
           <Ionicons name="refresh" size={14} color="#DC2626" />
         </Pressable>
       )}

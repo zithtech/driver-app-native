@@ -171,17 +171,27 @@ export const getDynamicPerformanceInsights = (metrics: PerformanceMetrics, t: an
 /**
  * Calculates current tier, next tier, and the roadmap to achieve it.
  */
-export const getTierRoadmapData = (currentPoints: number, metrics: PerformanceMetrics | null, t: any) => {
+export const getTierRoadmapData = (period: 'Today' | 'Week' | 'Month', metrics: PerformanceMetrics | null, t: any) => {
+  const thresholds = {
+    Today: { Silver: 2, Gold: 5, Platinum: 10 },
+    Week: { Silver: 10, Gold: 30, Platinum: 60 },
+    Month: { Silver: 40, Gold: 120, Platinum: 240 },
+  };
+
+  const activeThresholds = thresholds[period] || thresholds.Week;
+  
   const tiers = [
     { name: t('tier_partner', 'Partner'), threshold: 0, color: '#94A3B8' },
-    { name: t('tier_silver', 'Silver'), threshold: 100, color: '#CBD5E1' },
-    { name: t('tier_gold', 'Gold'), threshold: 500, color: '#FBBF24' },
-    { name: t('tier_platinum', 'Platinum'), threshold: 1500, color: '#3B82F6' },
+    { name: t('tier_silver', 'Silver'), threshold: activeThresholds.Silver, color: '#CBD5E1' },
+    { name: t('tier_gold', 'Gold'), threshold: activeThresholds.Gold, color: '#FBBF24' },
+    { name: t('tier_platinum', 'Platinum'), threshold: activeThresholds.Platinum, color: '#3B82F6' },
   ];
+
+  const completedRides = metrics?.completedTrips || 0;
 
   let currentTierIndex = 0;
   for (let i = tiers.length - 1; i >= 0; i--) {
-    if (currentPoints >= tiers[i].threshold) {
+    if (completedRides >= tiers[i].threshold) {
       currentTierIndex = i;
       break;
     }
@@ -190,19 +200,18 @@ export const getTierRoadmapData = (currentPoints: number, metrics: PerformanceMe
   const currentTier = tiers[currentTierIndex];
   const nextTier = tiers[currentTierIndex + 1] || null;
 
-  let pointsNeeded = 0;
+  let ridesNeeded = 0;
   let progress = 100;
   let tasks = [];
 
   if (nextTier) {
-    pointsNeeded = nextTier.threshold - currentPoints;
+    ridesNeeded = nextTier.threshold - completedRides;
     const tierRange = nextTier.threshold - currentTier.threshold;
-    const pointsInTier = currentPoints - currentTier.threshold;
-    progress = Math.min((pointsInTier / tierRange) * 100, 100);
+    const ridesInTier = completedRides - currentTier.threshold;
+    progress = Math.min((ridesInTier / tierRange) * 100, 100);
 
-    // 1. Core Points Task
-    const ridesNeeded = Math.ceil(pointsNeeded / 10);
-    tasks.push(t('tasks_rides_needed', `{{count}} more rides needed`, { count: ridesNeeded }));
+    // 1. Core Rides Completed Task
+    tasks.push(t('tasks_rides_needed', `{{count}} more rides needed to reach {{tier}}`, { count: ridesNeeded, tier: nextTier.name }));
     
     // 2. Dynamic Performance Based Tasks
     if (metrics) {
@@ -223,8 +232,7 @@ export const getTierRoadmapData = (currentPoints: number, metrics: PerformanceMe
 
       // Tier Specific Gamification (Partner Tier)
       if (currentTierIndex === 0) {
-        const peakBonusCount = Math.min(5, Math.max(2, ridesNeeded));
-        tasks.push(t('tasks_peak_hour_bonus', 'Complete {{count}} rides during peak hours (6 PM - 9 PM) for bonus points', { count: peakBonusCount }));
+        tasks.push(t('tasks_peak_hour_bonus', 'Drive during peak hours (6 PM - 9 PM) to maximize your points.'));
       }
 
       // Silver and above high-performance task
@@ -254,7 +262,8 @@ export const getTierRoadmapData = (currentPoints: number, metrics: PerformanceMe
   return {
     currentTier,
     nextTier,
-    pointsNeeded,
+    ridesNeeded,
+    pointsNeeded: ridesNeeded, // for compatibility
     progress,
     tasks: tasks.slice(0, 3), // Show top 3 most relevant tasks
     ratingPlan,

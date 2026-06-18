@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Modal,
     View,
@@ -8,6 +8,9 @@ import {
     FlatList,
     Pressable,
     Dimensions,
+    TextInput,
+    KeyboardAvoidingView,
+    Platform,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated, { 
@@ -59,165 +62,296 @@ const CancellationModal: React.FC<CancellationModalProps> = ({
     const { theme, isDark } = useAppTheme();
     const { triggerHaptic } = useHaptic();
     const [selectedReason, setSelectedReason] = useState<string | null>(null);
+    const [customReason, setCustomReason] = useState('');
+    const [isFocused, setIsFocused] = useState(false);
+    
+    // Internal states to control the Modal rendering and nested content animation
+    const [renderModal, setRenderModal] = useState(isVisible);
+    const [showContent, setShowContent] = useState(isVisible);
+    
+    const flatListRef = useRef<FlatList>(null);
 
     // Filter reasons based on hiddenReasonIds
     const filteredReasons = REASONS.filter(reason => !hiddenReasonIds.includes(reason.id));
 
     useEffect(() => {
         if (isVisible) {
+            setRenderModal(true);
+            setShowContent(true);
             triggerHaptic(HapticFeedbackTypes.impactLight);
         } else {
-            setSelectedReason(null);
+            setShowContent(false);
+            const timer = setTimeout(() => {
+                setRenderModal(false);
+            }, 300);
+            return () => clearTimeout(timer);
         }
     }, [isVisible, triggerHaptic]);
 
+    useEffect(() => {
+        if (!isVisible) {
+            setSelectedReason(null);
+            setCustomReason('');
+        }
+    }, [isVisible]);
+
+    useEffect(() => {
+        if (selectedReason !== 'OTHER') {
+            setCustomReason('');
+        } else {
+            // Scroll to the bottom when OTHER is selected to display the text box
+            setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+            }, 100);
+        }
+    }, [selectedReason]);
+
+    const isOtherInvalid = selectedReason === 'OTHER' && customReason.trim().length < 5;
+    const isConfirmDisabled = !selectedReason || isSubmitting || isOtherInvalid;
+
     const handleConfirm = () => {
-        if (selectedReason) {
+        if (selectedReason && !isConfirmDisabled) {
             triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-            onConfirm(selectedReason);
+            const finalReason = selectedReason === 'OTHER' ? customReason.trim() : selectedReason;
+            onConfirm(finalReason);
         }
     };
 
+    const renderFooter = () => {
+        if (selectedReason !== 'OTHER') return null;
+
+        const SUGGESTIONS = [
+            { id: 'traffic', label: t('reason_chip_traffic') },
+            { id: 'road_closed', label: t('reason_chip_road_closed') },
+            { id: 'vehicle_issue', label: t('reason_chip_vehicle_issue') },
+        ];
+
+        return (
+            <Animated.View 
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+                style={styles.customInputContainer}
+            >
+                <Text style={[styles.customInputTitle, { color: theme.colors.text }]}>
+                    {t('tell_us_more')}
+                </Text>
+                <TextInput
+                    multiline
+                    numberOfLines={3}
+                    value={customReason}
+                    onChangeText={setCustomReason}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    placeholder={t('reason_other_placeholder')}
+                    placeholderTextColor={theme.colors.textMuted}
+                    style={[
+                        styles.customTextInput,
+                        { 
+                            color: theme.colors.text,
+                            borderColor: isFocused
+                                ? theme.colors.primary
+                                : customReason.trim().length >= 5
+                                    ? (theme.colors.success || '#10B981')
+                                    : theme.colors.border + '40',
+                            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                        }
+                    ]}
+                    maxLength={150}
+                />
+
+                <View style={styles.chipsContainer}>
+                    {SUGGESTIONS.map((chip) => (
+                        <TouchableOpacity
+                            key={chip.id}
+                            style={[
+                                styles.chip,
+                                {
+                                    borderColor: theme.colors.border + '40',
+                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0,0,0,0.03)',
+                                }
+                            ]}
+                            onPress={() => {
+                                triggerHaptic(HapticFeedbackTypes.selection);
+                                setCustomReason(chip.label);
+                            }}
+                        >
+                            <Text style={[styles.chipText, { color: theme.colors.text }]}>
+                                {chip.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                <View style={styles.counterRow}>
+                    <Text style={[
+                        styles.counterText,
+                        { color: customReason.trim().length >= 5 ? theme.colors.success || '#10B981' : theme.colors.textMuted }
+                    ]}>
+                        {customReason.trim().length}/150
+                    </Text>
+                    {customReason.trim().length > 0 && customReason.trim().length < 5 && (
+                        <Text style={[styles.validationText, { color: '#B91C1C' }]}>
+                            {t('reason_min_length')}
+                        </Text>
+                    )}
+                </View>
+            </Animated.View>
+        );
+    };
+
+    if (!renderModal) return null;
+
     return (
         <Modal
-            visible={isVisible}
+            visible={renderModal}
             transparent
             animationType="none"
             onRequestClose={onClose}
         >
-            <Animated.View 
-                entering={FadeIn.duration(300)}
-                exiting={FadeOut.duration(300)}
-                style={styles.overlay}
-            >
-                <Pressable style={styles.background} onPress={onClose} />
-                
+            {showContent && (
                 <Animated.View 
-                    entering={SlideInDown.springify().damping(25).stiffness(200)}
-                    exiting={SlideOutDown.duration(250)}
-                    style={[styles.content, { backgroundColor: theme.colors.card }]}
+                    entering={FadeIn.duration(300)}
+                    exiting={FadeOut.duration(300)}
+                    style={styles.overlay}
                 >
-                        <View style={styles.handleContainer}>
-                            <View style={[styles.handle, { backgroundColor: theme.colors.border }]} />
-                        </View>
-
-                        <View style={styles.header}>
-                            <View>
-                                <Text style={[styles.title, { color: theme.colors.text }]}>
-                                    {t('cancel_trip_title')}
-                                </Text>
-                                <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>
-                                    {t('select_reason')}
-                                </Text>
+                    <Pressable style={styles.background} onPress={onClose} />
+                    
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                        keyboardVerticalOffset={Platform.OS === 'ios' ? vs(20) : 0}
+                        style={{ width: '100%' }}
+                    >
+                        <Animated.View 
+                            entering={SlideInDown.springify().damping(25).stiffness(200)}
+                            exiting={SlideOutDown.duration(250)}
+                            style={[styles.content, { backgroundColor: theme.colors.card }]}
+                        >
+                            <View style={styles.handleContainer}>
+                                <View style={[styles.handle, { backgroundColor: theme.colors.border }]} />
                             </View>
-                            <TouchableOpacity 
-                                onPress={onClose} 
-                                disabled={isSubmitting}
-                                style={[styles.closeButton, { backgroundColor: theme.colors.border + '40' }]}
-                            >
-                                <Ionicons name="close" size={ms(20)} color={theme.colors.text} />
-                            </TouchableOpacity>
-                        </View>
 
-                        <View style={[
-                            styles.warningContainer,
-                            { 
-                                backgroundColor: isDark ? 'rgba(153, 27, 27, 0.1)' : '#FEF2F2',
-                                borderColor: isDark ? 'rgba(153, 27, 27, 0.2)' : '#FEE2E2',
-                            }
-                        ]}>
-                            <View style={[styles.warningIconContainer, { backgroundColor: '#B91C1C' }]}>
-                                <Ionicons 
-                                    name="alert-outline" 
-                                    size={ms(16)} 
-                                    color="#FFFFFF" 
-                                />
-                            </View>
-                            <Text style={[
-                                styles.warningText,
-                                { color: isDark ? '#FCA5A5' : '#991B1B' }
-                            ]}>
-                                {t('cancellation_warning_text')}
-                            </Text>
-                        </View>
-
-                        <FlatList
-                            data={filteredReasons}
-                            keyExtractor={(item) => item.id}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    activeOpacity={0.7}
-                                    style={[
-                                        styles.reasonItem,
-                                        {
-                                            borderColor: selectedReason === item.id ? theme.colors.primary : theme.colors.border + '40',
-                                            backgroundColor: selectedReason === item.id ? theme.colors.primary + '08' : theme.colors.card,
-                                        },
-                                    ]}
-                                    onPress={() => {
-                                        triggerHaptic(HapticFeedbackTypes.selection);
-                                        setSelectedReason(item.id);
-                                    }}
+                            <View style={styles.header}>
+                                <View>
+                                    <Text style={[styles.title, { color: theme.colors.text }]}>
+                                        {t('cancel_trip_title')}
+                                    </Text>
+                                    <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>
+                                        {t('select_reason')}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity 
+                                    onPress={onClose} 
                                     disabled={isSubmitting}
+                                    style={[styles.closeButton, { backgroundColor: theme.colors.border + '40' }]}
                                 >
-                                    <View style={styles.reasonLeftContent}>
-                                        <View style={[
-                                            styles.reasonIconBox,
-                                            { 
-                                                backgroundColor: selectedReason === item.id ? theme.colors.primary + '15' : theme.colors.border + '30'
-                                            }
-                                        ]}>
-                                            <Ionicons 
-                                                name={item.icon} 
-                                                size={ms(18)} 
-                                                color={selectedReason === item.id ? theme.colors.primary : theme.colors.textMuted} 
-                                            />
-                                        </View>
-                                        <Text style={[
-                                            styles.reasonLabel,
-                                            { 
-                                                color: theme.colors.text,
-                                                fontWeight: selectedReason === item.id ? '600' : '500'
-                                            }
-                                        ]}>
-                                            {t(item.label)}
-                                        </Text>
-                                    </View>
-                                    <View style={[
-                                        styles.radioButton,
-                                        { borderColor: selectedReason === item.id ? theme.colors.primary : theme.colors.border }
-                                    ]}>
-                                        {selectedReason === item.id && (
-                                            <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />
-                                        )}
-                                    </View>
+                                    <Ionicons name="close" size={ms(20)} color={theme.colors.text} />
                                 </TouchableOpacity>
-                            )}
-                            style={styles.list}
-                            showsVerticalScrollIndicator={false}
-                        />
+                            </View>
 
-                        <View style={styles.footer}>
-                            <TouchableOpacity
-                                activeOpacity={0.8}
-                                onPress={handleConfirm}
-                                disabled={!selectedReason || isSubmitting}
-                                style={[
-                                    styles.confirmButton,
-                                    {
-                                        backgroundColor: !selectedReason || isSubmitting ? theme.colors.border : '#B91C1C',
-                                        shadowColor: '#B91C1C',
-                                        shadowOpacity: (selectedReason && !isSubmitting) ? 0.3 : 0,
-                                    }
-                                ]}
-                            >
-                                <Text style={styles.confirmButtonText}>
-                                    {isSubmitting ? t('processing') : t('confirm_cancellation')}
+                            <View style={[
+                                styles.warningContainer,
+                                { 
+                                    backgroundColor: isDark ? 'rgba(153, 27, 27, 0.1)' : '#FEF2F2',
+                                    borderColor: isDark ? 'rgba(153, 27, 27, 0.2)' : '#FEE2E2',
+                                }
+                            ]}>
+                                <View style={[styles.warningIconContainer, { backgroundColor: '#B91C1C' }]}>
+                                    <Ionicons 
+                                        name="alert-outline" 
+                                        size={ms(16)} 
+                                        color="#FFFFFF" 
+                                    />
+                                </View>
+                                <Text style={[
+                                    styles.warningText,
+                                    { color: isDark ? '#FCA5A5' : '#991B1B' }
+                                ]}>
+                                    {t('cancellation_warning_text')}
                                 </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </Animated.View>
+                            </View>
+
+                            <FlatList
+                                ref={flatListRef}
+                                data={filteredReasons}
+                                keyExtractor={(item) => item.id}
+                                keyboardShouldPersistTaps="handled"
+                                ListFooterComponent={renderFooter}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        activeOpacity={0.7}
+                                        style={[
+                                            styles.reasonItem,
+                                            {
+                                                borderColor: selectedReason === item.id ? theme.colors.primary : theme.colors.border + '40',
+                                                backgroundColor: selectedReason === item.id ? theme.colors.primary + '08' : theme.colors.card,
+                                            },
+                                        ]}
+                                        onPress={() => {
+                                            triggerHaptic(HapticFeedbackTypes.selection);
+                                            setSelectedReason(item.id);
+                                        }}
+                                        disabled={isSubmitting}
+                                    >
+                                        <View style={styles.reasonLeftContent}>
+                                            <View style={[
+                                                styles.reasonIconBox,
+                                                { 
+                                                    backgroundColor: selectedReason === item.id ? theme.colors.primary + '15' : theme.colors.border + '30'
+                                                }
+                                            ]}>
+                                                <Ionicons 
+                                                    name={item.icon} 
+                                                    size={ms(18)} 
+                                                    color={selectedReason === item.id ? theme.colors.primary : theme.colors.textMuted} 
+                                                />
+                                            </View>
+                                            <Text style={[
+                                                styles.reasonLabel,
+                                                { 
+                                                    color: theme.colors.text,
+                                                    fontWeight: selectedReason === item.id ? '600' : '500'
+                                                }
+                                            ]}>
+                                                {t(item.label)}
+                                            </Text>
+                                        </View>
+                                        <View style={[
+                                            styles.radioButton,
+                                            { borderColor: selectedReason === item.id ? theme.colors.primary : theme.colors.border }
+                                        ]}>
+                                            {selectedReason === item.id && (
+                                                <View style={[styles.radioInner, { backgroundColor: theme.colors.primary }]} />
+                                            )}
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                style={styles.list}
+                                showsVerticalScrollIndicator={false}
+                            />
+
+                            <View style={styles.footer}>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={handleConfirm}
+                                    disabled={isConfirmDisabled}
+                                    style={[
+                                        styles.confirmButton,
+                                        {
+                                            backgroundColor: isConfirmDisabled ? theme.colors.border : '#B91C1C',
+                                            shadowColor: '#B91C1C',
+                                            shadowOpacity: !isConfirmDisabled ? 0.3 : 0,
+                                        }
+                                    ]}
+                                >
+                                    <Text style={styles.confirmButtonText}>
+                                        {isSubmitting ? t('processing') : t('confirm_cancellation')}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Animated.View>
+                    </KeyboardAvoidingView>
                 </Animated.View>
+            )}
         </Modal>
     );
 };
@@ -348,6 +482,58 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         flex: 1,
         lineHeight: ms(18),
+    },
+    customInputContainer: {
+        marginTop: vs(10),
+        paddingHorizontal: ms(4),
+        width: '100%',
+        marginBottom: vs(15),
+    },
+    customInputTitle: {
+        fontSize: ms(15),
+        fontWeight: '600',
+        marginBottom: vs(8),
+    },
+    customTextInput: {
+        borderRadius: ms(16),
+        borderWidth: 1.5,
+        paddingHorizontal: ms(16),
+        paddingVertical: vs(12),
+        fontSize: ms(15),
+        minHeight: vs(80),
+        textAlignVertical: 'top',
+    },
+    counterRow: {
+        flexDirection: 'row-reverse',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: vs(6),
+        paddingHorizontal: ms(2),
+    },
+    counterText: {
+        fontSize: ms(12),
+        fontWeight: '600',
+    },
+    validationText: {
+        fontSize: ms(12),
+        fontWeight: '500',
+    },
+    chipsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: ms(8),
+        marginTop: vs(10),
+        marginBottom: vs(4),
+    },
+    chip: {
+        paddingHorizontal: ms(12),
+        paddingVertical: vs(6),
+        borderRadius: ms(20),
+        borderWidth: 1.5,
+    },
+    chipText: {
+        fontSize: ms(12),
+        fontWeight: '600',
     },
 });
 

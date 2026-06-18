@@ -39,7 +39,7 @@ const EmergencyCard = ({ title, sub, icon, color, number, index, theme, handleCa
                 <Ionicons name={icon} size={s(24)} color={color} />
             </View>
             <View style={styles.cardInfo}>
-                <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{title}</Text>
+                <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
                 <Text style={styles.cardSub}>{sub}</Text>
             </View>
             <View style={[styles.callCircle, { backgroundColor: color }]}>
@@ -130,7 +130,7 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={s(24)} color={theme.colors.text} />
                 </Pressable>
-                <Text style={styles.headerTitle}>{t('emergency_support')}</Text>
+                <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('emergency_support')}</Text>
                 <View style={{ width: s(24) }} />
             </View>
 
@@ -147,7 +147,7 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
                             <Ionicons name="shield-checkmark" size={s(44)} color="#DC2626" />
                         </View>
                     </View>
-                    <Text style={styles.sosTitle}>{t('emergency_help_title')}</Text>
+                    <Text style={styles.sosTitle} numberOfLines={1} adjustsFontSizeToFit>{t('emergency_help_title')}</Text>
                     <Text style={styles.sosDesc}>
                         {t('emergency_help_desc')}
                     </Text>
@@ -199,7 +199,7 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
 
                 {/* SAFETY FEATURES */}
                 <View style={styles.safetyFeatures}>
-                    <Text style={styles.sectionLabel}>{t('safety_tools')}</Text>
+                    <Text style={styles.sectionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('safety_tools')}</Text>
                     <TouchableOpacity
                         style={[styles.featureCard, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]}
                         onPress={handleShareLocation}
@@ -209,7 +209,7 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
                                 <Ionicons name="location" size={s(20)} color="#0369A1" />
                             </View>
                             <View>
-                                <Text style={styles.featureTitle}>{t('share_location')}</Text>
+                                <Text style={styles.featureTitle} numberOfLines={1} adjustsFontSizeToFit>{t('share_location')}</Text>
                                 <Text style={styles.featureSub}>{t('share_loc_desc')}</Text>
                             </View>
                         </View>
@@ -217,7 +217,7 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
                     </TouchableOpacity>
 
                     <View style={[styles.tipsCard, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', borderColor: theme.colors.border }]}>
-                        <Text style={[styles.tipsTitle, { color: theme.colors.text }]}>💡 {t('safety_tips')}</Text>
+                        <Text style={[styles.tipsTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>💡 {t('safety_tips')}</Text>
                         <View style={styles.tipRow}>
                             <Ionicons name="checkmark-circle" size={s(16)} color="#10B981" />
                             <Text style={styles.tipText}>{t('safety_tip_1')}</Text>

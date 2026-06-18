@@ -131,17 +131,17 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
 
       <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.cardHeaderText, { color: theme.colors.paragraphText }]}>
+          <Text style={[styles.cardHeaderText, { color: theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>
             {accepted ? t('your_active_ride') : t('scheduled_ride_request')}
           </Text>
           <View style={styles.badgeRow}>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-              <Text style={[styles.miniTagText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              <Text style={[styles.miniTagText, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t(item.ride_type || 'ONE_WAY')}
               </Text>
             </View>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-              <Text style={[styles.miniTagText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              <Text style={[styles.miniTagText, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t(item.paymentType || 'cash')}
               </Text>
             </View>
@@ -258,10 +258,10 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
               onPress={() => startHeadingToPickup(item)}
             >
               <Ionicons name="navigate" size={ms(18)} color="#FFF" style={{ marginRight: s(8) }} />
-              <Text style={styles.primaryBtnText}>{t('navigate_pickup')}</Text>
+              <Text style={styles.primaryBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('navigate_pickup')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.textBtn} onPress={() => cancelRide(item)}>
-              <Text style={styles.textBtnRed}>{t('cancel_ride')}</Text>
+              <Text style={styles.textBtnRed} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -286,7 +286,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
                   ]}
                   onPress={() => passRide(item.trip_id)}
                 >
-                  <Text style={[styles.outlineBtnText, { color: '#64748B' }]}>{t('pass')}</Text>
+                  <Text style={[styles.outlineBtnText, { color: '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('pass')}</Text>
                 </Pressable>
               </Animated.View>
 
@@ -312,17 +312,17 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
                   {acceptedSuccessId === item.trip_id ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Ionicons name="checkmark-circle" size={ms(20)} color="#FFF" style={{ marginRight: s(8) }} />
-                      <Text style={[styles.primaryBtnText, { color: '#FFF' }]}>{t('confirmed')}</Text>
+                      <Text style={[styles.primaryBtnText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('confirmed')}</Text>
                     </View>
                   ) : acceptingRideId === item.trip_id ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={[styles.primaryBtnText, { color: '#FFF', marginRight: s(8) }]}>{t('accepting')}</Text>
+                      <Text style={[styles.primaryBtnText, { color: '#FFF', marginRight: s(8) }]} numberOfLines={1} adjustsFontSizeToFit>{t('accepting')}</Text>
                       <Animated.View style={{ transform: [{ rotate: pulseAnim.interpolate({ inputRange: [1, 1.1], outputRange: ['0deg', '360deg'] }) }] }}>
                         <Ionicons name="sync" size={ms(16)} color="#FFF" />
                       </Animated.View>
                     </View>
                   ) : (
-                    <Text style={[styles.primaryBtnText, { color: '#FFF' }]}>{t('accept_ride')}</Text>
+                    <Text style={[styles.primaryBtnText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('accept_ride')}</Text>
                   )}
                 </Pressable>
               </Animated.View>
@@ -1198,7 +1198,7 @@ const ScheduledRidesScreen = () => {
                 styles.tabText,
                 { color: activeTab === 'today' ? theme.colors.primary : '#64748B' },
                 activeTab === 'today' && styles.activeTabText,
-              ]}>
+              ]} numberOfLines={1} adjustsFontSizeToFit>
                 {t('today')}
               </Text>
               <Animated.View
@@ -1223,7 +1223,7 @@ const ScheduledRidesScreen = () => {
                 styles.tabText,
                 { color: activeTab === 'upcoming' ? theme.colors.primary : '#64748B' },
                 activeTab === 'upcoming' && styles.activeTabText,
-              ]}>
+              ]} numberOfLines={1} adjustsFontSizeToFit>
                 {t('upcoming')}
               </Text>
               <Animated.View
@@ -1287,7 +1287,7 @@ const ScheduledRidesScreen = () => {
                     <Text style={[
                         styles.filterChipText,
                         { color: filterType === item ? '#FFF' : (isDark ? '#CBD5E1' : '#64748B') },
-                    ]}>
+                    ]} numberOfLines={1} adjustsFontSizeToFit>
                         {t(item)}
                     </Text>
                     {count > 0 && (

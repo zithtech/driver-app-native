@@ -326,6 +326,8 @@ export function setupNotificationOpenedHandler(
             navigate('ScheduledRides');
         } else if (type === 'PLAN_EXPIRY_REMINDER') {
             navigate('RechargePlanScreen');
+        } else if (type === 'SUPPORT_REPLY') {
+            navigate('HelpCenter_Nav', { openChat: true });
         }
     };
 

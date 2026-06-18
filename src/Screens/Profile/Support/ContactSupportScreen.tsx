@@ -22,7 +22,7 @@ const ContactCard = ({ icon, title, subtitle, color, onPress, index, theme }: an
                 <Ionicons name={icon} size={s(24)} color={color} />
             </View>
             <View style={styles.cardContent}>
-                <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{title}</Text>
+                <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
                 <Text style={[styles.cardSubtitle, { color: theme.colors.paragraphText }]}>{subtitle}</Text>
             </View>
             <Ionicons name="chevron-forward" size={s(20)} color={theme.colors.border} />
@@ -71,13 +71,13 @@ const ContactSupportScreen: React.FC = ({ navigation }: any) => {
                 <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={s(24)} color={theme.colors.text} />
                 </Pressable>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('contact_support')}</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_support')}</Text>
                 <View style={{ width: s(24) }} />
             </View>
 
             <View style={styles.container}>
                 <Animated.View entering={FadeInUp.duration(600)}>
-                    <Text style={[styles.heroText, { color: theme.colors.text }]}>
+                    <Text style={[styles.heroText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
                         {t('get_in_touch', 'Get in Touch')}
                     </Text>
                     <Text style={[styles.description, { color: theme.colors.paragraphText }]}>
@@ -116,7 +116,7 @@ const ContactSupportScreen: React.FC = ({ navigation }: any) => {
                 </View>
 
                 <View style={styles.footer}>
-                    <Text style={[styles.footerText, { color: theme.colors.paragraphText }]}>
+                    <Text style={[styles.footerText, { color: theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>
                         {t('average_response', 'Average response time: < 30 mins')}
                     </Text>
                 </View>

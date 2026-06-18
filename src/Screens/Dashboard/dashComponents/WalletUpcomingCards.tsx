@@ -87,9 +87,9 @@ const WalletUpcomingCards: React.FC<WalletUpcomingCardsProps> = ({ balance, upco
                     <View style={[styles.walletIcon, isDark && { backgroundColor: '#3B82F6' }]}>
                         <Ionicons name="wallet-outline" size={ms(18)} color={isDark ? '#FFFFFF' : '#2563EB'} />
                     </View>
-                    <Text style={[styles.cardTitle, { color: isDark ? '#DBEAFE' : '#1E40AF' }]}>{t('wallet_balance')}</Text>
+                    <Text style={[styles.cardTitle, { color: isDark ? '#DBEAFE' : '#1E40AF' }]} numberOfLines={2} adjustsFontSizeToFit>{t('wallet_balance')}</Text>
                 </View>
-                <Text style={[styles.walletAmount, { color: isDark ? '#FFFFFF' : '#1E3A8A' }]}>₹{balance || '0'}</Text>
+                <Text style={[styles.walletAmount, { color: isDark ? '#FFFFFF' : '#1E3A8A' }]} numberOfLines={1} adjustsFontSizeToFit>₹{balance || '0'}</Text>
                 <View style={styles.linkRow}>
                     <Text style={[styles.linkText, isDark && { color: '#60A5FA' }]}>{t('add_money')}</Text>
                     <Ionicons name="arrow-forward" size={ms(14)} color={isDark ? '#60A5FA' : '#2563EB'} style={{ marginLeft: s(4) }} />
@@ -102,7 +102,7 @@ const WalletUpcomingCards: React.FC<WalletUpcomingCardsProps> = ({ balance, upco
                 onPress={() => navigation.navigate('Requests', { initialTab: 'upcoming' })}
             >
                 <View style={styles.cardHeader}>
-                    <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+                    <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={2} adjustsFontSizeToFit>
                         {upcomingRide ? t('next_ride') : t('upcoming_ride')}
                     </Text>
                     <View style={styles.dotContainer}>
@@ -132,7 +132,7 @@ const WalletUpcomingCards: React.FC<WalletUpcomingCardsProps> = ({ balance, upco
                     ) : (
                         <>
                             <Ionicons name="calendar-outline" size={ms(24)} color={isDark ? '#4B5563' : '#94A3B8'} />
-                            <Text style={[styles.upcomingText, isDark && { color: '#6B7280' }]}>{t('no_upcoming_rides')}</Text>
+                            <Text style={[styles.upcomingText, isDark && { color: '#6B7280' }]} numberOfLines={2} adjustsFontSizeToFit>{t('no_upcoming_rides')}</Text>
                         </>
                     )}
                 </View>
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
         width: '48.5%',
         borderRadius: ms(20),
         padding: ms(16),
-        height: vs(135),
+        minHeight: vs(135),
         justifyContent: 'space-between',
     },
     walletCard: {

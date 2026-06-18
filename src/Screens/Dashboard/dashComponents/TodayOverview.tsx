@@ -36,7 +36,6 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.todayScrollContent}
-            snapToInterval={s(150) + s(8)}
             decelerationRate="fast"
         >
             <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F3F4F6' }]} onPress={onEarningsPress}>
@@ -44,11 +43,11 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Ionicons name="cash-outline" size={ms(20)} color={isDark ? '#34D399' : '#16A34A'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>
+                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
                         {t('currency_symbol')}
                         {earnings}
                     </Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]}>{t('earnings')}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('earnings')}</Text>
                 </View>
             </Pressable>
 
@@ -58,8 +57,8 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Ionicons name="car-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>{rides}</Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]}>{t('rides')}</Text>
+                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{rides}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('rides')}</Text>
                 </View>
             </Pressable>
 
@@ -69,10 +68,10 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Ionicons name="time-outline" size={ms(20)} color={isDark ? '#A78BFA' : '#7C3AED'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Animated.Text style={[styles.todayValue, { transform: [{ scale: timerPulseAnim }], color: isDark ? '#FFFFFF' : '#1E293B' }]}>
+                    <Animated.Text style={[styles.todayValue, { transform: [{ scale: timerPulseAnim }], color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
                         {displayTimeFormatted}
                     </Animated.Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]}>{t('online')}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('online')}</Text>
                 </View>
             </View>
 
@@ -82,11 +81,11 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Ionicons name="map-outline" size={ms(20)} color={isDark ? '#FBBF24' : '#D97706'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>
+                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
                         {distance}
                         {t('km')}
                     </Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]}>{t('distance')}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('distance')}</Text>
                 </View>
             </View>
 
@@ -96,8 +95,8 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Ionicons name="close-circle-outline" size={ms(20)} color={isDark ? '#F87171' : '#DC2626'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>{cancellations}</Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]}>{t('cancellations')}</Text>
+                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{cancellations}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('cancellations')}</Text>
                 </View>
             </View>
         </ScrollView>
@@ -113,7 +112,7 @@ const styles = StyleSheet.create({
         marginTop: vs(10),
     },
     todayCard: {
-        width: s(150),
+        minWidth: s(150),
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#FFFFFF',

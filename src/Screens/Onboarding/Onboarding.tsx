@@ -162,13 +162,13 @@ const Onboarding = ({ navigation }: any) => {
 
 
             <View style={styles.titleWrapper}>
-              <Text style={styles.title}>{t('welcome_to', 'Welcome to ')}</Text>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
               <AnimatedReanimated.View
                 entering={BounceIn.duration(1000).delay(200)}
                 style={styles.brandWrapper}
               >
                 <AnimatedReanimated.View style={pulseStyle}>
-                  <Text style={styles.brand}>{displayText}</Text>
+                  <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
                 </AnimatedReanimated.View>
               </AnimatedReanimated.View>
             </View>
@@ -199,7 +199,7 @@ const Onboarding = ({ navigation }: any) => {
                 onPress={() => setHelpVisible(true)}
               >
                 <Ionicons name="headset-outline" size={mS(12)} color="#4B5563" style={{ marginRight: hS(4) }} />
-                <Text style={styles.helpText}>{t('help_center', 'Help Center')}</Text>
+                <Text style={styles.helpText} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
               </TouchableOpacity>
             </AnimatedReanimated.View>
           </View>
@@ -251,7 +251,7 @@ const Onboarding = ({ navigation }: any) => {
               activeOpacity={0.8}
               onPress={() => navigation.navigate(DocumentScreen_Nav)}
             >
-              <Text style={styles.verificationButtonText}>
+              <Text style={styles.verificationButtonText} numberOfLines={1} adjustsFontSizeToFit>
                 {t('verify_docs_to_start', 'Verify Documents to Start Earning')}
               </Text>
               <Ionicons name="shield-checkmark" size={15} color="#FFF" style={{ marginLeft: 8 }} />
@@ -320,7 +320,7 @@ const Onboarding = ({ navigation }: any) => {
                     setShowCongratsModal(false);
                   }}
                 >
-                  <Text style={[styles.maybeLaterText, { color: colors.text + '60' }]}>
+                  <Text style={[styles.maybeLaterText, { color: colors.text + '60' }]} numberOfLines={1} adjustsFontSizeToFit>
                     Maybe Later
                   </Text>
                 </TouchableOpacity>

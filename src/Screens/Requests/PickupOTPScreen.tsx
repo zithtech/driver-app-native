@@ -68,7 +68,7 @@ const HelpModal = ({ showHelpModal, setShowHelpModal, theme, t, triggerHaptic, s
         <Ionicons name={icon} size={ms(20)} color={color} />
       </View>
       <View style={styles.optionInfo}>
-        <Text style={[styles.optionTitle, { color: isDanger ? theme.colors.error : theme.colors.text }]}>
+        <Text style={[styles.optionTitle, { color: isDanger ? theme.colors.error : theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
           {title}
         </Text>
         <Text style={[styles.optionDescription, { color: theme.colors.paragraphText }]}>
@@ -103,7 +103,7 @@ const HelpModal = ({ showHelpModal, setShowHelpModal, theme, t, triggerHaptic, s
           <View style={styles.modalIndicator} />
 
           <View style={styles.modalHeaderInner}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('help_options')}
             </Text>
             <TouchableOpacity
@@ -187,7 +187,7 @@ const HelpModal = ({ showHelpModal, setShowHelpModal, theme, t, triggerHaptic, s
             style={[styles.modalCloseBtn, { backgroundColor: theme.colors.primary }]}
             onPress={() => setShowHelpModal(false)}
           >
-            <Text style={styles.modalCloseText}>{t('close')}</Text>
+            <Text style={styles.modalCloseText} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
@@ -207,7 +207,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
   const { theme, isDark } = useAppTheme();
-  const { showAlert } = useAlert();
+  const { showAlert, hideAlert } = useAlert();
   const { triggerHaptic } = useHaptic();
   const dispatch = useDispatch();
 
@@ -242,11 +242,21 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
   const [cancelTripApi, { isLoading: isCancelling }] = useCancelTripMutation();
 
   const handleCancelTrip = async (reason: string) => {
+    const isStandard = [
+      'PERSONAL_EMERGENCY',
+      'VEHICLE_PROBLEM',
+      'PICKUP_TOO_FAR',
+      'RIDER_NOT_RESPONDING',
+      'RIDER_ASKED_TO_CANCEL',
+      'TECHNICAL_ISSUE'
+    ].includes(reason);
+
     try {
       await cancelTripApi({
         tripId: ride.trip_id || ride.id,
-        cancel_reason: reason,
-        cancel_by: 'DRIVER'
+        cancel_reason: isStandard ? reason : 'OTHER',
+        cancel_by: 'DRIVER',
+        notes: isStandard ? undefined : reason
       }).unwrap();
 
       setShowCancelModal(false);
@@ -255,12 +265,14 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         message: 'The trip has been cancelled successfully.',
         singleButton: true,
         icon: 'checkmark-circle-outline',
-        onConfirm: () => {
-          onClose();
-          dispatch(clearAcceptedRide());
-          navigation.replace('DashboardScreen');
-        }
       });
+
+      setTimeout(() => {
+        hideAlert();
+        onClose();
+        dispatch(clearAcceptedRide());
+        navigation.replace('DashboardScreen');
+      }, 1500);
     } catch (error: any) {
       console.error('Cancellation failed:', error);
 
@@ -419,7 +431,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
           <Pressable style={[styles.modalContent, { backgroundColor: theme.colors.card }]} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={[styles.modalTitleText, { color: theme.colors.text }]}>{t('verify_pickup_otp')}</Text>
+                <Text style={[styles.modalTitleText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('verify_pickup_otp')}</Text>
                 <Text style={[styles.modalSubtitleText, { color: theme.colors.paragraphText }]}>{t('ask_otp')}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowHelpModal(true)}>
@@ -501,7 +513,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
               ) : isVerified ? (
                 <Ionicons name="checkmark-circle" size={ms(24)} color="#FFF" />
               ) : (
-                <Text style={styles.confirmBtnText}>{t('confirm_pickup_btn')}</Text>
+                <Text style={styles.confirmBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('confirm_pickup_btn')}</Text>
               )}
             </TouchableOpacity>
 
@@ -510,7 +522,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
                 style={styles.skipBtn}
                 onPress={() => verifyOtp(ride?.otp || DEMO_OTP)}
               >
-                <Text style={[styles.skipBtnText, { color: theme.colors.primary }]}>
+                <Text style={[styles.skipBtnText, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>
                   {t('skip_verification') || 'Skip for testing'}
                 </Text>
               </TouchableOpacity>

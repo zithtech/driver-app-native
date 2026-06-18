@@ -74,7 +74,7 @@ const SwipeToArrive: React.FC<SwipeToArriveProps> = ({ onSwipeComplete, title, t
             ]} />
 
             <Animated.View style={[styles.textContainer, animatedTextStyle]}>
-                <Text style={[styles.text, { color: theme.colors.text }]}>{title}</Text>
+                <Text style={[styles.text, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
             </Animated.View>
 
             <GestureDetector gesture={panGesture}>

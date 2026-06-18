@@ -116,7 +116,7 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
 
                 <View style={{ marginLeft: s(12), flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <Text style={uiStyles.walletTitle} numberOfLines={1}>
+                        <Text style={uiStyles.walletTitle} numberOfLines={1} adjustsFontSizeToFit>
                             {activePlan ? (planName || t('subscription_plan')) : t('no_active_plan')}
                         </Text>
                         {!!activePlan && (
@@ -145,7 +145,7 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
             {isBasic && (
                 <View style={uiStyles.upgradeBox}>
                     <Ionicons name="sparkles" size={14} color="#6D28D9" />
-                    <Text style={uiStyles.upgradeText}>{t('upgrade_to_elite_rides')}</Text>
+                    <Text style={uiStyles.upgradeText} numberOfLines={2} adjustsFontSizeToFit>{t('upgrade_to_elite_rides')}</Text>
                 </View>
             )}
 
@@ -170,7 +170,7 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
                     style={[uiStyles.ctaBtn, { backgroundColor: isUrgent ? '#EA580C' : theme.colors.primary }]}
                     onPress={() => navigation.navigate('RechargePlanScreen')}
                 >
-                    <Text style={uiStyles.ctaText}>
+                    <Text style={uiStyles.ctaText} numberOfLines={1} adjustsFontSizeToFit>
                         {isUrgent ? t('renew_now') : t('view_plans')}
                     </Text>
                 </Pressable>

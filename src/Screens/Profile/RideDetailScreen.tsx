@@ -107,7 +107,11 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
       customer: {
         ...initialRide.customer,
         name: tripData.passenger_name || tripData.customer?.name || initialRide.customer?.name || 'Customer',
-        ratingGiven: tripData.rating || tripData.user_rating || tripData.trip_rating || initialRide.customer?.ratingGiven,
+        ratingGiven: (() => {
+          const rawRating = tripData.rating ?? tripData.user_rating ?? tripData.trip_rating ?? initialRide.customer?.ratingGiven;
+          const parsed = rawRating != null ? Number(rawRating) : NaN;
+          return isNaN(parsed) ? undefined : parsed;
+        })(),
         comment: tripData.feedback || tripData.comment || tripData.user_feedback || initialRide.customer?.comment || '',
       },
       fareDetails: {
@@ -217,7 +221,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#1F2937'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#1F2937' }]}>{t('ride_details')}</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#1F2937' }]} numberOfLines={1} adjustsFontSizeToFit>{t('ride_details')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -230,12 +234,12 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
             <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
               <View style={styles.rowBetween}>
                 <View>
-                  <Text style={[styles.rideId, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  <Text style={[styles.rideId, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
                     #{ride.trip_code || ride.id || 'TRIP-ID'}
                   </Text>
                   <Text style={[styles.dateTime, isDark && { color: '#9CA3AF' }]}>{ride.date} • {ride.time}</Text>
                 </View>
-                <StatusBadge status={ride.status} label={t(ride.status.toLowerCase())} isDark={isDark} />
+                <StatusBadge status={ride.status} label={ride.status ? t(ride.status.toLowerCase()) : ''} isDark={isDark} />
               </View>
 
               <View style={[styles.divider, isDark && { backgroundColor: '#374151' }]} />
@@ -247,7 +251,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                     <View style={[styles.verticalLine, isDark && { backgroundColor: '#4B5563' }]} />
                   </View>
                   <View style={styles.routeTextBody}>
-                    <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]}>{ride.pickup}</Text>
+                    <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.pickup}</Text>
                   </View>
                 </View>
 
@@ -256,7 +260,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                     <Ionicons name="location" size={18} color="#DC2626" />
                   </View>
                   <View style={styles.routeTextBody}>
-                    <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]}>{ride.drop}</Text>
+                    <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.drop}</Text>
                   </View>
                 </View>
               </View>
@@ -265,18 +269,22 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
             {/* Customer Information Section */}
             {ride.customer && (
               <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-                <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('customer_details')}</Text>
+                <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('customer_details')}</Text>
                 <View style={styles.customerRow}>
                   <Image source={{ uri: ride.customer.image || 'https://ui-avatars.com/api/?name=Customer' }} style={styles.customerAvatar} />
                   <View style={styles.customerInfo}>
-                    <Text style={[styles.customerName, { color: isDark ? '#F3F4F6' : '#1F2937' }]}>{ride.customer.name}</Text>
+                    <Text style={[styles.customerName, { color: isDark ? '#F3F4F6' : '#1F2937' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.customer.name}</Text>
                     {ride.status === 'Completed' ? (
                       <View style={[styles.ratingBox, isDark && { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: 'rgba(251, 191, 36, 0.2)' }]}>
                         <Ionicons name="star" size={14} color="#FBBF24" />
-                        <Text style={[styles.ratingText, isDark && { color: '#FCD34D' }]}>{ride.customer.ratingGiven?.toFixed(1) || t('no_rating')}</Text>
+                        <Text style={[styles.ratingText, isDark && { color: '#FCD34D' }]}>
+                          {ride.customer.ratingGiven !== undefined ? ride.customer.ratingGiven.toFixed(1) : t('no_rating')}
+                        </Text>
                       </View>
                     ) : (
-                      <Text style={[styles.noRatingText, isDark && { color: '#9CA3AF' }]}>{t('trip')} {t(ride.status.toLowerCase())}</Text>
+                      <Text style={[styles.noRatingText, isDark && { color: '#9CA3AF' }]}>
+                        {t('trip')} {ride.status ? t(ride.status.toLowerCase()) : ''}
+                      </Text>
                     )}
                   </View>
                 </View>
@@ -290,7 +298,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
 
             {/* Trip Timeline */}
             <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('trip_timeline')}</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('trip_timeline')}</Text>
 
               {ride.timeline ? (
                 <>
@@ -356,7 +364,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
             <View style={[styles.section, styles.receiptCard, isDark && { backgroundColor: theme.colors.card, borderColor: '#374151' }]}>
               <View style={[styles.receiptTopEdge, isDark && { borderBottomColor: theme.colors.background }]} />
 
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('fare_breakdown')}</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('fare_breakdown')}</Text>
               <FareRow label={t('base_fare')} value={formatCurrency(ride.fareDetails?.base || 0)} isDark={isDark} />
               <FareRow label={t('distance_fare', { distance: ride.distance || '0 km' })} value={formatCurrency(ride.fareDetails?.distance || 0)} isDark={isDark} />
               <FareRow label={t('time_fare')} value={formatCurrency(ride.fareDetails?.time || 0)} isDark={isDark} />
@@ -365,7 +373,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
               <View style={[styles.receiptDashedLine, isDark && { borderColor: '#4B5563' }]} />
 
               <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                <Text style={[styles.totalLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
                   {ride.status === 'Cancelled' ? t('cancellation_charge') : t('your_earnings')}
                 </Text>
                 <Text style={[styles.totalValue, isDark && { color: ride.status === 'Cancelled' ? '#9CA3AF' : '#34D399' }]}>
@@ -378,7 +386,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
 
             {/* Payment and Support */}
             <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('payment_method')}</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('payment_method')}</Text>
               <View style={styles.paymentBox}>
                 <Ionicons
                   name={ride.paymentMethod === 'Cash' ? 'cash-outline' : ride.paymentMethod === 'UPI' ? 'qr-code-outline' : 'wallet-outline'}
@@ -400,25 +408,25 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
               <View style={styles.actionRow}>
                 <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]}>
                   <Ionicons name="headset-outline" size={20} color={isDark ? '#E5E7EB' : '#4B5563'} />
-                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]}>{t('support')}</Text>
+                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('support')}</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.actionBtnPrimary, ride.status === 'Cancelled' && styles.disabledBtn]}
                   onPress={() => ride.status !== 'Cancelled' && downloadInvoice(ride)}
                 >
                   <Ionicons name="download-outline" size={20} color="#fff" />
-                  <Text style={styles.actionBtnPrimaryText}>{t('invoice')}</Text>
+                  <Text style={styles.actionBtnPrimaryText} numberOfLines={1} adjustsFontSizeToFit>{t('invoice')}</Text>
                 </Pressable>
               </View>
 
               <View style={styles.actionRow}>
                 <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]} onPress={handleReportIssue}>
                   <Ionicons name="warning-outline" size={20} color={isDark ? '#F87171' : '#DC2626'} />
-                  <Text style={[styles.actionBtnText, { color: isDark ? '#F87171' : '#DC2626' }]}>{t('report_issue')}</Text>
+                  <Text style={[styles.actionBtnText, { color: isDark ? '#F87171' : '#DC2626' }]} numberOfLines={1} adjustsFontSizeToFit>{t('report_issue')}</Text>
                 </Pressable>
                 <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]} onPress={handleShare}>
                   <Ionicons name="share-social-outline" size={20} color={isDark ? '#E5E7EB' : '#4B5563'} />
-                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]}>{t('share_details')}</Text>
+                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('share_details')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -435,7 +443,7 @@ const StatusBadge = ({ status, label, isDark }: any) => (
     styles.badge,
     status === 'Completed' ? [styles.success, isDark && { backgroundColor: 'rgba(22, 163, 74, 0.2)' }] : [styles.cancelled, isDark && { backgroundColor: 'rgba(220, 38, 38, 0.2)' }]
   ]}>
-    <Text style={[styles.badgeText, isDark && { color: status === 'Completed' ? '#34D399' : '#F87171' }]}>{label || status}</Text>
+    <Text style={[styles.badgeText, isDark && { color: status === 'Completed' ? '#34D399' : '#F87171' }]} numberOfLines={1} adjustsFontSizeToFit>{label || status}</Text>
   </View>
 );
 

@@ -506,9 +506,9 @@ const WelcomeScreen = ({ navigation }: any) => {
             >
               <Text style={styles.footerText}>
                 {t('agree_terms_prefix')}
-                <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('terms')}</Text>
+                <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('terms')}</Text>
                 {t('and')}
-                <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('privacy_policy')}</Text>
+                <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('privacy_policy')}</Text>
               </Text>
             </Reanimated.View>
           </View>

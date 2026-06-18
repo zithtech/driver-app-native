@@ -210,7 +210,7 @@ const WalletScreen = ({ navigation }: any) => {
         <Pressable onPress={() => navigation.goBack()} style={[styles.backButton, isDark && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>My Wallet</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]} numberOfLines={1} adjustsFontSizeToFit>My Wallet</Text>
       </View>
 
       <FlatList
@@ -253,7 +253,7 @@ const WalletScreen = ({ navigation }: any) => {
 
             {/* ================= PRIMARY BANK ================= */}
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>Withdrawal Account</Text>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#1e293b' }]} numberOfLines={1} adjustsFontSizeToFit>Withdrawal Account</Text>
             </View>
 
             {primaryBank ? (
@@ -272,7 +272,7 @@ const WalletScreen = ({ navigation }: any) => {
                   style={[styles.changeBankBtn, isDark && { backgroundColor: 'rgba(37, 99, 235, 0.2)' }]}
                   onPress={() => addBankSheetRef.current?.expand()}
                 >
-                  <Text style={[styles.changeText, isDark && { color: '#60A5FA' }]}>Change</Text>
+                  <Text style={[styles.changeText, isDark && { color: '#60A5FA' }]} numberOfLines={1} adjustsFontSizeToFit>Change</Text>
                 </Pressable>
               </View>
             ) : (
@@ -281,7 +281,7 @@ const WalletScreen = ({ navigation }: any) => {
                 onPress={() => addBankSheetRef.current?.expand()}
               >
                 <Ionicons name="add-circle-outline" size={24} color={isDark ? '#60A5FA' : '#2563eb'} />
-                <Text style={[styles.addBankText, isDark && { color: '#60A5FA' }]}>Add Bank Account</Text>
+                <Text style={[styles.addBankText, isDark && { color: '#60A5FA' }]} numberOfLines={1} adjustsFontSizeToFit>Add Bank Account</Text>
               </Pressable>
             )}
 
@@ -339,7 +339,7 @@ const WalletScreen = ({ navigation }: any) => {
         handleIndicatorStyle={[styles.sheetIndicator, isDark && { backgroundColor: '#4B5563' }]}
       >
         <View style={styles.sheetContent}>
-          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>Withdraw Funds</Text>
+          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]} numberOfLines={1} adjustsFontSizeToFit>Withdraw Funds</Text>
           <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#64748b' }]}>
             Available balance: <Text style={[styles.boldText, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>₹{balance.toLocaleString('en-IN')}</Text>
           </Text>
@@ -374,7 +374,7 @@ const WalletScreen = ({ navigation }: any) => {
             style={[styles.primaryActionBtn, isDark && { backgroundColor: '#3B82F6', shadowOpacity: 0.1 }]}
             onPress={confirmWithdraw}
           >
-            <Text style={[styles.primaryActionText, isDark && { color: '#FFFFFF' }]}>Confirm Withdrawal</Text>
+            <Text style={[styles.primaryActionText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>Confirm Withdrawal</Text>
           </Pressable>
         </View>
       </BottomSheet>
@@ -390,7 +390,7 @@ const WalletScreen = ({ navigation }: any) => {
         handleIndicatorStyle={[styles.sheetIndicator, isDark && { backgroundColor: '#4B5563' }]}
       >
         <View style={styles.sheetContent}>
-          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>Add Bank Account</Text>
+          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]} numberOfLines={1} adjustsFontSizeToFit>Add Bank Account</Text>
           <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Enter details to receive your earnings securely.</Text>
 
           <View style={styles.formGroup}>

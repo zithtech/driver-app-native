@@ -238,7 +238,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     <View style={[styles.checkBadge, { backgroundColor: theme.colors.success || '#34a853', shadowColor: theme.colors.success }]}>
                         <Ionicons name="checkmark" size={60} color="#fff" />
                     </View>
-                    <Text style={[styles.successTitle, { color: theme.colors.text }]}>{t('payment_success_title')}</Text>
+                    <Text style={[styles.successTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('payment_success_title')}</Text>
                     <Text style={[styles.successSubtitle, { color: theme.colors.paragraphText }]}>
                         {t('payment_success_msg', {
                             amount: price,
@@ -248,7 +248,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
 
                     <View style={[styles.earningsSummary, { backgroundColor: theme.colors.primary + '0D' }]}>
                         <Text style={[styles.netEarningLabel, { color: theme.colors.primary }]}>{t('net_earning')}</Text>
-                        <Text style={[styles.netEarningValue, { color: theme.colors.text }]}>{price}</Text>
+                        <Text style={[styles.netEarningValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{price}</Text>
                         <View style={[styles.zeroCommBadge, { backgroundColor: theme.colors.primary + '15' }]}>
                             <Ionicons name="flash" size={14} color={theme.colors.primary} />
                             <Text style={[styles.zeroCommText, { color: theme.colors.primary }]}>{t('zero_commission_note')}</Text>
@@ -261,7 +261,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                         style={[styles.doneBtn, { backgroundColor: theme.colors.primary }]}
                         onPress={() => navigation.navigate(Dashboard_Nav)}
                     >
-                        <Text style={[styles.doneBtnText, { color: '#fff' }]}>{t('done')}</Text>
+                        <Text style={[styles.doneBtnText, { color: '#fff' }]} numberOfLines={1} adjustsFontSizeToFit>{t('done')}</Text>
                     </Pressable>
                 </Animated.View>
             </View>
@@ -285,13 +285,13 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                             style={styles.subBadge}
                         >
                             <Ionicons name="star" size={14} color="#fff" />
-                            <Text style={styles.subBadgeText}>{t('subscription_active_badge')}</Text>
+                            <Text style={styles.subBadgeText} numberOfLines={1} adjustsFontSizeToFit>{t('subscription_active_badge')}</Text>
                         </LinearGradient>
                     </Animated.View>
 
                     {/* Header Section */}
                     <View style={styles.header}>
-                        <Text style={[styles.title, { color: theme.colors.text }]}>{t('trip_finished')}</Text>
+                        <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('trip_finished')}</Text>
                         <Text style={[styles.subtitle, { color: isDark ? '#b0b3b8' : '#5f6368' }]}>{t('collect_payment_from')} {ride?.passenger || ride?.passenger_details?.name || t('rider')}</Text>
                     </View>
 
@@ -305,7 +305,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                         </View>
 
                         <View style={styles.amountHeader}>
-                            <Text style={[styles.amountValue, { color: theme.colors.primary }]}>{price}</Text>
+                            <Text style={[styles.amountValue, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{price}</Text>
                             <Text style={[styles.amountLabel, { color: isDark ? '#b0b3b8' : '#5f6368' }]}>{t('net_earning')}</Text>
                         </View>
 
@@ -420,7 +420,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                         onPress={onEndTrip}
                         disabled={!paymentMode}
                     >
-                        <Text style={[styles.endTripBtnText, !paymentMode && { color: theme.colors.paragraphText }]}>{t('confirm_payment_received')}</Text>
+                        <Text style={[styles.endTripBtnText, !paymentMode && { color: theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>{t('confirm_payment_received')}</Text>
                        
                     </Pressable>
                 </View>
@@ -431,7 +431,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                 <View style={styles.processingOverlay}>
                     <View style={[styles.processingCard, { backgroundColor: theme.colors.card }]}>
                         <ActivityIndicator size="large" color={theme.colors.primary} />
-                        <Text style={[styles.processingText, { color: theme.colors.text }]}>{t('completing_trip')}</Text>
+                        <Text style={[styles.processingText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('completing_trip')}</Text>
                     </View>
                 </View>
             )}

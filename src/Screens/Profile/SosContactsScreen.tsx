@@ -185,7 +185,7 @@ const SosContactsScreen = ({ navigation }: any) => {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={ms(24)} color={textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: textPrimary }]}>{t('trusted_contacts')}</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('trusted_contacts')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -209,7 +209,7 @@ const SosContactsScreen = ({ navigation }: any) => {
               <Ionicons name="person-add" size={ms(18)} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.addCardTitle, { color: textPrimary }]}>{t('add_new_contact')}</Text>
+              <Text style={[styles.addCardTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('add_new_contact')}</Text>
             </View>
           </View>
 
@@ -229,7 +229,7 @@ const SosContactsScreen = ({ navigation }: any) => {
               <Ionicons name="phone-portrait-outline" size={ms(16)} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.importTitle, { color: textPrimary }]}>
+              <Text style={[styles.importTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t('import_from_contacts') || 'Import from Contacts'}
               </Text>
               <Text style={[styles.importSubtitle, { color: textMuted }]}>
@@ -248,7 +248,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Name Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('contact_name')}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_name')}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: name ? colors.primary : inputBorder }]}>
               <Ionicons name="person-outline" size={ms(18)} color={name ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -268,7 +268,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Phone Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]}>{t('phone_number')}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('phone_number')}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: phone ? colors.primary : inputBorder }]}>
               <Ionicons name="call-outline" size={ms(18)} color={phone ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -289,7 +289,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Relationship Chips */}
           <View style={[styles.inputGroup, { marginBottom: vs(20) }]}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]}>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('relationship') || 'Relationship'}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -317,7 +317,7 @@ const SosContactsScreen = ({ navigation }: any) => {
                       <Text style={[
                         styles.chipText,
                         { color: isSelected ? '#FFFFFF' : textSecondary }
-                      ]}>
+                      ]} numberOfLines={1} adjustsFontSizeToFit>
                         {t(key.toLowerCase()) || key}
                       </Text>
                     </Pressable>
@@ -354,7 +354,7 @@ const SosContactsScreen = ({ navigation }: any) => {
                 <Text style={[
                   styles.saveBtnText,
                   { color: !isFormValid ? textMuted : '#FFFFFF' }
-                ]}>
+                ]} numberOfLines={1} adjustsFontSizeToFit>
                   {t('save_contact')}
                 </Text>
               </>
@@ -365,7 +365,7 @@ const SosContactsScreen = ({ navigation }: any) => {
         {/* ── CONTACTS LIST ── */}
         <View style={styles.contactsList}>
           <View style={styles.listHeaderRow}>
-            <Text style={[styles.listTitle, { color: textPrimary }]}>{t('my_trusted_contacts')}</Text>
+            <Text style={[styles.listTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_trusted_contacts')}</Text>
             <View style={[styles.countBadge, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]}>
               <Text style={[styles.countText, { color: textSecondary }]}>{contacts.length}/5</Text>
             </View>

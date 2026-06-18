@@ -9,7 +9,7 @@ import { baseQueryWithReauth } from './baseQueryWithReauth';
 export const driverApi = createApi({
   reducerPath: 'driverApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Driver', 'Documents', 'TripVerification', 'Referral'],
+  tagTypes: ['Driver', 'Documents', 'TripVerification', 'Referral', 'Support'],
 
   endpoints: (builder) => ({
 
@@ -193,7 +193,7 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
-    cancelTrip: builder.mutation<any, { tripId: string; cancel_reason: string; cancel_by: string }>({
+    cancelTrip: builder.mutation<any, { tripId: string; cancel_reason: string; cancel_by: string; notes?: string }>({
       query: ({ tripId, ...body }) => ({
         url: `/trips/cancel/${tripId}`,
         method: 'POST',
@@ -339,6 +339,36 @@ export const driverApi = createApi({
         body,
       }),
     }),
+
+    /* ─────────── SUPPORT (/support) ─────────── */
+
+    // Get active FAQs for Help Center
+    getSupportFaqs: builder.query<any, void>({
+      query: () => '/support/faqs',
+      providesTags: ['Support'],
+    }),
+
+    // Create a support ticket
+    createSupportTicket: builder.mutation<any, { driver_id: string; subject: string; description: string; priority?: string; category?: string }>({
+      query: (body) => ({
+        url: '/support/tickets',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Support'],
+    }),
+
+    // Get driver's own tickets
+    getMyTickets: builder.query<any, string>({
+      query: (driverId) => `/support/tickets/driver/${driverId}`,
+      providesTags: ['Support'],
+    }),
+
+    // Get messages for a specific ticket
+    getTicketMessages: builder.query<any, string>({
+      query: (ticketId) => `/support/tickets/${ticketId}/messages`,
+      providesTags: ['Support'],
+    }),
   }),
 });
 
@@ -424,5 +454,14 @@ export const {
   useGetMyReferralStatsQuery,
   useLazyGetMyReferralStatsQuery,
   useApplyReferralCodeMutation,
+
+  // Support
+  useGetSupportFaqsQuery,
+  useLazyGetSupportFaqsQuery,
+  useCreateSupportTicketMutation,
+  useGetMyTicketsQuery,
+  useLazyGetMyTicketsQuery,
+  useGetTicketMessagesQuery,
+  useLazyGetTicketMessagesQuery,
 } = driverApi;
 

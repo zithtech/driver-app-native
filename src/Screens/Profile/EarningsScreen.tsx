@@ -274,7 +274,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
         </Pressable>
 
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('earnings')}</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('earnings')}</Text>
 
         <Pressable onPress={() => {
           triggerHaptic(HapticFeedbackTypes.impactLight);
@@ -351,7 +351,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
             {/* ================= MONTHLY STATEMENT ACTION ================= */}
             {activeTab === 'month' && (
               <View style={[styles.statementCard, { backgroundColor: theme.colors.card }]}>
-                <Text style={[styles.statementTitle, isDark && { color: '#FFFFFF' }]}>
+                <Text style={[styles.statementTitle, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>
                   {t('monthly_statement')}
                 </Text>
 
@@ -364,7 +364,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
                     size={18}
                     color="#fff"
                   />
-                  <Text style={[styles.statementBtnText, isDark && { color: '#FFFFFF' }]}>
+                  <Text style={[styles.statementBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>
                     {t('download_pdf')}
                   </Text>
                 </Pressable>
@@ -413,7 +413,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
             </View>
 
             {/* ================= TRANSACTIONS ================= */}
-            <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>{t('transactions')}</Text>
+            <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('transactions')}</Text>
           </>
         }
         renderItem={({ item }) => (
@@ -499,7 +499,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.modalDragHandle, isDark && { backgroundColor: '#4B5563' }]} />
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('transaction_details')}</Text>
+            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('transaction_details')}</Text>
 
             {selectedPayout && (
               <View style={styles.detailContainer}>
@@ -548,7 +548,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
               style={[styles.closeBtn, isDark && { backgroundColor: '#374151' }]}
               onPress={() => setIsModalVisible(false)}
             >
-              <Text style={[styles.closeBtnText, isDark && { color: '#FFFFFF' }]}>{t('close')}</Text>
+              <Text style={[styles.closeBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
             </Pressable>
           </View>
         </View>
