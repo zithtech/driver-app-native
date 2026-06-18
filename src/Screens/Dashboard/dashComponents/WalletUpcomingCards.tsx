@@ -98,7 +98,7 @@ const WalletUpcomingCards: React.FC<WalletUpcomingCardsProps> = ({ balance, upco
 
             {/* Upcoming Ride Card */}
             <Pressable
-                style={[styles.card, styles.upcomingCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F1F5F9' }]}
+                style={[styles.card, styles.upcomingCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F1F5F9' }]}
                 onPress={() => navigation.navigate('Requests', { initialTab: 'upcoming' })}
             >
                 <View style={styles.cardHeader}>
@@ -117,7 +117,7 @@ const WalletUpcomingCards: React.FC<WalletUpcomingCardsProps> = ({ balance, upco
                             <Ionicons
                                 name="timer-outline"
                                 size={ms(24)}
-                                color={isUrgent ? '#F97316' : (isDark ? '#E2E8F0' : theme.colors.primary)}
+                                color={isUrgent ? '#F97316' : (isDark ? theme.colors.text : theme.colors.primary)}
                             />
                             <Text style={[
                                 styles.countdownText,
@@ -125,15 +125,15 @@ const WalletUpcomingCards: React.FC<WalletUpcomingCardsProps> = ({ balance, upco
                             ]}>
                                 {countdownText}
                             </Text>
-                            <Text style={[styles.upcomingSubText, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+                            <Text style={[styles.upcomingSubText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1}>
                                 {new Date(rideTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </Text>
                         </>
                     ) : (
-                        <>
-                            <Ionicons name="calendar-outline" size={ms(24)} color={isDark ? '#4B5563' : '#94A3B8'} />
-                            <Text style={[styles.upcomingText, isDark && { color: '#6B7280' }]} numberOfLines={2} adjustsFontSizeToFit>{t('no_upcoming_rides')}</Text>
-                        </>
+                        <View style={styles.noUpcomingWrap}>
+                            <Ionicons name="calendar-outline" size={ms(24)} color={isDark ? theme.colors.textMuted : '#94A3B8'} />
+                            <Text style={[styles.upcomingText, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('no_upcoming_rides')}</Text>
+                        </View>
                     )}
                 </View>
             </Pressable>
@@ -225,6 +225,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         flex: 1,
+    },
+    noUpcomingWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1,
+        width: '100%',
     },
     upcomingText: {
         fontSize: ms(11),

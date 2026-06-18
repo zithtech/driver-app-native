@@ -139,17 +139,17 @@ const SwipeButton: React.FC<Props> = ({
         style={{
           height: 65,
           width: '100%',
-          backgroundColor: isDark ? '#1E293B' : activeColor,
+          backgroundColor: isDark ? theme.colors.card : activeColor,
           borderRadius: 32,
           justifyContent: 'center',
           padding: 4,
           overflow: 'hidden',
           borderWidth: isDark ? 1 : 0,
-          borderColor: isDark ? '#374151' : 'transparent',
+          borderColor: isDark ? theme.colors.border : 'transparent',
         }}
       >
         {/* Shimmering Text only */}
-        <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center' }}>
+        <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', paddingLeft: THUMB_SIZE + 4, paddingRight: 16 }}>
           <Animated.View
             style={{
               opacity: pan.interpolate({

@@ -274,7 +274,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
         {/* PASSENGER INFO */}
         <View style={styles.contentPadding}>
           <View style={styles.passengerRow}>
-            <View style={[styles.avatar, isDark && { backgroundColor: '#1E293B', borderColor: '#374151' }]}>
+            <View style={[styles.avatar, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <Ionicons name="person" size={s(20)} color={isDark ? '#60A5FA' : '#0b2e61'} />
             </View>
             <View style={{ flex: 1 }}>
@@ -282,20 +282,20 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               {item.rating && (
                 <View style={styles.ratingRow}>
                   <Ionicons name="star" size={ms(12)} color="#f59e0b" />
-                  <Text style={[styles.ratingText, isDark && { color: '#94A3B8' }]}>{item.rating}</Text>
+                  <Text style={[styles.ratingText, isDark && { color: theme.colors.textMuted }]}>{item.rating}</Text>
                 </View>
               )}
             </View>
             {/* Priority removed for now */}
           </View>
 
-          <View style={[styles.divider, isDark && { backgroundColor: '#1E293B' }]} />
+          <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
 
           {/* LOCATIONS */}
           <View style={styles.locationRow}>
             <View style={styles.locationIcons}>
               <View style={[styles.pickupCircle, isDark && { borderColor: theme.colors.card }]} />
-              <View style={[styles.locationLine, isDark && { backgroundColor: '#1E293B' }]} />
+              <View style={[styles.locationLine, isDark && { backgroundColor: theme.colors.border }]} />
               <View style={[styles.dropCircle, isDark && { borderColor: theme.colors.card }]} />
             </View>
 
@@ -312,7 +312,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
           {/* INFO */}
           <View style={styles.infoRow}>
-            <View style={[styles.infoCard, isDark && { backgroundColor: '#1E293B', borderColor: '#374151' }]}>
+            <View style={[styles.infoCard, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
                 colors={isDark ? ['#1E1B4B', '#312E81'] : ['#E0E7FF', '#C7D2FE']}
                 style={styles.infoIconBg}
@@ -325,7 +325,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               </View>
             </View>
 
-            <View style={[styles.infoCard, isDark && { backgroundColor: '#1E293B', borderColor: '#374151' }]}>
+            <View style={[styles.infoCard, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <LinearGradient
                 colors={isDark ? ['#451A03', '#92400E'] : ['#FEF3C7', '#FDE68A']}
                 style={styles.infoIconBg}
@@ -352,8 +352,8 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
           {/* ACTIONS */}
           <View style={styles.actionRow}>
-            <Pressable style={[styles.passBtn, isDark && { backgroundColor: '#1E293B' }]} onPress={handleReject}>
-              <Text style={[styles.passText, isDark && { color: '#94A3B8' }]}>{t('pass')}</Text>
+            <Pressable style={[styles.passBtn, isDark && { backgroundColor: theme.colors.card }]} onPress={handleReject}>
+              <Text style={[styles.passText, isDark && { color: theme.colors.textMuted }]}>{t('pass')}</Text>
             </Pressable>
 
             <Pressable style={styles.acceptBtn} onPress={handleAccept}>

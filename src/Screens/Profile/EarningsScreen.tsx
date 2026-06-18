@@ -323,7 +323,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
                 {summary.total}
               </Text>
 
-              <View style={[styles.tabs, isDark && { backgroundColor: '#374151' }]}>
+              <View style={[styles.tabs, isDark && { backgroundColor: theme.colors.border }]}>
                 {['today', 'week', 'month'].map((tab: any) => (
                   <Pressable
                     key={tab}
@@ -457,7 +457,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
               </View>
             )}
 
-            <View style={[styles.divider, isDark && { backgroundColor: '#374151' }]} />
+            <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
 
             <View style={styles.footer}>
               <View style={styles.footerItem}>
@@ -527,7 +527,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                <View style={[styles.divider, isDark && { backgroundColor: '#374151' }]} />
+                <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
 
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('payment_method')}</Text>
@@ -545,7 +545,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
             )}
 
             <Pressable
-              style={[styles.closeBtn, isDark && { backgroundColor: '#374151' }]}
+              style={[styles.closeBtn, isDark && { backgroundColor: theme.colors.border }]}
               onPress={() => setIsModalVisible(false)}
             >
               <Text style={[styles.closeBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>

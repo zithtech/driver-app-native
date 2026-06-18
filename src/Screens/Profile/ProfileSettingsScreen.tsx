@@ -165,7 +165,7 @@ const ProfileSettingsScreen = () => {
             <AppStatusBar forceLight />
             {/* PREMIUM GRADIENT HEADER */}
             <LinearGradient
-                colors={isDark ? ['#1e293b', '#0f172a'] : ['#1e3a8a', '#1e40af']}
+                colors={isDark ? [theme.colors.card, theme.colors.background] : ['#1e3a8a', '#1e40af']}
                 style={[styles.premiumHeader, { paddingTop: insets.top + vs(10) }]}
             >
                 <View style={styles.headerContent}>
@@ -287,8 +287,8 @@ const ProfileSettingsScreen = () => {
                     />
                 </AnimatedSection>
 
-                <View style={[styles.footer, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                    <Text style={[styles.versionText, { color: isDark ? '#FFFFFF' : theme.colors.paragraphText }]}>
+                <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
+                    <Text style={[styles.versionText, { color: theme.colors.textMuted }]}>
                         {t('version')} 1.0.4 (Production)
                     </Text>
                 </View>
@@ -315,7 +315,7 @@ const ProfileSettingsScreen = () => {
                 handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
             >
                 <BottomSheetView style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card }]}>
-                    <Text style={[styles.bottomSheetTitle, { color: isDark ? '#FFFFFF' : theme.colors.text }]}>
+                    <Text style={[styles.bottomSheetTitle, { color: theme.colors.text }]}>
                         {t('select_language')}
                     </Text>
                     <View style={styles.languageList}>
@@ -324,7 +324,7 @@ const ProfileSettingsScreen = () => {
                                 key={lang.value}
                                 style={[
                                     styles.languageItem,
-                                    isDark && { backgroundColor: 'rgba(255,255,255,0.05)' },
+                                    isDark && { backgroundColor: theme.colors.background },
                                     currentLanguage === lang.value && {
                                         backgroundColor: isDark ? theme.colors.primary + '20' : theme.colors.primary + '10',
                                         borderColor: theme.colors.primary,
@@ -333,15 +333,15 @@ const ProfileSettingsScreen = () => {
                                 onPress={() => handleLanguageSelect(lang.value)}
                             >
                                 <View>
-                                    <Text style={[styles.langNative, { color: isDark ? '#FFFFFF' : theme.colors.text }]}>
+                                    <Text style={[styles.langNative, { color: theme.colors.text }]}>
                                         {lang.nativeName}
                                     </Text>
-                                    <Text style={[styles.langLabel, { color: isDark ? '#FFFFFF' : theme.colors.paragraphText }]}>
+                                    <Text style={[styles.langLabel, { color: theme.colors.textMuted }]}>
                                         {lang.label}
                                     </Text>
                                 </View>
                                 {currentLanguage === lang.value && (
-                                    <Ionicons name="checkmark-circle-outline" size={ms(24)} color={isDark ? '#FFFFFF' : theme.colors.primary} />
+                                    <Ionicons name="checkmark-circle-outline" size={ms(24)} color={theme.colors.primary} />
                                 )}
                             </TouchableOpacity>
                         ))}
@@ -361,7 +361,7 @@ const AnimatedSection = ({ title, children, index }: any) => {
             entering={FadeInDown.delay(index * 100).duration(500)}
             style={styles.section}
         >
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : theme.colors.primary }]}>{title.toUpperCase()}</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.text : theme.colors.primary }]}>{title.toUpperCase()}</Text>
             <View style={styles.sectionContent}>
                 {children}
             </View>
@@ -371,7 +371,7 @@ const AnimatedSection = ({ title, children, index }: any) => {
 
 const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
     <TouchableOpacity
-        style={[styles.item, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
+        style={[styles.item, { borderBottomColor: theme.colors.border }]}
         onPress={onPress}
         activeOpacity={0.7}
     >
@@ -379,8 +379,8 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
             <View style={[
                 styles.iconContainer,
                 {
-                    backgroundColor: danger ? (isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2') : (isDark ? 'rgba(255,255,255,0.05)' : theme.colors.background),
-                    borderColor: danger ? (isDark ? 'rgba(239,68,68,0.2)' : '#FEE2E2') : (isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border + '30')
+                    backgroundColor: danger ? (isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2') : (isDark ? theme.colors.background : theme.colors.background),
+                    borderColor: danger ? (isDark ? 'rgba(239,68,68,0.2)' : '#FEE2E2') : (isDark ? theme.colors.border : theme.colors.border + '30')
                 }
             ]}>
                 <Ionicons
@@ -395,7 +395,7 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
                     ellipsizeMode="tail"
                     style={[
                         styles.itemText,
-                        { color: isDark ? '#FFFFFF' : theme.colors.text },
+                        { color: theme.colors.text },
                         danger && { color: '#EF4444', fontWeight: '600' },
                     ]}
                     adjustsFontSizeToFit
@@ -406,7 +406,7 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
                     <Text 
                         numberOfLines={1}
                         ellipsizeMode="tail"
-                        style={[styles.itemSubText, { color: isDark ? '#FFFFFF' : theme.colors.paragraphText }]}
+                        style={[styles.itemSubText, { color: theme.colors.textMuted }]}
                     >
                         {value}
                     </Text>
@@ -420,13 +420,13 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
 );
 
 const SwitchItem = ({ icon, label, value, onChange, theme, isDark }: any) => (
-    <View style={[styles.item, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+    <View style={[styles.item, { borderBottomColor: theme.colors.border }]}>
         <View style={styles.left}>
             <View style={[
                 styles.iconContainer,
                 {
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.colors.background,
-                    borderColor: isDark ? 'rgba(255,255,255,0.1)' : theme.colors.border + '30'
+                    backgroundColor: isDark ? theme.colors.background : theme.colors.background,
+                    borderColor: isDark ? theme.colors.border : theme.colors.border + '30'
                 }
             ]}>
                 <Ionicons name={icon} size={ms(20)} color={isDark ? '#FFFFFF' : theme.colors.primary} />
@@ -435,7 +435,7 @@ const SwitchItem = ({ icon, label, value, onChange, theme, isDark }: any) => (
                 <Text 
                     numberOfLines={1} 
                     ellipsizeMode="tail"
-                    style={[styles.itemText, { color: isDark ? '#FFFFFF' : theme.colors.text }]}
+                    style={[styles.itemText, { color: theme.colors.text }]}
                     adjustsFontSizeToFit
                 >
                     {label}
@@ -445,9 +445,9 @@ const SwitchItem = ({ icon, label, value, onChange, theme, isDark }: any) => (
         <Switch
             value={value}
             onValueChange={onChange}
-            trackColor={{ false: isDark ? '#374151' : '#E5E7EB', true: theme.colors.primary }}
-            thumbColor={value ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#f4f3f4')}
-            ios_backgroundColor={isDark ? '#374151' : '#3e3e3e'}
+            trackColor={{ false: isDark ? theme.colors.border : '#E5E7EB', true: theme.colors.primary }}
+            thumbColor={value ? '#FFFFFF' : (isDark ? theme.colors.textMuted : '#f4f3f4')}
+            ios_backgroundColor={isDark ? theme.colors.border : '#3e3e3e'}
             style={{ transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] }}
         />
     </View>

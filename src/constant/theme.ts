@@ -28,10 +28,10 @@ export const AppDarkTheme = {
   dark: true,
   colors: {
     ...colors,
-    background: '#121212',
+    background: '#0B1320',
     text: '#FFFFFF',
-    card: '#1E1E1E',
-    border: '#333333',
-    textMuted: '#9aa4ad',
+    card: '#1A2438',
+    border: '#2E3B52',
+    textMuted: '#94A3B8',
   },
 };

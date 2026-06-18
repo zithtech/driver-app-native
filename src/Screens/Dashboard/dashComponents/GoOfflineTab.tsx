@@ -78,7 +78,7 @@ const GoOfflineTab: React.FC<GoOfflineTabProps> = React.memo(({ onPress }) => {
     `;
 
     const headerBgColor = isDark ? theme.colors.card : '#F5F6FA';
-    const strokeColor = isDark ? '#374151' : '#E2E8F0';
+    const strokeColor = isDark ? theme.colors.border : '#E2E8F0';
 
     return (
         <Animated.View style={[styles.container, { transform: [{ translateY }, { scale }] }]}>

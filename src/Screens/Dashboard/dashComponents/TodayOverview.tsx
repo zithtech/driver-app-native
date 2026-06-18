@@ -38,65 +38,64 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
             contentContainerStyle={styles.todayScrollContent}
             decelerationRate="fast"
         >
-            <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F3F4F6' }]} onPress={onEarningsPress}>
+            <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]} onPress={onEarningsPress}>
                 <View style={[styles.todayIcon, { backgroundColor: isDark ? '#064e3b' : '#DCFCE7' }]}>
                     <Ionicons name="cash-outline" size={ms(20)} color={isDark ? '#34D399' : '#16A34A'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
+                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
                         {t('currency_symbol')}
                         {earnings}
                     </Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('earnings')}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('earnings')}</Text>
                 </View>
             </Pressable>
 
             {/* Rides */}
-            <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F3F4F6' }]} onPress={onRidesPress}>
+            <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]} onPress={onRidesPress}>
                 <View style={[styles.todayIcon, { backgroundColor: isDark ? '#1e3a8a' : '#DBEAFE' }]}>
                     <Ionicons name="car-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{rides}</Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('rides')}</Text>
+                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{rides}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('rides')}</Text>
                 </View>
             </Pressable>
 
             {/* Online */}
-            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
+            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
                 <View style={[styles.todayIcon, { backgroundColor: isDark ? '#4c1d95' : '#EDE9FE' }]}>
                     <Ionicons name="time-outline" size={ms(20)} color={isDark ? '#A78BFA' : '#7C3AED'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Animated.Text style={[styles.todayValue, { transform: [{ scale: timerPulseAnim }], color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
+                    <Animated.Text style={[styles.todayValue, { transform: [{ scale: timerPulseAnim }], color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
                         {displayTimeFormatted}
                     </Animated.Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('online')}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('online')}</Text>
                 </View>
             </View>
 
             {/* Distance */}
-            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
+            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
                 <View style={[styles.todayIcon, { backgroundColor: isDark ? '#78350f' : '#FEF3C7' }]}>
                     <Ionicons name="map-outline" size={ms(20)} color={isDark ? '#FBBF24' : '#D97706'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
-                        {distance}
-                        {t('km')}
+                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
+                        {distance} <Text style={{ fontSize: ms(12) }}>km</Text>
                     </Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('distance')}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('distance')}</Text>
                 </View>
             </View>
 
             {/* Cancellations */}
-            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
+            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
                 <View style={[styles.todayIcon, { backgroundColor: isDark ? '#7f1d1d' : '#FEE2E2' }]}>
                     <Ionicons name="close-circle-outline" size={ms(20)} color={isDark ? '#F87171' : '#DC2626'} />
                 </View>
                 <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? '#FFFFFF' : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{cancellations}</Text>
-                    <Text style={[styles.todayLabel, isDark && { color: '#94A3B8' }]} numberOfLines={2} adjustsFontSizeToFit>{t('cancellations')}</Text>
+                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{cancellations}</Text>
+                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('cancellations')}</Text>
                 </View>
             </View>
         </ScrollView>

@@ -127,17 +127,17 @@ const ProfileScreen = ({ navigation }: any) => {
         {/* ================= HEADER ================= */}
         <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
+            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
           </Pressable>
 
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_profile')}</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_profile')}</Text>
 
           <Pressable
-            style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#374151' }]}
+            style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
             onPress={() => setShowHelpModal(true)}
           >
-            <Ionicons name="headset-outline" size={18} color={isDark ? '#FFFFFF' : '#000'} />
-            <Text style={[styles.helpText, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
+            <Ionicons name="headset-outline" size={18} color={theme.colors.text} />
+            <Text style={[styles.helpText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
           </Pressable>
         </View>
 
@@ -162,8 +162,8 @@ const ProfileScreen = ({ navigation }: any) => {
             }
           }}
         >
-          <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
-            <Text style={[styles.avatarText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+          <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? theme.colors.card : '#F1F5F9' }]}>
+            <Text style={[styles.avatarText, { color: theme.colors.text }]}>
               {(() => {
                 if (!user) return 'UN';
                 const first = user.full_name ? user.full_name.charAt(0).toUpperCase() : '';
@@ -186,8 +186,8 @@ const ProfileScreen = ({ navigation }: any) => {
         </Pressable>
 
         {/* ================= NAME ================= */}
-        <Text style={[styles.name, { color: isDark ? '#FFFFFF' : '#111827' }]}>{name}</Text>
-        <Text style={[styles.phone, isDark && { color: '#9CA3AF' }]}>{phone}</Text>
+        <Text style={[styles.name, { color: theme.colors.text }]}>{name}</Text>
+        <Text style={[styles.phone, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>{phone}</Text>
 
         {/* ================= STATS ================= */}
         <View style={styles.statsContainer}>
@@ -296,7 +296,7 @@ const ProfileScreen = ({ navigation }: any) => {
       {showBannerPicker && (
         <View style={styles.overlay}>
           <View style={[styles.bannerModal, { backgroundColor: theme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('choose_banner')}</Text>
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('choose_banner')}</Text>
 
             <View style={styles.bannerGrid}>
               {BANNERS.map((img, index) => (
@@ -331,8 +331,8 @@ const ProfileScreen = ({ navigation }: any) => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.helpModalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.modalDragHandle, isDark && { backgroundColor: '#4B5563' }]} />
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center_title') || 'Support & Services'}</Text>
+            <View style={[styles.modalDragHandle, isDark && { backgroundColor: theme.colors.border }]} />
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center_title') || 'Support & Services'}</Text>
 
             <View style={styles.helpMenu}>
               <HelpItem
@@ -382,10 +382,10 @@ const ProfileScreen = ({ navigation }: any) => {
             </View>
 
             <Pressable
-              style={[styles.modalCloseBtn, isDark && { backgroundColor: '#374151' }]}
+              style={[styles.modalCloseBtn, isDark && { backgroundColor: theme.colors.background }]}
               onPress={() => setShowHelpModal(false)}
             >
-              <Text style={[styles.modalCloseBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
+              <Text style={[styles.modalCloseBtnText, isDark && { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
             </Pressable>
           </View>
         </View>
@@ -405,39 +405,45 @@ export default ProfileScreen;
 
 /* ================= SUB COMPONENTS ================= */
 
-const MenuItem = ({ icon, title, onPress, isDark }: any) => (
-  <Pressable style={styles.menuItem} onPress={onPress}>
-    <View style={styles.menuLeft}>
-      <Ionicons name={icon} size={20} color={isDark ? '#FFFFFF' : '#000'} />
-      <Text style={[styles.menuText, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
-    </View>
-    <Ionicons name="chevron-forward" size={20} color={isDark ? '#6B7280' : '#9CA3AF'} />
-  </Pressable>
-);
+const MenuItem = ({ icon, title, onPress, isDark }: any) => {
+  const { theme } = useAppTheme();
+  return (
+    <Pressable style={styles.menuItem} onPress={onPress}>
+      <View style={styles.menuLeft}>
+        <Ionicons name={icon} size={20} color={theme.colors.text} />
+        <Text style={[styles.menuText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={isDark ? theme.colors.textMuted : '#9CA3AF'} />
+    </Pressable>
+  );
+};
 
-const HelpItem = ({ icon, title, subtitle, color, colors, onPress, isDark }: any) => (
-  <Pressable
-    style={({ pressed }) => [
-      styles.helpMenuItem,
-      pressed && { opacity: 0.7, backgroundColor: isDark ? '#374151' : '#F9FAFB' }
-    ]}
-    onPress={onPress}
-  >
-    <LinearGradient
-      colors={colors || [color, color]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.helpIconBox}
+const HelpItem = ({ icon, title, subtitle, color, colors, onPress, isDark }: any) => {
+  const { theme } = useAppTheme();
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.helpMenuItem,
+        pressed && { opacity: 0.7, backgroundColor: isDark ? theme.colors.border : '#F9FAFB' }
+      ]}
+      onPress={onPress}
     >
-      <Ionicons name={icon} size={22} color="#FFFFFF" />
-    </LinearGradient>
-    <View style={styles.helpTextContainer}>
-      <Text style={[styles.helpMenuText, isDark && { color: '#F3F4F6' }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
-      {subtitle && <Text style={styles.helpMenuSubtitle}>{subtitle}</Text>}
-    </View>
-    <Ionicons name="chevron-forward" size={18} color={isDark ? '#4B5563' : '#D1D5DB'} />
-  </Pressable>
-);
+      <LinearGradient
+        colors={colors || [color, color]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.helpIconBox}
+      >
+        <Ionicons name={icon} size={22} color="#FFFFFF" />
+      </LinearGradient>
+      <View style={styles.helpTextContainer}>
+        <Text style={[styles.helpMenuText, isDark && { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+        {subtitle && <Text style={[styles.helpMenuSubtitle, isDark && { color: theme.colors.textMuted }]}>{subtitle}</Text>}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={isDark ? theme.colors.border : '#D1D5DB'} />
+    </Pressable>
+  );
+};
 
 const StatCard = ({ icon, iconColor, value, label, isDark, theme }: any) => (
   <View style={[styles.statCard, { backgroundColor: theme.colors.card }]}>
@@ -446,8 +452,8 @@ const StatCard = ({ icon, iconColor, value, label, isDark, theme }: any) => (
     </View>
 
     <View style={styles.statTextWrap}>
-      <Text style={[styles.statValue, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={[styles.statLabel, isDark && { color: '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+      <Text style={[styles.statValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={[styles.statLabel, { color: isDark ? theme.colors.textMuted : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
     </View>
   </View>
 );

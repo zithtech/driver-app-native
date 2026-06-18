@@ -56,7 +56,7 @@ const DashboardProfileHeader: React.FC<Props> = ({
         basic: {
             label: t('basic'),
             color: isDark ? '#60A5FA' : '#2563EB',
-            bg: isDark ? '#1e293b' : '#eff6ff',
+            bg: isDark ? theme.colors.card : '#eff6ff',
             icon: 'shield-checkmark',
         },
         elite: {
@@ -103,14 +103,14 @@ const DashboardProfileHeader: React.FC<Props> = ({
     }, [isOnline, pulseAnim]);
 
     return (
-        <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? '#374151' : '#E2E8F0' }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? theme.colors.border : '#E2E8F0' }]}>
             <Pressable style={styles.profileLeft} onPress={onProfilePress}>
                 <View style={styles.avatarWrapper}>
                     {isOnline && (
                         <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
                     )}
-                    <View style={[styles.avatarPlaceholder, isDark && { backgroundColor: '#1E293B' }]}>
-                        <Text style={[styles.avatarInitials, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+                    <View style={[styles.avatarPlaceholder, isDark && { backgroundColor: theme.colors.card }]}>
+                        <Text style={[styles.avatarInitials, { color: isDark ? theme.colors.text : '#0F172A' }]}>
                             {driverName ? driverName.charAt(0).toUpperCase() : 'D'}
                         </Text>
                         {profileImage && profileImage.trim() !== '' && !imgError && (
@@ -125,14 +125,14 @@ const DashboardProfileHeader: React.FC<Props> = ({
                 </View>
 
                 <View style={{ marginLeft: s(14), flex: 1 }}>
-                    <Text style={[styles.greeting, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1} adjustsFontSizeToFit>
-                        {getGreeting()}, <Text style={[styles.userName, isDark && { color: '#9CA3AF' }]}>{driverName}</Text>
+                    <Text style={[styles.greeting, { color: isDark ? theme.colors.text : '#0F172A' }]} numberOfLines={1} adjustsFontSizeToFit>
+                        {getGreeting()}, <Text style={[styles.userName, isDark && { color: theme.colors.textMuted }]}>{driverName}</Text>
                     </Text>
                     <View style={styles.metaRow}>
-                        <Ionicons name="star" size={ms(16)} color="#F59E0B" />
-                        <Text style={[styles.rating, { color: isDark ? '#FFFFFF' : '#1E293B' }]}>
-                            {Number(rating || 0).toFixed(1)}
-                            <Text style={[styles.tripsCount, { color: isDark ? '#94A3B8' : '#64748B' }]}> ({totalTrips})</Text>
+                        <Ionicons name="star" size={ms(12)} color="#F59E0B" style={{ marginRight: s(4) }} />
+                        <Text style={[styles.rating, { color: isDark ? theme.colors.text : '#1E293B' }]}>
+                            {rating ? rating.toFixed(1) : t('new')}
+                            <Text style={[styles.tripsCount, { color: isDark ? theme.colors.textMuted : '#64748B' }]}> ({totalTrips})</Text>
                         </Text>
 
                         <View style={[styles.badge, { marginLeft: s(10), backgroundColor: currentTier.bg }]}>
@@ -144,7 +144,7 @@ const DashboardProfileHeader: React.FC<Props> = ({
                 </View>
             </Pressable>
 
-            <Pressable style={[styles.settingsBtn, { backgroundColor: isDark ? '#1E293B' : '#EEF2F7' }]} onPress={onSettingsPress}>
+            <Pressable style={[styles.settingsBtn, { backgroundColor: isDark ? theme.colors.card : '#EEF2F7' }]} onPress={onSettingsPress}>
                 <Ionicons name="options-outline" size={s(24)} color={isDark ? '#FFFFFF' : '#1E293B'} />
             </Pressable>
         </View>

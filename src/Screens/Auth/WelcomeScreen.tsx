@@ -26,6 +26,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -67,7 +68,9 @@ const DecorativeBackground = ({ colors }: { colors: any }) => (
 
 
 const WelcomeScreen = ({ navigation }: any) => {
-  const { colors, fonts, dark } = useTheme() as any;
+  const { colors: navColors, fonts } = useTheme() as any;
+  const { theme, isDark: dark } = useAppTheme();
+  const colors = theme.colors;
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { triggerHaptic } = useHaptic();
@@ -138,11 +141,11 @@ const WelcomeScreen = ({ navigation }: any) => {
 
   const inputAnimatedStyle = useAnimatedStyle(() => ({
     borderColor: withTiming(
-      hasError ? '#EF4444' : isFocused ? colors.primary : colors.background === '#FFFFFF' ? '#9CA3AF' : 'rgba(255,255,255,0.3)',
+      hasError ? '#EF4444' : isFocused ? colors.primary : dark ? 'rgba(255,255,255,0.3)' : '#9CA3AF',
       { duration: 250 }
     ),
     transform: [{ scale: withSpring(isFocused ? 1.01 : 1) }],
-    backgroundColor: '#FFFFFF',
+    backgroundColor: dark ? theme.colors.card : '#FFFFFF',
   }));
 
   const handleCheckReferral = async () => {
@@ -311,7 +314,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                         borderColor: referralCodeStatus === 'valid' ? '#10B981' : referralCodeStatus === 'invalid' ? '#EF4444' : colors.primary + '40',
                         borderRadius: 16,
                         paddingHorizontal: 16,
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: dark ? theme.colors.card : '#FFFFFF',
                         height: 45,
                         flex: 1,
                         justifyContent: 'center',
@@ -340,6 +343,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                           textAlign: 'center',
                         }}
                         placeholderTextColor={colors.text + '40'}
+                        keyboardAppearance={dark ? 'dark' : 'light'}
                       />
                     </Reanimated.View>
 
@@ -451,6 +455,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                       textAlignVertical: 'center',
                     }}
                     placeholderTextColor={colors.text + '30'}
+                    keyboardAppearance={dark ? 'dark' : 'light'}
                   />
                 </Reanimated.View>
               </View>

@@ -124,9 +124,9 @@ const PerformanceGauge = ({ value, loading }: { value: number; loading?: boolean
 
 const StatCard = ({ label, value, icon, color, loading }: { label: string; value: string | number; icon: string; color: string; loading?: boolean }) => {
   const { t: _t } = useTranslation();
-  const { isDark } = useAppTheme();
+  const { isDark, theme } = useAppTheme();
   return (
-    <View style={[styles.statCard, { backgroundColor: isDark ? '#1F2937' : '#FFF', shadowOpacity: isDark ? 0 : 0.02 }]}>
+    <View style={[styles.statCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', shadowOpacity: isDark ? 0 : 0.02 }]}>
       <View style={[styles.statIconContainer, { backgroundColor: isDark ? color + '30' : color + '15' }]}>
         <Ionicons name={icon} size={20} color={isDark ? '#FFFFFF' : color} />
       </View>
@@ -274,7 +274,7 @@ const TierRoadmap = ({ period, metrics }: { period: 'Today' | 'Week' | 'Month'; 
 const DriverPerformanceScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { isDark } = useAppTheme();
+  const { isDark, theme } = useAppTheme();
   const { triggerHaptic } = useHaptic();
   
   const [updateDriver] = useUpdateDriverMutation();
@@ -400,9 +400,9 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
   });
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: isDark ? '#111827' : '#F9FAFB' }]}>
+    <View style={[styles.safeArea, { backgroundColor: isDark ? theme.colors.background : '#F9FAFB' }]}>
       {isFocused && <AppStatusBar />}
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: isDark ? '#1F2937' : '#FFF' }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
@@ -422,14 +422,14 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
       >
         {/* Period Selector */}
-        <View style={[styles.toggleContainer, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+        <View style={[styles.toggleContainer, { backgroundColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
           {(['Today', 'Week', 'Month'] as Period[]).map((p) => (
             <Pressable
               key={p}
               onPress={() => handlePeriodChange(p)}
               style={[
                 styles.toggleBtn,
-                period === p && [styles.toggleActive, { backgroundColor: isDark ? '#1F2937' : '#FFF' }]
+                period === p && [styles.toggleActive, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]
               ]}
             >
               <Text style={[
@@ -442,7 +442,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         </View>
 
         {/* Hero Section: Gauge */}
-        <Animated.View style={[styles.heroSection, headerStyle, { backgroundColor: isDark ? '#1F2937' : '#FFF' }]}>
+        <Animated.View style={[styles.heroSection, headerStyle, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
           <PerformanceGauge value={metrics.completionRate} loading={isLoading} />
           <View style={styles.heroSummary}>
             <Text style={[styles.summaryTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('overall_performance', 'Overall Performance')}</Text>
@@ -491,8 +491,8 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
         {/* Insight Section */}
         <View style={styles.insightSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('performance_insights', 'Performance Insights')}</Text>
-          <View style={[styles.insightCard, { backgroundColor: isDark ? '#1F2937' : '#FFF', borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.text : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('performance_insights', 'Performance Insights')}</Text>
+          <View style={[styles.insightCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
             {dynamicInsights.map((insight, index) => (
               <View key={index} style={styles.insightRow}>
                 <Ionicons name={insight.icon} size={20} color={isDark ? insight.color : insight.color} />

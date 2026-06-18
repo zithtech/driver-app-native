@@ -18,6 +18,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@react-navigation/native';
+import { useAppTheme } from '../../context/ThemeContext';
 import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
   FadeInDown,
@@ -117,7 +118,7 @@ const DotLoader = () => {
   );
 };
 
-const GenderOption = ({ option, index: _index, active, onPress, t }: any) => {
+const GenderOption = ({ option, index: _index, active, onPress, t, isDark, theme: themeColors }: any) => {
   const scale = useSharedValue(1);
 
 
@@ -140,17 +141,17 @@ const GenderOption = ({ option, index: _index, active, onPress, t }: any) => {
   };
 
   const getGenderColor = (opt: string, active: boolean) => {
-    if (!active) return '#6B7280';
+    if (!active) return isDark ? themeColors?.textMuted || '#8899B0' : '#6B7280';
     if (opt === 'male') return '#2563EB';
     if (opt === 'female') return '#DB2777';
-    return '#111827';
+    return isDark ? themeColors?.text || '#F1F5F9' : '#111827';
   };
 
   const getGenderBg = (opt: string, active: boolean) => {
     if (!active) return 'transparent';
-    if (opt === 'male') return '#EFF6FF';
-    if (opt === 'female') return '#FDF2F8';
-    return '#FFFFFF';
+    if (opt === 'male') return isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF';
+    if (opt === 'female') return isDark ? 'rgba(219, 39, 119, 0.15)' : '#FDF2F8';
+    return isDark ? themeColors?.card || '#1A2438' : '#FFFFFF';
   };
 
   const activeColor = getGenderColor(option, active);
@@ -186,7 +187,7 @@ const GenderOption = ({ option, index: _index, active, onPress, t }: any) => {
   );
 };
 
-const WheelColumn = ({ data, selectedValue, onValueChange, label, triggerHaptic }: any) => {
+const WheelColumn = ({ data, selectedValue, onValueChange, label, triggerHaptic, isDark, themeColors }: any) => {
   const ITEM_HEIGHT = 44;
   const flatListRef = useRef<any>(null);
 
@@ -209,7 +210,7 @@ const WheelColumn = ({ data, selectedValue, onValueChange, label, triggerHaptic 
 
   return (
     <View style={styles.wheelColumn}>
-      <Text style={styles.wheelLabel}>{label}</Text>
+      <Text style={[styles.wheelLabel, isDark && { color: themeColors?.textMuted }]}>{label}</Text>
       <View style={styles.wheelListContainer}>
         <FlatList
           ref={flatListRef}
@@ -231,14 +232,14 @@ const WheelColumn = ({ data, selectedValue, onValueChange, label, triggerHaptic 
             const isSelected = item === selectedValue;
             return (
               <View style={[styles.wheelItem, { height: ITEM_HEIGHT }]}>
-                <Text style={[styles.wheelItemText, isSelected && styles.wheelItemTextActive]}>
+                <Text style={[styles.wheelItemText, isDark && { color: themeColors?.textMuted }, isSelected && styles.wheelItemTextActive]}>
                   {item}
                 </Text>
               </View>
             );
           }}
         />
-        <View style={styles.activeIndicator} pointerEvents="none" />
+        <View style={[styles.activeIndicator, isDark && { backgroundColor: 'rgba(37, 99, 235, 0.15)', borderColor: 'rgba(37, 99, 235, 0.3)' }]} pointerEvents="none" />
       </View>
     </View>
   );
@@ -249,7 +250,9 @@ const PremiumWheelPicker = ({
   setShowDatePicker,
   setAndFormatDate,
   triggerHaptic,
-  t
+  t,
+  isDark,
+  themeColors
 }: any) => {
   const [selDay, setSelDay] = useState(tempDate.getDate());
   const [selMonth, setSelMonth] = useState(tempDate.getMonth() + 1);
@@ -277,10 +280,10 @@ const PremiumWheelPicker = ({
       <Animated.View
         entering={FadeInDown.springify().damping(15)}
         exiting={FadeOut.duration(200)}
-        style={styles.pickerContainer}
+        style={[styles.pickerContainer, isDark && { backgroundColor: themeColors?.card }]}
       >
-        <View style={styles.pickerHeader}>
-          <Text style={styles.pickerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
+        <View style={[styles.pickerHeader, isDark && { borderBottomColor: themeColors?.border }]}>
+          <Text style={[styles.pickerTitle, isDark && { color: themeColors?.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
           <TouchableOpacity onPress={handleConfirm} style={styles.doneBtn}>
             <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.doneGradient}>
               <Text style={styles.doneText} numberOfLines={1} adjustsFontSizeToFit>{t('continue')}</Text>
@@ -289,9 +292,9 @@ const PremiumWheelPicker = ({
         </View>
 
         <View style={styles.wheelsContainer}>
-          <WheelColumn label={t('day_label')} data={days} selectedValue={selDay} onValueChange={setSelDay} triggerHaptic={triggerHaptic} />
-          <WheelColumn label={t('month_label')} data={months} selectedValue={selMonth} onValueChange={setSelMonth} triggerHaptic={triggerHaptic} />
-          <WheelColumn label={t('year_label')} data={years} selectedValue={selYear} onValueChange={setSelYear} triggerHaptic={triggerHaptic} />
+          <WheelColumn label={t('day_label')} data={days} selectedValue={selDay} onValueChange={setSelDay} triggerHaptic={triggerHaptic} isDark={isDark} themeColors={themeColors} />
+          <WheelColumn label={t('month_label')} data={months} selectedValue={selMonth} onValueChange={setSelMonth} triggerHaptic={triggerHaptic} isDark={isDark} themeColors={themeColors} />
+          <WheelColumn label={t('year_label')} data={years} selectedValue={selYear} onValueChange={setSelYear} triggerHaptic={triggerHaptic} isDark={isDark} themeColors={themeColors} />
         </View>
       </Animated.View>
     </View>
@@ -301,7 +304,9 @@ const PremiumWheelPicker = ({
 /* ================= SCREEN ================= */
 
 const PersonalDetails = ({ navigation }: any) => {
-  const { colors } = useTheme();
+  const { colors: navColors } = useTheme();
+  const { theme, isDark } = useAppTheme();
+  const colors = theme.colors;
   const { t, i18n } = useTranslation();
   const { showAlert } = useAlert();
   const dispatch = useDispatch();
@@ -540,7 +545,7 @@ const PersonalDetails = ({ navigation }: any) => {
   /* ================= UI RENDER ================= */
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
       <AppStatusBar />
 
 
@@ -555,13 +560,13 @@ const PersonalDetails = ({ navigation }: any) => {
                 key={i}
                 style={[
                   styles.progressBar,
-                  { backgroundColor: i <= 2 ? '#2563EB' : '#E5E7EB' }
+                  { backgroundColor: i <= 2 ? '#2563EB' : (isDark ? colors.border : '#E5E7EB') }
                 ]}
               />
             ))}
           </View>
           <View style={styles.progressLabelRow}>
-            <Text style={styles.progressText}>
+            <Text style={[styles.progressText, isDark && { color: colors.textMuted }]}>
               {t('step_profile_label')} <Text style={styles.activeProgressText}>• {t('step_2_of_4')}</Text>
             </Text>
           </View>
@@ -585,24 +590,24 @@ const PersonalDetails = ({ navigation }: any) => {
                     colors={['#2563EB', '#60A5FA']}
                     style={styles.avatarGradient}
                   >
-                    <View style={styles.avatarInner}>
+                    <View style={[styles.avatarInner, isDark && { backgroundColor: colors.card }]}>
                       <PremiumUserIcon size={44} />
                     </View>
                   </LinearGradient>
-                  <View style={styles.verifiedBadge}>
+                  <View style={[styles.verifiedBadge, isDark && { borderColor: colors.background }]}>
                     <Ionicons name="checkmark-sharp" size={10} color="#FFFFFF" />
                   </View>
                 </View>
                 <View style={styles.greetingContent}>
                   <View style={styles.helloRow}>
-                    <Text style={styles.greetingLabel}>{t('hello')}</Text>
-                    <View style={styles.divider} />
+                    <Text style={[styles.greetingLabel, isDark && { color: colors.textMuted }]}>{t('hello')}</Text>
+                    <View style={[styles.divider, isDark && { backgroundColor: colors.border }]} />
                     <View style={styles.subtitleRow}>
                       <Ionicons name="shield-checkmark" size={12} color="#10B981" style={{ marginRight: 4 }} />
                       <Text
                         adjustsFontSizeToFit
                         numberOfLines={1}
-                        style={styles.smallSubtitle}
+                        style={[styles.smallSubtitle, isDark && { color: colors.textMuted }]}
                       >
                         {t('tell_us_about_yourself')}
                       </Text>
@@ -697,7 +702,7 @@ const PersonalDetails = ({ navigation }: any) => {
               </View>
 
               {/* DOB */}
-              <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
               <View style={{ position: 'relative' }}>
                 <Input
                   value={dobText}
@@ -718,8 +723,8 @@ const PersonalDetails = ({ navigation }: any) => {
               </View>
 
               {/* GENDER */}
-              <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit>{t('gender')}</Text>
-              <View style={styles.genderRow}>
+              <Text style={[styles.sectionTitle, isDark && { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('gender')}</Text>
+              <View style={[styles.genderRow, isDark && { backgroundColor: colors.card }]}>
                 {(['male', 'female', 'other'] as const).map((option, index) => (
                   <GenderOption
                     key={option}
@@ -731,6 +736,8 @@ const PersonalDetails = ({ navigation }: any) => {
                       setGender(option);
                     }}
                     t={t}
+                    isDark={isDark}
+                    theme={colors}
                   />
                 ))}
               </View>
@@ -739,7 +746,7 @@ const PersonalDetails = ({ navigation }: any) => {
 
           {/* FOOTER */}
           <View
-            style={[styles.footer, { backgroundColor: colors.background }]}
+            style={[styles.footer, { backgroundColor: isDark ? colors.background : '#FFFFFF', borderTopColor: isDark ? colors.border : '#F3F4F6' }]}
           >
             <Pressable
               onPress={handleContinue}
@@ -762,9 +769,9 @@ const PersonalDetails = ({ navigation }: any) => {
             <Text
               adjustsFontSizeToFit
               numberOfLines={2}
-              style={styles.footerInfo}
+              style={[styles.footerInfo, isDark && { color: colors.textMuted }]}
             >
-              <Ionicons name="shield-checkmark" size={12} color="#6B7280" /> {t('info_safe_verification')}
+              <Ionicons name="shield-checkmark" size={12} color={isDark ? colors.textMuted : '#6B7280'} /> {t('info_safe_verification')}
             </Text>
           </View>
         </KeyboardAvoidingView>
@@ -776,10 +783,10 @@ const PersonalDetails = ({ navigation }: any) => {
               <Animated.View
                 entering={FadeInDown.springify().damping(15)}
                 exiting={FadeOut.duration(200)}
-                style={styles.pickerContainer}
+                style={[styles.pickerContainer, isDark && { backgroundColor: colors.card }]}
               >
-                <View style={styles.pickerHeader}>
-                  <Text style={styles.pickerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
+                <View style={[styles.pickerHeader, isDark && { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.pickerTitle, isDark && { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('date_of_birth')}</Text>
                   <TouchableOpacity onPress={() => setShowDatePicker(false)} style={styles.doneBtn}>
                     <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.doneGradient}>
                       <Text style={styles.doneText} numberOfLines={1} adjustsFontSizeToFit>{t('continue')}</Text>

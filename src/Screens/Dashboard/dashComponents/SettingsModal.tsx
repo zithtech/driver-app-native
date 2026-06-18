@@ -101,12 +101,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
                     <View style={styles.modalHeader}>
                         <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('trip_settings')}</Text>
                         <Pressable onPress={onClose}>
-                            <Ionicons name="close" size={24} color={isDark ? '#9CA3AF' : '#374151'} />
+                            <Ionicons name="close" size={24} color={isDark ? theme.colors.textMuted : '#374151'} />
                         </Pressable>
                     </View>
-                    <Text style={[styles.modalSubtitle, isDark && { color: '#94A3B8' }]}>{t('select_trip_types')}</Text>
+                    <Text style={[styles.modalSubtitle, isDark && { color: theme.colors.textMuted }]}>{t('select_trip_types')}</Text>
 
-                    <View style={[styles.settingRow, isDark && { borderBottomColor: '#1E293B' }, { opacity: 0.7 }]}>
+                    <View style={[styles.settingRow, isDark && { borderBottomColor: theme.colors.border }, { opacity: 0.7 }]}>
                         <Text style={[styles.settingLabel, { color: theme.colors.text }]}>{t('local_trip_city')}</Text>
                         <Switch
                             value={true}
@@ -117,7 +117,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
                     </View>
 
                     {isOutstationEnabled && (
-                        <View style={[styles.settingRow, isDark && { borderBottomColor: '#1E293B' }]}>
+                        <View style={[styles.settingRow, isDark && { borderBottomColor: theme.colors.border }]}>
                             <Text style={[styles.settingLabel, { color: theme.colors.text }]}>{t('outstation_trip')}</Text>
                             <Switch
                                 value={tripPreferences.outstation}
@@ -131,7 +131,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
                     )}
 
                     {isRoundTripEnabled && (
-                        <View style={[styles.settingRow, isDark && { borderBottomColor: '#1E293B' }]}>
+                        <View style={[styles.settingRow, isDark && { borderBottomColor: theme.colors.border }]}>
                             <Text style={[styles.settingLabel, { color: theme.colors.text }]}>{t('round_trip')}</Text>
                             <Switch
                                 value={tripPreferences.roundTrip}
@@ -145,7 +145,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
                     )}
 
                     {isOneWayEnabled && (
-                        <View style={[styles.settingRow, isDark && { borderBottomColor: '#1E293B' }]}>
+                        <View style={[styles.settingRow, isDark && { borderBottomColor: theme.colors.border }]}>
                             <Text style={[styles.settingLabel, { color: theme.colors.text }]}>{t('one_way_trip')}</Text>
                             <Switch
                                 value={tripPreferences.oneWay}

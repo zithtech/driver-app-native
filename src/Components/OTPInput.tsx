@@ -2,6 +2,7 @@ import { StyleSheet, TextInput, View, ViewStyle, Text, Pressable, Platform } fro
 import React, { useRef, useState, useEffect } from 'react';
 import { Styles } from '../lib/styles';
 import { useTheme } from '@react-navigation/native';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface OTPInputProps {
   numberOfDigits?: number;
@@ -20,7 +21,9 @@ const OTPInput: React.FC<OTPInputProps> = ({
   hasError = false,
   autoFocus = false,
 }) => {
-  const { colors, fonts } = useTheme() as any;
+  const { colors: navColors, fonts } = useTheme() as any;
+  const { theme, isDark } = useAppTheme();
+  const colors = theme.colors;
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -94,6 +97,7 @@ const OTPInput: React.FC<OTPInputProps> = ({
         onBlur={() => setIsFocused(false)}
         style={styles.hiddenInput}
         caretHidden={true}
+        keyboardAppearance={isDark ? 'dark' : 'light'}
       />
     </View>
   );

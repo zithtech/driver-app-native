@@ -71,7 +71,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
 
   // Use card color from theme for background
   const cardBgColor = isDimmed
-    ? (isDark ? '#1E1E1E' : '#F9FAFB')
+    ? (isDark ? theme.colors.background : '#F9FAFB')
     : theme.colors.card;
 
   const formatDate = (time: string | number | Date) =>
@@ -136,12 +136,12 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
           </Text>
           <View style={styles.badgeRow}>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-              <Text style={[styles.miniTagText, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t(item.ride_type || 'ONE_WAY')}
               </Text>
             </View>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-              <Text style={[styles.miniTagText, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
                 {t(item.paymentType || 'cash')}
               </Text>
             </View>
@@ -178,11 +178,11 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
         </View>
         <View style={styles.addresses}>
           <View style={styles.addressBox}>
-            <Text style={[styles.addrLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>{t('pickup')}</Text>
+            <Text style={[styles.addrLabel, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t('pickup')}</Text>
             <Text style={[styles.addrText, { color: theme.colors.text }]}>{item.pickup_address}</Text>
           </View>
           <View style={[styles.addressBox, { marginTop: vs(12) }]}>
-            <Text style={[styles.addrLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>{t('drop')}</Text>
+            <Text style={[styles.addrLabel, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t('drop')}</Text>
             <Text style={[styles.addrText, { color: theme.colors.text }]}>{item.drop_address}</Text>
           </View>
         </View>
@@ -190,13 +190,13 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
 
       <View style={[styles.rideStatsPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
         <View style={styles.statItemRow}>
-          <Ionicons name="shuffle-outline" size={ms(14)} color={isDark ? '#94A3B8' : '#64748B'} />
-          <Text style={[styles.rideStatsText, { color: isDark ? '#CBD5E1' : '#475569' }]}>{item.distance_km} km</Text>
+          <Ionicons name="shuffle-outline" size={ms(14)} color={isDark ? theme.colors.textMuted : '#64748B'} />
+          <Text style={[styles.rideStatsText, { color: isDark ? theme.colors.text : '#475569' }]}>{item.distance_km} km</Text>
         </View>
         <View style={styles.statsDot} />
         <View style={styles.statItemRow}>
-          <Ionicons name="time-outline" size={ms(14)} color={isDark ? '#94A3B8' : '#64748B'} />
-          <Text style={[styles.rideStatsText, { color: isDark ? '#CBD5E1' : '#475569' }]}>
+          <Ionicons name="time-outline" size={ms(14)} color={isDark ? theme.colors.textMuted : '#64748B'} />
+          <Text style={[styles.rideStatsText, { color: isDark ? theme.colors.text : '#475569' }]}>
             {t('eta')}: {formatEstimatedDuration(item.distance_km)}
           </Text>
         </View>
@@ -228,7 +228,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
       </View>
 
       {accepted && (
-        <View style={[styles.passengerBox, { backgroundColor: isDark ? '#1A1A1A' : '#F8FAFC' }]}>
+        <View style={[styles.passengerBox, { backgroundColor: isDark ? theme.colors.background : '#F8FAFC' }]}>
           <View style={styles.passengerMain}>
             <View style={[styles.avatar, { backgroundColor: '#E0F2C1' }]}>
               <Text style={[styles.avatarText, { color: theme.colors.primary }]}>{initials}</Text>
@@ -266,10 +266,11 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
           </View>
         ) : (
           !acceptedRide && (
-            <View style={styles.buttonGroupHorizontal}>
+            <View style={[styles.buttonGroupHorizontal, { flexWrap: 'wrap' }]}>
               <Animated.View
                 style={{
-                  width: '48%',
+                  flex: 1,
+                  minWidth: '40%',
                   transform: [{ scale: passScale }],
                 }}
               >
@@ -292,7 +293,8 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
 
               <Animated.View
                 style={{
-                  flex: 1,
+                  flex: 1.5,
+                  minWidth: '45%',
                   transform: [{ scale: acceptScale }],
                 }}
               >
@@ -1273,31 +1275,31 @@ const ScheduledRidesScreen = () => {
                 style={[
                     styles.filterChip,
                     {
-                    backgroundColor: filterType === item ? theme.colors.primary : (isDark ? '#333' : '#FFF'),
-                    borderColor: filterType === item ? theme.colors.primary : (isDark ? '#444' : '#E2E8F0'),
+                    backgroundColor: filterType === item ? theme.colors.primary : (isDark ? theme.colors.card : '#FFF'),
+                    borderColor: filterType === item ? theme.colors.primary : (isDark ? theme.colors.border : '#E2E8F0'),
                     },
                 ]}
                 >
                     <Ionicons 
                         name={getIcon()} 
                         size={ms(16)} 
-                        color={filterType === item ? '#FFF' : (isDark ? '#94A3B8' : '#64748B')} 
+                        color={filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B')} 
                         style={{ marginRight: ms(6) }} 
                     />
                     <Text style={[
                         styles.filterChipText,
-                        { color: filterType === item ? '#FFF' : (isDark ? '#CBD5E1' : '#64748B') },
+                        { color: filterType === item ? '#FFF' : (isDark ? theme.colors.text : '#64748B') },
                     ]} numberOfLines={1} adjustsFontSizeToFit>
                         {t(item)}
                     </Text>
                     {count > 0 && (
                         <View style={[
                             styles.filterCountBadge,
-                            { backgroundColor: filterType === item ? 'rgba(255,255,255,0.2)' : (isDark ? '#444' : '#E2E8F0') }
+                            { backgroundColor: filterType === item ? 'rgba(255,255,255,0.2)' : (isDark ? theme.colors.border : '#E2E8F0') }
                         ]}>
                             <Text style={[
                                 styles.filterCountText,
-                                { color: filterType === item ? '#FFF' : (isDark ? '#94A3B8' : '#64748B') }
+                                { color: filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B') }
                             ]}>
                                 {count}
                             </Text>
@@ -1359,12 +1361,12 @@ const ScheduledRidesScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
-                <Ionicons name="search-outline" size={ms(40)} color={isDark ? '#4B5563' : '#CBD5E1'} />
+                <Ionicons name="search-outline" size={ms(40)} color={isDark ? theme.colors.textMuted : '#CBD5E1'} />
               </View>
               <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
                 {filterType === 'all' ? t('no_rides_found') : t('no_matching_rides')}
               </Text>
-              <Text style={[styles.emptySubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              <Text style={[styles.emptySubtitle, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
                 {filterType === 'all' ? t('check_back_later') : t('try_clearing_filters')}
               </Text>
               {filterType !== 'all' && (
@@ -1400,31 +1402,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: vs(8),
+    paddingHorizontal: s(16),
     gap: ms(8),
   },
   offlineText: {
     color: '#FFF',
     fontSize: ms(12),
     fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: s(16),
-    height: vs(56),
+    minHeight: vs(56),
+    paddingVertical: vs(8),
   },
   headerTitle: {
     fontSize: ms(18),
     fontWeight: '700',
+    textAlign: 'center',
   },
   headerTitleContainer: {
     alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: s(8),
   },
   headerSubtitle: {
     fontSize: ms(12),
     fontWeight: '500',
     marginTop: vs(2),
+    textAlign: 'center',
   },
   iconBtn: {
     width: ms(40),

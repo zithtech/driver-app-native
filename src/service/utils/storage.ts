@@ -45,9 +45,36 @@ export const storage = {
 
     // Clear all tokens
     async clearAll() {
-        await Keychain.resetGenericPassword({ service: ACCESS_KEY });
-        await Keychain.resetGenericPassword({ service: REFRESH_KEY });
-        await AsyncStorage.clear();
+        try {
+            await Keychain.resetGenericPassword({ service: ACCESS_KEY });
+        } catch (e) {
+            console.log('[Storage] Failed to reset ACCESS_KEY', e);
+        }
+        try {
+            await Keychain.resetGenericPassword({ service: REFRESH_KEY });
+        } catch (e) {
+            console.log('[Storage] Failed to reset REFRESH_KEY', e);
+        }
+        try {
+            await AsyncStorage.clear();
+        } catch (e) {
+            console.log('[Storage] Failed to clear AsyncStorage', e);
+        }
+        try {
+            await AsyncStorage.removeItem('persist:root');
+        } catch (e) {
+            console.log('[Storage] Failed to remove persist:root', e);
+        }
+        try {
+            await AsyncStorage.removeItem('persist:userSlice');
+        } catch (e) {
+            console.log('[Storage] Failed to remove persist:userSlice', e);
+        }
+        try {
+            await AsyncStorage.removeItem('DRIVER_ID');
+        } catch (e) {
+            console.log('[Storage] Failed to remove DRIVER_ID', e);
+        }
     },
 
     // General Storage (AsyncStorage)

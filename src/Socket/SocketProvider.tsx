@@ -5,7 +5,7 @@ import { ISocketContext } from "./socket.types";
 import { useDispatch, useSelector } from "react-redux";
 import { incrementUnreadCount } from "../redux/chatSlice";
 import { navigationRef } from "../Navigations/navigationRef";
-import { RootState } from "../redux/store";
+import { RootState, AppDispatch } from "../redux/store";
 import { clearAcceptedRide } from "../redux/rideSlice";
 import { useAlert } from "../context/AlertContext";
 import { StackActions } from "@react-navigation/native";
@@ -20,7 +20,7 @@ interface Props {
 export const SocketProvider: React.FC<Props> = ({ children }) => {
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [socketId, setSocketId] = useState<string | null>(null);
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const { showAlert } = useAlert();
     const currentRide = useSelector((state: RootState) => state.ride.currentRide);
     const driverId = useSelector((state: RootState) => state.userSlice.user?.driverId);

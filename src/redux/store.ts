@@ -31,7 +31,7 @@ const userPersistConfig = {
   blacklist: ['isOnline', 'driverStatus'], // 🛡️ Never persist volatile session state
 };
 
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   userSlice: persistReducer(userPersistConfig, userSliceReducer),
   plan: planReducer,
   ride: rideReducer,
@@ -40,6 +40,15 @@ const rootReducer = combineReducers({
   [userApi.reducerPath]: userApi.reducer,
   [driverApi.reducerPath]: driverApi.reducer,
 });
+
+const rootReducer = (state: any, action: any) => {
+  if (action.type === 'userSlice/clearUser') {
+    // We pass undefined to appReducer to reset all slices to their initial state,
+    // including all RTK Query caches!
+    return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
 
 /* ================= PERSIST CONFIG ================= */
 

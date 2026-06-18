@@ -150,7 +150,7 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
             )}
 
             <View style={uiStyles.planInfoRow}>
-                <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flex: 1, minWidth: '55%' }}>
                     {activePlan ? (
                         <Text style={uiStyles.expiryLabel}>
                             {t('expires_on')} <Text style={uiStyles.expiryDateText}>{expiryDate ? expiryDate.toDateString() : '—'}</Text>
@@ -167,7 +167,7 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
                     )}
                 </View>
                 <Pressable
-                    style={[uiStyles.ctaBtn, { backgroundColor: isUrgent ? '#EA580C' : theme.colors.primary }]}
+                    style={[uiStyles.ctaBtn, { backgroundColor: isUrgent ? '#EA580C' : theme.colors.primary, flexGrow: 1 }]}
                     onPress={() => navigation.navigate('RechargePlanScreen')}
                 >
                     <Text style={uiStyles.ctaText} numberOfLines={1} adjustsFontSizeToFit>
@@ -250,12 +250,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     planInfoRow: {
         flexDirection: 'row',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         marginTop: vs(20),
         justifyContent: 'space-between',
         paddingTop: vs(16),
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: theme.dark ? '#334155' : '#E2E8F0',
+        flexWrap: 'wrap',
+        gap: 12,
     },
     expiryLabel: {
         color: theme.colors.paragraphText,

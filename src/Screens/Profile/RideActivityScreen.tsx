@@ -250,18 +250,18 @@ const RideActivityScreen = ({ navigation, route }: any) => {
       {/* ================= HEADER ================= */}
       <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
         <Pressable onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </Pressable>
 
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('ride_activity')}</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('ride_activity')}</Text>
 
         <Pressable onPress={() => setShowDateFilter(true)}>
-          <Ionicons name="calendar-outline" size={22} color={isDark ? '#FFFFFF' : '#000'} />
+          <Ionicons name="calendar-outline" size={22} color={theme.colors.text} />
         </Pressable>
       </View>
 
       {/* ================= STATUS FILTER ================= */}
-      <View style={[styles.tabs, isDark && { backgroundColor: '#374151' }]}>
+      <View style={[styles.tabs, isDark && { backgroundColor: theme.colors.border }]}>
         {['all', 'Completed', 'Cancelled'].map((item) => {
           let iconName = 'layers-outline';
           if (item === 'Completed') iconName = 'checkmark-done-circle-outline';
@@ -279,12 +279,12 @@ const RideActivityScreen = ({ navigation, route }: any) => {
               <Ionicons
                 name={iconName}
                 size={16}
-                color={statusFilter === item ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#64748B')}
+                color={statusFilter === item ? '#FFFFFF' : (isDark ? theme.colors.textMuted : '#64748B')}
               />
               <Text
                 style={[
                   styles.tabText,
-                  isDark && statusFilter !== item && { color: '#9CA3AF' },
+                  isDark && statusFilter !== item && { color: theme.colors.textMuted },
                   statusFilter === item && styles.activeTabText,
                 ]}
                 numberOfLines={1} adjustsFontSizeToFit
@@ -364,7 +364,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
               }
             >
               <View style={styles.rideHeader}>
-                <Text style={[styles.rideDate, isDark && { color: '#9CA3AF' }]}>
+                <Text style={[styles.rideDate, isDark && { color: theme.colors.textMuted }]}>
                   {item.trip_code ? `#${item.trip_code}` : `#${item.id.slice(-6)}`} • {item.date} • {item.time}
                 </Text>
                 <StatusBadge status={item.status} isDark={isDark} />
@@ -376,15 +376,15 @@ const RideActivityScreen = ({ navigation, route }: any) => {
                   size={18}
                   color={isDark ? '#34D399' : '#16A34A'}
                 />
-                <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{item.pickup}</Text>
+                <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{item.pickup}</Text>
               </View>
 
               <View style={styles.routeRow}>
                 <Ionicons name="location" size={18} color="#DC2626" />
-                <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{item.drop}</Text>
+                <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{item.drop}</Text>
               </View>
 
-              <View style={[styles.divider, isDark && { backgroundColor: '#374151' }]} />
+              <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
 
               <View style={styles.footer}>
                 <View style={styles.footerItem}>
@@ -393,7 +393,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
                     size={16}
                     color={isDark ? '#60A5FA' : colors.primary}
                   />
-                  <Text style={[styles.footerText, isDark && { color: '#9CA3AF' }]}>
+                  <Text style={[styles.footerText, isDark && { color: theme.colors.textMuted }]}>
                     {item.distance?.includes(t('km')) || item.distance?.includes('km') ? item.distance : `${item.distance} ${t('km')}`}
                   </Text>
                 </View>
@@ -403,7 +403,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
                     styles.amount,
                     item.status === 'Cancelled' && styles.cancelAmount,
                     isDark && item.status !== 'Cancelled' && { color: '#34D399' },
-                    isDark && item.status === 'Cancelled' && { color: '#9CA3AF' }
+                    isDark && item.status === 'Cancelled' && { color: theme.colors.textMuted }
                   ]}
                 >
                   {formatCurrency(item.amount)}
@@ -440,11 +440,11 @@ const RideActivityScreen = ({ navigation, route }: any) => {
         <View style={styles.overlay}>
           <View style={[styles.sheet, { backgroundColor: theme.colors.card }]}>
             {/* Drag Indicator */}
-            <View style={[styles.dragHandle, isDark && { backgroundColor: '#4B5563' }]} />
+            <View style={[styles.dragHandle, isDark && { backgroundColor: theme.colors.border }]} />
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Ionicons name="funnel-outline" size={20} color={isDark ? '#FFFFFF' : '#111827'} />
-              <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#111827', marginBottom: 0 }]} numberOfLines={1} adjustsFontSizeToFit>{t('filter_trips')}</Text>
+              <Ionicons name="funnel-outline" size={20} color={theme.colors.text} />
+              <Text style={[styles.sheetTitle, { color: theme.colors.text, marginBottom: 0 }]} numberOfLines={1} adjustsFontSizeToFit>{t('filter_trips')}</Text>
             </View>
 
             {/* QUICK RANGES */}
@@ -470,26 +470,26 @@ const RideActivityScreen = ({ navigation, route }: any) => {
             <Text style={[styles.sectionLabel, isDark && { color: '#D1D5DB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('custom_range')}</Text>
 
             <Pressable
-              style={[styles.dateRow, isDark && { backgroundColor: '#374151' }]}
+              style={[styles.dateRow, isDark && { backgroundColor: theme.colors.background }]}
               onPress={() => setShowFromPicker(true)}
             >
-              <Ionicons name="calendar-outline" size={18} color={isDark ? '#FFFFFF' : '#000'} />
+              <Ionicons name="calendar-outline" size={18} color={theme.colors.text} />
               <View>
-                <Text style={[styles.dateLabel, isDark && { color: '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('from')}</Text>
-                <Text style={[styles.dateValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                <Text style={[styles.dateLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={1} adjustsFontSizeToFit>{t('from')}</Text>
+                <Text style={[styles.dateValue, { color: theme.colors.text }]}>
                   {fromDate.toDateString()}
                 </Text>
               </View>
             </Pressable>
 
             <Pressable
-              style={[styles.dateRow, isDark && { backgroundColor: '#374151' }]}
+              style={[styles.dateRow, isDark && { backgroundColor: theme.colors.background }]}
               onPress={() => setShowToPicker(true)}
             >
-              <Ionicons name="calendar-outline" size={18} color={isDark ? '#FFFFFF' : '#000'} />
+              <Ionicons name="calendar-outline" size={18} color={theme.colors.text} />
               <View>
-                <Text style={[styles.dateLabel, isDark && { color: '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('to')}</Text>
-                <Text style={[styles.dateValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                <Text style={[styles.dateLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={1} adjustsFontSizeToFit>{t('to')}</Text>
+                <Text style={[styles.dateValue, { color: theme.colors.text }]}>
                   {toDate.toDateString()}
                 </Text>
               </View>

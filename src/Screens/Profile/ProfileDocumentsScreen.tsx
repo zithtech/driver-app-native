@@ -106,7 +106,7 @@ const SUGGESTIONS = [
 
 /* ================= COMPONENTS ================= */
 
-const VerificationRoadmap = ({ status, t, isDark }: { status: string | undefined; t: any; isDark: boolean }) => {
+const VerificationRoadmap = ({ status, t, isDark, theme }: { status: string | undefined; t: any; isDark: boolean; theme: any }) => {
   const steps = [
     { 
       key: 'Submitted', 
@@ -150,7 +150,7 @@ const VerificationRoadmap = ({ status, t, isDark }: { status: string | undefined
               <View style={styles.roadmapStep}>
                 <View style={[
                   styles.roadmapIconCircle, 
-                  { backgroundColor: isActive ? '#10B981' : (isDark ? '#374151' : '#F3F4F6') }
+                  { backgroundColor: isActive ? '#10B981' : (isDark ? theme.colors.border : '#F3F4F6') }
                 ]}>
                   <Ionicons 
                     name={step.icon} 
@@ -168,7 +168,7 @@ const VerificationRoadmap = ({ status, t, isDark }: { status: string | undefined
               {index < steps.length - 1 && (
                 <View style={[
                   styles.roadmapLine, 
-                  { backgroundColor: index < currentStepIndex ? '#10B981' : (isDark ? '#374151' : '#E5E7EB') }
+                  { backgroundColor: index < currentStepIndex ? '#10B981' : (isDark ? theme.colors.border : '#E5E7EB') }
                 ]} />
               )}
             </React.Fragment>
@@ -179,10 +179,10 @@ const VerificationRoadmap = ({ status, t, isDark }: { status: string | undefined
   );
 };
 
-const SmartSuggestions = ({ t, isDark }: { t: any; isDark: boolean }) => (
+const SmartSuggestions = ({ t, isDark, theme }: { t: any; isDark: boolean; theme: any }) => (
   <View style={[styles.suggestionsContainer, { 
-    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-    borderColor: isDark ? '#374151' : '#E5E7EB',
+    backgroundColor: isDark ? theme.colors.card : '#FFFFFF',
+    borderColor: isDark ? theme.colors.border : '#E5E7EB',
     borderWidth: 1,
   }]}>
     <View style={styles.suggestionsHeader}>
@@ -347,7 +347,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       <AppStatusBar />
-      <View style={[styles.header, { borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}>
+      <View style={[styles.header, { borderBottomColor: isDark ? theme.colors.border : '#E5E7EB' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
@@ -359,7 +359,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={onRefresh} tintColor="#2563EB" />}
       >
-        <VerificationRoadmap status={displayStatus} t={t} isDark={isDark} />
+        <VerificationRoadmap status={displayStatus} t={t} isDark={isDark} theme={theme} />
         
         <Text style={[styles.sectionLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('identity_documents') || 'Identity & Verification'}</Text>
 
@@ -381,6 +381,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
               }}
               t={t}
               isDark={isDark}
+              theme={theme}
             />
           );
         })}
@@ -401,7 +402,7 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
   );
 };
 
-const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDark }: any) => {
+const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDark, theme }: any) => {
   const [loadError, setLoadError] = useState(false);
   
   // Reset error state if the preview URL changes (e.g. after a re-upload or refresh)
@@ -420,7 +421,7 @@ const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDa
     pending: { bg: '#FEF3C7', text: '#D97706', icon: 'time' },
     uploaded: { bg: '#FEF3C7', text: '#D97706', icon: 'time' },
     rejected: { bg: '#FEE2E2', text: '#DC2626', icon: 'close-circle' },
-    missing: { bg: isDark ? '#374151' : '#F3F4F6', text: isDark ? '#9CA3AF' : '#6B7280', icon: 'document-outline' },
+    missing: { bg: isDark ? theme.colors.border : '#F3F4F6', text: isDark ? theme.colors.textMuted : '#6B7280', icon: 'document-outline' },
   };
 
   const activeStatus = statusColors[status] || statusColors.missing;
@@ -430,12 +431,12 @@ const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDa
       onPress={isDone ? onView : onUpload}
       style={[
         styles.docCard, 
-        { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' },
+        { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' },
         isRejected && { borderColor: '#FCA5A5', borderWidth: 1 }
       ]}
     >
       <View style={styles.docMainRow}>
-        <View style={[styles.docIconBox, { backgroundColor: isDark ? '#374151' : '#F8FAFC' }]}>
+        <View style={[styles.docIconBox, { backgroundColor: isDark ? theme.colors.border : '#F8FAFC' }]}>
           {imageUri && !loadError ? (
             <Image 
               source={{ uri: imageUri }} 
@@ -467,7 +468,7 @@ const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDa
           {!imageUri ? (
             <Pressable 
               onPress={onUpload}
-              style={[styles.uploadCircle, { backgroundColor: isDark ? '#374151' : '#EFF6FF' }]}
+              style={[styles.uploadCircle, { backgroundColor: isDark ? theme.colors.border : '#EFF6FF' }]}
             >
               <Ionicons name="cloud-upload" size={20} color="#2563EB" />
             </Pressable>

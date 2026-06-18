@@ -8,6 +8,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import Reanimated, {
@@ -21,6 +24,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
+import { useAppTheme } from '../../context/ThemeContext';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -58,7 +62,9 @@ const DecorativeBackground = ({ colors }: { colors: any }) => (
 
 
 const OTPScreen = ({ navigation }: any) => {
-  const { colors, fonts } = useTheme() as any;
+  const { colors: navColors, fonts } = useTheme() as any;
+  const { theme, isDark: dark } = useAppTheme();
+  const colors = theme.colors;
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { showToast } = useToast();
@@ -195,6 +201,10 @@ const OTPScreen = ({ navigation }: any) => {
           responseData.driver_id ||
           responseData.id;
 
+        if (resolvedDriverId) {
+          await storage.setDriverId(resolvedDriverId);
+        }
+
         console.log('[OTPScreen] Resolved driverId:', resolvedDriverId || 'NULL');
 
         // Success! Trigger Animation
@@ -305,230 +315,237 @@ const OTPScreen = ({ navigation }: any) => {
         </TouchableOpacity>
       </Reanimated.View>
 
-      <View style={{ flex: 1, paddingHorizontal: 24 }}>
-        <View style={styles.centerContent}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={{ flex: 1, paddingHorizontal: 24 }}>
+            <View style={styles.centerContent}>
 
-          <Reanimated.View
-            style={styles.iconContainer}
-          >
-            <Reanimated.View style={[
-              styles.iconCircle,
-              { backgroundColor: showSuccess ? '#10B98120' : colors.primary + '20' },
-              successIconStyle
-            ]}>
-              <MaterialCommunityIcons
-                name={showSuccess ? "check-decagram" : "shield-check"}
-                size={showSuccess ? 56 : 48}
-                color={showSuccess ? '#10B981' : colors.primary}
-              />
-            </Reanimated.View>
-          </Reanimated.View>
-
-          <Reanimated.View>
-            {showSuccess ? (
-              <Reanimated.View style={[{ alignItems: 'center' }, successTextStyle]}>
-                <Text 
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                  style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: '#10B981' }]}
-                >
-                  {t('otp_verified')}
-                </Text>
-                <Text style={{ marginTop: 12, opacity: 0.8, textAlign: 'center', color: colors.text, fontSize: 16 }}>
-                  {t('redirecting_to_dashboard')}
-                </Text>
-              </Reanimated.View>
-            ) : (
-              <>
-                <Text 
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                  style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: colors.text }]}
-                >
-                  {t('verify_otp')}
-                </Text>
-
-                <Text style={{ marginTop: 12, opacity: 0.6, textAlign: 'center', color: colors.text, fontSize: 16 }}>
-                  {t('sent_code_to')}
-                </Text>
-
-                <View style={styles.phoneContainer}>
-                  <Text style={[fonts.bold, { fontSize: 18, color: colors.text }]}>
-                    +91 {user?.phone_number}
-                  </Text>
-                  <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editButton}>
-                    <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
-                      {t('edit')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.disclaimerContainer}>
-                  <MaterialCommunityIcons name="information-outline" size={14} color={colors.text + '60'} />
-                  <Text style={styles.disclaimerText}>
-                    {t('security_disclaimer')}
-                  </Text>
-                </View>
-              </>
-            )}
-          </Reanimated.View>
-
-          {!showSuccess && (
-            <>
-              {/* OTP INPUT OR LOCKOUT UI */}
-              {isLocked ? (
-                <View style={[styles.lockoutCard, { marginTop: 32 }]}>
+              <Reanimated.View
+                style={styles.iconContainer}
+              >
+                <Reanimated.View style={[
+                  styles.iconCircle,
+                  { backgroundColor: showSuccess ? '#10B98120' : colors.primary + '20' },
+                  successIconStyle
+                ]}>
                   <MaterialCommunityIcons
-                    name="account-lock"
-                    size={48}
-                    color="#EF4444"
-                    style={{ marginBottom: 16 }}
+                    name={showSuccess ? "check-decagram" : "shield-check"}
+                    size={showSuccess ? 56 : 48}
+                    color={showSuccess ? '#10B981' : colors.primary}
                   />
-                  <Text style={[fonts.bold, { fontSize: 20, color: '#EF4444', marginBottom: 8 }]}>
-                    {t('account_locked', 'Account Locked')}
-                  </Text>
-                  <Text style={styles.lockoutText}>
-                    {lockoutMessage}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsLocked(false);
-                      setHasError(false);
-                    }}
-                    style={[styles.retryButton, { marginTop: 24, backgroundColor: colors.primary + '15', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 }]}
-                  >
-                    <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>
-                      {t('try_again', 'Try Again')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <>
-                  <Animated.View
-                    style={{
-                      marginTop: 32,
-                      transform: [{ translateX: shakeAnim }],
-                    }}
-                  >
-                    <Reanimated.View>
-                      <OTPInput
-                        value={otp}
-                        autoFocus={true}
-                        onChangeText={text => {
-                          setOtp(text);
-                          if (hasError) { setHasError(false); }
-                          if (text.length > 0) triggerHaptic(HapticFeedbackTypes.selection);
-                        }}
-                        hasError={hasError}
-                      />
-                    </Reanimated.View>
-                  </Animated.View>
+                </Reanimated.View>
+              </Reanimated.View>
 
-                  {hasError && (
-                    <Reanimated.Text
-                      entering={FadeInDown}
-                      style={styles.errorText}
+              <Reanimated.View>
+                {showSuccess ? (
+                  <Reanimated.View style={[{ alignItems: 'center' }, successTextStyle]}>
+                    <Text 
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: '#10B981' }]}
                     >
-                      {t('invalid_otp')}
-                    </Reanimated.Text>
-                  )}
-
-                  <Reanimated.View style={{ width: '100%' }}>
-                    <Reanimated.View style={btnAnimatedStyle}>
-                      <Button
-                        style={{
-                          marginTop: 44,
-                          height: 60,
-                          width: '100%',
-                          borderRadius: 20,
-                          backgroundColor: colors.primary,
-                          elevation: 6,
-                          shadowColor: colors.primary,
-                          shadowOffset: { width: 0, height: 6 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 12,
-                        }}
-                        onPress={handleContinue}
-                        disabled={otp.length !== 6 || isLoading}
-                      >
-                        {isLoading ? <ActivityIndicator color="#FFF" /> : (
-                          <Text 
-                            adjustsFontSizeToFit
-                            numberOfLines={1}
-                            style={[fonts.bold, { color: '#FFF', fontSize: 18 }]}
-                          >
-                            {t('verify_continue')}
-                          </Text>
-                        )}
-                      </Button>
-                    </Reanimated.View>
+                      {t('otp_verified')}
+                    </Text>
+                    <Text style={{ marginTop: 12, opacity: 0.8, textAlign: 'center', color: colors.text, fontSize: 16 }}>
+                      {t('redirecting_to_dashboard')}
+                    </Text>
                   </Reanimated.View>
+                ) : (
+                  <>
+                    <Text 
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[fonts.bold, { fontSize: 28, textAlign: 'center', color: colors.text }]}
+                    >
+                      {t('verify_otp')}
+                    </Text>
 
-                  <Reanimated.View
-                    style={{ marginTop: 28 }}
-                  >
-                    {canResend ? (
-                      <TouchableOpacity onPress={handleResend} disabled={isResending} style={styles.resendButton}>
-                        <MaterialCommunityIcons name="refresh" size={20} color={colors.primary} style={{ marginRight: 6 }} />
-                        <Text 
-                          adjustsFontSizeToFit
-                          numberOfLines={1}
-                          style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}
-                        >
-                          {isResending ? t('sending') : t('resend_otp')}
+                    <Text style={{ marginTop: 12, opacity: 0.6, textAlign: 'center', color: colors.text, fontSize: 16 }}>
+                      {t('sent_code_to')}
+                    </Text>
+
+                    <View style={styles.phoneContainer}>
+                      <Text style={[fonts.bold, { fontSize: 18, color: colors.text }]}>
+                        +91 {user?.phone_number}
+                      </Text>
+                      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editButton}>
+                        <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
+                          {t('edit')}
                         </Text>
                       </TouchableOpacity>
-                    ) : (
-                      <View style={styles.countdownContainer}>
-                        <View style={styles.progressWrapper}>
-                          <Svg width={44} height={44} viewBox="0 0 44 44">
-                            <Circle
-                              cx="22"
-                              cy="22"
-                              r="19"
-                              stroke={colors.border + '40'}
-                              strokeWidth="3"
-                              fill="none"
-                            />
-                            <Circle
-                              cx="22"
-                              cy="22"
-                              r="19"
-                              stroke={colors.primary}
-                              strokeWidth="3"
-                              strokeDasharray={`${2 * Math.PI * 19}`}
-                              strokeDashoffset={2 * Math.PI * 19 * (resendTimer / RESEND_TIME)}
-                              strokeLinecap="round"
-                              fill="none"
-                              transform="rotate(-90 22 22)"
-                            />
-                          </Svg>
-                          <Text style={[styles.timerNumber, { color: colors.text, ...fonts.bold }]}>{resendTimer}</Text>
-                        </View>
-                        <Text style={[styles.resendInText, { color: colors.text }]}>
-                          {t('resend_in')}
+                    </View>
+
+                    <View style={styles.disclaimerContainer}>
+                      <MaterialCommunityIcons name="information-outline" size={14} color={colors.text + '60'} />
+                      <Text style={[styles.disclaimerText, { color: dark ? theme.colors.textMuted : '#6B7280' }]}>
+                        {t('security_disclaimer')}
+                      </Text>
+                    </View>
+                  </>
+                )}
+              </Reanimated.View>
+
+              {!showSuccess && (
+                <>
+                  {/* OTP INPUT OR LOCKOUT UI */}
+                  {isLocked ? (
+                    <View style={[styles.lockoutCard, { marginTop: 32 }]}>
+                      <MaterialCommunityIcons
+                        name="account-lock"
+                        size={48}
+                        color="#EF4444"
+                        style={{ marginBottom: 16 }}
+                      />
+                      <Text style={[fonts.bold, { fontSize: 20, color: '#EF4444', marginBottom: 8 }]}>
+                        {t('account_locked', 'Account Locked')}
+                      </Text>
+                      <Text style={styles.lockoutText}>
+                        {lockoutMessage}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setIsLocked(false);
+                          setHasError(false);
+                        }}
+                        style={[styles.retryButton, { marginTop: 24, backgroundColor: colors.primary + '15', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10 }]}
+                      >
+                        <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>
+                          {t('try_again', 'Try Again')}
                         </Text>
-                      </View>
-                    )}
-                  </Reanimated.View>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <>
+                      <Animated.View
+                        style={{
+                          marginTop: 32,
+                          transform: [{ translateX: shakeAnim }],
+                        }}
+                      >
+                        <Reanimated.View>
+                          <OTPInput
+                            value={otp}
+                            autoFocus={true}
+                            onChangeText={text => {
+                              setOtp(text);
+                              if (hasError) { setHasError(false); }
+                              if (text.length > 0) triggerHaptic(HapticFeedbackTypes.selection);
+                            }}
+                            hasError={hasError}
+                          />
+                        </Reanimated.View>
+                      </Animated.View>
+
+                      {hasError && (
+                        <Reanimated.Text
+                          entering={FadeInDown}
+                          style={styles.errorText}
+                        >
+                          {t('invalid_otp')}
+                        </Reanimated.Text>
+                      )}
+
+                      <Reanimated.View style={{ width: '100%' }}>
+                        <Reanimated.View style={btnAnimatedStyle}>
+                          <Button
+                            style={{
+                              marginTop: 44,
+                              height: 60,
+                              width: '100%',
+                              borderRadius: 20,
+                              backgroundColor: colors.primary,
+                              elevation: 6,
+                              shadowColor: colors.primary,
+                              shadowOffset: { width: 0, height: 6 },
+                              shadowOpacity: 0.3,
+                              shadowRadius: 12,
+                            }}
+                            onPress={handleContinue}
+                            disabled={otp.length !== 6 || isLoading}
+                          >
+                            {isLoading ? <ActivityIndicator color="#FFF" /> : (
+                              <Text 
+                                adjustsFontSizeToFit
+                                numberOfLines={1}
+                                style={[fonts.bold, { color: '#FFF', fontSize: 18 }]}
+                              >
+                                {t('verify_continue')}
+                              </Text>
+                            )}
+                          </Button>
+                        </Reanimated.View>
+                      </Reanimated.View>
+
+                      <Reanimated.View
+                        style={{ marginTop: 28 }}
+                      >
+                        {canResend ? (
+                          <TouchableOpacity onPress={handleResend} disabled={isResending} style={styles.resendButton}>
+                            <MaterialCommunityIcons name="refresh" size={20} color={colors.primary} style={{ marginRight: 6 }} />
+                            <Text 
+                              adjustsFontSizeToFit
+                              numberOfLines={1}
+                              style={{ color: colors.primary, fontSize: 16, fontWeight: '700' }}
+                            >
+                              {isResending ? t('sending') : t('resend_otp')}
+                            </Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.countdownContainer}>
+                            <View style={styles.progressWrapper}>
+                              <Svg width={44} height={44} viewBox="0 0 44 44">
+                                <Circle
+                                  cx="22"
+                                  cy="22"
+                                  r="19"
+                                  stroke={colors.border + '40'}
+                                  strokeWidth="3"
+                                  fill="none"
+                                />
+                                <Circle
+                                  cx="22"
+                                  cy="22"
+                                  r="19"
+                                  stroke={colors.primary}
+                                  strokeWidth="3"
+                                  strokeDasharray={`${2 * Math.PI * 19}`}
+                                  strokeDashoffset={2 * Math.PI * 19 * (resendTimer / RESEND_TIME)}
+                                  strokeLinecap="round"
+                                  fill="none"
+                                  transform="rotate(-90 22 22)"
+                                />
+                              </Svg>
+                              <Text style={[styles.timerNumber, { color: colors.text, ...fonts.bold }]}>{resendTimer}</Text>
+                            </View>
+                            <Text style={[styles.resendInText, { color: colors.text }]}>
+                              {t('resend_in')}
+                            </Text>
+                          </View>
+                        )}
+                      </Reanimated.View>
+                    </>
+                  )}
                 </>
               )}
-            </>
-          )}
-        </View>
+            </View>
 
-        {/* FOOTER */}
-        <Reanimated.View
-          style={styles.footer}
-        >
-          <Text style={styles.footerText}>
-            {t('agree_terms_prefix')}
-            <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('terms')}</Text>
-            {t('and')}
-            <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('privacy_policy')}</Text>
-          </Text>
-        </Reanimated.View>
-      </View>
+            {/* FOOTER */}
+            <Reanimated.View
+              style={styles.footer}
+            >
+              <Text style={[styles.footerText, { color: dark ? theme.colors.textMuted : '#6B7280' }]}>
+                {t('agree_terms_prefix')}
+                <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('terms')}</Text>
+                {t('and')}
+                <Text style={{ color: colors.primary, fontWeight: '700' }} numberOfLines={1} adjustsFontSizeToFit>{t('privacy_policy')}</Text>
+              </Text>
+            </Reanimated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

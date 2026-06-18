@@ -167,14 +167,15 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       } else {
         // Fallback / Gallery Flow
         const pickerConfig: any = {
-          width: 1200,
-          height: 800,
           cropping: true,
           compressImageQuality: 0.8,
           useFrontCamera: false,
           cropperCircleOverlay: false,
           freeStyleCropEnabled: true,
           avoidEmptySpaceAroundImage: true,
+          includeExif: true,
+          forceJpg: true,
+          mediaType: 'photo',
         };
 
         const res = (fromCamera

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Linking,
   Platform,
+  ScrollView,
 } from 'react-native';
 import {
   BottomSheetModal,
@@ -182,7 +183,7 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
             </TouchableOpacity>
           </View>
 
-          <BottomSheetScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: vS(20) }}>
+          <BottomSheetScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: vS(20) }}>
             
             {/* Layer 3: AI Chat Entry */}
             <TouchableOpacity
@@ -223,22 +224,28 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
               </View>
 
               <View style={[styles.faqSection, { backgroundColor: dark ? colors.card : '#FFF', borderColor: colors.border }]}>
-                {filteredFaqs.length > 0 ? (
-                  filteredFaqs.map((item, index) => (
-                    <FaqItem 
-                      key={index} 
-                      item={item} 
-                      searchQuery={search} 
-                      isExpanded={openIndex === index} 
-                      onPress={() => setOpenIndex(openIndex === index ? null : index)} 
-                    />
-                  ))
-                ) : (
-                  <View style={styles.noResultsContainer}>
-                    <Ionicons name="search-outline" size={mS(32)} color={colors.text} style={{ opacity: 0.3, marginBottom: vS(8) }} />
-                    <Text style={[styles.noResultsText, { color: colors.text, opacity: 0.6 }]}>No results found</Text>
-                  </View>
-                )}
+                <ScrollView 
+                  nestedScrollEnabled 
+                  showsVerticalScrollIndicator={true}
+                  style={styles.faqScrollView}
+                >
+                  {filteredFaqs.length > 0 ? (
+                    filteredFaqs.map((item, index) => (
+                      <FaqItem 
+                        key={index} 
+                        item={item} 
+                        searchQuery={search} 
+                        isExpanded={openIndex === index} 
+                        onPress={() => setOpenIndex(openIndex === index ? null : index)} 
+                      />
+                    ))
+                  ) : (
+                    <View style={styles.noResultsContainer}>
+                      <Ionicons name="search-outline" size={mS(32)} color={colors.text} style={{ opacity: 0.3, marginBottom: vS(8) }} />
+                      <Text style={[styles.noResultsText, { color: colors.text, opacity: 0.6 }]}>No results found</Text>
+                    </View>
+                  )}
+                </ScrollView>
               </View>
             </View>
 
@@ -346,6 +353,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
   },
+  faqScrollView: {
+    maxHeight: vS(280),
+  },
   faqRowContainer: { 
     borderBottomWidth: 1, 
     borderBottomColor: 'rgba(0,0,0,0.05)' 
@@ -383,7 +393,9 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: mS(14),
   },
+
   supportFooter: { 
+    flexShrink: 0,
     paddingVertical: vS(16), 
     paddingHorizontal: hS(20),
     borderTopWidth: 1,

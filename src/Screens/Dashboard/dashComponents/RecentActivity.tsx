@@ -28,12 +28,12 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ items }) => {
             <View style={styles.activityHeader}>
                 <Text style={[styles.activityTitle, { color: theme.colors.text, flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit>{t('recent_activity')}</Text>
                 <Pressable onPress={() => navigation.navigate('Profile', { screen: 'RideActivityScreen' })}>
-                    <Text style={[styles.seeAllText, isDark && { color: '#60A5FA' }]}>{t('see_all')}</Text>
+                    <Text style={[styles.seeAllText, isDark && { color: theme.colors.primary }]}>{t('see_all')}</Text>
                 </Pressable>
             </View>
 
             {items.length > 0 ? items.map((item, index) => (
-                <View key={item.id || `activity-${index}`} style={[styles.activityItem, isDark && { borderBottomColor: '#1E293B' }]}>
+                <View key={item.id || `activity-${index}`} style={[styles.activityItem, isDark && { borderBottomColor: theme.colors.border }]}>
                     <View style={[styles.activityIcon, isDark && { backgroundColor: '#064e3b' }]}>
                         <Ionicons
                             name={item.status === 'completed' ? 'checkmark-circle' : item.status === 'cancelled' ? 'close-circle' : 'time'}
@@ -45,14 +45,14 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ items }) => {
                         <Text style={[styles.activityLoc, { color: theme.colors.text }]} numberOfLines={1}>
                             {item.trip_code ? `#${item.trip_code} • ` : ''}{item.route}
                         </Text>
-                        <Text style={[styles.activityTime, isDark && { color: '#94A3B8' }]}>
+                        <Text style={[styles.activityTime, isDark && { color: theme.colors.textMuted }]}>
                             {item.timeAgo} • {item.amount}
                         </Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color={isDark ? '#4B5563' : '#9CA3AF'} />
+                    <Ionicons name="chevron-forward" size={16} color={isDark ? theme.colors.textMuted : '#9CA3AF'} />
                 </View>
             )) : (
-                <Text style={{ color: isDark ? '#4B5563' : '#9CA3AF', fontSize: ms(12), textAlign: 'center', paddingVertical: vs(16) }}>
+                <Text style={{ color: isDark ? theme.colors.textMuted : '#9CA3AF', fontSize: ms(12), textAlign: 'center', paddingVertical: vs(16) }}>
                     {t('no_recent_activity')}
                 </Text>
             )}

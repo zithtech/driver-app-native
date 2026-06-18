@@ -53,7 +53,7 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
             onPress={onClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={ms(24)} color={isDark ? '#94A3B8' : '#64748B'} />
+            <Ionicons name="close" size={ms(24)} color={isDark ? theme.colors.textMuted : '#64748B'} />
           </TouchableOpacity>
 
           <LinearGradient
@@ -68,7 +68,7 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
               {t('subscription_required', 'Recharge Plan Required')}
             </Text>
 
-            <Text style={[styles.description, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+            <Text style={[styles.description, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
               {t('active_plan_start_earning', 'Activate a plan to start receiving ride requests and maximize your earnings.')}
             </Text>
 
@@ -106,7 +106,7 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
                 style={styles.cancelButton}
                 onPress={onClose}
               >
-                <Text style={[styles.cancelButtonText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                <Text style={[styles.cancelButtonText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
                   {t('not_now', 'Decide Later')}
                 </Text>
               </TouchableOpacity>

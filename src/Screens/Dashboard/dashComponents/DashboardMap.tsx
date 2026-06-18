@@ -376,10 +376,10 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
             {(!userLocation || !isMapReady) && (
                 <View style={[
                     StyleSheet.absoluteFillObject, 
-                    { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? '#0f172a' : '#f8fafc', zIndex: 100 }
+                    { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? theme.colors.background : '#f8fafc', zIndex: 100 }
                 ]}>
                     <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={{ marginTop: vs(12), color: isDark ? '#94a3b8' : '#64748b', fontSize: ms(13), fontWeight: '600' }}>
+                    <Text style={{ marginTop: vs(12), color: isDark ? theme.colors.textMuted : '#64748b', fontSize: ms(13), fontWeight: '600' }}>
                         {t('fetching_location') || 'Fetching location...'}
                     </Text>
                 </View>
@@ -387,7 +387,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
 
             {/* ── GRADIENT FADE OVERLAY (bottom edge blend) ── */}
             <LinearGradient
-                colors={['transparent', isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(245, 246, 250, 0.5)']}
+                colors={['transparent', isDark ? 'rgba(11, 19, 32, 0.5)' : 'rgba(245, 246, 250, 0.5)']}
                 style={styles.mapGradientFade}
                 pointerEvents="none"
             />
@@ -397,20 +397,20 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
             {isOnline && (
                 <View style={[
                     styles.statusChip,
-                    { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)' },
+                    { backgroundColor: isDark ? 'rgba(26, 36, 56, 0.92)' : 'rgba(255, 255, 255, 0.92)' },
                 ]}>
                     <View style={styles.statusDot} />
-                    <Text style={[styles.statusChipText, { color: isDark ? '#E2E8F0' : '#1E293B' }]}>
-                        {t('online') || 'Online'}
+                    <Text style={[styles.statusChipText, { color: isDark ? theme.colors.text : '#1E293B' }]}>
+                        {t('finding_rides', 'Finding rides...')}
                     </Text>
                 </View>
             )}
 
             {/* ── MAP PAUSED TOAST ── */}
             {!isFollowing && isOnline && (
-                <View style={[styles.mapPausedChip, { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)' }]}>
-                    <Ionicons name="hand-left-outline" size={ms(14)} color={theme.colors.primary} style={{ marginRight: s(6) }} />
-                    <Text style={[styles.statusChipText, { color: isDark ? '#E2E8F0' : '#1E293B' }]}>
+                <View style={[styles.mapPausedChip, { backgroundColor: isDark ? 'rgba(26, 36, 56, 0.92)' : 'rgba(255, 255, 255, 0.92)' }]}>
+                    <Ionicons name="pause-circle" size={s(16)} color="#64748B" style={{ marginRight: s(6) }} />
+                    <Text style={[styles.statusChipText, { color: isDark ? theme.colors.text : '#1E293B' }]}>
                         {t('map_paused') || 'Map Paused'}
                     </Text>
                 </View>
@@ -438,8 +438,8 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                             styles.controlBtn,
                             {
                                 backgroundColor: showTraffic
-                                    ? theme.colors.primary
-                                    : (isDark ? '#1E293B' : '#FFFFFF'),
+                                    ? (isDark ? theme.colors.primary : '#3B82F6')
+                                    : (isDark ? theme.colors.card : '#FFFFFF'),
                             },
                         ]}
                         onPress={() => setShowTraffic(prev => !prev)}
@@ -450,7 +450,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                         <MaterialCommunityIcons
                             name="traffic-light"
                             size={s(18)}
-                            color={showTraffic ? '#FFFFFF' : (isDark ? '#94A3B8' : '#475569')}
+                            color={showTraffic ? '#FFFFFF' : (isDark ? theme.colors.textMuted : '#475569')}
                         />
                     </Pressable>
 
@@ -473,7 +473,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                             style={[
                                 styles.controlBtn,
                                 {
-                                    backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+                                    backgroundColor: isDark ? theme.colors.card : '#FFFFFF',
                                     borderWidth: !isFollowing ? 1.5 : 0,
                                     borderColor: !isFollowing ? theme.colors.primary : 'transparent',
                                 },
@@ -486,7 +486,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                             <Ionicons
                                 name={isFollowing ? 'navigate' : 'locate'}
                                 size={s(20)}
-                                color={isFollowing ? theme.colors.primary : (isDark ? '#FFFFFF' : '#1E293B')}
+                                color={isFollowing ? theme.colors.primary : (isDark ? theme.colors.text : '#1E293B')}
                             />
                         </Pressable>
                     </View>

@@ -217,7 +217,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
       {isFocused && <AppStatusBar />}
-      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? '#374151' : '#F3F4F6' }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#1F2937'} />
         </Pressable>
@@ -242,7 +242,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                 <StatusBadge status={ride.status} label={ride.status ? t(ride.status.toLowerCase()) : ''} isDark={isDark} />
               </View>
 
-              <View style={[styles.divider, isDark && { backgroundColor: '#374151' }]} />
+              <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
 
               <View style={styles.routeContainer}>
                 <View style={styles.routeItem}>
@@ -289,7 +289,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                   </View>
                 </View>
                 {ride.customer.comment && (
-                  <View style={[styles.commentBox, isDark && { backgroundColor: '#374151', borderLeftColor: '#4B5563' }]}>
+                  <View style={[styles.commentBox, isDark && { backgroundColor: theme.colors.border, borderLeftColor: '#4B5563' }]}>
                     <Text style={[styles.commentText, isDark && { color: '#D1D5DB' }]}>"{ride.customer.comment}"</Text>
                   </View>
                 )}
@@ -361,7 +361,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
             </View>
 
             {/* Fare Breakdown (Receipt Style) */}
-            <View style={[styles.section, styles.receiptCard, isDark && { backgroundColor: theme.colors.card, borderColor: '#374151' }]}>
+            <View style={[styles.section, styles.receiptCard, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
               <View style={[styles.receiptTopEdge, isDark && { borderBottomColor: theme.colors.background }]} />
 
               <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('fare_breakdown')}</Text>

@@ -76,11 +76,11 @@ export default function ProfileDetailsScreen({ navigation }: any) {
   };
 
   const dynamicStyles = useMemo(() => {
-    const textPrimary = isDark ? '#FFFFFF' : '#111827';
-    const textSecondary = isDark ? '#9CA3AF' : '#6B7280';
+    const textPrimary = theme.colors.text;
+    const textSecondary = theme.colors.textMuted;
 
-    const labelColor = isDark ? '#9CA3AF' : '#6B7280';
-    const cardBg = isDark ? '#1F2937' : '#FFFFFF';
+    const labelColor = theme.colors.textMuted;
+    const cardBg = theme.colors.card;
 
     return StyleSheet.create({
       safeArea: {
@@ -123,7 +123,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
         width: ms(80),
         height: ms(80),
         borderRadius: ms(40),
-        backgroundColor: isDark ? '#374151' : '#F3F4F6',
+        backgroundColor: isDark ? theme.colors.border : '#F3F4F6',
         alignItems: 'center',
         justifyContent: 'center',
       },
@@ -217,7 +217,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
       },
       documentsButton: {
         flex: 1,
-        backgroundColor: isDark ? '#1F2937' : '#F3F4F6',
+        backgroundColor: isDark ? theme.colors.background : '#F3F4F6',
         paddingVertical: vs(14),
         borderRadius: ms(16),
         flexDirection: 'row',
@@ -266,7 +266,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
         padding: 20,
         marginBottom: 16,
         borderWidth: isDark ? 1 : 0,
-        borderColor: '#374151',
+        borderColor: theme.colors.border,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: isDark ? 0 : 0.05,
@@ -281,7 +281,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: isDark ? '#374151' : '#FEF3C7',
+        backgroundColor: isDark ? theme.colors.background : '#FEF3C7',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 10,
@@ -359,7 +359,7 @@ export default function ProfileDetailsScreen({ navigation }: any) {
         shadowRadius: 20,
         elevation: 10,
         borderWidth: isDark ? 1 : 0,
-        borderColor: '#374151',
+        borderColor: theme.colors.border,
       },
       modalIconBg: {
         width: 64,

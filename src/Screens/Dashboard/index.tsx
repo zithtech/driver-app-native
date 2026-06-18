@@ -574,7 +574,7 @@ const DriverDashboard = () => {
 
         {/* ── SOS SAFETY TOOLKIT CARD ── */}
         {sosContactsCount !== null && sosContactsCount < 3 && !isSosDismissed && (
-          <Animated.View entering={FadeInDown.duration(600)} style={[styles.inlineSosCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF' }]}>
+          <Animated.View entering={FadeInDown.duration(600)} style={[styles.inlineSosCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
             <View style={styles.sosCardHeader}>
               <View style={styles.sosCardLeft}>
                 <View style={styles.sosCardIconRing}>
@@ -582,11 +582,11 @@ const DriverDashboard = () => {
                 </View>
                 <View style={styles.sosCardTextGroup}>
                   <Text style={[styles.sosCardTitle, { color: theme.colors.text }]}>Safety Toolkit</Text>
-                  <Text style={[styles.sosCardSubtitle, isDark && { color: '#94A3B8' }]}>{sosContactsCount}/3 Recommended Contacts</Text>
+                  <Text style={[styles.sosCardSubtitle, isDark && { color: theme.colors.textMuted }]}>{sosContactsCount}/3 Recommended Contacts</Text>
                 </View>
               </View>
               <TouchableOpacity onPress={() => setIsSosDismissed(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Text style={{ fontSize: ms(10), color: isDark ? '#94A3B8' : '#64748B', fontWeight: '500' }}>Close</Text>
+                <Text style={{ fontSize: ms(10), color: isDark ? theme.colors.textMuted : '#64748B', fontWeight: '500' }}>Close</Text>
               </TouchableOpacity>
             </View>
 
@@ -703,13 +703,13 @@ const DriverDashboard = () => {
                 onPress={() => setShowOfflineSwipe(false)}
                 style={{ position: 'absolute', right: s(16), top: vs(12), zIndex: 1100 }}
               >
-                <Text style={{ fontSize: ms(14), color: isDark ? '#94A3B8' : '#64748B', fontWeight: '500' }}>Close</Text>
+                <Text style={{ fontSize: ms(14), color: isDark ? theme.colors.textMuted : '#64748B', fontWeight: '500' }}>Close</Text>
               </TouchableOpacity>
             )}
             <Text style={[styles.swipeTitle, { color: theme.colors.text }]}>
               {isOnline ? t('you_are_online') : t('you_are_offline')}
             </Text>
-            <Text style={[styles.swipeSub, isDark && { color: '#94A3B8' }]}>
+            <Text style={[styles.swipeSub, isDark && { color: theme.colors.textMuted }]}>
               {isOnline ? t('waiting_requests') : t('go_online_start')}
             </Text>
             <SwipeButton
@@ -864,7 +864,7 @@ const DriverDashboard = () => {
             <Text style={[styles.confirmModalTitle, { color: theme.colors.text }]}>
               {acceptedRide?.booking_type === 'SCHEDULED' ? t('ride_scheduled', 'Ride Scheduled!') : t('ride_accepted', 'Ride Accepted!')}
             </Text>
-            <Text style={[styles.confirmModalSub, isDark && { color: '#94A3B8' }]}>
+            <Text style={[styles.confirmModalSub, isDark && { color: theme.colors.textMuted }]}>
               {acceptedRide?.booking_type === 'SCHEDULED'
                 ? t('scheduled_success_msg', 'You can find this ride in your upcoming list.')
                 : t('navigating_to_pickup', 'Navigating to pickup location...')}
