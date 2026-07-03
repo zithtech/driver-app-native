@@ -37,8 +37,6 @@ import {
     EmergencySupport_Nav,
     LegalAgreements_Nav,
     AboutApp_Nav,
-    ProfileDetails_Nav,
-    ProfileDocuments_Nav,
 } from '../../Navigations/navigations';
 import { logoutUser } from '../../service/utils/logoutHelper';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -187,29 +185,6 @@ const ProfileSettingsScreen = () => {
                 contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + vs(40) }]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* ACCOUNT SECTION */}
-                <AnimatedSection title={t('account')} index={0}>
-                    <Item
-                        icon="person-outline"
-                        label={t('profile_info')}
-                        onPress={() => {
-                            triggerHaptic();
-                            navigation.navigate(ProfileDetails_Nav);
-                        }}
-                        theme={theme}
-                        isDark={isDark}
-                    />
-                    <Item
-                        icon="document-text-outline"
-                        label={t('documents')}
-                        onPress={() => {
-                            triggerHaptic();
-                            navigation.navigate(ProfileDocuments_Nav);
-                        }}
-                        theme={theme}
-                        isDark={isDark}
-                    />
-                </AnimatedSection>
 
                 {/* DRIVER PREFERENCES SECTION */}
                 <AnimatedSection title={t('driver_preferences_text') || 'DRIVER PREFERENCES'} index={1}>

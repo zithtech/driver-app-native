@@ -60,7 +60,6 @@ const ProfileScreen = ({ navigation }: any) => {
   );
 
   const [showBannerPicker, setShowBannerPicker] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [showProfileImage, setShowProfileImage] = useState(false);
 
@@ -134,7 +133,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
           <Pressable
             style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-            onPress={() => setShowHelpModal(true)}
+            onPress={() => navigation.navigate(HelpCenter_Nav)}
           >
             <Ionicons name="headset-outline" size={18} color={theme.colors.text} />
             <Text style={[styles.helpText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
@@ -322,74 +321,6 @@ const ProfileScreen = ({ navigation }: any) => {
         </View>
       )}
 
-      {/* ================= HELP MODAL ================= */}
-      <Modal
-        visible={showHelpModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowHelpModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.helpModalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.modalDragHandle, isDark && { backgroundColor: theme.colors.border }]} />
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center_title') || 'Support & Services'}</Text>
-
-            <View style={styles.helpMenu}>
-              <HelpItem
-                icon="help-circle-outline"
-                title={t('help_center')}
-                subtitle={t('help_center_subtitle') || 'Find answers to common questions'}
-                colors={['#3B82F6', '#2563EB']}
-                isDark={isDark}
-                onPress={() => {
-                  setShowHelpModal(false);
-                  navigation.navigate(HelpCenter_Nav);
-                }}
-              />
-              <HelpItem
-                icon="chatbubble-ellipses-outline"
-                title={t('contact_support')}
-                subtitle={t('contact_support_desc') || 'Get in touch with our team 24/7'}
-                colors={['#10B981', '#059669']}
-                isDark={isDark}
-                onPress={() => {
-                  setShowHelpModal(false);
-                  navigation.navigate(ContactSupport_Nav);
-                }}
-              />
-              <HelpItem
-                icon="shield-checkmark-outline"
-                title={t('safety_emergency')}
-                subtitle={t('safety_features') || 'Emergency contacts & safety tools'}
-                colors={['#EF4444', '#DC2626']}
-                isDark={isDark}
-                onPress={() => {
-                  setShowHelpModal(false);
-                  navigation.navigate(SosContacts_Nav);
-                }}
-              />
-              <HelpItem
-                icon="document-text-outline"
-                title={t('about_app')}
-                subtitle={t('about_app_desc') || 'Versions, terms & conditions'}
-                colors={['#9CA3AF', '#4B5563']}
-                isDark={isDark}
-                onPress={() => {
-                  setShowHelpModal(false);
-                  navigation.navigate(AboutApp_Nav);
-                }}
-              />
-            </View>
-
-            <Pressable
-              style={[styles.modalCloseBtn, isDark && { backgroundColor: theme.colors.background }]}
-              onPress={() => setShowHelpModal(false)}
-            >
-              <Text style={[styles.modalCloseBtnText, isDark && { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
 
       <ImageZoomModal
         visible={showProfileImage}
@@ -418,32 +349,7 @@ const MenuItem = ({ icon, title, onPress, isDark }: any) => {
   );
 };
 
-const HelpItem = ({ icon, title, subtitle, color, colors, onPress, isDark }: any) => {
-  const { theme } = useAppTheme();
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.helpMenuItem,
-        pressed && { opacity: 0.7, backgroundColor: isDark ? theme.colors.border : '#F9FAFB' }
-      ]}
-      onPress={onPress}
-    >
-      <LinearGradient
-        colors={colors || [color, color]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.helpIconBox}
-      >
-        <Ionicons name={icon} size={22} color="#FFFFFF" />
-      </LinearGradient>
-      <View style={styles.helpTextContainer}>
-        <Text style={[styles.helpMenuText, isDark && { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
-        {subtitle && <Text style={[styles.helpMenuSubtitle, isDark && { color: theme.colors.textMuted }]}>{subtitle}</Text>}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={isDark ? theme.colors.border : '#D1D5DB'} />
-    </Pressable>
-  );
-};
+
 
 const StatCard = ({ icon, iconColor, value, label, isDark, theme }: any) => (
   <View style={[styles.statCard, { backgroundColor: theme.colors.card }]}>
@@ -715,69 +621,5 @@ const styles = StyleSheet.create({
     color: '#2563EB',
   },
 
-  /* ---------- HELP MODAL ---------- */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  helpModalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  modalDragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  helpMenu: {
-    marginTop: 8,
-  },
-  helpMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  helpIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  helpMenuText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  helpTextContainer: {
-    flex: 1,
-  },
-  helpMenuSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '400',
-  },
-  modalCloseBtn: {
-    marginTop: 24,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  modalCloseBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4B5563',
-  },
+
 });
