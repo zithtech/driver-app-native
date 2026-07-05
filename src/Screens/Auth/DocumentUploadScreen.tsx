@@ -491,7 +491,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                       ) : (
                         <>
                           {isSelfie && (
-                            <Animated.View
+                            <View
                               style={[
                                 StyleSheet.absoluteFill,
                                 {
@@ -499,20 +499,19 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                                   borderWidth: 2,
                                   borderColor: colors.primary,
                                   borderStyle: 'dashed',
-                                  transform: [{ rotate: spin }],
                                   opacity: 0.4
                                 }
                               ]}
                             />
                           )}
-                          <Animated.View style={isSelfie && { transform: [{ scale: pulseAnim }] }}>
+                          <View>
                             <Ionicons
                               name={isSelfie ? "person-outline" : "camera-outline"}
                               size={isSelfie ? 40 : 26}
                               color={isSelfie ? colors.primary : colors.border}
                               style={isSelfie && { opacity: 0.8 }}
                             />
-                          </Animated.View>
+                          </View>
                           <Text style={styles.placeholderText} numberOfLines={1} adjustsFontSizeToFit>
                             {isSelfie ? t('profile_selfie') : t('tap_to_upload')}
                           </Text>

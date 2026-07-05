@@ -486,6 +486,10 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         theme: { color: currentTier?.color || '#152D5E' },
       };
 
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor(currentTier?.color || '#152D5E');
+      }
+
       const data = await RazorpayCheckout.open(options);
 
       setPaymentStatus('verifying');
@@ -517,6 +521,9 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         icon: 'close-circle-outline',
       });
     } finally {
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent');
+      }
       setIsProcessing(false);
     }
   };
@@ -547,11 +554,11 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         >
           <LinearGradient
             colors={isDark ? ['#152D5E', '#0F172A'] : ['#152D5E', '#1E3A8A']}
-            style={styles.premiumHeader}
+            style={[styles.premiumHeader, { paddingTop: insets.top + 10 }]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <View style={[styles.headerContainer, { marginTop: insets.top + 5 }]}>
+            <View style={[styles.headerContainer]}>
               <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </Pressable>
@@ -593,7 +600,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
       >
         <LinearGradient
           colors={isDark ? ['#152D5E', '#0F172A'] : ['#152D5E', '#1E3A8A']}
-          style={styles.premiumHeader}
+          style={[styles.premiumHeader, { paddingTop: insets.top + 10 }]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
@@ -604,7 +611,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
           {/* Title Section */}
 
-          <View style={[styles.headerContainer, { marginTop: insets.top + 5 }]}>
+          <View style={[styles.headerContainer]}>
             <Pressable
               onPress={() => navigation.goBack()}
               style={({ pressed }) => [

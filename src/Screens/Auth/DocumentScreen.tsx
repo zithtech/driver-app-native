@@ -617,7 +617,7 @@ const DocumentScreen = ({ navigation }: any) => {
                   >
                     <View style={[styles.profileCircle, { borderColor: selfiePreview ? colors.primary : '#E5E7EB' }]}>
                       {!selfiePreview && (
-                        <Animated.View
+                        <View
                           style={[
                             StyleSheet.absoluteFill,
                             {
@@ -625,7 +625,6 @@ const DocumentScreen = ({ navigation }: any) => {
                               borderWidth: 2,
                               borderColor: colors.primary,
                               borderStyle: 'dashed',
-                              transform: [{ rotate: spin }],
                               opacity: 0.4
                             }
                           ]}
@@ -637,9 +636,9 @@ const DocumentScreen = ({ navigation }: any) => {
                           style={styles.profileImage}
                         />
                       ) : (
-                        <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                        <View>
                           <Ionicons name="person" size={50} color={colors.primary} style={{ opacity: 0.8 }} />
-                        </Animated.View>
+                        </View>
                       )}
                     </View>
                     <View style={[

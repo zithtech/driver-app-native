@@ -18,6 +18,7 @@ export interface UserState {
   /* Phone — backend sends phone_number */
   phone_number?: string;
   alternate_contact?: string | null;
+  otp?: string;
 
   accessToken?: string;
   refreshToken?: string;

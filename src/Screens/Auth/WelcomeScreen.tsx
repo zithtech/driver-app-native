@@ -194,14 +194,16 @@ const WelcomeScreen = ({ navigation }: any) => {
     }
 
     try {
-      await sendOtp({
+      const result = await sendOtp({
         phone_number: mobileNumber,
         role: 'driver',
         device_id: deviceId,
         allow_new_device: true,
       }).unwrap();
 
-      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined }));
+      const newOtp = result?.otp || result?.data?.otp || '';
+
+      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined, otp: newOtp }));
       // ToastAndroid.show(t('otp_sent_success'), ToastAndroid.SHORT);
 
       setTimeout(() => {
