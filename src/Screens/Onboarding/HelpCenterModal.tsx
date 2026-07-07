@@ -7,7 +7,6 @@ import {
   Modal,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -27,14 +26,9 @@ const HelpItem = ({ icon, title, subtitle, color, colors, onPress, isDark }: any
       ]}
       onPress={onPress}
     >
-      <LinearGradient
-        colors={colors || [color, color]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.helpIconBox}
-      >
-        <Ionicons name={icon} size={22} color="#FFFFFF" />
-      </LinearGradient>
+      <View style={[styles.helpIconBox, { backgroundColor: theme.colors.primary + '15' }]}>
+        <Ionicons name={icon} size={22} color={theme.colors.primary} />
+      </View>
       <View style={styles.helpTextContainer}>
         <Text style={[styles.helpMenuText, isDark && { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
         {subtitle && <Text style={[styles.helpMenuSubtitle, isDark && { color: theme.colors.textMuted }]}>{subtitle}</Text>}
@@ -70,7 +64,6 @@ const HelpCenterModal = ({ visible, onClose }: any) => {
               icon="help-circle-outline"
               title={t('help_center') || 'Help Center'}
               subtitle={t('help_center_subtitle') || 'Find answers to common questions'}
-              colors={['#3B82F6', '#2563EB']}
               isDark={isDark}
               onPress={() => {
                 onClose();
@@ -109,16 +102,16 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   modalDragHandle: {
-    width: 40,
-    height: 4,
+    width: 32,
+    height: 3,
     backgroundColor: '#E5E7EB',
-    borderRadius: 2,
+    borderRadius: 1.5,
     alignSelf: 'center',
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 12,
   },
@@ -129,8 +122,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
   },
   helpIconBox: {
     width: 40,
@@ -142,7 +135,7 @@ const styles = StyleSheet.create({
   },
   helpMenuText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1F2937',
     marginBottom: 2,
   },
@@ -151,20 +144,18 @@ const styles = StyleSheet.create({
   },
   helpMenuSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#9CA3AF',
     fontWeight: '400',
   },
   modalCloseBtn: {
     marginTop: 24,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   modalCloseBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4B5563',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
   },
 });
 

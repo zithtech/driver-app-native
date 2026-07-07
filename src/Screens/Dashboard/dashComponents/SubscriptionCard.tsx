@@ -128,14 +128,14 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
                 </View>
 
                 {isActive ? (
-                    <View style={[uiStyles.statusBadge, { backgroundColor: isUrgent ? '#FFF7ED' : '#F0FDF4' }]}>
-                        <Text style={[uiStyles.statusText, { color: isUrgent ? '#EA580C' : '#15803D' }]}>
+                    <View style={[uiStyles.statusBadge, { borderColor: isUrgent ? '#EA580C' : '#10B981', backgroundColor: 'transparent' }]}>
+                        <Text style={[uiStyles.statusText, { color: isUrgent ? '#EA580C' : '#10B981' }]}>
                             {isUrgent ? t('expiring_soon') || 'EXPIRING SOON' : t('active')}
                         </Text>
                     </View>
                 ) : activePlan ? (
-                    <View style={[uiStyles.statusBadge, { backgroundColor: '#F3F4F6' }]}>
-                        <Text style={[uiStyles.statusText, { color: '#6B7280' }]}>
+                    <View style={[uiStyles.statusBadge, { borderColor: theme.dark ? '#374151' : '#E5E7EB', backgroundColor: 'transparent' }]}>
+                        <Text style={[uiStyles.statusText, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
                             {t('expired')}
                         </Text>
                     </View>
@@ -186,18 +186,13 @@ const getStyles = (theme: any) => StyleSheet.create({
         marginHorizontal: s(16),
         marginTop: vs(12),
         backgroundColor: theme.colors.card,
-        borderRadius: ms(24),
-        padding: ms(20),
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.dark ? '#334155' : '#E2E8F0',
-        shadowColor: theme.dark ? '#000' : '#475569',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: theme.dark ? 0.3 : 0.08,
-        shadowRadius: 16,
-        elevation: 8,
+        borderRadius: ms(16),
+        padding: ms(16),
+        borderWidth: 1,
+        borderColor: theme.dark ? '#374151' : '#E5E7EB',
     },
     urgentCardBackground: {
-        backgroundColor: theme.dark ? '#2a1a15' : '#FFF7ED',
+        backgroundColor: 'transparent',
         borderColor: theme.dark ? '#9a3412' : '#FFEDD5',
         borderWidth: 1,
     },
@@ -236,10 +231,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     upgradeBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.dark ? '#3b0764' : '#F5F3FF',
+        backgroundColor: theme.dark ? 'rgba(91, 33, 182, 0.2)' : '#F5F3FF',
         padding: ms(10),
         borderRadius: ms(12),
-        marginTop: vs(16),
+        marginTop: vs(12),
         gap: s(8),
     },
     upgradeText: {
@@ -251,11 +246,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     planInfoRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: vs(20),
+        marginTop: vs(16),
         justifyContent: 'space-between',
-        paddingTop: vs(16),
+        paddingTop: vs(12),
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: theme.dark ? '#334155' : '#E2E8F0',
+        borderTopColor: theme.dark ? '#374151' : '#E5E7EB',
         flexWrap: 'wrap',
         gap: 12,
     },
@@ -275,8 +270,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     statusBadge: {
         paddingHorizontal: s(12),
-        paddingVertical: vs(5),
+        paddingVertical: vs(4),
         borderRadius: ms(12),
+        borderWidth: 1,
     },
     statusText: {
         fontSize: ms(10),
@@ -286,8 +282,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     ctaBtn: {
         paddingHorizontal: s(20),
-        paddingVertical: vs(12),
-        borderRadius: ms(16),
+        paddingVertical: vs(10),
+        borderRadius: ms(12),
         minWidth: s(110),
         alignItems: 'center',
     },

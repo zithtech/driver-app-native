@@ -18,7 +18,7 @@ import { useTheme, useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { RootState } from '../../redux/store';
-import { Text } from '../../Components';
+import { Text, DocSubmissionResultModal } from '../../Components';
 import Button from '../../Components/Button';
 import {
   useSubmitDocumentsMutation,
@@ -44,6 +44,7 @@ import { DocumentUploadScreen_Nav, Dashboard_Nav } from '../../Navigations/navig
 import { useHaptic } from '../../hooks/useHaptic';
 import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
+import WaitingForApprovalModal from './components/WaitingForApprovalModal';
 
 /* ================= TYPES ================= */
 
@@ -128,81 +129,37 @@ const AnimatedTips = ({ t, fonts }: { t: any; fonts: any }) => {
 
 /* ================= TIMELINE COMPONENT ================= */
 
-const VerificationTimeline = ({ currentStep, t, fonts }: { currentStep: number; t: any; fonts: any }) => {
-  const steps = [
-    { key: 'verification_step_1', icon: 'cloud-done-outline' },
-    { key: 'verification_step_2', icon: 'shield-checkmark-outline' },
-    { key: 'verification_step_3', icon: 'car-outline' },
-  ];
 
-  return (
-    <View style={styles.timelineContainer}>
-      {steps.map((step, index) => {
-        const isCompleted = index < currentStep;
-        const isActive = index === currentStep;
-        return (
-          <View key={step.key} style={styles.timelineItem}>
-            <View style={styles.timelineIconColumn}>
-              <View
-                style={[
-                  styles.timelineCircle,
-                  isCompleted && styles.timelineCircleCompleted,
-                  isActive && styles.timelineCircleActive,
-                ]}
-              >
-                <Ionicons
-                  name={isCompleted ? 'checkmark' : step.icon}
-                  size={16}
-                  color={isCompleted || isActive ? '#FFFFFF' : '#9CA3AF'}
-                />
-              </View>
-              {index < steps.length - 1 && (
-                <View
-                  style={[
-                    styles.timelineLine,
-                    isCompleted && styles.timelineLineCompleted,
-                  ]}
-                />
-              )}
-            </View>
-            <View style={styles.timelineContent}>
-              <Text
-                style={[
-                  fonts.bold,
-                  styles.timelineLabel,
-                  (isCompleted || isActive) && { color: '#111827' },
-                ]}
-              >
-                {t(step.key)}
-              </Text>
-              {isActive && (
-                <Text style={styles.timelineSublabel}>
-                  {index === 1 ? t('docs_review_time') : ''}
-                </Text>
-              )}
-            </View>
-          </View>
-        );
-      })}
-    </View>
-  );
-};
 
 /* ================= SCREEN ================= */
 
 const DocumentScreen = ({ navigation }: any) => {
   const { colors, fonts } = useTheme() as any;
+  const { theme, isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { triggerHaptic } = useHaptic();
   const { showToast } = useToast();
   const prevDocsStatus = useRef<Record<string, string>>({});
-  const [zoomData, setZoomData] = React.useState<{ uri: string; title: string } | null>(null);
+  const [zoomData, setZoomData] = React.useState<{ uris: string[]; title: string } | null>(null);
+  const [submissionStatus, setSubmissionStatus] = React.useState<'success' | 'failed' | null>(null);
+  const [showTips, setShowTips] = React.useState(false);
+  const [hideRejectedModal, setHideRejectedModal] = React.useState(false);
 
 
   /* ================= DOCUMENT CONFIG ================= */
   const DOCUMENTS: DocumentItem[] = useMemo(() => [
+    {
+      key: 'Profile_Selfie',
+      backendType: 'profile_selfie',
+      labelKey: 'profile_selfie',
+      Logo: ({ width }: any) => <Ionicons name="person-add-outline" size={width || 30} color="#1D4ED8" />,
+      typeKey: 'docs_headshot',
+      hintKey: 'docs_hint_selfie',
+      side: ['front'],
+      required: true,
+    },
     {
       key: 'Driving_License',
       backendType: 'driving_license',
@@ -243,16 +200,6 @@ const DocumentScreen = ({ navigation }: any) => {
       side: ['front'],
       required: false,
     },
-    {
-      key: 'Profile_Selfie',
-      backendType: 'profile_selfie',
-      labelKey: 'profile_selfie',
-      Logo: () => <Ionicons name="person-circle-outline" size={34} color="#1D4ED8" />,
-      typeKey: 'docs_headshot',
-      hintKey: 'docs_hint_selfie',
-      side: ['front'],
-      required: true,
-    },
   ], []);
 
   const [submitDocuments, { isLoading: isSubmitting }] = useSubmitDocumentsMutation();
@@ -284,10 +231,6 @@ const DocumentScreen = ({ navigation }: any) => {
         if (prevStatus && prevStatus !== status) {
           const docLabel = DOCUMENTS.find(d => d.backendType === type)?.labelKey || type;
           if (status === 'verified' || status === 'approved') {
-            showToast({
-              message: `${t(docLabel)} ${t('verified_success') || 'Verified Successfully'}`,
-              type: 'success',
-            });
             triggerHaptic(HapticFeedbackTypes.notificationSuccess);
           } else if (status === 'rejected') {
             showToast({
@@ -341,7 +284,7 @@ const DocumentScreen = ({ navigation }: any) => {
       kycStatusStr === 'verified'
     ) {
       if (pollRef.current) clearInterval(pollRef.current);
-      navigation.replace(Dashboard_Nav);
+      navigation.replace(Dashboard_Nav, { showVerificationSuccess: true });
     }
   }, [user?.onboarding_status, user?.status, user?.kyc_status, navigation]);
 
@@ -436,36 +379,31 @@ const DocumentScreen = ({ navigation }: any) => {
     (uploadedCount / requiredDocuments.length) * 100
   );
 
-  const { selfieDoc, otherDocs } = useMemo(() => {
-    const selfie = DOCUMENTS.find(d => d.key === 'Profile_Selfie');
-    const others = DOCUMENTS.filter(d => d.key !== 'Profile_Selfie');
-    return { selfieDoc: selfie, otherDocs: others };
+  const { otherDocs } = useMemo(() => {
+    return { otherDocs: DOCUMENTS };
   }, [DOCUMENTS]);
 
   const allUploaded = uploadedCount === requiredDocuments.length;
+
+  const rejectedDocs = useMemo(() => {
+    return otherDocs.filter(doc => getDocState(doc).status?.toLowerCase() === 'rejected');
+  }, [otherDocs, getDocState]);
+
+  const rejectionReasonsText = useMemo(() => {
+    return rejectedDocs.map(doc => `• ${t(doc.labelKey)}: ${getDocState(doc).rejection_reason || t('invalid_document', 'Invalid document')}`).join('\n');
+  }, [rejectedDocs, getDocState, t]);
 
   const handleSubmit = async () => {
     if (!user?.driverId) { return; }
 
     try {
       await submitDocuments(user.driverId).unwrap();
-      dispatch(setUser({ onboarding_status: 'DOCS_SUBMITTED' }));
+      // Delaying the dispatch until the success modal is closed to prevent iOS Modal overlap
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-      showAlert({
-        title: t('success'),
-        message: t('docs_submit_success') || 'Documents submitted successfully! Please wait while our team reviews them.',
-        singleButton: true,
-        icon: 'checkmark-circle-outline',
-      });
-      // The waiting modal will automatically appear since onboarding_status is now DOCS_SUBMITTED
+      setSubmissionStatus('success');
     } catch (error: any) {
       console.error('Failed to submit docs:', error);
-      showAlert({
-        title: t('docs_submit_failed'),
-        message: error?.data?.message || t('docs_mandatory_error'),
-        singleButton: true,
-        icon: 'alert-circle-outline',
-      });
+      setSubmissionStatus('failed');
     }
   };
 
@@ -477,80 +415,25 @@ const DocumentScreen = ({ navigation }: any) => {
       edges={['top', 'bottom']}
     >
       <AppStatusBar />
-      {/* --- WAITING MODAL (No skip allowed) --- */}
-      <Modal visible={isWaitingForAdmin} animationType="fade" transparent={true} statusBarTranslucent={true}>
-        <LinearGradient
-          colors={['#FFFFFF', '#F5F7FF', '#EEF2FF']}
-          style={styles.waitingContainer}
-        >
-          <SafeAreaView style={{ flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' }}>
-            <View style={styles.waitingIconWrapper}>
-              <Animated.View
-                style={[
-                  styles.scanRing,
-                  {
-                    transform: [{ rotate: spin }],
-                  }
-                ]}
-              />
-              <View style={styles.waitingIconBg}>
-                <Ionicons name="time" size={50} color={colors.primary} />
-              </View>
-            </View>
+      {/* --- WAITING MODAL --- */}
+      <WaitingForApprovalModal
+        visible={(isWaitingForAdmin || isDocsRejected) && !hideRejectedModal}
+        status={isDocsRejected ? 'rejected' : 'review'}
+        rejectionReasons={rejectionReasonsText}
+        onReupload={() => {
+          setHideRejectedModal(true);
+        }}
+        fonts={fonts}
+        onCheckStatus={() => {
+          refetch();
+          fetchProfile();
+          showToast({ message: t('check_status') || 'Refreshing...', type: 'info' });
+        }}
+        onContactSupport={() => {
+          Linking.openURL('tel:+919043522612');
+        }}
+      />
 
-            <View style={{ alignItems: 'center', paddingHorizontal: 30 }}>
-              <Text
-                adjustsFontSizeToFit
-                numberOfLines={1}
-                style={[fonts.bold, styles.waitingTitle]}
-              >
-                {t('docs_under_review')}
-              </Text>
-              <Text style={styles.waitingDesc}>
-                {t('docs_review_desc')}
-              </Text>
-            </View>
-
-            <VerificationTimeline currentStep={1} t={t} fonts={fonts} />
-
-            <View style={styles.waitingActionRow}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={[styles.checkStatusBtn, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  triggerHaptic(HapticFeedbackTypes.impactMedium);
-                  refetch();
-                  fetchProfile();
-                  showToast({ message: t('check_status') || 'Refreshing...', type: 'info' });
-                }}
-              >
-                <Ionicons name="refresh-outline" size={20} color="#FFFFFF" />
-                <Text style={[fonts.bold, styles.checkStatusText]} numberOfLines={1} adjustsFontSizeToFit>
-                  {t('check_status_btn') || 'Check My Status'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                activeOpacity={0.7}
-                style={styles.waitingSupportBtn}
-                onPress={() => {
-                  triggerHaptic(HapticFeedbackTypes.impactLight);
-                  Linking.openURL('tel:+919043522612');
-                }}
-              >
-                <Ionicons name="call-outline" size={20} color="#4B5563" />
-                <Text style={[fonts.medium, { color: '#4B5563', marginLeft: 10 }]}>
-                  {t('contact_support')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.waitingFooter}>
-              {t('docs_secure_note')}
-            </Text>
-          </SafeAreaView>
-        </LinearGradient>
-      </Modal>
 
       {/* PROGRESS HEADER */}
       <View style={styles.progressHeader}>
@@ -560,7 +443,7 @@ const DocumentScreen = ({ navigation }: any) => {
               key={i}
               style={[
                 styles.progressBar,
-                { backgroundColor: i < uploadedCount ? '#10B981' : '#E5E7EB' }
+                { backgroundColor: i < uploadedCount ? '#10B981' : (isDark ? '#374151' : '#E5E7EB') }
               ]}
             />
           ))}
@@ -579,96 +462,41 @@ const DocumentScreen = ({ navigation }: any) => {
         {isFetching && !remoteDocs ? (
           <View style={{ gap: 15 }}>
             {[1, 2, 3, 4, 5].map(i => (
-              <View key={i} style={[styles.docItem, { opacity: 0.5 }]}>
-                <View style={[styles.docIconBox, { backgroundColor: '#E5E7EB' }]} />
+              <View key={i} style={[styles.docItem, { opacity: 0.5, backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+                <View style={[styles.docIconBox, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
                 <View style={{ flex: 1, marginLeft: 15, gap: 8 }}>
-                  <View style={{ height: 16, width: '60%', backgroundColor: '#E5E7EB', borderRadius: 4 }} />
-                  <View style={{ height: 12, width: '40%', backgroundColor: '#E5E7EB', borderRadius: 4 }} />
+                  <View style={{ height: 16, width: '60%', backgroundColor: isDark ? '#374151' : '#E5E7EB', borderRadius: 4 }} />
+                  <View style={{ height: 12, width: '40%', backgroundColor: isDark ? '#374151' : '#E5E7EB', borderRadius: 4 }} />
                 </View>
               </View>
             ))}
           </View>
         ) : (
           <>
-            <View style={{ marginBottom: 25 }}>
-              <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, { fontSize: 28, color: colors.text }]}>
-                {t('docs_title')}
-              </Text>
-              <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 16, color: colors.text, opacity: 0.6, marginTop: 5 }}>
-                {t('docs_subtitle')}
-              </Text>
+            <View style={{ marginBottom: 25, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flex: 1, paddingRight: 15 }}>
+                <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, { fontSize: 28, color: colors.text }]}>
+                  {t('docs_title')}
+                </Text>
+                <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 16, color: colors.text, opacity: 0.6, marginTop: 5 }}>
+                  {t('docs_subtitle')}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowTips(true)} style={{ padding: 10 }}>
+                 <Ionicons name="bulb" size={24} color="#F59E0B" />
+              </TouchableOpacity>
             </View>
-
-            {/* PROFILE WIDGET */}
-            {selfieDoc && (() => {
-              const state = getDocState(selfieDoc);
-              // Fallback: use profile_picture from Redux if document preview is missing
-              const selfiePreview = state.preview || user?.profile_picture || user?.profile_pic_url;
-              const selfieStatus = state.status;
-              return (
-                <View style={styles.profileUploadWrapper}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    style={styles.profileUploadContainer}
-                    onPress={() => {
-                      triggerHaptic(HapticFeedbackTypes.impactLight);
-                      navigation.navigate(DocumentUploadScreen_Nav, { doc: selfieDoc });
-                    }}
-                  >
-                    <View style={[styles.profileCircle, { borderColor: selfiePreview ? colors.primary : '#E5E7EB' }]}>
-                      {!selfiePreview && (
-                        <View
-                          style={[
-                            StyleSheet.absoluteFill,
-                            {
-                              borderRadius: 100,
-                              borderWidth: 2,
-                              borderColor: colors.primary,
-                              borderStyle: 'dashed',
-                              opacity: 0.4
-                            }
-                          ]}
-                        />
-                      )}
-                      {selfiePreview ? (
-                        <Image
-                          source={{ uri: resolveImageUrl(selfiePreview) }}
-                          style={styles.profileImage}
-                        />
-                      ) : (
-                        <View>
-                          <Ionicons name="person" size={50} color={colors.primary} style={{ opacity: 0.8 }} />
-                        </View>
-                      )}
-                    </View>
-                    <View style={[
-                      styles.addIconBadge,
-                      (selfieStatus === 'uploaded' || selfieStatus === 'pending' || selfieStatus === 'verified')
-                        ? { backgroundColor: '#10B981', borderWidth: 2, borderColor: '#FFFFFF' }
-                        : { backgroundColor: '#2563EB' }
-                    ]}>
-                      <Ionicons
-                        name={(selfieStatus === 'uploaded' || selfieStatus === 'pending' || selfieStatus === 'verified') ? "checkmark" : "add"}
-                        size={(selfieStatus === 'uploaded' || selfieStatus === 'pending' || selfieStatus === 'verified') ? 20 : 24}
-                        color="#FFFFFF"
-                      />
-                    </View>
-                  </TouchableOpacity>
-                  <Text style={[fonts.bold, styles.profileLabel]} numberOfLines={1} adjustsFontSizeToFit>{t('profile_selfie')}</Text>
-                </View>
-              );
-            })()}
 
             {/* REJECTION BANNER */}
             {(isDocsRejected || user?.status === 'rejected' || user?.status === 'blocked') && (
-              <View style={[styles.rejectionBanner, (user?.status === 'blocked' || user?.status === 'rejected') && { borderLeftColor: '#EF4444' }]}>
+              <View style={[styles.rejectionBanner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FECACA' }, (user?.status === 'blocked' || user?.status === 'rejected') && { borderLeftColor: '#EF4444' }]}>
                 <Ionicons name="warning-outline" size={22} color="#DC2626" />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={[fonts.bold, { color: '#DC2626', fontSize: 14 }]}>
-                    {user?.status === 'blocked' ? (t('account_restricted') || 'Account Restricted') : (t('docs_rejected_title') || 'Documents Need Correction')}
+                  <Text style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626', fontSize: 14 }]}>
+                    {user?.status === 'blocked' ? t('account_restricted', 'Account Restricted') : t('docs_rejected_title', 'Documents Need Correction')}
                   </Text>
-                  <Text style={{ color: '#7F1D1D', fontSize: 12, marginTop: 2 }}>
-                    {user?.status_reason || t('docs_rejected_desc') || 'Some documents were rejected. Please re-upload the highlighted items below.'}
+                  <Text style={{ color: isDark ? '#FECACA' : '#7F1D1D', fontSize: 12, marginTop: 2 }}>
+                    {user?.status_reason || t('docs_rejected_desc', 'Some documents were rejected. Please re-upload the highlighted items below.')}
                   </Text>
                 </View>
               </View>
@@ -692,12 +520,17 @@ const DocumentScreen = ({ navigation }: any) => {
                   }}
                   style={[
                     styles.docItem,
+                    { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' },
                     isDone && { borderLeftWidth: 4, borderLeftColor: '#10B981' },
-                    isRejected && { borderLeftWidth: 4, borderLeftColor: '#EF4444', backgroundColor: '#FFF5F5' }
+                    isRejected && { borderLeftWidth: 4, borderLeftColor: '#EF4444', backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FFF5F5' }
                   ]}
                 >
-                  <View style={styles.docIconBox}>
-                    <doc.Logo width={30} height={30} />
+                  <View style={[styles.docIconBox, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F3F7FF' }, doc.key === 'Profile_Selfie' && { borderRadius: 25, overflow: 'hidden' }]}>
+                    {doc.key === 'Profile_Selfie' && state.preview ? (
+                       <Image source={{ uri: resolveImageUrl(state.preview) }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                    ) : (
+                       <doc.Logo width={30} height={30} />
+                    )}
                   </View>
 
                   <View style={{ flex: 1, marginLeft: 15 }}>
@@ -722,10 +555,10 @@ const DocumentScreen = ({ navigation }: any) => {
 
                         <TouchableOpacity
                           onPress={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
-                          style={styles.actionBtn}
+                          style={[styles.actionBtn, { backgroundColor: isDark ? '#374151' : '#F3F4F6', borderColor: isDark ? '#4B5563' : '#E5E7EB' }]}
                         >
-                          <Ionicons name="camera-outline" size={14} color="#6B7280" />
-                          <Text style={[styles.actionText, { color: '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
+                          <Ionicons name="camera-outline" size={14} color={isDark ? '#D1D5DB' : '#6B7280'} />
+                          <Text style={[styles.actionText, { color: isDark ? '#D1D5DB' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -740,9 +573,9 @@ const DocumentScreen = ({ navigation }: any) => {
                   <View style={[
                     styles.statusBadge,
                     {
-                      backgroundColor: isRejected ? '#EF4444' : isDone ? '#10B981' : '#F3F4F6',
+                      backgroundColor: isRejected ? '#EF4444' : isDone ? '#10B981' : (isDark ? '#374151' : '#F3F4F6'),
                       borderWidth: isDone || isRejected ? 0 : 1,
-                      borderColor: '#E5E7EB'
+                      borderColor: isDark ? '#4B5563' : '#E5E7EB'
                     }
                   ]}>
                     <Ionicons
@@ -755,14 +588,13 @@ const DocumentScreen = ({ navigation }: any) => {
               );
             })}
 
-            {/* IMAGE TIPS — Animated */}
-            <AnimatedTips t={t} fonts={fonts} />
+
 
           </>
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF', borderTopColor: isDark ? '#374151' : '#F3F4F6' }]}>
         <Button
           disabled={!allUploaded || isSubmitting}
           loading={isSubmitting}
@@ -782,9 +614,48 @@ const DocumentScreen = ({ navigation }: any) => {
       <ImageZoomModal
         visible={!!zoomData}
         onClose={() => setZoomData(null)}
-        imageUris={zoomData?.uri ? [zoomData.uri] : []}
+        imageUris={zoomData?.uris || []}
         title={zoomData?.title}
       />
+
+      <DocSubmissionResultModal
+        visible={submissionStatus !== null}
+        status={submissionStatus || 'failed'}
+        onClose={() => {
+          if (submissionStatus === 'success') {
+            dispatch(setUser({ onboarding_status: 'DOCS_SUBMITTED' }));
+          }
+          setSubmissionStatus(null);
+        }}
+      />
+
+      <Modal visible={showTips} transparent={true} animationType="fade" onRequestClose={() => setShowTips(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: isDark ? theme.colors.card : colors.background, borderRadius: 20, padding: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="bulb" size={24} color="#F59E0B" />
+                <Text style={[fonts.bold, { fontSize: 18, color: colors.text, marginLeft: 8 }]}>{t('docs_tips_title') || 'Tips for fast approval'}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowTips(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ gap: 16 }}>
+              {TIPS.map((tip) => (
+                <View key={tip.key} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isDark ? '#374151' : '#F3F4F6', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name={tip.icon} size={20} color={isDark ? '#D1D5DB' : "#6B7280"} />
+                  </View>
+                  <Text style={[fonts.medium, { fontSize: 14, color: colors.text, marginLeft: 12, flex: 1 }]}>
+                    {t(tip.key)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -829,7 +700,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    marginBottom: 15,
+    marginBottom: 8,
   },
   docIconBox: {
     width: 50,

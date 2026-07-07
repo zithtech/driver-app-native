@@ -75,6 +75,7 @@ export interface UserState {
   address?: {
     street?: string;
     city?: string;
+    district?: string;
     state?: string;
     country?: string;
     pincode?: string;

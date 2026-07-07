@@ -40,7 +40,7 @@ import { RootState } from '../../redux/store';
 import { setUser } from '../../redux/userSlice';
 import { Onboarding_Nav } from '../../Navigations/navigations';
 import { useLocation } from '../../hooks/useLocation';
-import { ALL_CITIES, ALL_STATES } from '../../constant/cities';
+import { ALL_CITIES, ALL_STATES, ALL_DISTRICTS } from '../../constant/cities';
 import AppStatusBar from '../../Components/AppStatusBar';
 
 
@@ -99,7 +99,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const handleCityChange = (text: string) => {
     setCity(text);
     if (text.length > 1) {
-      const filtered = ALL_CITIES.filter(c => 
+      const filtered = ALL_CITIES.filter(c =>
         c.toLowerCase().includes(text.toLowerCase())
       ).slice(0, 5); // Show top 5 suggestions
       setCitySuggestions(filtered);
@@ -111,7 +111,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const handleStateChange = (text: string) => {
     setStateName(text);
     if (text.length > 0) {
-      const filtered = ALL_STATES.filter(s => 
+      const filtered = ALL_STATES.filter(s =>
         s.toLowerCase().includes(text.toLowerCase())
       ).slice(0, 5);
       setStateSuggestions(filtered);
@@ -120,9 +120,27 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     }
   };
 
+  const handleDistrictChange = (text: string) => {
+    setDistrict(text);
+    if (text.length > 1) {
+      const filtered = ALL_DISTRICTS.filter(d =>
+        d.toLowerCase().includes(text.toLowerCase())
+      ).slice(0, 5);
+      setDistrictSuggestions(filtered);
+    } else {
+      setDistrictSuggestions([]);
+    }
+  };
+
   const selectCitySuggestion = (suggestion: string) => {
     setCity(suggestion);
     setCitySuggestions([]);
+    triggerHaptic(HapticFeedbackTypes.impactLight);
+  };
+
+  const selectDistrictSuggestion = (suggestion: string) => {
+    setDistrict(suggestion);
+    setDistrictSuggestions([]);
     triggerHaptic(HapticFeedbackTypes.impactLight);
   };
 
@@ -135,10 +153,12 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [district, setDistrict] = useState('');
+  const [districtSuggestions, setDistrictSuggestions] = useState<string[]>([]);
   const [stateName, setStateName] = useState('Tamil Nadu');
   const [stateSuggestions, setStateSuggestions] = useState<string[]>([]);
   const [pincode, setPincode] = useState('');
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   /* ---------------- REFS ---------------- */
@@ -149,6 +169,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     if (user?.address) {
       if (user.address.street) setStreet(user.address.street);
       if (user.address.city) setCity(user.address.city);
+      if (user.address.district) setDistrict(user.address.district);
       if (user.address.state) setStateName(user.address.state);
       if (user.address.pincode) setPincode(user.address.pincode);
     }
@@ -162,10 +183,11 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const [updateDriver, { isLoading }] = useUpdateDriverMutation();
   const { getCurrentLocation, getAddressFromCoords, loading: locationLoading } = useLocation();
 
-  const isFormValid = street.trim().length > 0 && 
-                      city.trim().length > 0 && 
-                      stateName.trim().length > 0 && 
-                      pincode.trim().length === 6;
+  const isFormValid = street.trim().length > 0 &&
+    city.trim().length > 0 &&
+    district.trim().length > 0 &&
+    stateName.trim().length > 0 &&
+    pincode.trim().length === 6;
 
   const triggerShake = () => {
     triggerHaptic(HapticFeedbackTypes.notificationError);
@@ -196,6 +218,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
         triggerHaptic(HapticFeedbackTypes.selection);
         setStreet(address.street || '');
         setCity(address.city || '');
+        setDistrict(address.district || '');
         setStateName(address.state || '');
         setPincode(address.pincode || '');
       } else {
@@ -230,7 +253,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
       return;
     }
 
-    if (!street || !city || !stateName || pincode.length !== 6) {
+    if (!street || !city || !district || !stateName || pincode.length !== 6) {
       showAlert({
         title: 'Validation',
         message: 'Please fill all address fields correctly',
@@ -248,6 +271,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
       address: {
         street,
         city,
+        district,
         state: stateName,
         country: 'India',
         pincode,
@@ -340,10 +364,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
             {/* HEADER */}
             <View style={styles.headerSection}>
               <Text style={styles.title}>
-                {t('address_title_line1', 'What is your')}
-              </Text>
-              <Text style={styles.titleItalic}>
-                {t('address_title_line2', 'Home address?')}
+                {t('address_title_line1', 'What is your')} {t('address_title_line2', 'Home address?')}
               </Text>
               <Text style={styles.subtitle}>
                 {t('address_subtitle', "This helps us verify your profile and connect with us for security purposes.")}
@@ -363,9 +384,9 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               <Animated.View style={[styles.locationCard, locationAnimatedStyle]}>
                 <View style={styles.locationIconCircle}>
                   {locationLoading ? (
-                    <ActivityIndicator size="small" color="#D97706" />
+                    <ActivityIndicator size="small" color="#2563EB" />
                   ) : (
-                    <Ionicons name="locate" size={22} color="#D97706" />
+                    <Ionicons name="locate" size={22} color="#2563EB" />
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
@@ -422,7 +443,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                   style={styles.flatInput}
                   placeholderTextColor="#6B7280"
                 />
-                
+
                 {citySuggestions.length > 0 && (
                   <View style={styles.suggestionBox}>
                     {citySuggestions.map((item, index) => (
@@ -430,6 +451,39 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                         key={index}
                         style={styles.suggestionItem}
                         onPress={() => selectCitySuggestion(item)}
+                      >
+                        <Text style={styles.suggestionText}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* DISTRICT */}
+              <View style={[styles.fieldBox, { zIndex: 95 }]}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="location-outline" size={17} color="#111827" />
+                  <Text style={styles.fieldLabel}>{t('district', 'DISTRICT').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
+                </View>
+                <Input
+                  value={district}
+                  scrollable={true}
+                  placeholder="e.g. Coimbatore"
+                  onChangeText={handleDistrictChange}
+                  onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
+                  containerStyle={styles.flatInputContainer}
+                  inputContainerStyle={styles.flatInputInner}
+                  style={styles.flatInput}
+                  placeholderTextColor="#6B7280"
+                />
+
+                {districtSuggestions.length > 0 && (
+                  <View style={styles.suggestionBox}>
+                    {districtSuggestions.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.suggestionItem}
+                        onPress={() => selectDistrictSuggestion(item)}
                       >
                         <Text style={styles.suggestionText}>{item}</Text>
                       </TouchableOpacity>
@@ -456,7 +510,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                     style={styles.flatInput}
                     placeholderTextColor="#6B7280"
                   />
-                  
+
                   {stateSuggestions.length > 0 && (
                     <View style={styles.suggestionBox}>
                       {stateSuggestions.map((item, index) => (
@@ -587,25 +641,30 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     marginBottom: 14,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
-    lineHeight: 32,
-  },
-  titleItalic: {
-    fontSize: 26,
-    fontWeight: '700',
-    fontStyle: 'italic',
     color: '#111827',
     lineHeight: 32,
     marginBottom: 6,
+    textAlign: 'center',
+  },
+  titleItalic: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    lineHeight: 32,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#9CA3AF',
     lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 4,
   },
   locationCard: {
     flexDirection: 'row',
@@ -622,7 +681,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -659,7 +718,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   fieldBox: {
-    marginBottom: 18,
+    marginBottom: 10,
     width: '100%',
   },
   fieldLabelRow: {
@@ -695,7 +754,7 @@ const styles = StyleSheet.create({
   flatInputInner: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 54,

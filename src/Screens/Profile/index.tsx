@@ -217,7 +217,7 @@ const ProfileScreen = ({ navigation }: any) => {
         </View>
 
         {/* ================= MENU CARD ================= */}
-        <ScrollView style={[styles.menuCard, { backgroundColor: theme.colors.card }]} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.menuCard} showsVerticalScrollIndicator={false}>
           <MenuItem
             icon="speedometer-outline"
             title={t('performance')}
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
 
   /* ---------- BANNER ---------- */
   banner: {
-    height: 160,
+    height: 110,
     backgroundColor: '#E5E7EB',
   },
 
@@ -436,10 +436,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  /* ---------- AVATAR ---------- */
   avatarWrapper: {
     alignSelf: 'center',
-    marginTop: -45,
+    marginTop: -35,
     backgroundColor: 'transparent',
     padding: 3,
     borderRadius: 60,
@@ -525,12 +524,10 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  /* ---------- MENU CARD ---------- */
   menuCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 8,
     marginBottom: 16,
     borderRadius: 7,
     elevation: 0,
@@ -542,7 +539,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 11,
   },
 
   menuLeft: {

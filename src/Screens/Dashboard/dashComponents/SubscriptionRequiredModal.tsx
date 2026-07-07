@@ -5,11 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Animated,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
-import LinearGradient from 'react-native-linear-gradient';
 import { ms, vs } from '../../../lib/scale';
 import { Text } from '../../../Components';
 import { useAppTheme } from '../../../context/ThemeContext';
@@ -31,10 +29,10 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
   const { t } = useTranslation();
 
   const benefits = [
-    { icon: 'shield-checkmark-outline', label: t('zero_commission', 'Zero Commission on Trips') },
-    { icon: 'car-outline', label: t('instant_requests', 'Instant Ride Requests') },
+    { icon: 'shield-checkmark-outline', label: t('zero_commission', 'Zero commission on all rides') },
+    { icon: 'car-outline', label: t('instant_requests', 'Instant Requests') },
     { icon: 'map-outline', label: t('unlock_all_trips', 'Unlock All Trip Types') },
-    { icon: 'headset-outline', label: t('support_24_7', '24/7 Priority Support') },
+    { icon: 'headset-outline', label: t('support_24_7', '24/7 Support') },
   ];
 
   return (
@@ -47,36 +45,41 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
     >
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: theme.colors.card }]}>
-          {/* Close Button UI */}
-          <TouchableOpacity 
-            style={styles.closeIcon} 
-            onPress={onClose}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close" size={ms(24)} color={isDark ? theme.colors.textMuted : '#64748B'} />
-          </TouchableOpacity>
 
-          <LinearGradient
-            colors={isDark ? ['#1E3A8A', '#1C294D'] : ['#EBF4FF', '#DBEAFF']}
-            style={styles.iconWrapper}
-          >
-            <Ionicons name="diamond" size={ms(42)} color={isDark ? '#60A5FA' : '#2563EB'} />
-          </LinearGradient>
 
           <View style={styles.contentContainer}>
-            <Text style={[styles.title, { color: theme.colors.text }]}>
+            <View style={styles.planTextWrapper}>
+              <View style={styles.planBadge}>
+                <Ionicons name="star-outline" size={ms(14)} color={isDark ? '#94A3B8' : '#64748B'} style={{ marginRight: ms(4) }} />
+                <Text style={[styles.planText, { color: isDark ? '#94A3B8' : '#64748B' }]}>Basic</Text>
+              </View>
+              
+              <View style={styles.planBadge}>
+                <Ionicons name="flash-outline" size={ms(14)} color={isDark ? '#94A3B8' : '#64748B'} style={{ marginRight: ms(4) }} />
+                <Text style={[styles.planText, { color: isDark ? '#94A3B8' : '#64748B' }]}>Elite</Text>
+              </View>
+              
+              <View style={[styles.planBadge, styles.premiumBadge]}>
+                <Ionicons name="diamond" size={ms(14)} color={isDark ? '#FFF' : theme.colors.primary} style={{ marginRight: ms(4) }} />
+                <Text style={[styles.planText, { color: isDark ? '#FFF' : theme.colors.primary, fontWeight: '800' }]}>Premium</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.title, { color: isDark ? theme.colors.text : theme.colors.primary }]}>
               {t('subscription_required', 'Recharge Plan Required')}
             </Text>
 
-            <Text style={[styles.description, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
-              {t('active_plan_start_earning', 'Activate a plan to start receiving ride requests and maximize your earnings.')}
+            <Text style={[styles.description, { color: isDark ? 'rgba(255,255,255,0.5)' : '#94A3B8' }]}>
+              {t('active_plan_start_earning', 'Active the plan then start earning')}
             </Text>
+
+            <View style={[styles.separator, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }]} />
 
             <View style={styles.benefitsContainer}>
               {benefits.map((benefit, index) => (
                 <View key={index} style={styles.benefitItem}>
-                  <View style={[styles.benefitIconWrapper, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : 'rgba(37, 99, 235, 0.08)' }]}>
-                    <Ionicons name={benefit.icon} size={ms(18)} color={isDark ? '#60A5FA' : '#2563EB'} />
+                  <View style={[styles.benefitIconWrapper, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : '#EFF6FF' }]}>
+                    <Ionicons name={benefit.icon} size={ms(14)} color={isDark ? '#60A5FA' : '#3B82F6'} />
                   </View>
                   <Text style={[styles.benefitText, { color: theme.colors.text }]}>
                     {benefit.label}
@@ -91,23 +94,18 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
                 style={[styles.subscribeButton, { backgroundColor: theme.colors.primary }]}
                 onPress={onSubscribe}
               >
-                <LinearGradient
-                  colors={['rgba(255,255,255,0.1)', 'transparent']}
-                  style={styles.buttonGradient}
-                >
-                  <Text style={styles.subscribeButtonText}>
-                    {t('view_plans_btn', 'Browse Recharge Plans')}
-                  </Text>
-                  <Ionicons name="arrow-forward" size={ms(18)} color="#FFF" style={{ marginLeft: ms(8) }} />
-                </LinearGradient>
+                <Text style={styles.subscribeButtonText}>
+                  {t('view_plans_btn', 'Browse Recharge Plans')}
+                </Text>
+                <Ionicons name="arrow-forward" size={ms(16)} color="#FFF" style={{ marginLeft: ms(6) }} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#CBD5E1' }]}
                 onPress={onClose}
               >
-                <Text style={[styles.cancelButtonText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
-                  {t('not_now', 'Decide Later')}
+                <Text style={[styles.cancelButtonText, { color: isDark ? theme.colors.textMuted : '#475569' }]}>
+                  {t('not_now', 'Not Now')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -123,78 +121,100 @@ export default SubscriptionRequiredModal;
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: ms(24),
+    paddingHorizontal: ms(20),
   },
   container: {
     width: '100%',
-    maxWidth: ms(360),
-    borderRadius: ms(32),
+    maxWidth: ms(320),
+    borderRadius: ms(16),
     overflow: 'hidden',
-    elevation: 10,
+    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    paddingTop: vs(40),
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
-  closeIcon: {
-    position: 'absolute',
-    right: ms(20),
-    top: vs(20),
-    zIndex: 10,
-  },
-  iconWrapper: {
-    width: ms(90),
-    height: ms(90),
-    borderRadius: ms(45),
-    alignSelf: 'center',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: vs(24),
-  },
+
   contentContainer: {
-    paddingHorizontal: ms(24),
-    paddingBottom: vs(32),
+    paddingHorizontal: ms(20),
+    paddingTop: vs(32),
+    paddingBottom: vs(24),
     alignItems: 'center',
+  },
+
+  planTextWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: vs(16),
+    gap: ms(8),
+  },
+  planBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    paddingHorizontal: ms(10),
+    paddingVertical: vs(6),
+    borderRadius: ms(12),
+  },
+  premiumBadge: {
+    backgroundColor: 'rgba(21, 45, 94, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(21, 45, 94, 0.3)',
+    shadowColor: '#152D5E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  planText: {
+    fontSize: ms(11),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   title: {
-    fontSize: ms(24),
+    fontSize: ms(22),
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: vs(12),
-    letterSpacing: -0.5,
+    marginBottom: vs(8),
+    letterSpacing: -0.3,
   },
   description: {
-    fontSize: ms(15),
+    fontSize: ms(14),
     textAlign: 'center',
-    lineHeight: ms(22),
-    marginBottom: vs(28),
+    marginBottom: vs(16),
     paddingHorizontal: ms(10),
   },
-  benefitsContainer: {
+  separator: {
     width: '100%',
-    gap: vs(14),
-    marginBottom: vs(32),
-    paddingHorizontal: ms(10),
+    height: StyleSheet.hairlineWidth,
+    marginBottom: vs(20),
+  },
+  benefitsContainer: {
+    alignSelf: 'center',
+    gap: vs(8),
+    marginBottom: vs(24),
   },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
   },
   benefitIconWrapper: {
-    width: ms(32),
-    height: ms(32),
-    borderRadius: ms(10),
+    width: ms(28),
+    height: ms(28),
+    borderRadius: ms(8),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: ms(12),
   },
   benefitText: {
-    fontSize: ms(14),
-    fontWeight: '600',
+    fontSize: ms(13),
+    fontWeight: '500',
   },
   footer: {
     width: '100%',
@@ -202,28 +222,32 @@ const styles = StyleSheet.create({
   },
   subscribeButton: {
     width: '100%',
-    borderRadius: ms(18),
-    overflow: 'hidden',
-  },
-  buttonGradient: {
-    paddingVertical: vs(18),
+    borderRadius: ms(14),
+    paddingVertical: vs(14),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#152D5E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   subscribeButtonText: {
     color: '#FFFFFF',
-    fontSize: ms(16),
-    fontWeight: '800',
+    fontSize: ms(15),
+    fontWeight: '700',
   },
   cancelButton: {
     width: '100%',
-    paddingVertical: vs(8),
+    paddingVertical: vs(12),
+    borderRadius: ms(14),
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: ms(14),
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

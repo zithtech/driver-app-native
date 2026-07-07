@@ -508,13 +508,7 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { borderBottomColor: colors.border, paddingTop: Math.max(insets.top, vS(16)) }]}>
-          {isLiveMode ? (
-            <View style={{ width: mS(60) }} />
-          ) : (
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={mS(24)} color={colors.text} />
-            </TouchableOpacity>
-          )}
+          <View style={{ width: mS(60) }} />
           
           <View style={styles.headerTitleContainer}>
             <Text style={[styles.headerTitle, { color: colors.text, ...fonts.bold }]}>
@@ -533,7 +527,9 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
               <Text style={{ color: '#EF4444', fontSize: mS(12), fontWeight: '700' }}>End Chat</Text>
             </TouchableOpacity>
           ) : (
-            <View style={{ width: mS(60) }} />
+            <TouchableOpacity onPress={onClose} style={styles.closeTextBtn}>
+              <Text style={{ color: colors.text, fontSize: mS(14), fontWeight: '600' }}>Close</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -603,40 +599,41 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: hS(16), paddingVertical: vS(16), borderBottomWidth: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: hS(16), paddingVertical: vS(16), borderBottomWidth: StyleSheet.hairlineWidth },
   closeBtn: { padding: mS(4), width: mS(40) },
+  closeTextBtn: { paddingHorizontal: hS(8), paddingVertical: vS(8), minWidth: mS(60), alignItems: 'flex-end' },
   endChatBtn: { paddingHorizontal: hS(12), paddingVertical: vS(8), borderRadius: mS(8) },
   headerTitleContainer: { alignItems: 'center' },
-  headerTitle: { fontSize: mS(16) },
-  headerSubtitle: { fontSize: mS(11), fontWeight: '700' },
-  onlineDot: { width: mS(6), height: mS(6), borderRadius: mS(3) },
+  headerTitle: { fontSize: mS(16), fontWeight: '600' },
+  headerSubtitle: { fontSize: mS(11), fontWeight: '500' },
+  onlineDot: { width: mS(5), height: mS(5), borderRadius: mS(2.5) },
   listContent: { padding: mS(16), paddingBottom: vS(20) },
   messageRow: { flexDirection: 'row', marginBottom: vS(16), width: '100%' },
   messageRowBot: { justifyContent: 'flex-start' },
   messageRowMe: { justifyContent: 'flex-end' },
-  botAvatar: { width: mS(28), height: mS(28), borderRadius: mS(14), justifyContent: 'center', alignItems: 'center', marginRight: hS(10), alignSelf: 'flex-end', marginBottom: vS(4) },
-  messageBubble: { maxWidth: '80%', paddingHorizontal: hS(16), paddingVertical: vS(12), shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
-  bubbleBot: { borderTopLeftRadius: mS(18), borderTopRightRadius: mS(18), borderBottomRightRadius: mS(18), borderBottomLeftRadius: mS(4) },
-  bubbleMe: { borderTopLeftRadius: mS(18), borderTopRightRadius: mS(18), borderBottomLeftRadius: mS(18), borderBottomRightRadius: mS(4) },
-  senderName: { fontSize: mS(11), fontWeight: '800', marginBottom: vS(4) },
+  botAvatar: { width: mS(26), height: mS(26), borderRadius: mS(13), justifyContent: 'center', alignItems: 'center', marginRight: hS(8), alignSelf: 'flex-end', marginBottom: vS(2) },
+  messageBubble: { maxWidth: '80%', paddingHorizontal: hS(14), paddingVertical: vS(10) },
+  bubbleBot: { borderTopLeftRadius: mS(16), borderTopRightRadius: mS(16), borderBottomRightRadius: mS(16), borderBottomLeftRadius: 0 },
+  bubbleMe: { borderTopLeftRadius: mS(16), borderTopRightRadius: mS(16), borderBottomLeftRadius: mS(16), borderBottomRightRadius: 0 },
+  senderName: { fontSize: mS(11), fontWeight: '600', marginBottom: vS(2) },
   messageText: { fontSize: mS(14), lineHeight: vS(20) },
   timeContainer: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginTop: vS(4) },
-  timeText: { fontSize: mS(10), fontWeight: '500' },
+  timeText: { fontSize: mS(10), fontWeight: '400' },
   typingBubble: { paddingVertical: vS(10), paddingHorizontal: hS(16) },
   typingDot: { width: mS(6), height: mS(6), borderRadius: mS(3), marginHorizontal: hS(2) },
   systemMessageContainer: { alignItems: 'center', marginVertical: vS(16), width: '100%' },
   systemMessagePill: { paddingHorizontal: hS(16), paddingVertical: vS(6), borderRadius: mS(16) },
-  systemMessageText: { fontSize: mS(10), fontWeight: '700', letterSpacing: 0.5 },
+  systemMessageText: { fontSize: mS(10), fontWeight: '600', letterSpacing: 0.5 },
   quickRepliesContainer: { marginBottom: vS(12) },
-  quickReplyChip: { paddingHorizontal: hS(16), paddingVertical: vS(10), borderRadius: mS(24), borderWidth: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
-  quickReplyText: { fontSize: mS(13), fontWeight: '600' },
-  actionButtonsContainer: { flexDirection: 'row', paddingLeft: hS(44), marginBottom: vS(16), flexWrap: 'wrap' },
-  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: hS(14), paddingVertical: vS(8), borderRadius: mS(20), borderWidth: 1, marginRight: hS(8), marginTop: vS(6) },
-  actionButtonText: { fontSize: mS(12), fontWeight: '700', marginLeft: hS(6) },
-  inputWrapper: { borderTopWidth: 1, paddingHorizontal: hS(16), paddingTop: vS(12) },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: mS(24), paddingHorizontal: hS(12), paddingVertical: vS(6) },
-  input: { flex: 1, minHeight: vS(40), maxHeight: vS(120), paddingTop: vS(10), paddingBottom: vS(10), fontSize: mS(14) },
-  sendBtn: { width: mS(36), height: mS(36), borderRadius: mS(18), justifyContent: 'center', alignItems: 'center', marginLeft: hS(8) },
+  quickReplyChip: { paddingHorizontal: hS(16), paddingVertical: vS(8), borderRadius: mS(20), borderWidth: StyleSheet.hairlineWidth },
+  quickReplyText: { fontSize: mS(13), fontWeight: '500' },
+  actionButtonsContainer: { flexDirection: 'row', paddingLeft: hS(34), marginBottom: vS(16), flexWrap: 'wrap' },
+  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: hS(14), paddingVertical: vS(8), borderRadius: mS(20), borderWidth: StyleSheet.hairlineWidth, marginRight: hS(8), marginTop: vS(6) },
+  actionButtonText: { fontSize: mS(12), fontWeight: '600', marginLeft: hS(6) },
+  inputWrapper: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: hS(16), paddingTop: vS(12) },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: mS(24), paddingHorizontal: hS(12), paddingVertical: vS(4) },
+  input: { flex: 1, minHeight: vS(36), maxHeight: vS(120), paddingTop: vS(10), paddingBottom: vS(10), fontSize: mS(14) },
+  sendBtn: { width: mS(32), height: mS(32), borderRadius: mS(16), justifyContent: 'center', alignItems: 'center', marginLeft: hS(8) },
 });
 
 export default FaqChatbotModal;

@@ -171,6 +171,7 @@ export const useAuthBootstrap = () => {
         const address = {
             street: raw.address?.street || '',
             city: raw.address?.city || '',
+            district: raw.address?.district || '',
             state: raw.address?.state || '',
             country: raw.address?.country || 'India',
             pincode: raw.address?.pincode || '',

@@ -18,7 +18,7 @@ import DeviceInfo from 'react-native-device-info';
 import { calculateAverageRating } from '../../utils/ratingUtils';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, NavigationProp, useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useNavigation, NavigationProp, useFocusEffect, useIsFocused, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -62,6 +62,7 @@ import RecentActivity from './dashComponents/RecentActivity';
 import WalletUpcomingCards from './dashComponents/WalletUpcomingCards';
 import GoOfflineTab from './dashComponents/GoOfflineTab';
 import SubscriptionRequiredModal from './dashComponents/SubscriptionRequiredModal';
+import VerificationSuccessModal from './dashComponents/VerificationSuccessModal';
 import ConfirmationModal from '../../Components/ConfirmationModal';
 import { parseOnlineTimeToSeconds, formatOnlineTime } from '../../utils/timeUtils';
 import socketService from '../../service/socketService';
@@ -79,6 +80,7 @@ import axiosInstance from '../../api/axiosInstance';
 
 const DriverDashboard = () => {
   const navigation = useNavigation<NavigationProp<any>>();
+  const route = useRoute<any>();
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { t } = useTranslation();
@@ -228,7 +230,15 @@ const DriverDashboard = () => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [acceptedRide, setAcceptedRide] = useState<RideItem | null>(null);
+
+  useEffect(() => {
+    if (route.params?.showVerificationSuccess) {
+      setShowVerificationModal(true);
+      navigation.setParams({ showVerificationSuccess: undefined });
+    }
+  }, [route.params?.showVerificationSuccess, navigation]);
 
   const { rideQueue, acceptRide, rejectRide } = useRideFeed({
     isOnline,
@@ -502,7 +512,7 @@ const DriverDashboard = () => {
     return user?.total_trips || 0;
   }, [allHistoryResult?.data, user?.total_trips, extractArray]);
 
-  const route = [] as { latitude: number; longitude: number }[];
+  const mapRouteCoordinates = [] as { latitude: number; longitude: number }[];
 
   const driverName = user?.full_name || t('driver');
 
@@ -569,7 +579,7 @@ const DriverDashboard = () => {
           userLocation={userLocation}
           currentAddress={currentAddress}
           isOnline={isOnline}
-          routeCoordinates={route}
+          routeCoordinates={mapRouteCoordinates}
         />
 
         {/* ── SOS SAFETY TOOLKIT CARD ── */}
@@ -839,6 +849,12 @@ const DriverDashboard = () => {
 
       {/* ── SETTINGS MODAL ── */}
       <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
+
+      {/* ── VERIFICATION SUCCESS MODAL ── */}
+      <VerificationSuccessModal
+        visible={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+      />
 
       {/* ── SUBSCRIPTION REQUIRED MODAL ── */}
       <SubscriptionRequiredModal

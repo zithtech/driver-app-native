@@ -1386,5 +1386,6 @@
   "identity_documents": "Identity & Verification",
   "submitted": "Submitted",
   "activated": "Activated",
-  "reupload": "Re-upload"
+  "reupload": "Re-upload",
+  "profile_details": "Profile Details"
 }

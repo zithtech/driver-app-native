@@ -818,7 +818,7 @@
   "reason_traffic": "भारी ट्रैफिक / सड़क जाम",
   "reason_customer_no_show": "ग्राहक से संपर्क नहीं हो पा रहा",
   "reason_other": "अन्य",
-  "tell_us_more": "हमें और बताएं",
+  "tell_us_more": "हमें और बताएं... (अनिवार्य)",
   "reason_other_placeholder": "अपना कारण यहाँ लिखें...",
   "reason_min_length": "कृपया कम से कम 5 अक्षर दर्ज करें",
   "reason_chip_traffic": "आगे भारी ट्रैफिक है",
@@ -927,7 +927,6 @@
   "km_unit": "किमी",
   "minutes_unit": "मिनट",
   "call_rider_last_time": "{{name}} को कॉल करें",
-  "tell_us_more": "हमें और बताएं... (अनिवार्य)",
   "ride_details": "राइड विवरण",
   "estimated_fare": "अनुमानित किराया",
   "payment_cash": "नकद भुगतान",
@@ -1266,5 +1265,6 @@
   "identity_documents": "पहचान और सत्यापन",
   "submitted": "जमा किया गया",
   "activated": "सक्रिय",
-  "reupload": "पुनः अपलोड करें"
+  "reupload": "पुनः अपलोड करें",
+  "profile_details": "Profile Details"
 }
