@@ -1,19 +1,13 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, Dimensions, Pressable } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
   FadeInUp,
   FadeOutUp,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useToast } from '../context/ToastContext';
-import { theme } from '../constant/theme';
-
-const { width } = Dimensions.get('window');
+import { hS as s, vS as vs, mS as ms } from '../lib/scale';
 
 const Toast: React.FC = () => {
   const { isVisible, toastConfig, hideToast } = useToast();
@@ -27,28 +21,19 @@ const Toast: React.FC = () => {
     switch (type) {
       case 'success':
         return {
-          backgroundColor: '#E8F5E9',
-          borderLeftColor: '#4CAF50',
           icon: 'check-circle',
-          iconColor: '#4CAF50',
-          textColor: '#2E7D32',
+          iconColor: '#34C759', // Minimal green
         };
       case 'error':
         return {
-          backgroundColor: '#FFEBEE',
-          borderLeftColor: '#F44336',
           icon: 'alert-circle',
-          iconColor: '#F44336',
-          textColor: '#C62828',
+          iconColor: '#FF3B30', // Minimal red
         };
       case 'info':
       default:
         return {
-          backgroundColor: '#E3F2FD',
-          borderLeftColor: '#2196F3',
           icon: 'information',
-          iconColor: '#2196F3',
-          textColor: '#1565C0',
+          iconColor: '#0A84FF', // Minimal blue
         };
     }
   };
@@ -62,24 +47,17 @@ const Toast: React.FC = () => {
       style={[
         styles.container,
         {
-          top: insets.top + 10,
-          backgroundColor: config.backgroundColor,
-          borderLeftColor: config.borderLeftColor,
+          top: insets.top + vs(10),
         },
       ]}
     >
       <Pressable onPress={hideToast} style={styles.content}>
         <View style={styles.iconContainer}>
-          <MaterialCommunityIcons name={config.icon} size={24} color={config.iconColor} />
+          <MaterialCommunityIcons name={config.icon} size={ms(20)} color={config.iconColor} />
         </View>
-        <View style={styles.textContainer}>
-          <Text style={[styles.message, { color: config.textColor }]}>{message}</Text>
-        </View>
-        <Pressable onPress={hideToast} style={styles.closeButton}>
-          <View style={{ opacity: 0.6 }}>
-            <MaterialCommunityIcons name="close" size={18} color={config.textColor} />
-          </View>
-        </Pressable>
+        <Text style={styles.message} numberOfLines={2}>
+          {message}
+        </Text>
       </Pressable>
     </Animated.View>
   );
@@ -88,37 +66,32 @@ const Toast: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 20,
-    right: 20,
+    alignSelf: 'center',
     zIndex: 9999,
-    borderRadius: 12,
-    borderLeftWidth: 6,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: 'rgba(28, 28, 30, 0.95)', // Sleek dark aesthetic
+    borderRadius: 100, // Pill shape
+    paddingVertical: vs(10),
+    paddingHorizontal: ms(16),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+    maxWidth: '90%', // Prevent it from stretching full width on long texts
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainer: {
-    marginRight: 12,
-  },
-  textContainer: {
-    flex: 1,
+    marginRight: ms(8),
   },
   message: {
-    fontSize: 14,
+    fontSize: ms(14),
     fontWeight: '600',
-    lineHeight: 20,
-  },
-  closeButton: {
-    marginLeft: 8,
-    padding: 4,
+    color: '#FFFFFF', // Crisp white text
+    lineHeight: vs(20),
   },
 });
 

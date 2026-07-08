@@ -148,7 +148,7 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
             {/* Top Image Section */}
             <Animated.View entering={FadeIn.duration(800)} style={styles.imageContainer}>
                <Image 
-                 source={require('../../../assets/images/doc_review_hero.png')} 
+                 source={require('../../../assets/images/docReview.png')} 
                  style={styles.image} 
                  resizeMode="contain" 
                />

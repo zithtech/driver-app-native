@@ -152,9 +152,9 @@ const styles = StyleSheet.create({
     },
     card: {
         width: '48.5%',
-        borderRadius: ms(20),
+        borderRadius: ms(16),
         padding: ms(16),
-        minHeight: vs(135),
+        minHeight: vs(120),
         justifyContent: 'space-between',
     },
     walletCard: {
@@ -166,14 +166,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderWidth: 1,
         borderColor: '#F1F5F9',
-        shadowColor: '#000',
-        shadowOpacity: 0.02,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 }
     },
     cardHeader: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
     },
     walletIcon: {
@@ -190,6 +186,7 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#1E293B',
         flex: 1,
+        marginRight: s(8),
     },
     walletAmount: {
         fontSize: getLanguageScaledSize(22),
@@ -212,6 +209,7 @@ const styles = StyleSheet.create({
         height: s(12),
         justifyContent: 'center',
         alignItems: 'center',
+        marginTop: vs(2),
     },
     statusDot: {
         width: s(6),
@@ -225,6 +223,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         flex: 1,
+        marginTop: vs(8),
     },
     noUpcomingWrap: {
         alignItems: 'center',
@@ -239,14 +238,14 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     countdownText: {
-        fontSize: getLanguageScaledSize(16),
-        fontWeight: '800',
-        marginTop: vs(4),
+        fontSize: getLanguageScaledSize(15),
+        fontWeight: '700',
+        marginTop: vs(6),
         textAlign: 'center',
     },
     upcomingSubText: {
-        fontSize: getLanguageScaledSize(20),
-        fontWeight: '800',
+        fontSize: getLanguageScaledSize(18),
+        fontWeight: '700',
         marginTop: vs(4),
         textAlign: 'center',
     },

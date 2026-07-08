@@ -62,6 +62,7 @@ import RecentActivity from './dashComponents/RecentActivity';
 import WalletUpcomingCards from './dashComponents/WalletUpcomingCards';
 import GoOfflineTab from './dashComponents/GoOfflineTab';
 import SubscriptionRequiredModal from './dashComponents/SubscriptionRequiredModal';
+import BatteryOptimizationModal from './dashComponents/BatteryOptimizationModal';
 import VerificationSuccessModal from './dashComponents/VerificationSuccessModal';
 import ConfirmationModal from '../../Components/ConfirmationModal';
 import { parseOnlineTimeToSeconds, formatOnlineTime } from '../../utils/timeUtils';
@@ -183,10 +184,11 @@ const DriverDashboard = () => {
     const trips = extractArray(scheduledTripsResult);
     if (!trips.length) return null;
 
-    const myAcceptedRides = trips.filter((t: any) =>
-      (t.trip_id === myAcceptedRideId || t.id === myAcceptedRideId) &&
-      (t.status === 'ACCEPTED' || t.trip_status === 'ACCEPTED' || t.status === 'ARRIVING' || t.trip_status === 'ARRIVING')
-    );
+    const myAcceptedRides = trips.filter((t: any) => {
+      const status = (t.trip_status || t.status || '').toString().toUpperCase();
+      return (t.trip_id === myAcceptedRideId || t.id === myAcceptedRideId) &&
+        (status === 'ACCEPTED' || status === 'ARRIVING');
+    });
 
     if (!myAcceptedRides.length) return null;
 
@@ -230,6 +232,7 @@ const DriverDashboard = () => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showBatteryModal, setShowBatteryModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [acceptedRide, setAcceptedRide] = useState<RideItem | null>(null);
 
@@ -778,34 +781,17 @@ const DriverDashboard = () => {
                       const notifee = (await import('@notifee/react-native')).default;
                       const isOptimized = await notifee.isBatteryOptimizationEnabled();
                       if (isOptimized) {
-                        showAlert(
-                          'Background Priority',
-                          `To receive ride requests reliably, please change the battery setting for vDrive to "Unrestricted" or "Don't Optimize".`,
-                          {
-                            icon: 'battery-dead',
-                            singleButton: false,
-                            confirmText: 'Fix Now',
-                            cancelText: 'Skip',
-                            onConfirm: () => {
-                              Linking.sendIntent('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS').catch(() => {
-                                Linking.openSettings();
-                              });
-                              setAlertModalVisible(false);
-                              setShowOfflineSwipe(false);
-                            },
-                            onCancel: () => {
-                              proceedToOnline();
-                            }
-                          }
-                        );
-                        return;
+                        setShowBatteryModal(true);
+                      } else {
+                        proceedToOnline();
                       }
-                    } catch (e) {
-                      console.log('Battery check failed', e);
+                    } catch (error) {
+                      console.log('Error checking battery optimization:', error);
+                      proceedToOnline();
                     }
+                  } else {
+                    proceedToOnline();
                   }
-
-                  proceedToOnline();
                 } else {
                   // 🛡️ Safety: Prevent going offline if on an active ride
                   const isActiveTrip = currentRide && (
@@ -950,6 +936,14 @@ const DriverDashboard = () => {
           setRatingModalVisible(false);
           dispatch(setLastTripRating(null));
         }}
+      />
+      <BatteryOptimizationModal 
+        visible={showBatteryModal} 
+        onClose={() => setShowBatteryModal(false)} 
+        onFix={() => {
+          setShowBatteryModal(false);
+          setShowOfflineSwipe(false);
+        }} 
       />
     </SafeAreaView>
   );

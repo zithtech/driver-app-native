@@ -57,6 +57,7 @@ import ProfileDocumentsScreen from '../Screens/Profile/ProfileDocumentsScreen';
 import SosContactsScreen from '../Screens/Profile/SosContactsScreen';
 import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
 import RechargePlanScreen from '../Screens/Profile/SubscriptionPlanScreen';
+import MySubscriptionScreen from '../Screens/Profile/MySubscriptionScreen';
 import WalletScreen from '../Screens/Profile/WalletScreen';
 import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
 import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
@@ -351,6 +352,7 @@ const RootNavigation = () => {
           <Stack.Screen name={EmergencySupport_Nav} component={EmergencySupportScreen} />
           <Stack.Screen name={LegalAgreements_Nav} component={LegalAgreementsScreen} />
           <Stack.Screen name="RechargePlanScreen" component={RechargePlanScreen} />
+          <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} />
           <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="WalletScreen" component={WalletScreen} />
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />

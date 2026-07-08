@@ -365,7 +365,7 @@
   "mock_route_2": "Guindy → Velachery",
   "time_ago_2h": "2 hours ago",
   "time_ago_3h": "3 hours ago",
-  "no_active_plan": "No active subscription plan",
+  "no_active_plan": "No active plan found",
   "where_going": "Where are you going?",
   "you_are_here": "You are here",
   "one_way": "One-Way",
@@ -643,7 +643,7 @@
   "payout_status": "Payout Status",
   "bank_transfer": "Bank Transfer",
   "cash": "Cash",
-  "choose_plan": "Choose Your Plan",
+  "choose_plan": "Choose Plan",
   "plan_subtitle": "Unlock unlimited rides, priority matching, and premium features",
   "offer_banner": "Save up to 20% today! Limited time offer",
   "daily_plan": "Daily Plan",
@@ -1387,5 +1387,13 @@
   "submitted": "Submitted",
   "activated": "Activated",
   "reupload": "Re-upload",
-  "profile_details": "Profile Details"
+  "profile_details": "Profile Details",
+  "my_subscription": "My Subscription",
+  "price_paid": "Price Paid",
+  "start_date": "Start Date",
+  "expiry_date": "Expiry Date",
+  "transaction_id": "Transaction ID",
+  "plan_features": "Plan Features",
+  "included_all_premium_features": "Included all premium features",
+  "my_plan": "My Plan"
 }

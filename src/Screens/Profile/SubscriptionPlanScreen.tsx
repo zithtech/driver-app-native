@@ -15,6 +15,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useIsFocused } from '@react-navigation/native';
 import { useAlert } from '../../context/AlertContext';
+import { useTranslation } from 'react-i18next';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import RazorpayCheckout from 'react-native-razorpay';
@@ -109,6 +110,7 @@ const MinimalPromoCoupon = ({ promo, tierColor, onApply, onCopy, isDark }: { pro
 const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   const { colors } = useTheme();
   const { showAlert } = useAlert();
+  const { t } = useTranslation();
   const { isDark } = useAppTheme();
   const user = useSelector((state: RootState) => state.userSlice?.user);
 
@@ -178,7 +180,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     const labels: Record<string, string> = {
       zero_commission: 'Zero Commission',
       instant_rides: 'Instant Requests',
-      local_rides: 'Local Rides',
+      // local_rides: 'Local Rides',
       outstation_trips: 'Outstation Trips',
       one_way_trips: 'One-Way Trips',
       scheduled_rides: 'Scheduled Rides',
@@ -204,7 +206,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     
     const allowedTypes = feats.allowed_ride_types || [];
     if (allowedTypes.includes('INSTANT') || feats.instant_requests) features.push({ key: 'instant_rides', icon: 'checkmark' });
-    else features.push({ key: 'local_rides', icon: 'checkmark' });
+    // else features.push({ key: 'local_rides', icon: 'checkmark' });
 
     if (allowedTypes.includes('OUTSTATION') || feats.outstation_enabled) features.push({ key: 'outstation_trips', icon: 'checkmark' });
     if (allowedTypes.includes('ONE-WAY') || feats.oneway_enabled) features.push({ key: 'one_way_trips', icon: 'checkmark' });
@@ -377,8 +379,10 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Choose Plan</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('choose_plan') || 'Choose Plan'}</Text>
+        <Pressable onPress={() => navigation.navigate('MySubscriptionScreen')} style={styles.mySubBtn}>
+          <Text style={[styles.mySubBtnText, { color: colors?.primary || '#3B82F6' }]}>{t('my_plan') || 'My Plan'}</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -578,6 +582,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: '600' },
+  mySubBtn: { padding: 4, paddingHorizontal: 8, backgroundColor: 'rgba(150,150,150,0.1)', borderRadius: 8 },
+  mySubBtnText: { fontSize: 14, fontWeight: '700' },
   scrollContent: { paddingBottom: 100 }, // Space for bottom bar
   
   durationTabs: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 12, padding: 4, marginBottom: 16 },

@@ -298,7 +298,7 @@
   "mock_route_2": "गुइंडी → वेलाचेरी",
   "time_ago_2h": "2 घंटे पहले",
   "time_ago_3h": "3 घंटे पहले",
-  "no_active_plan": "कोई सक्रिय सब्सक्रिप्शन प्लान नहीं",
+  "no_active_plan": "कोई सक्रिय योजना नहीं मिली",
   "where_going": "आप कहाँ जा रहे हैं?",
   "you_are_here": "आप यहाँ हैं",
   "one_way": "एकतरफा",
@@ -555,7 +555,7 @@
   "payout_status": "भुगतान की स्थिति",
   "bank_transfer": "बैंक ट्रांसफर",
   "cash": "नकद",
-  "choose_plan": "अपना प्लान चुनें",
+  "choose_plan": "योजना चुनें",
   "plan_subtitle": "असीमित सवारी, प्राथमिकता मिलान और प्रीमियम सुविधाओं को अनलॉक करें",
   "offer_banner": "आज ही 20% तक बचाएं! सीमित समय का ऑफर",
   "daily_plan": "दैनिक योजना (डेली)",
@@ -1266,5 +1266,13 @@
   "submitted": "जमा किया गया",
   "activated": "सक्रिय",
   "reupload": "पुनः अपलोड करें",
-  "profile_details": "Profile Details"
+  "profile_details": "Profile Details",
+  "my_subscription": "मेरी सदस्यता",
+  "price_paid": "चुकाया गया मूल्य",
+  "start_date": "शुरू होने की तिथि",
+  "expiry_date": "समाप्ति तिथि",
+  "transaction_id": "लेनदेन आईडी",
+  "plan_features": "योजना की विशेषताएं",
+  "included_all_premium_features": "सभी प्रीमियम सुविधाएं शामिल हैं",
+  "my_plan": "मेरी योजना"
 }
