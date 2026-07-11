@@ -258,13 +258,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 2,
   },
   imageContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     height: SCREEN_HEIGHT * 0.4,
-    marginBottom: -105, // Increased overlap effect
+    marginBottom: -80, // Increased overlap effect
     zIndex: 1,
   },
   image: {

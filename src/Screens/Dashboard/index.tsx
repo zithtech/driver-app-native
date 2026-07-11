@@ -122,7 +122,13 @@ const DriverDashboard = () => {
 
   // ── BACKEND DATA ──
   const { data: subData, isLoading: isSubLoading, refetch: refetchSub } = useGetMySubscriptionQuery();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayStr = getLocalDateString(new Date());
   const { data: earningsResult, isLoading: isEarningsLoading, refetch: refetchEarnings } = useGetDriverEarningsSummaryQuery(
     { driverId: user?.driverId || '', from: todayStr, to: todayStr },
     { skip: !user?.driverId }

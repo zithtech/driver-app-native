@@ -267,8 +267,10 @@ const RootNavigation = () => {
         initialRoute = PickupMapScreen_Nav;
       } else if (rawStatus === 'VERIFICATION_PENDING') {
         initialRoute = 'VehicleVerificationScreen';
-      } else if (['LIVE', 'STARTED', 'ON_TRIP', 'DESTINATION_REACHED'].includes(rawStatus)) {
+      } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
         initialRoute = DropMapScreen_Nav;
+      } else if (rawStatus === 'DESTINATION_REACHED') {
+        initialRoute = 'PaymentCollectionScreen';
       }
       
       // If a route was determined by recovery, we can skip standard onboarding checks

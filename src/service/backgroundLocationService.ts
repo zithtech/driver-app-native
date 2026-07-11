@@ -10,6 +10,7 @@
  */
 import BackgroundService from 'react-native-background-actions';
 import Geolocation from 'react-native-geolocation-service';
+import { AppState } from 'react-native';
 import socketService from './socketService';
 
 const BACKGROUND_INTERVAL_MS = 10_000; // 10 seconds
@@ -46,19 +47,22 @@ const locationTask = async (params: {
       lastLng = longitude;
       lastHeading = heading || 0;
 
-      socketService.emit('driver_location_update', {
-        driverId,
-        lat: latitude,
-        lng: longitude,
-      });
+      // Only emit from background service if app is NOT active
+      if (AppState.currentState !== 'active') {
+        socketService.emit('driver_location_update', {
+          driverId,
+          lat: latitude,
+          lng: longitude,
+        });
 
-      if (tripId) {
-        socketService.emitLocationUpdate(tripId, latitude, longitude, position.coords.heading || 0);
+        if (tripId) {
+          socketService.emitLocationUpdate(tripId, latitude, longitude, position.coords.heading || 0);
+        }
+
+        console.log(
+          `📍 [BG] Location sent: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+        );
       }
-
-      console.log(
-        `📍 [BG] Location sent: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
-      );
     },
     error => {
       console.warn('📍 [BG] Location error:', error.message);
@@ -86,7 +90,7 @@ const locationTask = async (params: {
       }
 
       // Re-send last known location as heartbeat (if no movement)
-      if (lastLat !== 0 && lastLng !== 0) {
+      if (lastLat !== 0 && lastLng !== 0 && AppState.currentState !== 'active') {
         socketService.emit('driver_location_update', {
           driverId,
           lat: lastLat,

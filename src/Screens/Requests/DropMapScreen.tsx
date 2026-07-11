@@ -12,6 +12,7 @@ import {
   Animated as RNAnimated,
   BackHandler,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, LatLng, AnimatedRegion } from 'react-native-maps';
@@ -27,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { useAlert } from '../../context/AlertContext';
-import { mS as ms, vS as vs } from '../../lib/scale';
+import { mS as ms, vS as vs, s } from '../../lib/scale';
 import BottomSheet, { BottomSheetView, BottomSheetBackgroundProps } from '@gorhom/bottom-sheet';
 import SwipeButton from '../Dashboard/dashComponents/SwipeButton';
 import { useSelector, useDispatch } from 'react-redux';
@@ -43,7 +44,6 @@ import { useHaptic } from '../../hooks/useHaptic';
 import socketService from '../../service/socketService';
 import audioService from '../../utils/audioService';
 import Clipboard from '@react-native-clipboard/clipboard';
-import LinearGradient from 'react-native-linear-gradient';
 import { ChatScreen_Nav } from '../../Navigations/navigations';
 
 // Premium Dark Map Style
@@ -62,6 +62,7 @@ const darkMapStyle = [
 const DropMapScreen = ({ route }: any) => {
   // 1. Core Hooks
   const { showAlert, hideAlert } = useAlert();
+  const { showToast } = useToast();
   const { t } = useTranslation();
   const navigation = useNavigation<StackNavigationProp<any>>();
   const theme = useAppTheme().theme;
@@ -123,18 +124,34 @@ const DropMapScreen = ({ route }: any) => {
       });
     }
   }, [ride.trip_code, ride.booking_code, triggerHaptic, showAlert, t]);
+
+  const handleCopyTripId = useCallback(() => {
+    const id = ride.trip_id || ride.id;
+    if (id) {
+      Clipboard.setString(String(id));
+      triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
+      showAlert({
+        title: t('copied') || 'Copied',
+        message: t('trip_id_copied') || 'Trip ID copied to clipboard',
+        singleButton: true,
+        icon: 'checkmark-circle-outline',
+      });
+    }
+  }, [ride.trip_id, ride.id, triggerHaptic, showAlert, t]);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [currentWaypointIndex, setCurrentWaypointIndex] = useState(0);
   const [isTracking, setIsTracking] = useState(true);
   const [isSimulating, setIsSimulating] = useState(false);
   const [shouldFetchRoute, setShouldFetchRoute] = useState(true);
   const [isAutoFollow, setIsAutoFollow] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false);
+
   const [mapMargin, setMapMargin] = useState(1);
   const [distance, setDistance] = useState(initialDistance.current);
   const [eta, setEta] = useState(initialEta.current);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRideDetailsModal, setShowRideDetailsModal] = useState(false);
+  const [showEndTripConfirmModal, setShowEndTripConfirmModal] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
 
   const getVehicleInfo = useCallback((type?: string) => {
     const lowerType = type?.toLowerCase() || '';
@@ -168,11 +185,7 @@ const DropMapScreen = ({ route }: any) => {
     longitudeDelta: 0.01,
   })).current;
 
-  const successScale = useSharedValue(0);
-  const animatedSuccessStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: successScale.value }],
-    opacity: successScale.value,
-  }));
+
 
   // 📍 High-fidelity unified location tracker
   const { locationDisabled } = useLocationTracker({
@@ -191,11 +204,9 @@ const DropMapScreen = ({ route }: any) => {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        showAlert({
-          title: t('active_trip'),
-          message: t('active_trip_cancel_msg'),
-          singleButton: true,
-          icon: 'car-outline',
+        showToast({
+          message: t('active_trip_cancel_msg') || 'You cannot go back during an active trip',
+          type: 'info',
         });
         return true;
       };
@@ -206,17 +217,17 @@ const DropMapScreen = ({ route }: any) => {
         subscription.remove();
         navigation.setOptions({ gestureEnabled: true });
       };
-    }, [showAlert, t, navigation])
+    }, [showToast, t, navigation])
   );
 
   // 🛡️ Guard: Exit screen if ride is cleared from Redux (e.g. by global cancellation)
   useEffect(() => {
-    if (!reduxCurrentRide && !showSuccess) {
+    if (!reduxCurrentRide) {
       console.log('[DropMapScreen] Active ride cleared from Redux, exiting...');
       isExitingRef.current = true;
       navigation.dispatch(StackActions.replace('DashboardScreen'));
     }
-  }, [reduxCurrentRide, navigation, showSuccess]);
+  }, [reduxCurrentRide, navigation]);
 
   useEffect(() => {
     const initLocation = async () => {
@@ -256,6 +267,28 @@ const DropMapScreen = ({ route }: any) => {
     latitude: drop_lat,
     longitude: drop_lng,
   }), [drop_lat, drop_lng]);
+
+  const openExternalGoogleMap = useCallback(() => {
+    if (driverLocation && dropLocation) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${driverLocation.latitude},${driverLocation.longitude}&destination=${dropLocation.latitude},${dropLocation.longitude}&travelmode=driving`;
+      Linking.openURL(url).catch(err => {
+        console.error("Failed to open Google Maps", err);
+        showAlert({
+          title: t('common.error') || 'Error',
+          message: t('failed_to_open_maps') || 'Failed to open external maps.',
+          singleButton: true,
+          icon: 'alert-circle-outline'
+        });
+      });
+    } else {
+      showAlert({
+        title: t('common.error') || 'Error',
+        message: t('location_not_ready') || 'Location not ready yet.',
+        singleButton: true,
+        icon: 'alert-circle-outline'
+      });
+    }
+  }, [driverLocation, dropLocation, showAlert, t]);
 
   const handleSOS = useCallback(() => {
     showAlert({
@@ -539,50 +572,38 @@ const DropMapScreen = ({ route }: any) => {
     };
   }, [isTracking, isAutoFollow, isSimulating, watchLocation, driverAnimatedLocation, snapToRoute, getDistanceMeters, calculateRemainingDistance]);
 
-  const handleEndTrip = useCallback(async () => {
-    // Calculate final duration in minutes
-    const startTimeStr = ride?.started_at || ride?.actual_pickup_time;
-    const calculatedDuration = startTimeStr 
-        ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
-        : (initialEta.current || 15);
+  const confirmEndTripComplete = useCallback(async () => {
+    setShowEndTripConfirmModal(false);
+    try {
+      const startTimeStr = ride?.started_at || ride?.actual_pickup_time;
+      const calculatedDuration = startTimeStr 
+          ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
+          : (initialEta.current || 15);
 
-    const confirmEndTrip = async () => {
-      try {
-        await destinationReachedApi(trip_id.toString()).unwrap();
-        setShowSuccess(true);
-        successScale.value = withSpring(1, { damping: 10, stiffness: 100 });
-        triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
-        setTimeout(() => {
-          setShowSuccess(false);
-          navigation.replace('PaymentCollectionScreen', { 
-            ride,
-            actualDistance: distance,
-            actualDuration: calculatedDuration
-          });
-        }, 2000);
-      } catch (error: any) {
-        showAlert({
-          title: t('common.error'),
-          message: error?.data?.message || t('failed_end_trip') || 'Failed to finish trip',
-          singleButton: true,
-          icon: 'alert-circle-outline',
-        });
-      }
-    };
-
-    // 🏁 Distance Guard: Check if driver is still far (> 500m) from destination
-    if (distance > 0.5) {
-      showAlert({
-        title: t('far_from_destination') || 'Wait!',
-        message: t('far_from_destination_msg') || 'You are still far from the drop-off location. Are you sure the trip has ended?',
-        icon: 'location-outline',
-        onConfirm: () => confirmEndTrip(),
-        onCancel: () => console.log('End trip cancelled by driver'),
+      await destinationReachedApi(trip_id.toString()).unwrap();
+      triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
+      navigation.replace('PaymentCollectionScreen', { 
+        ride,
+        actualDistance: distance,
+        actualDuration: calculatedDuration
       });
-    } else {
-      confirmEndTrip();
+    } catch (error: any) {
+      showAlert({
+        title: t('common.error'),
+        message: error?.data?.message || t('failed_end_trip') || 'Failed to finish trip',
+        singleButton: true,
+        icon: 'alert-circle-outline',
+      });
     }
-  }, [trip_id, destinationReachedApi, successScale, triggerHaptic, navigation, ride, distance, showAlert, t]);
+  }, [trip_id, destinationReachedApi, triggerHaptic, navigation, ride, distance, showAlert, t]);
+
+  const handleEndTrip = useCallback(() => {
+    if (distance > 0.5) {
+      setShowEndTripConfirmModal(true);
+    } else {
+      confirmEndTripComplete();
+    }
+  }, [distance, confirmEndTripComplete]);
 
   const handleCancelTrip = async (reason: string) => {
     const isStandard = [
@@ -634,7 +655,7 @@ const DropMapScreen = ({ route }: any) => {
     navigation.navigate(ChatScreen_Nav, {
       rideId: trip_id,
       userId: user?.driverId,
-      userName: ride.passenger || ride.passenger_details?.name || ride.passenger_name || ride.customer?.name || t('rider'),
+      userName: ride.passenger_details?.name || ride.user_details?.full_name || ride.user_details?.first_name || ride.passenger || ride.passenger_name || ride.customer?.name || t('rider'),
       userImage: ride.passenger_details?.image || ride.riderImage,
       userPhone: ride.phone || ride.riderPhone || ride.customer?.phone || ride.passenger_phone,
     });
@@ -683,6 +704,39 @@ const DropMapScreen = ({ route }: any) => {
     }]} />
   ), [theme.colors.card]);
 
+  const renderEndTripConfirmModal = () => (
+    <Modal visible={showEndTripConfirmModal} transparent animationType="slide">
+      <Pressable style={styles.modalOverlay} onPress={() => setShowEndTripConfirmModal(false)}>
+        <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+          <View style={styles.dragHandle} />
+          
+          <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
+            {t('far_from_destination') || 'Wait!'}
+          </Text>
+          <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginHorizontal: ms(20) }]}>
+            {t('far_from_destination_msg') || 'You are still far from the destination. Are you sure you want to end the trip?'}
+          </Text>
+
+          <View style={styles.sheetButtonsRow}>
+            <TouchableOpacity 
+              style={styles.sheetCancelBtn} 
+              onPress={() => setShowEndTripConfirmModal(false)}
+            >
+              <Text style={styles.sheetCancelBtnText}>{t('common.cancel') || 'Cancel'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
+              onPress={confirmEndTripComplete}
+            >
+              <Text style={styles.sheetConfirmBtnText}>{t('confirm') || 'Confirm'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar animated={false} barStyle={isDark ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
@@ -715,59 +769,84 @@ const DropMapScreen = ({ route }: any) => {
             apikey={GOOGLE_MAPS_API_KEY}
             strokeWidth={0}
             strokeColor={theme.colors.primary}
+            optimizeWaypoints={true}
             onReady={(result) => {
+              console.log('✅ Directions Ready | Dist:', result.distance, 'km | ETA:', result.duration, 'min');
               setRouteCoords(result.coordinates);
               routeCoordsRef.current = result.coordinates;
-              const distSinceLastEmit = lastEmittedLoc.current ? getDistanceMeters(lastEmittedLoc.current, driverLocation) : 20;
-              if (distSinceLastEmit > 10) {
-                setDistance(parseFloat(result.distance.toFixed(1)));
-                setEta(Math.ceil(result.duration));
+
+              // 🧪 Update dynamic stats for the tracking card
+              setDistance(parseFloat(result.distance.toFixed(1)));
+              setEta(Math.ceil(result.duration));
+
+              // 📐 Update calibration refs for simulation/smoothing
+              initialDistance.current = result.distance;
+              initialEta.current = result.duration;
+
+              setCurrentWaypointIndex(0);
+              setShouldFetchRoute(false);
+              if (mapRef.current) {
+                mapRef.current.fitToCoordinates(result.coordinates, {
+                  edgePadding: { top: vs(120), right: ms(50), bottom: vs(380), left: ms(50) },
+                  animated: true,
+                });
               }
+            }}
+            onError={(errorMessage) => {
+              console.error('❌ Directions Error on GMAPS route request:', errorMessage);
+              console.log('📍 Origin:', driverLocation);
+              console.log('📍 Destination:', dropLocation);
               setShouldFetchRoute(false);
             }}
           />
         )}
 
-        {routeCoords.length > 0 && (
-          <>
-            {/* Background "Ghost" Path (Full Route) */}
-            <Polyline
-              coordinates={routeCoords}
-              strokeWidth={vs(6)}
-              strokeColor={isDark ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.1)"}
-              lineCap="round"
-              lineJoin="round"
-              zIndex={4}
-            />
-            {/* Active Path (Remaining Route) */}
-            {routeCoords.length > currentWaypointIndex && (
-              <Polyline
-                coordinates={routeCoords.slice(currentWaypointIndex)}
-                strokeWidth={vs(6)}
-                strokeColor={theme.colors.primary}
-                lineCap="round"
-                lineJoin="round"
-                zIndex={5}
+        {shouldFetchRoute && driverLocation && !hasValidCoords && (() => {
+          console.log('⏳ Waiting for valid drop-off coordinates before fetching route...');
+          return null;
+        })()}
+
+        {driverLocation && (
+          <Marker.Animated
+            coordinate={driverAnimatedLocation as any}
+            flat
+            anchor={{ x: 0.5, y: 0.5 }}
+            zIndex={10}
+          >
+            <View style={styles.markerContainer}>
+              <Image
+                source={require('../../assets/images/car.png')}
+                style={{
+                  width: ms(40),
+                  height: ms(40),
+                  resizeMode: 'contain',
+                  transform: [{ rotate: `${markerRotation}deg` }]
+                }}
               />
-            )}
-          </>
+              <View style={styles.etaPillAbsolute}>
+                <Text style={styles.etaText}>{eta} {t('minutes_unit')}</Text>
+              </View>
+            </View>
+          </Marker.Animated>
         )}
 
-        <Marker.Animated coordinate={driverAnimatedLocation as any} flat anchor={{ x: 0.5, y: 0.5 }}>
-          <View style={styles.markerContainer}>
-            <RNAnimated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }], opacity: pulseAnim.interpolate({ inputRange: [1, 1.3], outputRange: [0.6, 0] }) }]} />
-            <View style={[styles.driverMarker, { backgroundColor: theme.colors.primary }]}>
-              <Ionicons name="car" size={ms(18)} color="#fff" style={{ transform: [{ rotate: `${markerRotation}deg` }] }} />
-            </View>
-          </View>
-        </Marker.Animated>
-        <Marker coordinate={dropLocation}>
-          <View style={styles.destMarker}>
-            <LinearGradient colors={['#EF4444', '#B91C1C']} style={styles.destCircle}>
-              <Ionicons name="location" size={ms(20)} color="#fff" />
-            </LinearGradient>
+        <Marker coordinate={dropLocation} anchor={{ x: 0.5, y: 0.9 }}>
+          <View style={styles.pickupMarkerContainer}>
+            <Ionicons name="location" size={ms(34)} color={theme.colors.error || '#B91C1C'} />
           </View>
         </Marker>
+
+        {/* Default Polyline */}
+        {routeCoords.length > 0 && (
+          <Polyline
+            coordinates={routeCoords}
+            strokeWidth={vs(6)}
+            strokeColor={theme.colors.primary}
+            lineCap="round"
+            lineJoin="round"
+            zIndex={5}
+          />
+        )}
       </MapView>
 
       {/* Top Overlays */}
@@ -802,14 +881,33 @@ const DropMapScreen = ({ route }: any) => {
             </TouchableOpacity>
           )}
 
-          {!isAutoFollow && (
-            <TouchableOpacity
-              style={[styles.recenterFab, { backgroundColor: theme.colors.card }]}
-              onPress={() => setIsAutoFollow(true)}
-            >
-              <MaterialCommunityIcons name="navigation-variant" size={ms(24)} color={theme.colors.primary} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.recenterFab, { backgroundColor: theme.colors.card, marginTop: vs(10) }]}
+            onPress={openExternalGoogleMap}
+          >
+            <MaterialCommunityIcons name="google-maps" size={ms(24)} color={theme.colors.primary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.recenterFab, { backgroundColor: theme.colors.card, marginTop: vs(10) }]}
+            onPress={() => {
+              setIsAutoFollow(true);
+              if (mapRef.current && driverLocation) {
+                mapRef.current.animateCamera({
+                  center: driverLocation,
+                  heading: markerRotationRef.current,
+                  pitch: 45,
+                  zoom: 18,
+                }, { duration: 500 });
+              }
+            }}
+          >
+            <MaterialCommunityIcons
+              name="crosshairs-gps"
+              size={ms(24)}
+              color={isAutoFollow ? theme.colors.primary : (isDark ? "#9CA3AF" : "#6B7280")}
+            />
+          </TouchableOpacity>
 
         </View>
       </View>
@@ -819,31 +917,32 @@ const DropMapScreen = ({ route }: any) => {
         index={0}
         snapPoints={snapPoints}
         backgroundComponent={CustomBackground}
+        handleIndicatorStyle={{ backgroundColor: isDark ? '#4B5563' : '#D1D5DB', width: ms(40) }}
       >
         <BottomSheetView style={[styles.bottomSheetContent, { paddingBottom: insets.bottom + vs(20) }]}>
           <>
             {/* Rider Info Card */}
             <View style={styles.riderRow}>
-              {ride.passenger_details?.image || ride.riderImage ? (
-                <Image 
-                  source={{ uri: ride.riderImage || ride.passenger_details?.image }} 
-                  style={[styles.riderAvatar, { borderColor: isDark ? '#1E293B' : '#FFF' }]} 
+              {ride.passenger_details?.image || ride.user_details?.profile_url || ride.riderImage ? (
+                <Image
+                  source={{ uri: ride.passenger_details?.image || ride.user_details?.profile_url || ride.riderImage }}
+                  style={[styles.riderAvatar, { borderColor: isDark ? '#1E293B' : '#FFF' }]}
                 />
               ) : (
                 <View style={[styles.riderAvatar, { backgroundColor: isDark ? '#1E293B' : '#EEF2FF', justifyContent: 'center', alignItems: 'center', borderWidth: 0 }]}>
                   <Text style={[styles.avatarInitials, { color: theme.colors.primary, fontSize: ms(18), fontWeight: '800' }]}>
-                    {(ride.passenger || ride.passenger_details?.name || 'P').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                    {String(ride.passenger_details?.name || ride.user_details?.full_name || ride.user_details?.first_name || ride.passenger || ride.passenger_name || ride.customer?.name || 'P').trim().substring(0, 2).toUpperCase()}
                   </Text>
                 </View>
               )}
               <View style={styles.riderMeta}>
                 <Text style={[styles.riderName, { color: theme.colors.text }]} numberOfLines={2}>
-                  {ride.passenger_details?.name || ride.passenger || ride.passenger_name || ride.customer?.name || 'Passenger'}
+                  {ride.passenger_details?.name || ride.user_details?.full_name || ride.user_details?.first_name || ride.passenger || ride.passenger_name || ride.customer?.name || 'Passenger'}
                 </Text>
                 <View style={styles.ratingRow}>
                   <Ionicons name="star" size={ms(14)} color="#F59E0B" />
                   <Text style={[styles.ratingText, { color: theme.colors.text + '80' }]}>
-                    {ride.passenger_details?.rating || ride.passenger_rating || ride.rating || ride.customer?.rating || '5.0'} • {t('verified') || 'Verified'}
+                    {ride.passenger_details?.rating ?? ride.user_details?.rating ?? ride.passenger_rating ?? ride.rating ?? ride.customer?.rating ?? '5.0'} • {t('verified') || 'Verified'}
                   </Text>
                 </View>
               </View>
@@ -852,49 +951,58 @@ const DropMapScreen = ({ route }: any) => {
                   style={[styles.actionBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6' }]}
                   onPress={() => Linking.openURL(`tel:${ride.phone || ride.riderPhone || ride.passenger_phone || '112'}`)}
                 >
-                  <Ionicons name="call" size={ms(20)} color={theme.colors.primary} />
+                  <Ionicons name="call" size={ms(18)} color={theme.colors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6' }]}
                   onPress={handleChatPress}
                 >
-                  <Ionicons name="chatbubble" size={ms(20)} color={theme.colors.primary} />
+                  <Ionicons name="chatbubble" size={ms(18)} color={theme.colors.primary} />
                   {unreadCount > 0 && (
                     <View style={styles.badge}>
                       <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: 'transparent', marginLeft: s(4) }]}
+                  onPress={() => setShowOptionsMenu(true)}
+                >
+                  <Ionicons name="ellipsis-vertical" size={ms(22)} color={theme.colors.text} />
+                </TouchableOpacity>
               </View>
             </View>
 
-            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-
+            <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', marginVertical: vs(8), marginHorizontal: ms(20) }} />
 
             {/* Trip Stats */}
             <View style={styles.tripInfoRow}>
               <View style={styles.infoBlock}>
                 <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primary + '10' }]}>
-                  <Ionicons name="navigate" size={ms(16)} color={theme.colors.primary} />
+                  <Ionicons name="navigate" size={ms(14)} color={theme.colors.primary} />
                 </View>
                 <Text style={[styles.infoLabel, { color: theme.colors.text }]}>{t('distance')}</Text>
-                <Text style={[styles.infoValue, { color: theme.colors.text }]}>{distance} {t('km_unit')}</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]}>
+                  {distance || '0'} <Text style={styles.infoUnit}>{t('km_unit')}</Text>
+                </Text>
               </View>
-
               <View style={styles.infoBlock}>
                 <View style={[styles.infoIconContainer, { backgroundColor: '#FFD70020' }]}>
                   <Ionicons name="time" size={ms(16)} color="#FFB800" />
                 </View>
                 <Text style={[styles.infoLabel, { color: theme.colors.text }]}>{t('eta')}</Text>
-                <Text style={[styles.infoValue, { color: theme.colors.text }]}>{eta} {t('minutes_unit')}</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]}>
+                  {eta || '0'} <Text style={styles.infoUnit}>{t('minutes_unit')}</Text>
+                </Text>
               </View>
-
               <View style={styles.infoBlock}>
                 <View style={[styles.infoIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
                   <MaterialCommunityIcons name="shield-check" size={ms(18)} color={theme.colors.success || '#10B981'} />
                 </View>
                 <Text style={[styles.infoLabel, { color: theme.colors.text }]}>{t('type')}</Text>
-                <Text style={[styles.infoValue, { color: theme.colors.text }]}>{ride.trip_type || ride.ride_type || 'ONE_WAY'}</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]}>
+                  <Text style={styles.infoUnit}>{ride.trip_type || ride.ride_type || 'ONE_WAY'}</Text>
+                </Text>
               </View>
             </View>
 
@@ -908,16 +1016,8 @@ const DropMapScreen = ({ route }: any) => {
             </View>
 
             {/* Arrival Action */}
-            <View style={styles.actionFooter}>
-              <TouchableOpacity 
-                style={styles.detailsLink} 
-                onPress={() => setShowRideDetailsModal(true)}
-              >
-                <Text style={[styles.detailsLinkText, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{t('view_ride_details') || 'View Ride Details'}</Text>
-                <Ionicons name="chevron-forward" size={ms(16)} color={theme.colors.primary} />
-              </TouchableOpacity>
-
-              <View style={{ marginBottom: vs(10), width: '100%' }}>
+            <View style={[styles.actionFooter, { borderTopWidth: 0, paddingHorizontal: ms(20) }]}>
+              <View style={{ width: '100%' }}>
                 <SwipeButton
                   title={distance <= 0.1 ? (t('reach_destination') || "Reached Destination") : (t('driving_to_destination') || "Driving to Destination")}
                   onSwipeSuccess={handleEndTrip}
@@ -925,29 +1025,57 @@ const DropMapScreen = ({ route }: any) => {
                   thumbIcon="chevron-double-right"
                 />
               </View>
-
-              <TouchableOpacity
-                style={styles.cancelTripBtn}
-                onPress={() => setShowCancelModal(true)}
-              >
-                <Text style={styles.cancelTxt} numberOfLines={1} adjustsFontSizeToFit>{t('pickup.cancel_ride')}</Text>
-              </TouchableOpacity>
             </View>
           </>
         </BottomSheetView>
       </BottomSheet>
 
-      {showSuccess && (
-        <View style={styles.successOverlay}>
-          <Animated.View style={[styles.successCard, animatedSuccessStyle, { backgroundColor: theme.colors.card }]}>
-            <View style={styles.successIconOuter}>
-              <Ionicons name="checkmark-sharp" size={ms(45)} color="#fff" />
+      {/* Options Menu Modal */}
+      <Modal
+        visible={showOptionsMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptionsMenu(false)}
+      >
+        <Pressable
+          style={[styles.modalOverlay, { justifyContent: 'center' }]}
+          onPress={() => setShowOptionsMenu(false)}
+        >
+          <Pressable
+            style={[styles.optionsMenuContainer, { backgroundColor: isDark ? '#424242' : '#FFFFFF', borderRadius: ms(4), width: '85%', padding: ms(24) }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={{ fontSize: ms(20), fontWeight: '500', color: isDark ? '#FFFFFF' : '#000000', marginBottom: vs(16) }}>Trip Options</Text>
+            <Text style={{ fontSize: ms(16), color: isDark ? '#E0E0E0' : '#424242', marginBottom: vs(32) }}>What would you like to do?</Text>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: ms(24) }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowOptionsMenu(false);
+                  setTimeout(() => setShowCancelModal(true), 300);
+                }}
+              >
+                <Text style={{ fontSize: ms(14), fontWeight: '600', color: '#EF5350', textTransform: 'uppercase' }}>CANCEL RIDE</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setShowOptionsMenu(false);
+                  setShowRideDetailsModal(true);
+                }}
+              >
+                <Text style={{ fontSize: ms(14), fontWeight: '600', color: '#80CBC4', textTransform: 'uppercase' }}>VIEW DATA</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => setShowOptionsMenu(false)}>
+                <Text style={{ fontSize: ms(14), fontWeight: '600', color: '#80CBC4', textTransform: 'uppercase' }}>CLOSE</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={[styles.successTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('trip_completed') || "Trip Completed!"}</Text>
-            <Text style={styles.successSub} numberOfLines={1} adjustsFontSizeToFit>{t('collect_payment') || "Please collect payment from rider"}</Text>
-          </Animated.View>
-        </View>
-      )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+
 
       {/* Ride Details Modal */}
       <Modal
@@ -959,140 +1087,198 @@ const DropMapScreen = ({ route }: any) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.detailsModal, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.modalIndicator, { backgroundColor: theme.colors.border }]} />
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.success || '#10B981' }]} numberOfLines={1} adjustsFontSizeToFit>
-                {t('trip_details').toUpperCase() || 'TRIP DETAILS'}
-              </Text>
+            <View style={[styles.modalHeader, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              <View>
+                <Text style={[styles.modalTitle, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {t('trip_details').toUpperCase() || 'TRIP DETAILS'}
+                </Text>
+                <Text style={[styles.modalSubtitle, { color: theme.colors.paragraphText }]}>
+                  {t('complete_trip_info') || 'Complete trip information'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowRideDetailsModal(false)} style={{ padding: ms(4) }}>
+                <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: ms(14) }}>{t('close') || 'Close'}</Text>
+              </TouchableOpacity>
             </View>
 
-            <ScrollView 
-              style={styles.detailsContent} 
+            <ScrollView
+              style={styles.detailsContent}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: vs(20) }}
             >
-              {/* Trip Identifiers Box */}
-              <View style={[styles.tripIdsBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC', borderColor: theme.colors.border }]}>
-                <View style={styles.idColumn}>
-                  <Text style={[styles.idLabel, { color: theme.colors.paragraphText }]}>{t('trip_id') || 'TRIP ID'}</Text>
-                  <Text style={[styles.idValue, { color: theme.colors.text }]}>#{ride.trip_id || ride.id || 'N/A'}</Text>
+              {/* Trip Identifiers Box (Minimal Stacked) */}
+              <View style={[styles.tripIdsBox, { flexDirection: 'column', backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: vs(4), marginBottom: vs(8), gap: vs(8) }]}>
+
+                {/* Trip ID Row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={[styles.idLabel, { color: theme.colors.paragraphText, marginRight: ms(6), marginBottom: 0 }]} numberOfLines={1}>{t('trip_id') || 'TRIP ID'}:</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }} style={{ flex: 1, maxWidth: '80%' }}>
+                      <Text style={[styles.idValue, { color: theme.colors.text, fontSize: ms(13), textAlign: 'right' }]}>#{ride.trip_id || ride.id || 'N/A'}</Text>
+                    </ScrollView>
+                    <TouchableOpacity
+                      onPress={handleCopyTripId}
+                      style={{ marginLeft: ms(8), padding: ms(2) }}
+                    >
+                      <Ionicons name="copy-outline" size={ms(16)} color={theme.colors.text} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={[styles.idDivider, { backgroundColor: theme.colors.border }]} />
-                <View style={styles.idColumn}>
-                  <Text style={[styles.idLabel, { color: theme.colors.paragraphText }]}>{t('trip_code') || 'TRIP CODE'}</Text>
+
+                {/* Trip Code Row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={[styles.idLabel, { color: theme.colors.paragraphText, marginRight: ms(6), marginBottom: 0 }]} numberOfLines={1}>{t('trip_code') || 'TRIP CODE'}:</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={[styles.idValue, { color: theme.colors.primary, fontWeight: '900' }]}>{ride.trip_code || ride.booking_code || '---'}</Text>
+                    <Text style={[styles.idValue, { color: theme.colors.primary, fontWeight: '900', fontSize: ms(14) }]}>{ride.trip_code || ride.booking_code || '---'}</Text>
                     {(ride.trip_code || ride.booking_code) && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={handleCopyTripCode}
-                        style={{ marginLeft: ms(8), padding: ms(4) }}
+                        style={{ marginLeft: ms(8), padding: ms(2) }}
                       >
-                        <Ionicons name="copy-outline" size={ms(18)} color={theme.colors.primary} />
+                        <Ionicons name="copy-outline" size={ms(16)} color={theme.colors.primary} />
                       </TouchableOpacity>
                     )}
                   </View>
                 </View>
+
               </View>
 
-              {/* Vehicle & Service Info */}
-              <View style={[styles.detailsCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: theme.colors.border }]}>
-                <View style={styles.paymentRow}>
-                  <View style={styles.paymentInfo}>
-                    <View style={[styles.paymentIconBox, { backgroundColor: vehicleInfo.color + '15' }]}>
-                        <MaterialCommunityIcons name={vehicleInfo.icon} size={ms(24)} color={vehicleInfo.color} />
-                    </View>
-                    <View style={{ marginLeft: ms(12) }}>
-                      <Text style={[styles.detailValue, { color: theme.colors.text, fontSize: ms(16), fontWeight: '800' }]}>
-                        {ride.car_name || vehicleInfo.label || 'Premium Ride'}
-                      </Text>
-                      <Text style={[styles.detailLabel, { color: theme.colors.paragraphText, fontSize: ms(11) }]}>
-                        {t(`ride_type_${(ride.ride_type || 'one_way').toLowerCase()}`)} • {t(`service_type_${(ride.service_type || (ride.driver_only ? 'driver_only' : 'cab_driver')).toLowerCase()}`)}
-                      </Text>
+              {/* Exact UI from RideCardItem */}
+              <View style={[
+                styles.card,
+                {
+                  backgroundColor: isDark ? theme.colors.background : '#F9FAFB',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                  marginTop: vs(8),
+                  borderWidth: 1,
+                  overflow: 'hidden',
+                }
+              ]}>
+                <View style={[styles.timeSubHeader, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : '#EFF6FF' }]}>
+                  <Ionicons name="calendar-outline" size={ms(14)} color={isDark ? '#93C5FD' : '#2563EB'} />
+                  <Text style={[styles.dateSubHeaderText, { color: isDark ? '#93C5FD' : '#2563EB' }]}>
+                    {new Date(ride.created_at || new Date()).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' })}
+                  </Text>
+                  <View style={styles.statsDot} />
+                  <Ionicons name="time-outline" size={ms(14)} color={isDark ? '#93C5FD' : '#2563EB'} />
+                  <Text style={[styles.timeSubHeaderText, { color: isDark ? '#93C5FD' : '#2563EB' }]}>
+                    {new Date(ride.created_at || new Date()).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </Text>
+                </View>
+
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.cardHeaderText, { color: theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>
+                      {t('your_active_ride') || 'Your Active Ride'}
+                    </Text>
+                    <View style={styles.badgeRow}>
+                      <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
+                        <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
+                          {t(ride.ride_type || 'ONE_WAY')}
+                        </Text>
+                      </View>
+                      <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
+                        <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
+                          {t(ride.paymentType || ride.payment_method || 'CASH')}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                  <View style={[styles.serviceTag, { backgroundColor: theme.colors.primary + '15' }]}>
-                    <Text style={[styles.serviceTagText, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{t(`booking_type_${(ride.booking_type || 'live').toLowerCase()}`)}</Text>
+                  <Text style={[styles.priceBig, { color: '#16A34A' }]}>{t('currency_symbol')}{ride.total_fare || ride.fare || '0'}</Text>
+                </View>
+
+                <View style={styles.locationContainer}>
+                  <View style={styles.locationIndicator}>
+                    <Ionicons name="radio-button-on" size={ms(18)} color="#4ade80" />
+                    <View style={[styles.line, { backgroundColor: theme.colors.border, flex: 1 }]} />
+                    <Ionicons name="location" size={ms(18)} color="#f87171" />
+                  </View>
+                  <View style={styles.addresses}>
+                    <View style={styles.addressBox}>
+                      <Text style={[styles.addrLabel, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t('pickup')}</Text>
+                      <Text style={[styles.addrText, { color: theme.colors.text }]}>{ride.pickup_address || ride.pickup}</Text>
+                    </View>
+                    <View style={[styles.addressBox, { marginTop: vs(12) }]}>
+                      <Text style={[styles.addrLabel, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t('drop')}</Text>
+                      <Text style={[styles.addrText, { color: theme.colors.text }]}>{ride.drop_address || ride.drop}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Route Card */}
-              <View style={[styles.detailsCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: theme.colors.border }]}>
-                <View style={[styles.routeItem, { marginBottom: vs(16) }]}>
-                  <View style={styles.iconColumn}>
-                    <Ionicons name="radio-button-on" size={ms(18)} color={theme.colors.primary} />
-                    <View style={[styles.routeLine, { backgroundColor: theme.colors.border, height: vs(25) }]} />
+                <View style={[styles.rideStatsPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                  <View style={styles.statItemRow}>
+                    <Ionicons name="shuffle-outline" size={ms(14)} color={isDark ? theme.colors.textMuted : '#64748B'} />
+                    <Text style={[styles.rideStatsText, { color: isDark ? theme.colors.text : '#475569' }]}>{distance || '0'} {t('km_unit') || 'km'}</Text>
                   </View>
-                  <View style={styles.routeTextBody}>
-                    <Text style={[styles.detailLabel, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{t('pickup_caps') || 'PICKUP'}</Text>
-                    <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                      {ride.pickup_address || ride.pickup || t('location_not_available')}
+                  <View style={styles.statsDot} />
+                  <View style={styles.statItemRow}>
+                    <Ionicons name="time-outline" size={ms(14)} color={isDark ? theme.colors.textMuted : '#64748B'} />
+                    <Text style={[styles.rideStatsText, { color: isDark ? theme.colors.text : '#475569' }]}>
+                      {t('eta')}: {eta || '0'} {t('minutes_unit') || 'm'}
                     </Text>
                   </View>
-                </View>
-
-                <View style={styles.routeItem}>
-                  <View style={styles.iconColumn}>
-                    <Ionicons name="location" size={ms(18)} color="#B91C1C" />
-                  </View>
-                  <View style={styles.routeTextBody}>
-                    <Text style={[styles.detailLabel, { color: '#B91C1C' }]} numberOfLines={1} adjustsFontSizeToFit>{t('drop_caps') || 'DROP-OFF'}</Text>
-                    <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                      {ride.drop_address || ride.dropoff || ride.drop || t('location_not_available')}
-                    </Text>
+                  <View style={styles.statsDot} />
+                  <View style={styles.ecoBadge}>
+                    <Ionicons name="leaf-outline" size={ms(12)} color="#22C55E" />
+                    <Text style={[styles.ecoBadgeText, { color: '#22C55E' }]}>{t('eco_friendly')}</Text>
                   </View>
                 </View>
-              </View>
 
-              {/* Stats Row */}
-              <View style={styles.detailsStatsRow}>
-                <View style={[styles.statBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderLeftWidth: 3, borderLeftColor: theme.colors.primary }]}>
-                  <Ionicons name="map-outline" size={ms(20)} color={theme.colors.primary} />
-                  <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                    {distance || '0'} {t('km_unit')}
+                <View style={styles.vehicleInfoContainer}>
+                  <Text style={[styles.vehicleNameText, { color: theme.colors.text }]}>
+                    {ride.car_name || vehicleInfo.label || 'Premium Ride'}
                   </Text>
-                  <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('distance')}</Text>
-                </View>
-                <View style={[styles.statBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderLeftWidth: 3, borderLeftColor: '#F59E0B' }]}>
-                  <Ionicons name="time-outline" size={ms(20)} color="#F59E0B" />
-                  <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                    {eta || '0'} {t('minutes_unit')}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('duration')}</Text>
-                </View>
-                <View style={[styles.statBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderLeftWidth: 3, borderLeftColor: theme.colors.success || '#10B981' }]}>
-                  <Ionicons name="wallet-outline" size={ms(20)} color={theme.colors.success || '#10B981'} />
-                  <Text style={[styles.statValue, { color: theme.colors.text }]}>₹{ride.total_fare || ride.fare || ride.price || '0'}</Text>
-                  <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('estimated_fare')}</Text>
-                </View>
-              </View>
-
-              {/* Payment Info */}
-              <View style={[styles.detailsCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', borderColor: theme.colors.border }]}>
-                <View style={styles.paymentRow}>
-                  <View style={styles.paymentInfo}>
-                    <View style={[styles.paymentIconBox, { backgroundColor: (theme.colors.success || '#10B981') + '15' }]}>
-                        <MaterialCommunityIcons name="cash-multiple" size={ms(22)} color={theme.colors.success || '#10B981'} />
-                    </View>
-                    <View style={{ marginLeft: ms(12) }}>
-                      <Text style={[styles.detailValue, { color: theme.colors.text, fontSize: ms(15) }]}>
-                        {ride.payment_method === 'CASH' || ride.paymentMethod === 'Cash' ? (t('payment_cash') || 'Cash Payment') : (t('payment_online') || 'Online Payment')}
+                  <View style={styles.vehicleBadgeRow}>
+                    <View style={[styles.vehicleBadge, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : '#EFF6FF' }]}>
+                      <Ionicons name="cog-outline" size={ms(12)} color={isDark ? '#93C5FD' : '#2563EB'} />
+                      <Text style={[styles.vehicleBadgeText, { color: isDark ? '#93C5FD' : '#2563EB' }]}>
+                        {ride.transmission || 'Auto'}
                       </Text>
-                      <Text style={[styles.detailLabel, { color: theme.colors.paragraphText, fontSize: ms(11) }]} numberOfLines={1} adjustsFontSizeToFit>{t('collect_from_customer') || 'Collect total amount from customer'}</Text>
+                    </View>
+                    <View style={[styles.vehicleBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.1)' : '#F0FDF4' }]}>
+                      <Ionicons name="flash-outline" size={ms(12)} color={isDark ? '#4ADE80' : '#16A34A'} />
+                      <Text style={[styles.vehicleBadgeText, { color: isDark ? '#4ADE80' : '#16A34A' }]}>
+                        {ride.fuel_type || 'Any'}
+                      </Text>
                     </View>
                   </View>
                 </View>
+
+                <View style={styles.passengerBox}>
+                  <View style={styles.passengerMain}>
+                    {ride.passenger_details?.image || ride.user_details?.profile_url || ride.riderImage ? (
+                      <Image source={{ uri: ride.passenger_details?.image || ride.user_details?.profile_url || ride.riderImage }} style={styles.avatar} />
+                    ) : (
+                      <View style={[styles.avatar, { backgroundColor: '#E0F2C1' }]}>
+                        <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
+                          {String(ride.passenger_details?.name || ride.user_details?.full_name || ride.user_details?.first_name || ride.passenger || ride.passenger_name || ride.customer?.name || 'P').trim().substring(0, 2).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    <View>
+                      <Text style={[styles.psgrName, { color: isDark ? '#FFF' : '#111827' }]}>{ride.passenger_details?.name || ride.user_details?.full_name || ride.user_details?.first_name || ride.passenger || ride.passenger_name || ride.customer?.name || 'Passenger'}</Text>
+                      <View style={styles.psgrDetailRow}>
+                        <Text style={[styles.psgrDetail, { color: '#16A34A' }]}>{t('verified_passenger') || 'Verified Passenger'}</Text>
+                        <View style={styles.ratingBadge}>
+                          <Ionicons name="star" size={ms(12)} color="#F59E0B" />
+                          <Text style={styles.ratingText}>{ride.passenger_details?.rating ?? ride.user_details?.rating ?? ride.passenger_rating ?? ride.rating ?? ride.customer?.rating ?? '5.0'}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                  <TouchableOpacity style={styles.floatCallBtn} onPress={() => Linking.openURL(`tel:${ride.phone || ride.passenger_phone || ride.user_details?.phone_number || ride.passenger_details?.phone}`)}>
+                    <Ionicons name="call" size={ms(20)} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+
               </View>
             </ScrollView>
 
-            <TouchableOpacity
-              style={[styles.closeModalBtn, { backgroundColor: theme.colors.primary }]}
-              onPress={() => setShowRideDetailsModal(false)}
-            >
-              <Text style={[styles.closeModalBtnText, { color: theme.colors.card }]} numberOfLines={1} adjustsFontSizeToFit>{t('close') || 'Close'}</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      {renderEndTripConfirmModal()}
 
       <CancellationModal
         isVisible={showCancelModal}
@@ -1137,42 +1323,54 @@ const styles = StyleSheet.create({
   markerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: ms(60),
-    height: ms(60),
+    width: ms(100),
+    height: ms(110),
   },
-  pulseCircle: {
+  etaPillAbsolute: {
     position: 'absolute',
+    bottom: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    paddingHorizontal: ms(12),
+    paddingVertical: vs(6),
+    borderRadius: ms(20),
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    elevation: 10,
+    alignSelf: 'center',
+    minWidth: ms(65),
+    alignItems: 'center',
+    marginBottom: vs(8),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+  },
+  etaText: { color: '#FFF', fontSize: ms(11), fontWeight: '800' },
+  driverMarker: {
     width: ms(40),
     height: ms(40),
     borderRadius: ms(20),
-    backgroundColor: '#3B82F6',
-  },
-  driverMarker: {
-    width: ms(28),
-    height: ms(28),
-    borderRadius: ms(14),
-    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFF',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
+    alignItems: 'center',
+    zIndex: 2,
     elevation: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
   },
-  destMarker: { width: ms(44), height: ms(44), alignItems: 'center', justifyContent: 'center' },
-  destCircle: {
-    width: ms(40),
-    height: ms(40),
-    borderRadius: ms(20),
+  pulseCircle: {
+    position: 'absolute',
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(32),
+    zIndex: 1,
+  },
+  pickupMarkerContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
   liveIndicator: {
     flexDirection: 'row',
@@ -1281,6 +1479,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: ms(13), textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: '700', opacity: 0.6 },
   infoValue: { fontSize: ms(17), fontWeight: '500', marginTop: vs(2) },
+  infoUnit: { fontSize: ms(13), fontWeight: '600' },
   addressRow: {
     flexDirection: 'row',
     padding: ms(16),
@@ -1313,32 +1512,7 @@ const styles = StyleSheet.create({
   },
   cancelTripBtn: { marginTop: vs(12), padding: ms(10), minWidth: ms(150), alignItems: 'center' },
   cancelTxt: { color: '#B91C1C', fontSize: ms(14), fontWeight: '800', letterSpacing: 0.5 },
-  successOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  successCard: {
-    width: '85%',
-    padding: ms(30),
-    borderRadius: ms(35),
-    alignItems: 'center',
-    elevation: 24,
-  },
-  successIconOuter: {
-    width: ms(90),
-    height: ms(90),
-    borderRadius: ms(45),
-    backgroundColor: '#22C55E',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: vs(20),
-    elevation: 8,
-  },
-  successTitle: { fontSize: ms(26), fontWeight: '900', marginBottom: vs(8), textAlign: 'center' },
-  successSub: { fontSize: ms(14), color: '#64748B', textAlign: 'center', paddingHorizontal: ms(20) },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -1518,6 +1692,291 @@ const styles = StyleSheet.create({
     fontSize: ms(10),
     fontWeight: '600',
     marginTop: vs(2),
+  },
+  card: {
+    borderRadius: ms(16),
+    padding: ms(16),
+    marginBottom: vs(16),
+    borderWidth: 1,
+  },
+  timeSubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ms(12),
+    paddingVertical: vs(6),
+    borderRadius: ms(12),
+    marginBottom: vs(8),
+    gap: ms(6),
+  },
+  dateSubHeaderText: {
+    fontSize: ms(14),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  timeSubHeaderText: {
+    fontSize: ms(14),
+    fontWeight: '800',
+  },
+  statsDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    marginHorizontal: ms(2),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: vs(8),
+    marginTop: 0,
+  },
+  cardHeaderText: {
+    fontSize: ms(12),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(6),
+    marginTop: vs(8),
+    flexWrap: 'wrap',
+  },
+  miniTag: {
+    paddingHorizontal: ms(8),
+    paddingVertical: vs(4),
+    borderRadius: ms(8),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  miniTagText: {
+    fontSize: ms(12),
+    fontWeight: '700',
+  },
+  priceBig: {
+    fontSize: ms(24),
+    fontWeight: '800',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    marginBottom: vs(12),
+  },
+  locationIndicator: {
+    alignItems: 'center',
+    marginRight: ms(14),
+    paddingTop: vs(6),
+    paddingBottom: vs(10),
+  },
+  line: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: vs(2),
+  },
+  addresses: {
+    flex: 1,
+  },
+  addressBox: {
+    justifyContent: 'center',
+  },
+  addrLabel: {
+    fontSize: ms(13),
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: vs(2),
+  },
+  addrText: {
+    fontSize: ms(15),
+    fontWeight: '500',
+  },
+  rideStatsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: ms(12),
+    paddingVertical: vs(10),
+    borderRadius: ms(12),
+    marginBottom: vs(16),
+    gap: ms(8),
+  },
+  statItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(6),
+  },
+  rideStatsText: {
+    fontSize: ms(13),
+    fontWeight: '500',
+  },
+  ecoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(4),
+  },
+  ecoBadgeText: {
+    fontSize: ms(6),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  vehicleInfoContainer: {
+    alignItems: 'center',
+    paddingVertical: vs(12),
+    marginHorizontal: ms(12),
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    marginBottom: vs(6),
+  },
+  vehicleNameText: {
+    fontSize: ms(16),
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: vs(4),
+  },
+  vehicleBadgeRow: {
+    flexDirection: 'row',
+    gap: ms(8),
+  },
+  vehicleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ms(8),
+    paddingVertical: vs(2),
+    borderRadius: ms(8),
+    gap: ms(4),
+  },
+  vehicleBadgeText: {
+    fontSize: ms(10),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  passengerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: vs(26),
+  },
+  passengerMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: ms(12),
+  },
+  avatarText: {
+    fontSize: ms(15),
+    fontWeight: '800',
+  },
+  psgrName: {
+    fontSize: ms(15),
+    fontWeight: '800',
+  },
+  psgrDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(8),
+    marginTop: vs(2),
+  },
+  psgrDetail: {
+    fontSize: ms(12),
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(3),
+  },
+  floatCallBtn: {
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
+    backgroundColor: '#152D5E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#152D5E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  optionsMenuContainer: {
+    width: '80%',
+    borderRadius: ms(16),
+    overflow: 'hidden',
+    paddingVertical: vs(8),
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  modalSubtitle: {
+    fontSize: ms(13),
+    opacity: 0.6,
+    fontWeight: '600',
+    marginTop: vs(2),
+  },
+  bottomSheet: {
+    padding: ms(24),
+    paddingTop: ms(12),
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    alignItems: 'center',
+    width: '100%',
+  },
+  dragHandle: {
+    width: ms(40),
+    height: ms(4),
+    backgroundColor: '#E2E8F0',
+    borderRadius: ms(2),
+    marginBottom: vs(16),
+  },
+  sheetTitle: {
+    fontSize: ms(20),
+    fontWeight: '700',
+    marginBottom: vs(8),
+    textAlign: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: ms(14),
+    marginBottom: vs(24),
+    lineHeight: vs(20),
+  },
+  sheetButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: ms(12),
+  },
+  sheetCancelBtn: {
+    flex: 1,
+    paddingVertical: vs(14),
+    backgroundColor: '#F3F4F6',
+    borderRadius: ms(12),
+    alignItems: 'center',
+  },
+  sheetCancelBtnText: {
+    color: '#374151',
+    fontSize: ms(16),
+    fontWeight: '700',
+  },
+  sheetConfirmBtn: {
+    flex: 1,
+    paddingVertical: vs(14),
+    borderRadius: ms(12),
+    alignItems: 'center',
+  },
+  sheetConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: ms(16),
+    fontWeight: '700',
   },
 });
 

@@ -437,6 +437,8 @@ const ScheduledRidesScreen = () => {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showNavigateModal, setShowNavigateModal] = useState(false);
+  const [rideToNavigate, setRideToNavigate] = useState<Ride | null>(null);
   const [rideToCancel, setRideToCancel] = useState<Ride | null>(null);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [selectedReason, setSelectedReason] = useState<string>('');
@@ -545,9 +547,9 @@ const ScheduledRidesScreen = () => {
           trip_status: (trip.trip_status || trip.status || '').toString().toUpperCase(),
           scheduled_start_time: timeVal,
           startTime: new Date(timeVal).getTime(), // Added for RideCard display & timer logic
-          passenger: trip.passenger || trip.passenger_details?.name || trip.passenger_name || trip.customer?.name || 'Customer',
-          phone: trip.phone || trip.passenger_details?.phone || trip.customer?.phone || trip.passenger_phone || '',
-          rating: typeof trip.rating === 'number' ? trip.rating : (typeof trip.passenger_details?.rating === 'number' ? trip.passenger_details.rating : (typeof trip.customer?.rating === 'number' ? trip.customer.rating : 5.0)),
+          passenger: trip.passenger || trip.passenger_details?.name || trip.user_details?.full_name || trip.user_details?.first_name || trip.passenger_name || trip.customer?.name || 'Customer',
+          phone: trip.phone || trip.passenger_details?.phone || trip.user_details?.phone_number || trip.customer?.phone || trip.passenger_phone || '',
+          rating: typeof trip.rating === 'number' ? trip.rating : (typeof trip.passenger_details?.rating === 'number' ? trip.passenger_details.rating : (typeof trip.user_details?.rating === 'number' ? trip.user_details.rating : (typeof trip.customer?.rating === 'number' ? trip.customer.rating : 5.0))),
           paymentType: trip.paymentType || trip.payment_method || trip.paymentType || 'CASH',
           scheduled_status: trip.scheduled_status,
           re_dispatch_count: trip.re_dispatch_count,
@@ -891,6 +893,7 @@ const ScheduledRidesScreen = () => {
       // Delay to let the driver see the success state
       setTimeout(() => {
         setAcceptedSuccessId(null);
+        setSelectedRide(null);
         refetchTrips();
       }, 1500);
 
@@ -909,6 +912,7 @@ const ScheduledRidesScreen = () => {
           icon: 'close-circle-outline',
           isDestructive: true,
         });
+        setSelectedRide(null);
         refetchTrips();
       } else if (isAlreadyAccepted) {
         showAlert({
@@ -917,6 +921,7 @@ const ScheduledRidesScreen = () => {
           singleButton: true,
           icon: 'information-circle-outline',
         });
+        setSelectedRide(null);
         refetchTrips();
       } else {
         showAlert({
@@ -964,11 +969,9 @@ const ScheduledRidesScreen = () => {
   const startHeadingToPickup = async (ride: Ride) => {
     // 1. Online Status Check
     if (!isOnline) {
-      showAlert({
-        title: t('go_online_required'),
+      showToast({
         message: t('must_go_online_to_start_ride'),
-        singleButton: true,
-        icon: 'eye-off-outline',
+        type: 'error',
       });
       return;
     }
@@ -994,42 +997,40 @@ const ScheduledRidesScreen = () => {
       console.warn('Status check failed, proceeding with caution:', err);
     }
 
-    // 3. Confirmation Modal
-    showAlert({
-      title: t('start_ride_confirmation'),
-      message: t('confirm_start_heading_pickup'),
-      confirmText: t('confirm'),
-      cancelText: t('cancel'),
-      onConfirm: async () => {
-        try {
-          triggerHaptic(HapticFeedbackTypes.impactMedium);
+    // 3. Open Custom Confirmation Modal
+    setRideToNavigate(ride);
+    setShowNavigateModal(true);
+  };
 
-          // 1. Notify backend (Updates status to ARRIVING)
-          await arrivingTrip(ride.trip_id).unwrap();
+  const confirmNavigation = async () => {
+    if (!rideToNavigate) return;
+    try {
+      triggerHaptic(HapticFeedbackTypes.impactMedium);
 
-          // 2. Production Flow: Ensure driver state is updated before navigating
-          const { setDriverStatus } = require('../../redux/userSlice');
-          dispatch(setDriverStatus('ON_TRIP'));
-          dispatch(setMyAcceptedRideId(ride.trip_id));
-          dispatch(setCurrentRide(ride));
+      // 1. Notify backend (Updates status to ARRIVING)
+      await arrivingTrip(rideToNavigate.trip_id).unwrap();
 
-          // 3. Notify rider via socket (Redundant but good for legacy / real-time)
-          socketService.emitEnRoute(ride.trip_id, user.driverId || user.id);
+      // 2. Production Flow: Ensure driver state is updated before navigating
+      const { setDriverStatus } = require('../../redux/userSlice');
+      dispatch(setDriverStatus('ON_TRIP'));
+      dispatch(setMyAcceptedRideId(rideToNavigate.trip_id));
+      dispatch(setCurrentRide(rideToNavigate));
 
-          // 4. Navigate
-          navigation.navigate(PickupMapScreen_Nav, { ride });
-        } catch (error) {
-          console.error('Failed to transition to arriving status:', error);
-          showAlert({
-            title: t('error'),
-            message: t('failed_to_start_navigation'),
-            singleButton: true,
-            icon: 'alert-circle-outline'
-          });
-        }
-      },
-      icon: 'navigate-circle-outline',
-    });
+      // 3. Notify rider via socket (Redundant but good for legacy / real-time)
+      socketService.emitEnRoute(rideToNavigate.trip_id, user.driverId || user.id);
+
+      // 4. Navigate
+      setShowNavigateModal(false);
+      setRideToNavigate(null);
+      navigation.navigate(PickupMapScreen_Nav, { ride: rideToNavigate });
+    } catch (error) {
+      console.error('Failed to transition to arriving status:', error);
+      showToast({
+        message: t('failed_to_start_navigation'),
+        type: 'error'
+      });
+      setShowNavigateModal(false);
+    }
   };
 
   const confirmCancelRide = async () => {
@@ -1144,6 +1145,39 @@ const ScheduledRidesScreen = () => {
               {t('distance_low_high')}
             </Text>
           </TouchableOpacity>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+
+  const renderNavigateModal = () => (
+    <Modal visible={showNavigateModal} transparent animationType="slide">
+      <Pressable style={styles.modalOverlay} onPress={() => setShowNavigateModal(false)}>
+        <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+          <View style={styles.dragHandle} />
+          
+          <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
+            {t('start_ride_confirmation')}
+          </Text>
+          <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginHorizontal: ms(20) }]}>
+            {t('confirm_start_heading_pickup')}
+          </Text>
+
+          <View style={styles.sheetButtonsRow}>
+            <TouchableOpacity 
+              style={styles.sheetCancelBtn} 
+              onPress={() => setShowNavigateModal(false)}
+            >
+              <Text style={styles.sheetCancelBtnText}>{t('cancel')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
+              onPress={confirmNavigation}
+            >
+              <Text style={styles.sheetConfirmBtnText}>{t('confirm')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Pressable>
     </Modal>
@@ -1623,6 +1657,7 @@ const ScheduledRidesScreen = () => {
 
       {renderSortModal()}
       {renderCancelModal()}
+      {renderNavigateModal()}
     </SafeAreaView>
   );
 };
@@ -2220,5 +2255,60 @@ const styles = StyleSheet.create({
   filterCountText: {
     fontSize: ms(10),
     fontWeight: '800',
+  },
+  bottomSheet: {
+    padding: ms(24),
+    paddingTop: ms(12),
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    alignItems: 'center',
+    width: '100%',
+  },
+  dragHandle: {
+    width: ms(40),
+    height: ms(4),
+    backgroundColor: '#E2E8F0',
+    borderRadius: ms(2),
+    marginBottom: vs(16),
+  },
+  sheetTitle: {
+    fontSize: ms(20),
+    fontWeight: '700',
+    marginBottom: vs(8),
+    textAlign: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: ms(14),
+    marginBottom: vs(24),
+    lineHeight: vs(20),
+  },
+  sheetButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: ms(12),
+  },
+  sheetCancelBtn: {
+    flex: 1,
+    paddingVertical: vs(14),
+    backgroundColor: '#F3F4F6',
+    borderRadius: ms(12),
+    alignItems: 'center',
+  },
+  sheetCancelBtnText: {
+    color: '#374151',
+    fontSize: ms(16),
+    fontWeight: '700',
+  },
+  sheetConfirmBtn: {
+    flex: 1,
+    paddingVertical: vs(14),
+    borderRadius: ms(12),
+    alignItems: 'center',
+  },
+  sheetConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: ms(16),
+    fontWeight: '700',
   },
 });

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Animated as RNAnimated, Platform, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import MapView, { PROVIDER_GOOGLE, AnimatedRegion, Marker } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -155,7 +155,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
         setTrackChanges(true);
         const timer = setTimeout(() => {
             setTrackChanges(false);
-        }, 1500); // Allow enough time for the map and text to render
+        }, 3000); // Increased time to ensure map and text render fully without hiding
         return () => clearTimeout(timer);
     }, [currentAddress, isOnline]);
 
@@ -165,13 +165,6 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
         }
     }, [userLocation, hasMountedMap]);
 
-    // ── Animated Marker (Smooth Glide) ──
-    const animatedCoord = useRef(new AnimatedRegion({
-        latitude: userLocation?.latitude || 0,
-        longitude: userLocation?.longitude || 0,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-    })).current;
 
     // ── Recenter button highlight animation ──
     const recenterPulse = useRef(new RNAnimated.Value(0)).current;
@@ -201,44 +194,6 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
         }, [isOnline])
     );
 
-    const hasInitializedLocation = useRef(false);
-
-    // ── Smooth marker animation on location updates ──
-    useEffect(() => {
-        if (userLocation && isOnline) {
-            if (!hasInitializedLocation.current) {
-                // Instantly snap to the first valid location without animating from 0,0
-                animatedCoord.setValue({
-                    latitude: userLocation.latitude,
-                    longitude: userLocation.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                });
-                hasInitializedLocation.current = true;
-            } else {
-                // Smooth glide the marker to new position
-                if (Platform.OS === 'android') {
-                    animatedCoord.timing({
-                        latitude: userLocation.latitude,
-                        longitude: userLocation.longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                        duration: 1000,
-                        useNativeDriver: false,
-                    } as any).start();
-                } else {
-                    animatedCoord.timing({
-                        latitude: userLocation.latitude,
-                        longitude: userLocation.longitude,
-                        latitudeDelta: 0.01,
-                        longitudeDelta: 0.01,
-                        duration: 1000,
-                        useNativeDriver: false,
-                    } as any).start();
-                }
-            }
-        }
-    }, [userLocation, isOnline, animatedCoord]);
 
     // ── Auto-center/Follow map ──
     useEffect(() => {
@@ -332,11 +287,14 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                     longitudeDelta: 0.05,
                 }}
             >
-                {/* ── SMOOTH ANIMATED MARKER ── */}
+                {/* ── MARKER ── */}
                 {userLocation && isMapLoaded && (
-                    <Marker.Animated
+                    <Marker
                         key={currentAddress ? 'loaded-marker' : 'loading-marker'} // Forces a clean render when address is found
-                        coordinate={animatedCoord as any}
+                        coordinate={{
+                            latitude: userLocation.latitude,
+                            longitude: userLocation.longitude,
+                        }}
                         anchor={{ x: 0.5, y: 1 }}
                         flat={false}
                         zIndex={99}
@@ -367,7 +325,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                                 </View>
                             </View>
                         </View>
-                    </Marker.Animated>
+                    </Marker>
                 )}
             </MapView>
             )}
@@ -564,7 +522,6 @@ const styles = StyleSheet.create({
     customMarkerContainer: {
         alignItems: 'center',
         justifyContent: 'flex-end',
-        paddingBottom: vs(12),
     },
     markerVisuals: {
         alignItems: 'center',
@@ -577,7 +534,7 @@ const styles = StyleSheet.create({
     },
     blueBaseCircle: {
         position: 'absolute',
-        bottom: ms(3),
+        bottom: ms(2),
         width: ms(14),
         height: ms(14),
         borderRadius: ms(7),
