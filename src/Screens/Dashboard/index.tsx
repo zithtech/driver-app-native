@@ -67,7 +67,7 @@ import { parseOnlineTimeToSeconds, formatOnlineTime } from '../../utils/timeUtil
 import socketService from '../../service/socketService';
 import RatingReceivedModal from '../../Components/RatingReceivedModal';
 import AppStatusBar from '../../Components/AppStatusBar';
-import { setLastTripRating } from '../../redux/rideSlice';
+import { setLastTripRating, setCurrentRide, setMyAcceptedRideId } from '../../redux/rideSlice';
 import axiosInstance from '../../api/axiosInstance';
 // Use RideItem from the hook
 // Use RideItem from the hook, but for now we keep the local type for compatibility if needed.
@@ -656,6 +656,10 @@ const DriverDashboard = () => {
                     setAcceptedRide(item);
                     acceptRide(item.id);
                     dispatch(setDriverStatus(item.booking_type === 'SCHEDULED' ? 'HAS_UPCOMING_SCHEDULED' : 'ON_TRIP'));
+                    if (item.booking_type !== 'SCHEDULED') {
+                      dispatch(setCurrentRide(item as any));
+                      dispatch(setMyAcceptedRideId(item.trip_id.toString()));
+                    }
                     refetchScheduled();
                     setShowConfirmModal(true);
                   } catch (e: any) {

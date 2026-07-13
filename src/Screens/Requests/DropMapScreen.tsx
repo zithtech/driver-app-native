@@ -34,7 +34,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import { useLocation } from '../../hooks/useLocation';
-import { useDestinationReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery } from '../../service/driverApi';
+import { useDestinationReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery, useStartReturnTripMutation } from '../../service/driverApi';
 import { clearAcceptedRide } from '../../redux/rideSlice';
 import { MapConnectionStatus, CancellationModal } from '../../Components';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
@@ -79,6 +79,7 @@ const DropMapScreen = ({ route }: any) => {
 
   // 3. API Mutation Hooks
   const [destinationReachedApi] = useDestinationReachedTripMutation();
+  const [startReturnTripApi] = useStartReturnTripMutation();
   const [triggerSosApi] = useTriggerSosMutation();
   const [cancelTripApi, { isLoading: isCancelling }] = useCancelTripMutation();
 
@@ -135,6 +136,7 @@ const DropMapScreen = ({ route }: any) => {
   const [eta, setEta] = useState(initialEta.current);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRideDetailsModal, setShowRideDetailsModal] = useState(false);
+  const [showReturnConfirm, setShowReturnConfirm] = useState(false);
 
   const getVehicleInfo = useCallback((type?: string) => {
     const lowerType = type?.toLowerCase() || '';
@@ -548,17 +550,22 @@ const DropMapScreen = ({ route }: any) => {
 
     const confirmEndTrip = async () => {
       try {
-        await destinationReachedApi(trip_id.toString()).unwrap();
+        const res = await destinationReachedApi(trip_id.toString()).unwrap();
+        const updatedStatus = res?.data?.trip_status || res?.data?.status || res?.trip_status || res?.status || 'COMPLETED';
         setShowSuccess(true);
         successScale.value = withSpring(1, { damping: 10, stiffness: 100 });
         triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
         setTimeout(() => {
           setShowSuccess(false);
-          navigation.replace('PaymentCollectionScreen', { 
-            ride,
-            actualDistance: distance,
-            actualDuration: calculatedDuration
-          });
+          if (updatedStatus === 'WAITING' || updatedStatus === 'DAY_HALT') {
+             // Stay on screen, UI will update via Redux/Sockets
+          } else {
+             navigation.replace('PaymentCollectionScreen', { 
+               ride,
+               actualDistance: distance,
+               actualDuration: calculatedDuration
+             });
+          }
         }, 2000);
       } catch (error: any) {
         showAlert({
@@ -907,7 +914,7 @@ const DropMapScreen = ({ route }: any) => {
               </Text>
             </View>
 
-            {/* Arrival Action */}
+            {/* Arrival / Return Action */}
             <View style={styles.actionFooter}>
               <TouchableOpacity 
                 style={styles.detailsLink} 
@@ -918,20 +925,38 @@ const DropMapScreen = ({ route }: any) => {
               </TouchableOpacity>
 
               <View style={{ marginBottom: vs(10), width: '100%' }}>
-                <SwipeButton
-                  title={distance <= 0.1 ? (t('reach_destination') || "Reached Destination") : (t('driving_to_destination') || "Driving to Destination")}
-                  onSwipeSuccess={handleEndTrip}
-                  activeColor={theme.colors.success || '#10B981'}
-                  thumbIcon="chevron-double-right"
-                />
+                {(ride.trip_status === 'WAITING' || ride.trip_status === 'DAY_HALT') ? (
+                  <SwipeButton
+                    title={t('start_return_trip') || "Start Return Trip"}
+                    onSwipeSuccess={() => setShowReturnConfirm(true)}
+                    activeColor={theme.colors.primary}
+                    thumbIcon="chevron-double-right"
+                  />
+                ) : ride.trip_status === 'RETURN_STARTED' ? (
+                  <SwipeButton
+                    title={t('finish_return_trip') || "Finish Return Trip"}
+                    onSwipeSuccess={handleEndTrip}
+                    activeColor={theme.colors.success || '#10B981'}
+                    thumbIcon="flag-checkered"
+                  />
+                ) : (
+                  <SwipeButton
+                    title={distance <= 0.1 ? (t('reach_destination') || "Reached Destination") : (t('driving_to_destination') || "Driving to Destination")}
+                    onSwipeSuccess={handleEndTrip}
+                    activeColor={theme.colors.success || '#10B981'}
+                    thumbIcon="chevron-double-right"
+                  />
+                )}
               </View>
 
-              <TouchableOpacity
-                style={styles.cancelTripBtn}
-                onPress={() => setShowCancelModal(true)}
-              >
-                <Text style={styles.cancelTxt} numberOfLines={1} adjustsFontSizeToFit>{t('pickup.cancel_ride')}</Text>
-              </TouchableOpacity>
+              {!(ride.trip_status === 'WAITING' || ride.trip_status === 'DAY_HALT' || ride.trip_status === 'RETURN_STARTED') && (
+                <TouchableOpacity
+                  style={styles.cancelTripBtn}
+                  onPress={() => setShowCancelModal(true)}
+                >
+                  <Text style={styles.cancelTxt} numberOfLines={1} adjustsFontSizeToFit>{t('pickup.cancel_ride')}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </>
         </BottomSheetView>
@@ -1100,6 +1125,61 @@ const DropMapScreen = ({ route }: any) => {
         onConfirm={handleCancelTrip}
         isSubmitting={isCancelling}
       />
+
+      {/* Start Return Trip Confirmation Modal */}
+      <Modal
+        visible={showReturnConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReturnConfirm(false)}
+      >
+        <View style={styles.successOverlay}>
+          <View style={[styles.successCard, { backgroundColor: theme.colors.card }]}>
+            <View style={[styles.successIconOuter, { backgroundColor: theme.colors.primary }]}>
+              <Ionicons name="refresh" size={ms(40)} color="#fff" />
+            </View>
+            <Text style={[styles.successTitle, { color: theme.colors.text }]} numberOfLines={2} adjustsFontSizeToFit>
+              {t('start_return_trip') || "Start Return Trip"}
+            </Text>
+            <Text style={styles.successSub} numberOfLines={2} adjustsFontSizeToFit>
+              {t('start_return_trip_msg') || "Are you sure you want to start the return trip to the origin?"}
+            </Text>
+            <View style={{ flexDirection: 'row', marginTop: vs(20), width: '100%', justifyContent: 'space-between' }}>
+              <TouchableOpacity
+                style={[styles.closeModalBtn, { flex: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', marginRight: ms(10) }]}
+                onPress={() => setShowReturnConfirm(false)}
+              >
+                <Text style={[styles.closeModalBtnText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('cancel') || 'Cancel'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.closeModalBtn, { flex: 1, backgroundColor: theme.colors.primary }]}
+                onPress={async () => {
+                  try {
+                    await startReturnTripApi(trip_id.toString()).unwrap();
+                    setShowReturnConfirm(false);
+                    showAlert({
+                      title: t('success') || 'Success',
+                      message: t('return_trip_started') || 'Return trip started successfully.',
+                      singleButton: true,
+                      icon: 'checkmark-circle-outline',
+                    });
+                  } catch (err: any) {
+                    setShowReturnConfirm(false);
+                    showAlert({
+                      title: t('common.error') || 'Error',
+                      message: err?.data?.message || 'Failed to start return trip.',
+                      singleButton: true,
+                      icon: 'alert-circle-outline',
+                    });
+                  }
+                }}
+              >
+                <Text style={[styles.closeModalBtnText, { color: theme.colors.card }]} numberOfLines={1} adjustsFontSizeToFit>{t('confirm') || 'Confirm'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

@@ -193,6 +193,14 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
+    startReturnTrip: builder.mutation<any, string>({
+      query: (tripId) => ({
+        url: `/trips/${tripId}/start-return`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
     cancelTrip: builder.mutation<any, { tripId: string; cancel_reason: string; cancel_by: string; notes?: string }>({
       query: ({ tripId, ...body }) => ({
         url: `/trips/cancel/${tripId}`,
@@ -437,6 +445,7 @@ export const {
   useArrivingTripMutation,
   useArrivedTripMutation,
   useDestinationReachedTripMutation,
+  useStartReturnTripMutation,
   useCancelTripMutation,
   useSkipTripMutation,
   useCompleteTripMutation,
