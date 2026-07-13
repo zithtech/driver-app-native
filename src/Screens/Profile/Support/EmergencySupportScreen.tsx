@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     Share,
 } from 'react-native';
+import Geolocation from 'react-native-geolocation-service';
 import { useTheme } from '@react-navigation/native';
 import { useAlert } from '../../../context/AlertContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,20 +32,18 @@ import { hS as s, vS as vs, ms } from '../../../lib/scale';
 const EmergencyCard = ({ title, sub, icon, color, number, index, theme, handleCall }: any) => (
     <Animated.View entering={FadeInDown.delay(index * 150)}>
         <TouchableOpacity
-            style={[styles.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}
+            style={[styles.listItem, { borderBottomColor: theme.colors.border }]}
             onPress={() => handleCall(number)}
             activeOpacity={0.7}
         >
-            <View style={[styles.iconBox, { backgroundColor: color + '15' }]}>
-                <Ionicons name={icon} size={s(24)} color={color} />
+            <View style={styles.minimalIconBox}>
+                <Ionicons name={icon} size={s(22)} color={color} />
             </View>
             <View style={styles.cardInfo}>
                 <Text style={[styles.cardTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
                 <Text style={styles.cardSub}>{sub}</Text>
             </View>
-            <View style={[styles.callCircle, { backgroundColor: color }]}>
-                <Ionicons name="call" size={s(18)} color="#FFF" />
-            </View>
+            <Ionicons name="call-outline" size={s(20)} color={theme.colors.text} style={{ opacity: 0.4 }} />
         </TouchableOpacity>
     </Animated.View>
 );
@@ -108,18 +107,33 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
     };
 
     const handleShareLocation = async () => {
-        try {
-            // Placeholder coordinates - in real app, fetch from geolocation
-            const message = t('emergency_location_msg');
-            await Share.share({ message });
-        } catch (error) {
-            showAlert({
-      title: t('sos_triggered'),
-      message: t('emergency_services_notified'),
-      singleButton: true,
-      icon: 'shield-checkmark-outline',
-    });
-        }
+        Geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                const mapLink = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+                const message = `${t('emergency_location_msg')}\n\n${mapLink}`;
+                try {
+                    await Share.share({ message });
+                } catch (error) {
+                    showAlert({
+                        title: t('sos_triggered'),
+                        message: t('emergency_services_notified'),
+                        singleButton: true,
+                        icon: 'shield-checkmark-outline',
+                    });
+                }
+            },
+            (error) => {
+                console.log(error.code, error.message);
+                showAlert({
+                    title: 'Location Error',
+                    message: 'Unable to fetch your current location.',
+                    singleButton: true,
+                    icon: 'alert-circle',
+                });
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
     };
 
     return (
@@ -201,22 +215,22 @@ const EmergencySupportScreen: React.FC = ({ navigation }: any) => { // Kept navi
                 <View style={styles.safetyFeatures}>
                     <Text style={styles.sectionLabel} numberOfLines={1} adjustsFontSizeToFit>{t('safety_tools')}</Text>
                     <TouchableOpacity
-                        style={[styles.featureCard, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]}
+                        style={[styles.featureListItem, { borderBottomColor: theme.colors.border }]}
                         onPress={handleShareLocation}
                     >
                         <View style={styles.featureLeft}>
-                            <View style={styles.featureIconBox}>
-                                <Ionicons name="location" size={s(20)} color="#0369A1" />
+                            <View style={styles.minimalIconBox}>
+                                <Ionicons name="location-outline" size={s(22)} color="#0369A1" />
                             </View>
                             <View>
                                 <Text style={styles.featureTitle} numberOfLines={1} adjustsFontSizeToFit>{t('share_location')}</Text>
                                 <Text style={styles.featureSub}>{t('share_loc_desc')}</Text>
                             </View>
                         </View>
-                        <Ionicons name="share-social-outline" size={s(20)} color="#0369A1" />
+                        <Ionicons name="chevron-forward" size={s(20)} color={theme.colors.text} style={{ opacity: 0.4 }} />
                     </TouchableOpacity>
 
-                    <View style={[styles.tipsCard, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', borderColor: theme.colors.border }]}>
+                    <View style={styles.tipsSection}>
                         <Text style={[styles.tipsTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>💡 {t('safety_tips')}</Text>
                         <View style={styles.tipRow}>
                             <Ionicons name="checkmark-circle" size={s(16)} color="#10B981" />
@@ -303,105 +317,84 @@ const styles = StyleSheet.create({
     actionSection: {
         paddingHorizontal: s(20),
     },
-    card: {
+    listItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: s(16),
-        borderRadius: ms(20),
-        marginBottom: vs(12),
-        borderWidth: 1
+        paddingVertical: vs(16),
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
-    iconBox: {
-        width: s(52),
-        height: s(52),
-        borderRadius: ms(16),
-        alignItems: 'center',
+    minimalIconBox: {
+        width: s(40),
+        alignItems: 'flex-start',
         justifyContent: 'center',
     },
     cardInfo: {
         flex: 1,
-        marginLeft: s(16),
     },
     cardTitle: {
-        fontSize: ms(16),
-        fontWeight: '700',
+        fontSize: ms(15),
+        fontWeight: '600',
         marginBottom: vs(2),
     },
     cardSub: {
         fontSize: ms(13),
         color: '#64748B',
-        fontWeight: '500',
-    },
-    callCircle: {
-        width: s(40),
-        height: s(40),
-        borderRadius: s(20),
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     safetyFeatures: {
         paddingHorizontal: s(20),
-        marginTop: vs(20),
+        marginTop: vs(16),
     },
     sectionLabel: {
         fontSize: ms(12),
-        fontWeight: '800',
+        fontWeight: '700',
         color: '#94A3B8',
-        marginBottom: vs(12),
-        letterSpacing: 1.2,
+        marginBottom: vs(4),
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
-    featureCard: {
+    featureListItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: s(16),
-        borderRadius: ms(20),
+        paddingVertical: vs(16),
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        marginBottom: vs(16),
     },
     featureLeft: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
     },
-    featureIconBox: {
-        width: s(40),
-        height: s(40),
-        borderRadius: ms(12),
-        backgroundColor: '#FFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: s(12),
-    },
     featureTitle: {
         fontSize: ms(15),
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#0369A1',
+        marginBottom: vs(2),
     },
     featureSub: {
-        fontSize: ms(12),
-        color: '#0EA5E9',
-        marginTop: vs(2),
+        fontSize: ms(13),
+        color: '#64748B',
     },
-    tipsCard: {
-        marginTop: vs(16),
-        padding: s(16),
-        borderRadius: ms(20),
-        borderWidth: 1,
+    tipsSection: {
+        marginTop: vs(8),
+        paddingVertical: vs(12),
     },
     tipsTitle: {
-        fontSize: ms(15),
-        fontWeight: '800',
-        marginBottom: vs(12),
+        fontSize: ms(16),
+        fontWeight: '700',
+        marginBottom: vs(16),
     },
     tipRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: vs(8),
-        gap: s(8),
+        marginBottom: vs(12),
+        gap: s(12),
     },
     tipText: {
-        fontSize: ms(13),
+        fontSize: ms(14),
         color: '#64748B',
         flex: 1,
+        lineHeight: ms(20),
     },
 });
 

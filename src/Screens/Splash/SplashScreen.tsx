@@ -157,7 +157,7 @@ const SplashScreen = () => {
             maskElement={
               <View style={styles.maskElementContainer}>
                 <Animated.Text style={[styles.brandText, animatedLogoStyle]}>
-                  VDrive
+                  T2drive
                 </Animated.Text>
               </View>
             }

@@ -9,7 +9,7 @@ import { useGetMySubscriptionQuery } from '../../service/userApi';
 import moment from 'moment';
 import { useAlert } from '../../context/AlertContext';
 import AppStatusBar from '../../Components/AppStatusBar';
-
+import { Dashboard_Nav } from '../../Navigations/navigations';
 const { width } = Dimensions.get('window');
 
 const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
@@ -34,7 +34,10 @@ const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
   };
 
   const handleGoToDashboard = () => {
-    navigation.popToTop(); // Go back to Dashboard / Tabs
+    navigation.reset({
+      index: 0,
+      routes: [{ name: Dashboard_Nav }],
+    });
   };
 
   const formatDuration = (dur: string) => {

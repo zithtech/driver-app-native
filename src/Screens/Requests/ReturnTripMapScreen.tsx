@@ -35,7 +35,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import { useLocation } from '../../hooks/useLocation';
-import { useDestinationReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery, useWaitingTripMutation } from '../../service/driverApi';
+import { useReturnReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery } from '../../service/driverApi';
 import { clearAcceptedRide } from '../../redux/rideSlice';
 import { MapConnectionStatus, CancellationModal } from '../../Components';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
@@ -59,7 +59,7 @@ const darkMapStyle = [
   { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#17263c" }] }
 ];
 
-const DropMapScreen = ({ route }: any) => {
+const ReturnTripMapScreen = ({ route }: any) => {
   // 1. Core Hooks
   const { showAlert, hideAlert } = useAlert();
   const { showToast } = useToast();
@@ -79,8 +79,7 @@ const DropMapScreen = ({ route }: any) => {
   const unreadCount = useSelector((state: RootState) => state.chat?.unreadCounts[(ride.trip_id || ride.id)?.toString()] || 0);
 
   // 3. API Mutation Hooks
-  const [destinationReachedApi] = useDestinationReachedTripMutation();
-  const [waitingTripApi] = useWaitingTripMutation();
+  const [returnReachedTripApi] = useReturnReachedTripMutation();
   const [triggerSosApi] = useTriggerSosMutation();
   const [cancelTripApi, { isLoading: isCancelling }] = useCancelTripMutation();
 
@@ -100,8 +99,8 @@ const DropMapScreen = ({ route }: any) => {
   const simInterval = useRef<any>(null);
 
   // Normalize Drop-off coordinates
-  const drop_lat = parseFloat(ride.drop_lat?.toString() || "0");
-  const drop_lng = parseFloat(ride.drop_lng?.toString() || "0");
+  const drop_lat = parseFloat(ride.pickup_lat?.toString() || "0");
+  const drop_lng = parseFloat(ride.pickup_lng?.toString() || "0");
   const hasValidCoords = !!(drop_lat && drop_lng);
   const trip_id = ride?.trip_id || ride?.id || '';
 
@@ -581,19 +580,13 @@ const DropMapScreen = ({ route }: any) => {
           ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
           : (initialEta.current || 15);
 
-      if (ride?.ride_type === 'ROUND_TRIP') {
-        await waitingTripApi(trip_id.toString()).unwrap();
-        triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
-        navigation.replace('WaitingScreen', { ride });
-      } else {
-        await destinationReachedApi(trip_id.toString()).unwrap();
-        triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
-        navigation.replace('PaymentCollectionScreen', { 
-          ride,
-          actualDistance: distance,
-          actualDuration: calculatedDuration
-        });
-      }
+      await returnReachedTripApi(trip_id.toString()).unwrap();
+      triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
+      navigation.replace('PaymentCollectionScreen', { 
+        ride,
+        actualDistance: distance,
+        actualDuration: calculatedDuration
+      });
     } catch (error: any) {
       showAlert({
         title: t('common.error'),
@@ -602,7 +595,7 @@ const DropMapScreen = ({ route }: any) => {
         icon: 'alert-circle-outline',
       });
     }
-  }, [trip_id, destinationReachedApi, triggerHaptic, navigation, ride, distance, showAlert, t]);
+  }, [trip_id, returnReachedTripApi, triggerHaptic, navigation, ride, distance, showAlert, t]);
 
   const handleEndTrip = useCallback(() => {
     if (distance > 0.5) {
@@ -1987,4 +1980,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default DropMapScreen;
+export default ReturnTripMapScreen;
