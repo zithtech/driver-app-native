@@ -13,6 +13,7 @@ import {
   RefreshControl,
   Modal,
   Image,
+  TextInput,
 } from 'react-native';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -27,6 +28,7 @@ import { PickupMapScreen_Nav } from '../../Navigations/navigations';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { useAlert } from '../../context/AlertContext';
+import { useToast } from '../../context/ToastContext';
 import { hS as s, vS as vs, mS as ms } from '../../lib/scale';
 import RideSkeleton from './components/RideSkeleton';
 import { setMyAcceptedRideId, setCurrentRide, Ride } from '../../redux/rideSlice';
@@ -38,9 +40,73 @@ import socketService from '../../service/socketService';
 
 
 type SortOption = 'time' | 'price' | 'distance';
-type FilterType = 'all' | 'local' | 'outstation' | 'one_way' | 'round_trip' | 'high_value';
+type FilterType = 'all' | 'outstation' | 'one_way' | 'round_trip' | 'high_value';
 
-const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navigation, cancelRide, passRide, acceptRide, startHeadingToPickup, acceptingRideId, acceptedSuccessId, handlePressIn, handlePressOut, ms, vs, s, styles }: any) => {
+
+const SimpleRideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, ms, vs, s, styles, onPress }: any) => {
+  const accepted = item.trip_status === 'ACCEPTED';
+  const isDimmed = !!acceptedRide && !accepted;
+  const { text: timeText } = getRemainingTime(item.startTime);
+  const cardBgColor = isDimmed ? (isDark ? theme.colors.background : '#F9FAFB') : theme.colors.card;
+
+  const formatTime = (time: string | number | Date) => new Date(time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
+  const formatDate = (time: string | number | Date) => new Date(time).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' });
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={() => onPress(item)}
+      style={[
+        styles.card,
+        {
+          backgroundColor: cardBgColor,
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+          opacity: isDimmed ? 0.7 : 1,
+        },
+        accepted && styles.acceptedCard,
+      ]}
+    >
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(12) }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(6) }}>
+          <Ionicons name="calendar-outline" size={ms(14)} color={isDark ? '#93C5FD' : '#2563EB'} />
+          <Text style={{ fontSize: ms(13), fontWeight: '700', color: isDark ? '#93C5FD' : '#2563EB' }}>
+            {formatDate(item.startTime)} • {formatTime(item.startTime)}
+          </Text>
+        </View>
+        <Text style={{ fontSize: ms(16), fontWeight: '800', color: '#16A34A' }}>{t('currency_symbol')}{item.total_fare}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: vs(4) }}>
+        <Ionicons name="location-outline" size={ms(14)} color={theme.colors.textMuted} />
+        <Text style={{ fontSize: ms(13), color: theme.colors.text, marginLeft: s(6), flex: 1 }} numberOfLines={1}>{item.pickup_address}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: vs(4) }}>
+        <Ionicons name="navigate-outline" size={ms(14)} color={theme.colors.textMuted} />
+        <Text style={{ fontSize: ms(13), color: theme.colors.text, marginLeft: s(6), flex: 1 }} numberOfLines={1}>{item.drop_address}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: vs(12) }}>
+        <View style={{ flexDirection: 'row', gap: ms(8) }}>
+          <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
+            <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t(item.ride_type || 'ONE_WAY')}</Text>
+          </View>
+          {!accepted && (
+            <View style={[styles.remainingTag, { backgroundColor: '#FFF7ED' }]}>
+              <Ionicons name="time-outline" size={ms(10)} color="#F97316" />
+              <Text style={[styles.remainingTagText, { color: '#F97316' }]}>{timeText}</Text>
+            </View>
+          )}
+        </View>
+        {accepted && (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="checkmark-circle" size={ms(14)} color={theme.colors.primary} />
+            <Text style={{ fontSize: ms(12), fontWeight: '700', color: theme.colors.primary, marginLeft: s(4) }}>{t('accepted')}</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const RideDetailsModalCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navigation, cancelRide, passRide, acceptRide, startHeadingToPickup, acceptingRideId, acceptedSuccessId, handlePressIn, handlePressOut, ms, vs, s, styles }: any) => {
   const accepted = item.trip_status === 'ACCEPTED';
   const isDimmed = !!acceptedRide && !accepted;
   const { text: timeText } = getRemainingTime(item.startTime);
@@ -112,6 +178,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
         styles.card as any,
         {
           backgroundColor: cardBgColor,
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
           opacity: isDimmed ? 0.7 : 1,
         },
         accepted && styles.acceptedCard,
@@ -201,7 +268,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
           </Text>
         </View>
         <View style={styles.statsDot} />
-        <View style={[styles.ecoBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.1)' : '#F0FDF4' }]}>
+        <View style={styles.ecoBadge}>
           <Ionicons name="leaf-outline" size={ms(12)} color="#22C55E" />
           <Text style={[styles.ecoBadgeText, { color: '#22C55E' }]}>{t('eco_friendly')}</Text>
         </View>
@@ -228,7 +295,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
       </View>
 
       {accepted && (
-        <View style={[styles.passengerBox, { backgroundColor: isDark ? theme.colors.background : '#F8FAFC' }]}>
+        <View style={styles.passengerBox}>
           <View style={styles.passengerMain}>
             <View style={[styles.avatar, { backgroundColor: '#E0F2C1' }]}>
               <Text style={[styles.avatarText, { color: theme.colors.primary }]}>{initials}</Text>
@@ -236,7 +303,7 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
             <View>
               <Text style={[styles.psgrName, { color: '#111827' }]}>{item.passenger}</Text>
               <View style={styles.psgrDetailRow}>
-                <Text style={[styles.psgrDetail, { color: '#16A34A' }]}>✓ {t('verified_passenger')}</Text>
+                <Text style={[styles.psgrDetail, { color: '#16A34A' }]}>{t('verified_passenger')}</Text>
                 <View style={styles.ratingBadge}>
                   <Ionicons name="star" size={ms(12)} color="#F59E0B" />
                   <Text style={styles.ratingText}>{item.rating?.toFixed(1) || '5.0'}</Text>
@@ -252,16 +319,18 @@ const RideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navi
 
       <View style={styles.footerActions}>
         {accepted ? (
-          <View style={styles.buttonGroupVertical}>
+          <View style={styles.buttonGroupHorizontal}>
             <TouchableOpacity
-              style={[styles.primaryBtnLarge, { backgroundColor: theme.colors.primary }]}
+              style={[styles.textBtn, { flex: 0.5 }]}
+              onPress={() => cancelRide(item)}
+            >
+              <Text style={styles.textBtnRed} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.primaryBtnLarge, { flex: 1, backgroundColor: theme.colors.primary, marginBottom: 0 }]}
               onPress={() => startHeadingToPickup(item)}
             >
-              <Ionicons name="navigate" size={ms(18)} color="#FFF" style={{ marginRight: s(8) }} />
               <Text style={styles.primaryBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('navigate_pickup')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.textBtn} onPress={() => cancelRide(item)}>
-              <Text style={styles.textBtnRed} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -342,6 +411,7 @@ const ScheduledRidesScreen = () => {
   const route = useRoute<any>();
   const { theme, isDark } = useAppTheme();
   const { showAlert } = useAlert();
+  const { showToast } = useToast();
   const { triggerHaptic } = useHaptic();
 
   // Access online status from Redux
@@ -361,14 +431,18 @@ const ScheduledRidesScreen = () => {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'today' | 'upcoming'>('today');
+  const [activeTab, setActiveTab] = useState<'accepted' | 'today' | 'upcoming'>('today');
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [sortBy, setSortBy] = useState<SortOption>('time');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showNavigateModal, setShowNavigateModal] = useState(false);
+  const [rideToNavigate, setRideToNavigate] = useState<Ride | null>(null);
   const [rideToCancel, setRideToCancel] = useState<Ride | null>(null);
+  const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [selectedReason, setSelectedReason] = useState<string>('');
+  const [otherReasonText, setOtherReasonText] = useState<string>('');
   const [containerWidth, setContainerWidth] = useState(0);
   const dispatch = useDispatch();
   const myAcceptedRideId = useSelector((state: any) => state.ride.myAcceptedRideId);
@@ -401,11 +475,19 @@ const ScheduledRidesScreen = () => {
       refetchTrips();
     });
 
+    socketService.on('TRIP_REMOVED', (data: any) => {
+      if (data?.tripId) {
+        setRides(prev => prev.filter(r => String(r.trip_id) !== String(data.tripId) && String(r.id) !== String(data.tripId)));
+      }
+      refetchTrips();
+    });
+
     return () => {
       socketService.offTripUpdate();
       socketService.off('NEW_SCHEDULED_RIDE');
       socketService.off('SCHEDULED_RIDE_TAKEN');
       socketService.off('SCHEDULED_RIDE_CANCELLED');
+      socketService.off('TRIP_REMOVED');
     };
   }, [refetchTrips, user.driverId, user.id, dispatch, showAlert, t]);
 
@@ -415,14 +497,14 @@ const ScheduledRidesScreen = () => {
 
   /* ================= HELPERS ================= */
 
-  const switchTab = useCallback((tab: 'today' | 'upcoming') => {
+  const switchTab = useCallback((tab: 'accepted' | 'today' | 'upcoming') => {
     if (tab === activeTab) { return; }
 
     setActiveTab(tab);
     triggerHaptic(HapticFeedbackTypes.impactLight);
 
     Animated.spring(tabAnim, {
-      toValue: tab === 'today' ? 0 : 1,
+      toValue: tab === 'accepted' ? 0 : tab === 'today' ? 1 : 2,
       useNativeDriver: true,
       friction: 8,
       tension: 50,
@@ -430,10 +512,16 @@ const ScheduledRidesScreen = () => {
   }, [activeTab, triggerHaptic, tabAnim]);
 
   useEffect(() => {
-    if (route.params?.initialTab === 'upcoming') {
-      switchTab('upcoming');
+    if (route.params?.initialTab) {
+      switchTab(route.params.initialTab as any);
     }
   }, [route.params?.initialTab, switchTab]);
+
+  useEffect(() => {
+    if (myAcceptedRideId) {
+      switchTab('accepted');
+    }
+  }, [myAcceptedRideId, switchTab]);
 
   useEffect(() => {
     if (isTripsLoading && !rawTrips) {
@@ -456,12 +544,12 @@ const ScheduledRidesScreen = () => {
           drop_address: trip.drop_address || trip.drop,
           total_fare: typeof trip.total_fare === 'number' ? trip.total_fare : parseFloat(trip.total_fare || trip.price || '0'),
           distance_km: trip.distance_km ? parseFloat(trip.distance_km) : parseFloat(trip.distance || '0'),
-          trip_status: trip.trip_status || trip.status,
+          trip_status: (trip.trip_status || trip.status || '').toString().toUpperCase(),
           scheduled_start_time: timeVal,
           startTime: new Date(timeVal).getTime(), // Added for RideCard display & timer logic
-          passenger: trip.passenger || trip.passenger_details?.name || trip.passenger_name || trip.customer?.name || 'Customer',
-          phone: trip.phone || trip.passenger_details?.phone || trip.customer?.phone || trip.passenger_phone || '',
-          rating: typeof trip.rating === 'number' ? trip.rating : (typeof trip.passenger_details?.rating === 'number' ? trip.passenger_details.rating : (typeof trip.customer?.rating === 'number' ? trip.customer.rating : 5.0)),
+          passenger: trip.passenger || trip.passenger_details?.name || trip.user_details?.full_name || trip.user_details?.first_name || trip.passenger_name || trip.customer?.name || 'Customer',
+          phone: trip.phone || trip.passenger_details?.phone || trip.user_details?.phone_number || trip.customer?.phone || trip.passenger_phone || '',
+          rating: typeof trip.rating === 'number' ? trip.rating : (typeof trip.passenger_details?.rating === 'number' ? trip.passenger_details.rating : (typeof trip.user_details?.rating === 'number' ? trip.user_details.rating : (typeof trip.customer?.rating === 'number' ? trip.customer.rating : 5.0))),
           paymentType: trip.paymentType || trip.payment_method || trip.paymentType || 'CASH',
           scheduled_status: trip.scheduled_status,
           re_dispatch_count: trip.re_dispatch_count,
@@ -505,18 +593,17 @@ const ScheduledRidesScreen = () => {
 
   const baseEligibleRides = useMemo(() => {
     const subscription = subData?.data?.subscription || user?.subscription || user?.subscription_details;
-    const billingCycle = subscription?.billing_cycle; 
+    const billingCycle = subscription?.billing_cycle;
     const planName = (subscription?.plan?.name || subscription?.plan?.plan_name || subscription?.plan_name || '').toLowerCase();
-    
-    return rides.filter((ride) => {
-      // 1. ALWAYS show your own accepted ride at the top, bypassing other filters
-      if (ride.trip_id === myAcceptedRideId) { return true; }
 
+    return rides.filter((ride) => {
       // Strictly include ONLY scheduled rides in this screen
       if (ride.booking_type !== 'SCHEDULED') { return false; }
 
       // 2. No new scheduled rides if it's a 'day' plan or no subscription
       if (billingCycle === 'day' || !billingCycle) {
+        // If it's my accepted ride, allow it anyway so it shows in the accepted tab
+        if (ride.trip_id === myAcceptedRideId) return true;
         return false;
       }
 
@@ -526,15 +613,15 @@ const ScheduledRidesScreen = () => {
       const isBasic = planName.includes('basic') || (!isPremium && !isElite); // Default to basic if unknown
 
       const type = (ride.ride_type || ride.service_type || '').toLowerCase();
-      
+
       if (isBasic) {
-        // Basic: only local, one_way
-        if (type !== 'local' && type !== 'one_way') return false;
+        // Basic: only one_way
+        if (type !== 'one_way') return false;
       } else if (isElite) {
         // Elite: local, one_way, outstation (NO round_trip)
         if (type === 'round_trip') return false;
       }
-      
+
       // Premium allows all
       return true;
     });
@@ -550,16 +637,25 @@ const ScheduledRidesScreen = () => {
 
       const rideDate = new Date(ride.scheduled_start_time);
       const isToday = rideDate >= today && rideDate < tomorrow;
-      const matchesTab = activeTab === 'today' ? isToday : !isToday;
+      const isMine = ride.trip_id === myAcceptedRideId;
+
+      let matchesTab = false;
+      if (activeTab === 'accepted') {
+        matchesTab = isMine;
+      } else if (activeTab === 'today') {
+        matchesTab = isToday && !isMine;
+      } else if (activeTab === 'upcoming') {
+        matchesTab = !isToday && !isMine;
+      }
 
       if (!matchesTab) { return false; }
 
       // Filter by Type (Categories)
       if (filterType !== 'all') {
         const type = (ride.ride_type || ride.service_type || '').toLowerCase();
-        
-        if (filterType === 'local') { if (type !== 'local') return false; }
-        else if (filterType === 'outstation') { if (type !== 'outstation') return false; }
+
+        // Local condition removed
+        if (filterType === 'outstation') { if (type !== 'outstation') return false; }
         else if (filterType === 'one_way') { if (type !== 'one_way') return false; }
         else if (filterType === 'round_trip') { if (type !== 'round_trip') return false; }
         else if (filterType === 'high_value') {
@@ -574,9 +670,8 @@ const ScheduledRidesScreen = () => {
         return false;
       }
 
-      const isMine = ride.trip_id === myAcceptedRideId;
+      // If it's another driver's active/accepted ride, exclude it
       if (!isMine) {
-        // If not mine, exclude others' active/accepted rides
         if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
           return false;
         }
@@ -629,14 +724,16 @@ const ScheduledRidesScreen = () => {
       return true;
     });
 
+    const acceptedRides = visibleRides.filter(r => r.trip_id === myAcceptedRideId);
     const todayRides = visibleRides.filter(r => {
       const d = new Date(r.scheduled_start_time);
-      return d >= today && d < tomorrow;
+      return d >= today && d < tomorrow && r.trip_id !== myAcceptedRideId;
     });
 
     return {
+      accepted: acceptedRides.length,
       today: todayRides.length,
-      upcoming: visibleRides.length - todayRides.length,
+      upcoming: visibleRides.length - todayRides.length - acceptedRides.length,
     };
   }, [baseEligibleRides, myAcceptedRideId]);
 
@@ -648,37 +745,40 @@ const ScheduledRidesScreen = () => {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const sameTabRides = baseEligibleRides.filter(r => {
-        const status = r.trip_status;
-        if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
+      const status = r.trip_status;
+      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
+        return false;
+      }
+
+      const isMine = r.trip_id === myAcceptedRideId;
+      if (!isMine) {
+        // Exclude others' active/accepted rides
+        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
           return false;
         }
+      }
 
-        const isMine = r.trip_id === myAcceptedRideId;
-        if (!isMine) {
-          // Exclude others' active/accepted rides
-          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
-            return false;
-          }
-        }
+      const d = new Date(r.scheduled_start_time);
+      const isToday = d >= today && d < tomorrow;
 
-        const d = new Date(r.scheduled_start_time);
-        const isToday = d >= today && d < tomorrow;
-        return activeTab === 'today' ? isToday : !isToday;
+      if (activeTab === 'accepted') return isMine;
+      if (activeTab === 'today') return isToday && !isMine;
+      return !isToday && !isMine;
     });
 
     const getCount = (type: FilterType) => {
-        if (type === 'all') return sameTabRides.length;
-        if (type === 'high_value') return sameTabRides.filter(r => r.total_fare >= 300).length;
-        return sameTabRides.filter(r => (r.ride_type || r.service_type || '').toLowerCase() === type).length;
+      if (type === 'all') return sameTabRides.length;
+      if (type === 'high_value') return sameTabRides.filter(r => r.total_fare >= 300).length;
+      return sameTabRides.filter(r => (r.ride_type || r.service_type || '').toLowerCase() === type).length;
     };
 
     return {
-        all: getCount('all'),
-        local: getCount('local'),
-        outstation: getCount('outstation'),
-        one_way: getCount('one_way'),
-        round_trip: getCount('round_trip'),
-        high_value: getCount('high_value'),
+      all: getCount('all'),
+      // local: getCount('local'),
+      outstation: getCount('outstation'),
+      one_way: getCount('one_way'),
+      round_trip: getCount('round_trip'),
+      high_value: getCount('high_value'),
     };
   }, [baseEligibleRides, activeTab, myAcceptedRideId]);
 
@@ -754,15 +854,15 @@ const ScheduledRidesScreen = () => {
     const rideStartTime = moment(ride.scheduled_start_time || ride.startTime);
 
     if (expiryDate.isValid() && rideStartTime.isValid()) {
-        if (rideStartTime.isAfter(expiryDate)) {
-            showAlert({
-                title: t('subscription_expiry_warning'),
-                message: t('subscription_expires_before_ride'),
-                singleButton: true,
-                icon: 'time-outline',
-            });
-            return;
-        }
+      if (rideStartTime.isAfter(expiryDate)) {
+        showAlert({
+          title: t('subscription_expiry_warning'),
+          message: t('subscription_expires_before_ride'),
+          singleButton: true,
+          icon: 'time-outline',
+        });
+        return;
+      }
     }
 
     if (checkOverlap(ride)) {
@@ -793,6 +893,7 @@ const ScheduledRidesScreen = () => {
       // Delay to let the driver see the success state
       setTimeout(() => {
         setAcceptedSuccessId(null);
+        setSelectedRide(null);
         refetchTrips();
       }, 1500);
 
@@ -811,6 +912,7 @@ const ScheduledRidesScreen = () => {
           icon: 'close-circle-outline',
           isDestructive: true,
         });
+        setSelectedRide(null);
         refetchTrips();
       } else if (isAlreadyAccepted) {
         showAlert({
@@ -819,6 +921,7 @@ const ScheduledRidesScreen = () => {
           singleButton: true,
           icon: 'information-circle-outline',
         });
+        setSelectedRide(null);
         refetchTrips();
       } else {
         showAlert({
@@ -866,11 +969,9 @@ const ScheduledRidesScreen = () => {
   const startHeadingToPickup = async (ride: Ride) => {
     // 1. Online Status Check
     if (!isOnline) {
-      showAlert({
-        title: t('go_online_required'),
+      showToast({
         message: t('must_go_online_to_start_ride'),
-        singleButton: true,
-        icon: 'eye-off-outline',
+        type: 'error',
       });
       return;
     }
@@ -879,7 +980,7 @@ const ScheduledRidesScreen = () => {
     try {
       const tripResult = await getTripById(ride.trip_id).unwrap();
       const status = tripResult?.data?.trip_status || tripResult?.data?.status || tripResult?.trip_status;
-      
+
       if (status === 'CANCELLED' || status === 'CANCEL') {
         showAlert({
           title: t('ride_cancelled') || 'Ride Cancelled',
@@ -896,51 +997,61 @@ const ScheduledRidesScreen = () => {
       console.warn('Status check failed, proceeding with caution:', err);
     }
 
-    // 3. Confirmation Modal
-    showAlert({
-      title: t('start_ride_confirmation'),
-      message: t('confirm_start_heading_pickup'),
-      confirmText: t('confirm'),
-      cancelText: t('cancel'),
-      onConfirm: async () => {
-        try {
-          triggerHaptic(HapticFeedbackTypes.impactMedium);
-          
-          // 1. Notify backend (Updates status to ARRIVING)
-          await arrivingTrip(ride.trip_id).unwrap();
+    // 3. Open Custom Confirmation Modal
+    setRideToNavigate(ride);
+    setShowNavigateModal(true);
+  };
 
-          // 2. Production Flow: Ensure driver state is updated before navigating
-          const { setDriverStatus } = require('../../redux/userSlice');
-          dispatch(setDriverStatus('ON_TRIP'));
-          dispatch(setMyAcceptedRideId(ride.trip_id));
-          dispatch(setCurrentRide(ride));
-          
-          // 3. Notify rider via socket (Redundant but good for legacy / real-time)
-          socketService.emitEnRoute(ride.trip_id, user.driverId || user.id);
-          
-          // 4. Navigate
-          navigation.navigate(PickupMapScreen_Nav, { ride });
-        } catch (error) {
-          console.error('Failed to transition to arriving status:', error);
-          showAlert({
-            title: t('error'),
-            message: t('failed_to_start_navigation'),
-            singleButton: true,
-            icon: 'alert-circle-outline'
-          });
-        }
-      },
-      icon: 'navigate-circle-outline',
-    });
+  const confirmNavigation = async () => {
+    if (!rideToNavigate) return;
+    try {
+      triggerHaptic(HapticFeedbackTypes.impactMedium);
+
+      // 1. Notify backend (Updates status to ARRIVING)
+      await arrivingTrip(rideToNavigate.trip_id).unwrap();
+
+      // 2. Production Flow: Ensure driver state is updated before navigating
+      const { setDriverStatus } = require('../../redux/userSlice');
+      dispatch(setDriverStatus('ON_TRIP'));
+      dispatch(setMyAcceptedRideId(rideToNavigate.trip_id));
+      dispatch(setCurrentRide(rideToNavigate));
+
+      // 3. Notify rider via socket (Redundant but good for legacy / real-time)
+      socketService.emitEnRoute(rideToNavigate.trip_id, user.driverId || user.id);
+
+      // 4. Navigate
+      setShowNavigateModal(false);
+      setRideToNavigate(null);
+      navigation.navigate(PickupMapScreen_Nav, { ride: rideToNavigate });
+    } catch (error) {
+      console.error('Failed to transition to arriving status:', error);
+      showToast({
+        message: t('failed_to_start_navigation'),
+        type: 'error'
+      });
+      setShowNavigateModal(false);
+    }
   };
 
   const confirmCancelRide = async () => {
     if (!rideToCancel || !selectedReason) { return; }
+    if (selectedReason === 'reason_other' && !otherReasonText.trim()) { return; }
+
+    const backendReasonMap: Record<string, string> = {
+      'reason_vehicle_problem': 'VEHICLE_PROBLEM',
+      'reason_personal_emergency': 'PERSONAL_EMERGENCY',
+      'reason_traffic': 'reason_heavy_traffic',
+      'rider_no_show': 'NO_SHOW',
+      'reason_other': 'reason_other',
+    };
+
+    const finalBackendReason = backendReasonMap[selectedReason] || 'OTHER';
 
     try {
       await cancelTripMutation({
         tripId: rideToCancel.trip_id,
-        cancel_reason: selectedReason,
+        cancel_reason: finalBackendReason,
+        notes: selectedReason === 'reason_other' ? otherReasonText.trim() : undefined,
         cancel_by: 'DRIVER'
       }).unwrap();
 
@@ -951,23 +1062,19 @@ const ScheduledRidesScreen = () => {
       setRideToCancel(null);
       dispatch(setMyAcceptedRideId(null));
       refetchTrips();
-      showAlert({
-        title: t('ride_cancelled'),
-        message: t('no_cancellation_fee'),
-        singleButton: true,
-        icon: 'checkmark-circle-outline',
+      showToast({
+        message: t('ride_cancelled'),
+        type: 'success',
       });
     } catch (error: any) {
       console.error('Failed to cancel ride', error);
       const isAlreadyCancelled = error?.data?.message?.toLowerCase().includes('already cancelled');
 
-      showAlert({
-        title: isAlreadyCancelled ? (t('ride_cancelled') || 'Ride Cancelled') : t('error'),
-        message: isAlreadyCancelled 
+      showToast({
+        message: isAlreadyCancelled
           ? (t('rider_cancelled_msg') || 'The ride has already been cancelled.')
           : (error.data?.message || 'Failed to cancel ride. Please try again.'),
-        singleButton: true,
-        icon: isAlreadyCancelled ? 'checkmark-circle-outline' : 'alert-circle-outline',
+        type: isAlreadyCancelled ? 'success' : 'error',
       });
 
       if (isAlreadyCancelled) {
@@ -1043,6 +1150,39 @@ const ScheduledRidesScreen = () => {
     </Modal>
   );
 
+  const renderNavigateModal = () => (
+    <Modal visible={showNavigateModal} transparent animationType="slide">
+      <Pressable style={styles.modalOverlay} onPress={() => setShowNavigateModal(false)}>
+        <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+          <View style={styles.dragHandle} />
+          
+          <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
+            {t('start_ride_confirmation')}
+          </Text>
+          <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginHorizontal: ms(20) }]}>
+            {t('confirm_start_heading_pickup')}
+          </Text>
+
+          <View style={styles.sheetButtonsRow}>
+            <TouchableOpacity 
+              style={styles.sheetCancelBtn} 
+              onPress={() => setShowNavigateModal(false)}
+            >
+              <Text style={styles.sheetCancelBtnText}>{t('cancel')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
+              onPress={confirmNavigation}
+            >
+              <Text style={styles.sheetConfirmBtnText}>{t('confirm')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+
   const renderCancelModal = () => (
     <Modal
       visible={showCancelModal}
@@ -1052,13 +1192,13 @@ const ScheduledRidesScreen = () => {
     >
       <Pressable style={styles.modalOverlay} onPress={() => setShowCancelModal(false)}>
         <View style={[styles.cancelModalContainer, { backgroundColor: theme.colors.card }]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-              {t('cancel_trip_title')}
+          <View style={{ alignItems: 'center', marginBottom: vs(16) }}>
+            <View style={{ width: ms(40), height: ms(4), backgroundColor: isDark ? '#333' : '#E2E8F0', borderRadius: ms(2) }} />
+          </View>
+          <View style={[styles.modalHeader, { justifyContent: 'center' }]}>
+            <Text style={[styles.modalTitle, { color: theme.colors.text, marginBottom: 0 }]}>
+              {t('cancel_trip')}
             </Text>
-            <TouchableOpacity onPress={() => setShowCancelModal(false)}>
-              <Ionicons name="close" size={ms(24)} color={theme.colors.text} />
-            </TouchableOpacity>
           </View>
 
           <Text style={[styles.modalSubtitle, { color: theme.colors.paragraphText }]}>
@@ -1073,54 +1213,99 @@ const ScheduledRidesScreen = () => {
               'rider_no_show',
               'reason_other',
             ].map((reasonKey) => (
-              <TouchableOpacity
-                key={reasonKey}
-                onPress={() => setSelectedReason(reasonKey)}
-                style={[
-                  styles.reasonItem,
-                  selectedReason === reasonKey && {
-                    backgroundColor: theme.colors.primary + '10',
-                    borderColor: theme.colors.primary,
-                  },
-                ]}
-              >
-                <Text
+              <View key={reasonKey}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedReason(reasonKey);
+                    if (reasonKey !== 'reason_other') setOtherReasonText('');
+                  }}
                   style={[
-                    styles.reasonText,
-                    { color: theme.colors.text },
+                    styles.reasonItem,
+                    { backgroundColor: 'transparent', borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderBottomWidth: 1 },
                     selectedReason === reasonKey && {
-                      color: theme.colors.primary,
-                      fontWeight: '700',
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
+                      borderColor: 'transparent',
+                      borderBottomColor: 'transparent',
                     },
                   ]}
                 >
-                  {t(reasonKey)}
-                </Text>
-                <View
-                  style={[
-                    styles.radioCircle,
-                    { borderColor: theme.colors.border },
-                    selectedReason === reasonKey && { borderColor: theme.colors.primary },
-                  ]}
-                >
-                  {selectedReason === reasonKey && <View style={[styles.radioDot, { backgroundColor: theme.colors.primary }]} />}
-                </View>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.reasonText,
+                      { color: theme.colors.text },
+                      selectedReason === reasonKey && {
+                        fontWeight: '700',
+                      },
+                    ]}
+                  >
+                    {t(reasonKey)}
+                  </Text>
+                  <View
+                    style={[
+                      styles.radioCircle,
+                      { borderColor: isDark ? theme.colors.border : '#CBD5E1' },
+                      selectedReason === reasonKey && { borderColor: '#EF4444' },
+                    ]}
+                  >
+                    {selectedReason === reasonKey && <View style={[styles.radioDot, { backgroundColor: '#EF4444' }]} />}
+                  </View>
+                </TouchableOpacity>
+
+                {reasonKey === 'reason_other' && selectedReason === 'reason_other' && (
+                  <View style={{ paddingHorizontal: ms(16), paddingBottom: vs(12), backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC', borderBottomLeftRadius: ms(12), borderBottomRightRadius: ms(12) }}>
+                    <TextInput
+                      style={[
+                        styles.otherReasonInput, 
+                        { 
+                          color: theme.colors.text, 
+                          borderColor: isDark ? theme.colors.border : '#E2E8F0', 
+                          backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFF' 
+                        }
+                      ]}
+                      placeholder={t('type_reason_here', 'Please specify...')}
+                      placeholderTextColor={isDark ? theme.colors.textMuted : '#9CA3AF'}
+                      value={otherReasonText}
+                      onChangeText={setOtherReasonText}
+                      multiline
+                    />
+                  </View>
+                )}
+              </View>
             ))}
           </View>
 
-          <TouchableOpacity
-            disabled={!selectedReason}
-            style={[
-              styles.confirmCancelBtn,
-              { backgroundColor: selectedReason ? '#EF4444' : '#E5E7EB' },
-            ]}
-            onPress={confirmCancelRide}
-          >
-            <Text style={[styles.confirmCancelBtnText, { color: selectedReason ? '#FFF' : '#9CA3AF' }]}>
-              {t('confirm_cancellation')}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: ms(12) }}>
+            <TouchableOpacity
+              style={[
+                styles.confirmCancelBtn,
+                { 
+                  flex: 1,
+                  backgroundColor: isDark ? theme.colors.border : '#F3F4F6',
+                },
+              ]}
+              onPress={() => setShowCancelModal(false)}
+            >
+              <Text style={[styles.confirmCancelBtnText, { color: theme.colors.text }]}>
+                {t('cancel')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              disabled={!selectedReason || (selectedReason === 'reason_other' && !otherReasonText.trim())}
+              style={[
+                styles.confirmCancelBtn,
+                { 
+                  flex: 1,
+                  backgroundColor: 'transparent',
+                },
+              ]}
+              onPress={confirmCancelRide}
+            >
+              <Text style={[styles.confirmCancelBtnText, { color: selectedReason ? '#EF4444' : (isDark ? theme.colors.textMuted : '#9CA3AF') }]}>
+                {t('confirm_cancellation')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Pressable>
     </Modal>
@@ -1178,12 +1363,12 @@ const ScheduledRidesScreen = () => {
                 styles.slidingPill,
                 {
                   backgroundColor: theme.colors.card,
-                  width: containerWidth / 2,
+                  width: containerWidth / 3,
                   transform: [
                     {
                       translateX: tabAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, containerWidth / 2],
+                        inputRange: [0, 1, 2],
+                        outputRange: [0, containerWidth / 3, (containerWidth / 3) * 2],
                       }),
                     },
                   ],
@@ -1191,6 +1376,31 @@ const ScheduledRidesScreen = () => {
               ]}
             />
           )}
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => switchTab('accepted')}
+          >
+            <View style={styles.tabContent}>
+              <Text style={[
+                styles.tabText,
+                { color: activeTab === 'accepted' ? theme.colors.primary : '#64748B' },
+                activeTab === 'accepted' && styles.activeTabText,
+              ]} numberOfLines={1} adjustsFontSizeToFit>
+                {t('accepted')}
+              </Text>
+              <Animated.View
+                style={[
+                  styles.countBadge,
+                  {
+                    backgroundColor: activeTab === 'accepted' ? theme.colors.primary : '#64748B',
+                    transform: [{ scale: countPulseAnim }]
+                  }
+                ]}
+              >
+                <Text style={styles.countBadgeText}>{counts.accepted}</Text>
+              </Animated.View>
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.tab}
             onPress={() => switchTab('today')}
@@ -1249,63 +1459,63 @@ const ScheduledRidesScreen = () => {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={['all', 'local', 'outstation', 'one_way', 'round_trip', 'high_value'] as FilterType[]}
+          data={['all', 'one_way', 'round_trip', 'outstation', 'high_value'] as FilterType[]}
           keyExtractor={(item) => item}
           contentContainerStyle={styles.filterList}
           renderItem={({ item }) => {
             const count = filterCounts[item];
             const getIcon = () => {
-                switch(item) {
-                    case 'all': return 'list-outline';
-                    case 'local': return 'car-outline';
-                    case 'outstation': return 'map-outline';
-                    case 'one_way': return 'arrow-forward-outline';
-                    case 'round_trip': return 'repeat-outline';
-                    case 'high_value': return 'star-outline';
-                    default: return 'filter-outline';
-                }
+              switch (item) {
+                case 'all': return 'list-outline';
+                // case 'local': return 'car-outline';
+                case 'outstation': return 'map-outline';
+                case 'one_way': return 'arrow-forward-outline';
+                case 'round_trip': return 'repeat-outline';
+                case 'high_value': return 'star-outline';
+                default: return 'filter-outline';
+              }
             };
-            
+
             return (
-                <TouchableOpacity
+              <TouchableOpacity
                 onPress={() => {
-                    setFilterType(item);
-                    triggerHaptic(HapticFeedbackTypes.impactLight);
+                  setFilterType(item);
+                  triggerHaptic(HapticFeedbackTypes.impactLight);
                 }}
                 style={[
-                    styles.filterChip,
-                    {
+                  styles.filterChip,
+                  {
                     backgroundColor: filterType === item ? theme.colors.primary : (isDark ? theme.colors.card : '#FFF'),
                     borderColor: filterType === item ? theme.colors.primary : (isDark ? theme.colors.border : '#E2E8F0'),
-                    },
+                  },
                 ]}
-                >
-                    <Ionicons 
-                        name={getIcon()} 
-                        size={ms(16)} 
-                        color={filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B')} 
-                        style={{ marginRight: ms(6) }} 
-                    />
+              >
+                <Ionicons
+                  name={getIcon()}
+                  size={ms(16)}
+                  color={filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B')}
+                  style={{ marginRight: ms(6) }}
+                />
+                <Text style={[
+                  styles.filterChipText,
+                  { color: filterType === item ? '#FFF' : (isDark ? theme.colors.text : '#64748B') },
+                ]} numberOfLines={1} adjustsFontSizeToFit>
+                  {t(item)}
+                </Text>
+                {count > 0 && (
+                  <View style={[
+                    styles.filterCountBadge,
+                    { backgroundColor: filterType === item ? 'rgba(255,255,255,0.2)' : (isDark ? theme.colors.border : '#E2E8F0') }
+                  ]}>
                     <Text style={[
-                        styles.filterChipText,
-                        { color: filterType === item ? '#FFF' : (isDark ? theme.colors.text : '#64748B') },
-                    ]} numberOfLines={1} adjustsFontSizeToFit>
-                        {t(item)}
+                      styles.filterCountText,
+                      { color: filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B') }
+                    ]}>
+                      {count}
                     </Text>
-                    {count > 0 && (
-                        <View style={[
-                            styles.filterCountBadge,
-                            { backgroundColor: filterType === item ? 'rgba(255,255,255,0.2)' : (isDark ? theme.colors.border : '#E2E8F0') }
-                        ]}>
-                            <Text style={[
-                                styles.filterCountText,
-                                { color: filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B') }
-                            ]}>
-                                {count}
-                            </Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
+                  </View>
+                )}
+              </TouchableOpacity>
             );
           }}
         />
@@ -1322,29 +1532,48 @@ const ScheduledRidesScreen = () => {
         <FlatList
           data={filteredRides}
           keyExtractor={(item) => item.trip_id}
-          renderItem={({ item }) => (
-            <RideCard
-              item={item}
-              acceptedRide={acceptedRide}
-              getRemainingTime={getRemainingTime}
-              theme={theme}
-              isDark={isDark}
-              t={t}
-              navigation={navigation}
-              cancelRide={cancelRide}
-              passRide={passRide}
-              acceptRide={acceptRide}
-              startHeadingToPickup={startHeadingToPickup}
-              acceptingRideId={acceptingRideId}
-              acceptedSuccessId={acceptedSuccessId}
-              handlePressIn={handlePressIn}
-              handlePressOut={handlePressOut}
-              ms={ms}
-              vs={vs}
-              s={s}
-              styles={styles}
-            />
-          )}
+          renderItem={({ item }) => {
+            if (activeTab === 'accepted') {
+              return (
+                <RideDetailsModalCard
+                  item={item}
+                  acceptedRide={acceptedRide}
+                  getRemainingTime={getRemainingTime}
+                  theme={theme}
+                  isDark={isDark}
+                  t={t}
+                  navigation={navigation}
+                  cancelRide={cancelRide}
+                  passRide={passRide}
+                  acceptRide={acceptRide}
+                  startHeadingToPickup={startHeadingToPickup}
+                  acceptingRideId={acceptingRideId}
+                  acceptedSuccessId={acceptedSuccessId}
+                  handlePressIn={handlePressIn}
+                  handlePressOut={handlePressOut}
+                  ms={ms}
+                  vs={vs}
+                  s={s}
+                  styles={styles}
+                />
+              );
+            }
+            return (
+              <SimpleRideCard
+                item={item}
+                acceptedRide={acceptedRide}
+                getRemainingTime={getRemainingTime}
+                theme={theme}
+                isDark={isDark}
+                t={t}
+                ms={ms}
+                vs={vs}
+                s={s}
+                styles={styles}
+                onPress={(ride: any) => setSelectedRide(ride)}
+              />
+            );
+          }}
           contentContainerStyle={[
             styles.listContent,
             filteredRides.length === 0 && { flexGrow: 1, justifyContent: 'center' }
@@ -1385,8 +1614,50 @@ const ScheduledRidesScreen = () => {
         />
       )}
 
+
+      <Modal
+        visible={!!selectedRide}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedRide(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedRide(null)}>
+          <Pressable style={{ width: '100%', paddingHorizontal: s(16), paddingBottom: vs(24) }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: vs(12) }}>
+              <TouchableOpacity onPress={() => setSelectedRide(null)} style={{ backgroundColor: isDark ? '#333' : '#FFF', padding: ms(8), borderRadius: ms(20) }}>
+                <Ionicons name="close" size={ms(24)} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            {selectedRide && (
+              <RideDetailsModalCard
+                item={selectedRide}
+                acceptedRide={acceptedRide}
+                getRemainingTime={getRemainingTime}
+                theme={theme}
+                isDark={isDark}
+                t={t}
+                navigation={navigation}
+                cancelRide={(item: any) => { setSelectedRide(null); cancelRide(item); }}
+                passRide={(id: string) => { setSelectedRide(null); passRide(id); }}
+                acceptRide={acceptRide}
+                startHeadingToPickup={(item: any) => { setSelectedRide(null); startHeadingToPickup(item); }}
+                acceptingRideId={acceptingRideId}
+                acceptedSuccessId={acceptedSuccessId}
+                handlePressIn={handlePressIn}
+                handlePressOut={handlePressOut}
+                ms={ms}
+                vs={vs}
+                s={s}
+                styles={styles}
+              />
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {renderSortModal()}
       {renderCancelModal()}
+      {renderNavigateModal()}
     </SafeAreaView>
   );
 };
@@ -1495,24 +1766,13 @@ const styles = StyleSheet.create({
     paddingBottom: vs(24),
   },
   card: {
-    borderRadius: ms(24),
-    padding: ms(20),
+    borderRadius: ms(16),
+    padding: ms(16),
     marginBottom: vs(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
-    backgroundColor: '#FFF',
+    borderWidth: 1,
   },
   acceptedCard: {
-    borderWidth: 2,
-    borderColor: 'transparent',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    borderWidth: 1,
   },
   modalOverlay: {
     flex: 1,
@@ -1544,7 +1804,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footerActions: {
-    marginTop: vs(16),
+    marginTop: vs(8),
   },
   buttonGroupHorizontal: {
     flexDirection: 'row',
@@ -1567,16 +1827,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: vs(12),
-    marginTop: vs(4),
+    marginBottom: vs(8),
+    marginTop: 0,
   },
   timeSubHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: ms(12),
-    paddingVertical: vs(8),
+    paddingVertical: vs(6),
     borderRadius: ms(12),
-    marginBottom: vs(12),
+    marginBottom: vs(8),
     gap: ms(6),
   },
   dateSubHeaderText: {
@@ -1627,7 +1887,7 @@ const styles = StyleSheet.create({
     marginLeft: ms(4),
   },
   priceBig: {
-    fontSize: ms(32),
+    fontSize: ms(24),
     fontWeight: '800',
   },
   miniTag: {
@@ -1655,13 +1915,13 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     flexDirection: 'row',
-    marginBottom: vs(24),
+    marginBottom: vs(12),
   },
   locationIndicator: {
     alignItems: 'center',
     marginRight: ms(14),
     paddingTop: vs(6), // Re-aligned with the PICKUP/DROP headings
-    paddingBottom: vs(10), 
+    paddingBottom: vs(10),
   },
   line: {
     width: 2,
@@ -1682,23 +1942,23 @@ const styles = StyleSheet.create({
     marginBottom: vs(2),
   },
   addrText: {
-    fontSize: ms(18),
+    fontSize: ms(15),
     fontWeight: '500',
   },
   vehicleInfoContainer: {
     alignItems: 'center',
-    paddingVertical: vs(20),
+    paddingVertical: vs(12),
     marginHorizontal: ms(12),
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
-    marginBottom: vs(16),
+    marginBottom: vs(6),
   },
   vehicleNameText: {
-    fontSize: ms(20),
+    fontSize: ms(16),
     fontWeight: '900',
     letterSpacing: 0.5,
-    marginBottom: vs(8),
+    marginBottom: vs(4),
   },
   vehicleBadgeRow: {
     flexDirection: 'row',
@@ -1707,13 +1967,13 @@ const styles = StyleSheet.create({
   vehicleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: ms(10),
-    paddingVertical: vs(4),
+    paddingHorizontal: ms(8),
+    paddingVertical: vs(2),
     borderRadius: ms(8),
     gap: ms(4),
   },
   vehicleBadgeText: {
-    fontSize: ms(12),
+    fontSize: ms(10),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -1743,9 +2003,6 @@ const styles = StyleSheet.create({
   ecoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: ms(8),
-    paddingVertical: vs(4),
-    borderRadius: ms(8),
     gap: ms(4),
   },
   ecoBadgeText: {
@@ -1809,9 +2066,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: ms(14),
-    borderRadius: ms(16),
-    marginBottom: vs(20),
+    marginBottom: vs(26),
   },
   passengerMain: {
     flexDirection: 'row',
@@ -1841,10 +2096,6 @@ const styles = StyleSheet.create({
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
-    paddingHorizontal: ms(6),
-    paddingVertical: vs(1),
-    borderRadius: ms(6),
     gap: ms(3),
   },
   ratingText: {
@@ -1939,15 +2190,18 @@ const styles = StyleSheet.create({
     borderRadius: ms(12),
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
   confirmCancelBtnText: {
     fontSize: ms(16),
     fontWeight: '700',
+  },
+  otherReasonInput: {
+    minHeight: vs(80),
+    borderWidth: 1,
+    borderRadius: ms(8),
+    padding: ms(12),
+    fontSize: ms(14),
+    textAlignVertical: 'top',
   },
   emptyContainer: {
     flex: 1,
@@ -2001,5 +2255,60 @@ const styles = StyleSheet.create({
   filterCountText: {
     fontSize: ms(10),
     fontWeight: '800',
+  },
+  bottomSheet: {
+    padding: ms(24),
+    paddingTop: ms(12),
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    alignItems: 'center',
+    width: '100%',
+  },
+  dragHandle: {
+    width: ms(40),
+    height: ms(4),
+    backgroundColor: '#E2E8F0',
+    borderRadius: ms(2),
+    marginBottom: vs(16),
+  },
+  sheetTitle: {
+    fontSize: ms(20),
+    fontWeight: '700',
+    marginBottom: vs(8),
+    textAlign: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: ms(14),
+    marginBottom: vs(24),
+    lineHeight: vs(20),
+  },
+  sheetButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: ms(12),
+  },
+  sheetCancelBtn: {
+    flex: 1,
+    paddingVertical: vs(14),
+    backgroundColor: '#F3F4F6',
+    borderRadius: ms(12),
+    alignItems: 'center',
+  },
+  sheetCancelBtnText: {
+    color: '#374151',
+    fontSize: ms(16),
+    fontWeight: '700',
+  },
+  sheetConfirmBtn: {
+    flex: 1,
+    paddingVertical: vs(14),
+    borderRadius: ms(12),
+    alignItems: 'center',
+  },
+  sheetConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: ms(16),
+    fontWeight: '700',
   },
 });

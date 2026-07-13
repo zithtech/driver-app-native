@@ -12,6 +12,7 @@ import { StackActions } from "@react-navigation/native";
 import audioService from "../utils/audioService";
 import { setUser } from "../redux/userSlice";
 import { driverApi } from "../service/driverApi";
+import { setCurrentRide } from "../redux/rideSlice";
 
 interface Props {
     children: React.ReactNode;
@@ -37,11 +38,24 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
         // 🔄 Use the centralized socket service
         socketService.connect(driverId, role);
         
-        const connectionListener = (connected: boolean) => {
+        // const connectionListener = (connected: boolean) => {
+        //     setIsConnected(connected);
+        //     // Optionally update socketId if needed from socketService
+        // };
+         const connectionListener = async (connected: boolean) => {
             setIsConnected(connected);
-            // Optionally update socketId if needed from socketService
+            if (connected && driverId) {
+                try {
+                    const res = await dispatch(driverApi.endpoints.getActiveTrip.initiate(driverId, { forceRefetch: true }) as any);
+                    if (res?.data?.data) {
+                        dispatch(setCurrentRide(res.data.data));
+                    }
+                } catch (e) {
+                    console.log('Failed to fetch active trip on connect', e);
+                }
+            }
         };
-        
+
         socketService.addConnectionListener(connectionListener);
 
         socketService.on("receiveChatMessage", (data: any) => {
@@ -94,7 +108,23 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             }
         };
 
-        socketService.on("trip_updated", handleGlobalCancellation);
+        // socketService.on("trip_updated", handleGlobalCancellation);
+         const handleTripUpdated = async (data: any) => {
+            if (driverId) {
+                try {
+                    const res = await dispatch(driverApi.endpoints.getActiveTrip.initiate(driverId, { forceRefetch: true }) as any);
+                    if (res?.data?.data) {
+                        dispatch(setCurrentRide(res.data.data));
+                    }
+                } catch (e) {
+                    console.log('Failed to fetch active trip on trip_updated', e);
+                }
+            }
+            handleGlobalCancellation(data);
+        };
+
+        socketService.on("trip_updated", handleTripUpdated);
+        
         socketService.on("TRIP_CANCELLED", handleGlobalCancellation);
         socketService.on("rider_cancelled", handleGlobalCancellation);
         socketService.on("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);

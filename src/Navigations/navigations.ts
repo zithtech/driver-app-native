@@ -40,6 +40,8 @@ export const PickupOTPScreen_Nav = 'PickupOTPScreen';
 
 export const VehicleVerificationScreen_Nav = 'VehicleVerificationScreen';
 export const DropMapScreen_Nav = 'DropMapScreen';
+export const WaitingScreen_Nav = 'WaitingScreen';
+export const ReturnTripMapScreen_Nav = 'ReturnTripMapScreen';
 
 export const HelpCenter_Nav = 'HelpCenterScreen';
 export const ContactSupport_Nav = 'ContactSupportScreen';

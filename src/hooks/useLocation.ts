@@ -12,6 +12,7 @@ let GOOGLE_MAPS_API_KEY = 'AIzaSyCWGzSmu6tKxCRSan4p0z_7juXDNdZcG3s';
 export interface StructuredAddress {
     street: string;
     city: string;
+    district: string;
     state: string;
     pincode: string;
     country: string;
@@ -81,6 +82,7 @@ export const useLocation = () => {
                 const components = data.results[0].address_components;
                 let street = '';
                 let city = '';
+                let district = '';
                 let state = '';
                 let pincode = '';
                 let country = '';
@@ -89,8 +91,14 @@ export const useLocation = () => {
                     if (c.types.includes('route') || c.types.includes('street_number') || c.types.includes('sublocality')) {
                         street = street ? `${street}, ${c.long_name}` : c.long_name;
                     }
-                    if (c.types.includes('locality') || c.types.includes('administrative_area_level_2')) {
+                    if (c.types.includes('locality')) {
                         if (!city) { city = c.long_name; }
+                    }
+                    if (c.types.includes('administrative_area_level_2')) {
+                        if (!district) { district = c.long_name; }
+                    }
+                    if (c.types.includes('administrative_area_level_3')) {
+                        if (!district) { district = c.long_name; }
                     }
                     if (c.types.includes('administrative_area_level_1')) {
                         state = c.long_name;
@@ -107,9 +115,29 @@ export const useLocation = () => {
                     street = components.find((c: any) => c.types.includes('route'))?.long_name || data.results[0].formatted_address.split(',')[0];
                 }
 
+                // Fallback: if district is still empty, use city name (common in Indian geography)
+                if (!district && city) {
+                    district = city;
+                }
+
+                // Fallback: if pincode is still empty, scan other results for postal_code
+                if (!pincode && data.results.length > 1) {
+                    for (let i = 1; i < data.results.length; i++) {
+                        const result = data.results[i];
+                        const postalComp = result.address_components?.find(
+                            (c: any) => c.types.includes('postal_code')
+                        );
+                        if (postalComp) {
+                            pincode = postalComp.long_name;
+                            break;
+                        }
+                    }
+                }
+
                 return {
                     street: street || '',
                     city: city || '',
+                    district: district || '',
                     state,
                     pincode,
                     country,

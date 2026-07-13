@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     },
     headerTitle: {
         fontSize: ms(18),
-        fontWeight: '700',
+        fontWeight: '600',
     },
     scrollContent: {
         paddingBottom: vs(40),
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     },
     heroTitle: {
         fontSize: ms(24),
-        fontWeight: '800',
+        fontWeight: '700',
         marginBottom: vs(16),
         color: '#1E293B',
     },
@@ -305,17 +305,18 @@ const styles = StyleSheet.create({
     },
     categoryText: {
         fontSize: ms(13),
-        fontWeight: '700',
+        fontWeight: '600',
     },
     faqList: {
         paddingHorizontal: s(20),
         marginTop: vs(10),
     },
     faqCard: {
-        borderRadius: ms(16),
-        padding: s(16),
-        marginBottom: vs(12),
-        borderWidth: 1,
+        borderRadius: ms(14),
+        paddingVertical: vs(12),
+        paddingHorizontal: s(16),
+        marginBottom: vs(8),
+        borderWidth: StyleSheet.hairlineWidth,
     },
     faqHeader: {
         flexDirection: 'row',
@@ -324,7 +325,7 @@ const styles = StyleSheet.create({
     },
     questionText: {
         fontSize: ms(15),
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#1E293B',
         flex: 1,
         marginRight: s(10),
@@ -333,8 +334,8 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     divider: {
-        height: 1,
-        backgroundColor: '#F1F5F9',
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: '#E5E7EB',
         marginVertical: vs(8),
     },
     answerText: {
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     },
     footerTitle: {
         fontSize: ms(18),
-        fontWeight: '800',
+        fontWeight: '700',
         color: '#1E40AF',
         marginBottom: vs(4),
     },
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
     actionBtnText: {
         color: '#FFFFFF',
         fontSize: ms(14),
-        fontWeight: '700',
+        fontWeight: '600',
     },
 });
 

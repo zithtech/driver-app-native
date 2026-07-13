@@ -173,6 +173,12 @@ export function setupForegroundHandler(): () => void {
                 return;
             }
 
+            // Skip system notification for support replies (Live Agent Chat) when app is OPEN
+            if (type === 'SUPPORT_REPLY') {
+                console.log('📩 [Foreground] Support reply handled in-app, skipping system tray.');
+                return;
+            }
+
             // For data-only messages, read title/body from data field
             const title = remoteMessage.notification?.title ?? (remoteMessage.data as any)?.title ?? 'New Notification';
             const body = remoteMessage.notification?.body ?? (remoteMessage.data as any)?.body ?? '';

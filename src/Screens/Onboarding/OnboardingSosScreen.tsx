@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAppTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import AppStatusBar from '../../Components/AppStatusBar';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +40,7 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
   const { theme, isDark } = useAppTheme();
   const colors = theme.colors;
   const insets = useSafeAreaInsets();
+  const { showToast } = useToast();
   
   const nextScreen = route?.params?.nextScreen || 'Dashboard_Nav';
 
@@ -80,11 +82,9 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
           PermissionsAndroid.PERMISSIONS.READ_CONTACTS
         );
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          showConfirm({
-            title: t('permission_denied') || 'Permission Denied',
+          showToast({
             message: 'Contacts permission is required to use this feature.',
-            icon: 'lock-closed',
-            isDestructive: true
+            type: 'error'
           });
           return;
         }
@@ -103,24 +103,14 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
 
   const handleAddContact = async () => {
     if (!name.trim() || !phone.trim()) {
-      showConfirm({
-        title: t('error') || 'Error',
-        message: t('fill_all_fields') || 'Please fill name and phone number',
-        icon: 'alert-circle',
-        isDestructive: true
-      });
+      showToast({ message: t('fill_all_fields') || 'Please fill name and phone number', type: 'error' });
       return;
     }
 
     const cleanInputPhone = phone.trim().replace(/[\s\-\(\)]/g, '');
     const phoneRegex = /^\+?[0-9]{10,15}$/;
     if (!phoneRegex.test(cleanInputPhone)) {
-      showConfirm({
-        title: t('invalid_phone') || 'Invalid Phone Number',
-        message: t('invalid_phone_desc') || 'Please enter a valid phone number.',
-        icon: 'call',
-        isDestructive: true
-      });
+      showToast({ message: t('invalid_phone_desc') || 'Please enter a valid phone number.', type: 'error' });
       return;
     }
 
@@ -137,25 +127,13 @@ const OnboardingSosScreen = ({ navigation, route }: any) => {
         setName('');
         setPhone('');
         setContactsAddedCount(prev => prev + 1);
-        showConfirm({
-          title: t('success') || 'Success',
-          message: t('contact_added_success') || 'Emergency contact added securely!',
-          icon: 'checkmark-circle',
-          onConfirm: () => {
-            setModalVisible(false);
-            setTimeout(() => {
-              proceedToNext();
-            }, 300);
-          }
-        });
+        showToast({ message: t('contact_added_success') || 'Emergency contact added securely!', type: 'success' });
+        setTimeout(() => {
+          proceedToNext();
+        }, 1000);
       }
     } catch (error: any) {
-      showConfirm({
-        title: t('error') || 'Error',
-        message: error.response?.data?.message || t('failed_to_add_contact') || 'Failed to add contact.',
-        icon: 'close-circle',
-        isDestructive: true
-      });
+      showToast({ message: error.response?.data?.message || t('failed_to_add_contact') || 'Failed to add contact.', type: 'error' });
     } finally {
       setLoading(false);
     }

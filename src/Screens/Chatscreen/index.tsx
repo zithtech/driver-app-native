@@ -551,7 +551,7 @@ const ChatScreen = ({ route, navigation }: any) => {
         }]}>
             <AppStatusBar />
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <View style={[styles.header, { backgroundColor: theme.colors.card, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }]}>
                 <TouchableOpacity 
                     onPress={() => {
                         triggerHaptic(HapticFeedbackTypes.selection);
@@ -625,7 +625,7 @@ const ChatScreen = ({ route, navigation }: any) => {
                 keyboardVerticalOffset={Platform.OS === 'ios' ? vS(90) : 0}
             >
                 {!isChatDisabled ? (
-                    <View style={[styles.footerWrapper, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+                    <View style={[styles.footerWrapper, { backgroundColor: theme.colors.card, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }]}>
                         {/* Quick Replies */}
                         <ScrollView 
                             horizontal 
@@ -643,7 +643,7 @@ const ChatScreen = ({ route, navigation }: any) => {
                             ))}
                         </ScrollView>
 
-                        <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+                        <View style={[styles.inputContainer, { backgroundColor: theme.colors.card, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }]}>
                             <TouchableOpacity
                                 style={styles.attachBtn}
                                 onPress={() => {
@@ -690,7 +690,7 @@ const ChatScreen = ({ route, navigation }: any) => {
                         </View>
                     </View>
                 ) : (
-                    <View style={[styles.closedChatContainer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border, paddingBottom: insets.bottom + vS(12) }]}>
+                    <View style={[styles.closedChatContainer, { backgroundColor: theme.colors.card, borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', paddingBottom: insets.bottom + vS(12) }]}>
                         <View style={[styles.closedChatContent, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC', borderColor: theme.colors.border }]}>
                             <MaterialCommunityIcons name="information-outline" size={mS(20)} color={theme.colors.paragraphText} />
                             <Text style={[styles.closedChatText, { color: theme.colors.paragraphText }]}>

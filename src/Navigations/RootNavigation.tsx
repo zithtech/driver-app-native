@@ -26,6 +26,8 @@ import {
   SosContacts_Nav,
   PickupOTPScreen_Nav,
   DropMapScreen_Nav,
+  WaitingScreen_Nav,
+  ReturnTripMapScreen_Nav,
   ChatScreen_Nav,
   ScheduledRides_Nav,
   Blocked_Nav,
@@ -57,12 +59,16 @@ import ProfileDocumentsScreen from '../Screens/Profile/ProfileDocumentsScreen';
 import SosContactsScreen from '../Screens/Profile/SosContactsScreen';
 import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
 import RechargePlanScreen from '../Screens/Profile/SubscriptionPlanScreen';
+import MySubscriptionScreen from '../Screens/Profile/MySubscriptionScreen';
 import WalletScreen from '../Screens/Profile/WalletScreen';
 import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
+import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
 
 import PickupMapScreen from '../Screens/Requests/PickupMapScreen';
 import PickupOTPScreen from '../Screens/Requests/PickupOTPScreen';
 import DropMapScreen from '../Screens/Requests/DropMapScreen';
+import WaitingScreen from '../Screens/Requests/WaitingScreen';
+import ReturnTripMapScreen from '../Screens/Requests/ReturnTripMapScreen';
 import PaymentCollectionScreen from '../Screens/Requests/PaymentCollectionScreen';
 
 import HelpCenterScreen from '../Screens/Profile/Support/HelpCenterScreen';
@@ -265,8 +271,14 @@ const RootNavigation = () => {
         initialRoute = PickupMapScreen_Nav;
       } else if (rawStatus === 'VERIFICATION_PENDING') {
         initialRoute = 'VehicleVerificationScreen';
-      } else if (['LIVE', 'STARTED', 'ON_TRIP', 'DESTINATION_REACHED'].includes(rawStatus)) {
+      } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
         initialRoute = DropMapScreen_Nav;
+      } else if (rawStatus === 'WAITING') {
+        initialRoute = WaitingScreen_Nav;
+      } else if (rawStatus === 'RETURN_STARTED') {
+        initialRoute = ReturnTripMapScreen_Nav;
+      } else if (rawStatus === 'DESTINATION_REACHED' || rawStatus === 'RETURN_REACHED') {
+        initialRoute = 'PaymentCollectionScreen';
       }
       
       // If a route was determined by recovery, we can skip standard onboarding checks
@@ -350,13 +362,17 @@ const RootNavigation = () => {
           <Stack.Screen name={EmergencySupport_Nav} component={EmergencySupportScreen} />
           <Stack.Screen name={LegalAgreements_Nav} component={LegalAgreementsScreen} />
           <Stack.Screen name="RechargePlanScreen" component={RechargePlanScreen} />
+          <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} />
+          <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="WalletScreen" component={WalletScreen} />
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />
 
           {/* -------- TRIP FLOW -------- */}
           <Stack.Screen name={PickupMapScreen_Nav} component={PickupMapScreen} />
           <Stack.Screen name="VehicleVerificationScreen" component={VehicleVerificationScreen} />
-          <Stack.Screen name="DropMapScreen" component={DropMapScreen} />
+          <Stack.Screen name={DropMapScreen_Nav} component={DropMapScreen} />
+          <Stack.Screen name={WaitingScreen_Nav} component={WaitingScreen} />
+          <Stack.Screen name={ReturnTripMapScreen_Nav} component={ReturnTripMapScreen} />
           <Stack.Screen name="PaymentCollectionScreen" component={PaymentCollectionScreen} />
           <Stack.Screen name="NavigationScreen" component={NavigationScreen} />
           <Stack.Screen name={ChatScreen_Nav} component={ChatScreen} />

@@ -40,7 +40,7 @@ const DocGuidelines: React.FC<DocGuidelinesProps> = ({ docKey }) => {
         {getGuidelines().map((item, index) => (
           <View key={index} style={styles.item}>
             <View style={styles.iconBg}>
-              <Ionicons name={item.icon} size={14} color="#2563EB" />
+              <Ionicons name={item.icon} size={16} color="#4B5563" />
             </View>
             <Text style={styles.text}>{item.text}</Text>
           </View>
@@ -54,12 +54,12 @@ export default DocGuidelines;
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F0F7FF',
-    borderRadius: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#D0E4FF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E5E7EB',
   },
   header: {
     flexDirection: 'row',
@@ -68,7 +68,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    color: '#1E40AF',
+    color: '#374151',
+    fontWeight: '600',
     marginLeft: 8,
   },
   list: {
@@ -81,8 +82,6 @@ const styles = StyleSheet.create({
   iconBg: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E0EEFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,

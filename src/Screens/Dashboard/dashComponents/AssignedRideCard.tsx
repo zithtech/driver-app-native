@@ -118,7 +118,7 @@ const AssignedRideCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
     const playSound = () => {
       try {
-        SoundPlayer.playSoundFile('notification', 'mp3');
+        SoundPlayer.playSoundFile('incoming', 'mp3');
         // Vibration.vibrate([0, 500, 200, 500], true); // Disabled as per user request
       } catch (e) {
         console.log('SoundPlayer error:', e);

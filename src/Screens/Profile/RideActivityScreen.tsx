@@ -94,8 +94,8 @@ const RideActivityScreen = ({ navigation, route }: any) => {
   } = useGetRideActivityQuery(
     {
       driverId,
-      from: fromDate.toISOString().split('T')[0],
-      to: toDate.toISOString().split('T')[0],
+      from: `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`,
+      to: `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`,
       status: statusFilter === 'all' ? undefined : statusFilter,
     },
     { skip: !driverId }
@@ -104,8 +104,8 @@ const RideActivityScreen = ({ navigation, route }: any) => {
   const { data: earningsSummary, refetch: refetchSummary } = useGetEarningsSummaryQuery(
     { 
       driverId,
-      from: fromDate.toISOString().split('T')[0],
-      to: toDate.toISOString().split('T')[0],
+      from: `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`,
+      to: `${toDate.getFullYear()}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`,
     }, 
     { skip: !driverId }
   );

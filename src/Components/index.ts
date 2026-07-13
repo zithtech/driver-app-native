@@ -19,3 +19,4 @@ export { default as ConnectionStatus } from './ConnectionStatus';
 export { default as MapConnectionStatus } from './MapConnectionStatus';
 export { default as LanguageSelector } from './LanguageSelector';
 export { default as ImageSourcePicker } from './ImageSourcePicker';
+export { default as DocSubmissionResultModal } from './DocSubmissionResultModal';

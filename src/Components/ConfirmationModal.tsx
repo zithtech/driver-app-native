@@ -118,23 +118,17 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                             }
                         ]}
                     >
-                        {/* Status Icon with Glow */}
+                        {/* Minimal Status Icon */}
                         <View style={styles.iconContainer}>
-                            <View style={[
-                                styles.iconGlow,
-                                { backgroundColor: isDestructive ? '#EF4444' : theme.colors.primary }
-                            ]} />
                             <View style={[
                                 styles.iconWrapper,
                                 {
-                                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
-                                    borderColor: isDestructive ? 'rgba(239, 68, 68, 0.2)' : 'rgba(37, 99, 235, 0.1)',
-                                    borderWidth: 1,
+                                    backgroundColor: isDestructive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(37, 99, 235, 0.1)',
                                 }
                             ]}>
                                 <Ionicons
                                     name={icon}
-                                    size={ms(34)}
+                                    size={ms(24)}
                                     color={isDestructive ? '#EF4444' : theme.colors.primary}
                                 />
                             </View>
@@ -201,67 +195,52 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
     },
     modalContainer: {
-        width: width * 0.85,
-        borderRadius: ms(28),
-        padding: ms(24),
+        width: width * 0.8,
+        borderRadius: ms(16),
+        padding: ms(20),
         alignItems: 'center',
         borderWidth: 1,
-        elevation: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-    },
-    iconContainer: {
-        width: ms(72),
-        height: ms(72),
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: vs(20),
-        position: 'relative',
-    },
-    iconGlow: {
-        position: 'absolute',
-        width: ms(40),
-        height: ms(40),
-        borderRadius: ms(20),
-        opacity: 0.15,
-        transform: [{ scale: 1.8 }],
-    },
-    iconWrapper: {
-        width: ms(64),
-        height: ms(64),
-        borderRadius: ms(32),
-        justifyContent: 'center',
-        alignItems: 'center',
+        elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+    },
+    iconContainer: {
+        width: ms(48),
+        height: ms(48),
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: vs(12),
+    },
+    iconWrapper: {
+        width: ms(48),
+        height: ms(48),
+        borderRadius: ms(24),
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     title: {
-        fontSize: ms(20),
-        fontWeight: '800',
+        fontSize: ms(17),
+        fontWeight: '700',
         textAlign: 'center',
-        marginBottom: vs(8),
-        letterSpacing: -0.5,
+        marginBottom: vs(6),
     },
     message: {
-        fontSize: ms(15),
+        fontSize: ms(14),
         textAlign: 'center',
-        lineHeight: ms(22),
-        marginBottom: vs(24),
+        lineHeight: ms(20),
+        marginBottom: vs(20),
     },
     buttonContainer: {
         flexDirection: 'row',
         width: '100%',
-        gap: ms(12),
+        gap: ms(10),
     },
     button: {
         flex: 1,
-        height: vs(48),
-        borderRadius: ms(16),
+        height: vs(42),
+        borderRadius: ms(10),
         justifyContent: 'center',
         alignItems: 'center',
     },
