@@ -34,7 +34,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import { useLocation } from '../../hooks/useLocation';
-import { useDestinationReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery, useStartReturnTripMutation } from '../../service/driverApi';
+import { useDestinationReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery, useStartReturnTripMutation, useReturnReachedTripMutation } from '../../service/driverApi';
 import { clearAcceptedRide } from '../../redux/rideSlice';
 import { MapConnectionStatus, CancellationModal } from '../../Components';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
@@ -80,6 +80,7 @@ const DropMapScreen = ({ route }: any) => {
   // 3. API Mutation Hooks
   const [destinationReachedApi] = useDestinationReachedTripMutation();
   const [startReturnTripApi] = useStartReturnTripMutation();
+  const [returnReachedTripApi] = useReturnReachedTripMutation();
   const [triggerSosApi] = useTriggerSosMutation();
   const [cancelTripApi, { isLoading: isCancelling }] = useCancelTripMutation();
 
@@ -548,9 +549,12 @@ const DropMapScreen = ({ route }: any) => {
         ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
         : (initialEta.current || 15);
 
+    const isReturnLeg = ride?.trip_status === 'RETURN_STARTED';
+
     const confirmEndTrip = async () => {
       try {
-        const res = await destinationReachedApi(trip_id.toString()).unwrap();
+        const apiCall = isReturnLeg ? returnReachedTripApi : destinationReachedApi;
+        const res = await apiCall(trip_id.toString()).unwrap();
         const updatedStatus = res?.data?.trip_status || res?.data?.status || res?.trip_status || res?.status || 'COMPLETED';
         setShowSuccess(true);
         successScale.value = withSpring(1, { damping: 10, stiffness: 100 });
@@ -589,7 +593,7 @@ const DropMapScreen = ({ route }: any) => {
     } else {
       confirmEndTrip();
     }
-  }, [trip_id, destinationReachedApi, successScale, triggerHaptic, navigation, ride, distance, showAlert, t]);
+  }, [trip_id, destinationReachedApi, returnReachedTripApi, successScale, triggerHaptic, navigation, ride, distance, showAlert, t]);
 
   const handleCancelTrip = async (reason: string) => {
     const isStandard = [
