@@ -39,6 +39,7 @@ import { Input, LanguageSelector } from '../../Components';
 import Button from '../../Components/Button';
 
 import vdriveImg from '../../assets/images/wee.png';
+import t2dLogo from '../../assets/images/t2dLogo.png';
 
 import { OTPScreen_Nav } from '../../Navigations/navigations';
 import { setUser } from '../../redux/userSlice';
@@ -194,14 +195,16 @@ const WelcomeScreen = ({ navigation }: any) => {
     }
 
     try {
-      await sendOtp({
+      const result = await sendOtp({
         phone_number: mobileNumber,
         role: 'driver',
         device_id: deviceId,
         allow_new_device: true,
       }).unwrap();
 
-      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined }));
+      const newOtp = result?.otp || result?.data?.otp || '';
+
+      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined, otp: newOtp }));
       // ToastAndroid.show(t('otp_sent_success'), ToastAndroid.SHORT);
 
       setTimeout(() => {
@@ -229,7 +232,7 @@ const WelcomeScreen = ({ navigation }: any) => {
         style={styles.headerContainer}
       >
         <View style={styles.logoWrapper}>
-          <Logo width={52} height={52} />
+          <Image source={t2dLogo} style={{ width: 54, height: 54 }} resizeMode="contain" />
         </View>
         <LanguageSelector variant={dark ? 'dark' : 'light'} />
       </Reanimated.View>

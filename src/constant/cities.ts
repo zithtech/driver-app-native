@@ -95,3 +95,28 @@ export const ALL_CITIES = [
     ...TAMIL_NADU_CITIES.sort(),
     ...OTHER_INDIAN_CITIES
 ];
+
+export const TAMIL_NADU_DISTRICTS = [
+    'Ariyalur', 'Chengalpattu', 'Chennai', 'Coimbatore', 'Cuddalore', 'Dharmapuri',
+    'Dindigul', 'Erode', 'Kallakurichi', 'Kancheepuram', 'Karur', 'Krishnagiri',
+    'Madurai', 'Mayiladuthurai', 'Nagapattinam', 'Namakkal', 'Nilgiris',
+    'Perambalur', 'Pudukkottai', 'Ramanathapuram', 'Ranipet', 'Salem',
+    'Sivaganga', 'Tenkasi', 'Thanjavur', 'Theni', 'Thoothukudi',
+    'Tiruchirappalli', 'Tirunelveli', 'Tirupathur', 'Tiruppur', 'Tiruvallur',
+    'Tiruvannamalai', 'Tiruvarur', 'Vellore', 'Viluppuram', 'Virudhunagar'
+];
+
+export const OTHER_DISTRICTS = [
+    'Bengaluru Urban', 'Bengaluru Rural', 'Mysuru', 'Hyderabad', 'Rangareddy',
+    'Ernakulam', 'Thiruvananthapuram', 'Thrissur', 'Kozhikode',
+    'Mumbai', 'Pune', 'Nagpur', 'Thane', 'Ahmedabad', 'Surat', 'Vadodara',
+    'New Delhi', 'Gurugram', 'Ghaziabad', 'Lucknow', 'Kanpur',
+    'Kolkata', 'Howrah', 'Patna', 'Ranchi', 'Bhubaneswar',
+    'Bhopal', 'Indore', 'Jaipur', 'Jodhpur', 'Raipur',
+    'Guwahati', 'Chandigarh'
+].sort();
+
+export const ALL_DISTRICTS = [
+    ...TAMIL_NADU_DISTRICTS.sort(),
+    ...OTHER_DISTRICTS
+];

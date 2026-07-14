@@ -193,9 +193,17 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
+    waitingTrip: builder.mutation<any, string>({
+      query: (tripId) => ({
+        url: `/trips/${tripId}/waiting`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
     startReturnTrip: builder.mutation<any, string>({
       query: (tripId) => ({
-        url: `/trips/${tripId}/start-return`,
+        url: `/trips/${tripId}/return-start`,
         method: 'POST',
       }),
       invalidatesTags: ['Driver'],
@@ -218,7 +226,7 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
-    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number }>({
+    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; rating?: number }>({
       query: ({ tripId, ...body }) => ({
         url: `/trips/${tripId}/complete`,
         method: 'POST',
@@ -453,6 +461,7 @@ export const {
   useArrivingTripMutation,
   useArrivedTripMutation,
   useDestinationReachedTripMutation,
+  useWaitingTripMutation,
   useStartReturnTripMutation,
   useReturnReachedTripMutation,
   useCancelTripMutation,

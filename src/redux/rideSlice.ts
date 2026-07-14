@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { TripStatus } from '../types/trip';
 
 export interface Ride {
+    id?: string | number;
     trip_id: string;
     trip_code?: string;
     user_id: string;

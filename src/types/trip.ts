@@ -13,6 +13,9 @@ export enum TripStatus {
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   MID_CANCELLED = 'MID_CANCELLED',
+  WAITING = 'WAITING',
+  RETURN_STARTED = 'RETURN_STARTED',
+  RETURN_REACHED = 'RETURN_REACHED',
 }
 
 export interface RecentActivityItem {

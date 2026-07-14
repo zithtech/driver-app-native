@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -20,11 +20,8 @@ import {
     BottomSheetView,
     BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
-import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
     FadeInDown,
-    Layout,
-    FadeInRight
 } from 'react-native-reanimated';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import AppStatusBar from '../../Components/AppStatusBar';
@@ -37,12 +34,10 @@ import {
     EmergencySupport_Nav,
     LegalAgreements_Nav,
     AboutApp_Nav,
-    ProfileDetails_Nav,
-    ProfileDocuments_Nav,
 } from '../../Navigations/navigations';
 import { logoutUser } from '../../service/utils/logoutHelper';
 import { useAppTheme } from '../../context/ThemeContext';
-import { setUser, clearUser } from '../../redux/userSlice';
+import { setUser } from '../../redux/userSlice';
 import { useUpdateDriverMutation } from '../../service/driverApi';
 import i18n from '../../i18n/i18n';
 import { languagesList } from '../../constant/language';
@@ -94,7 +89,6 @@ const ProfileSettingsScreen = () => {
         bottomSheetModalRef.current?.dismiss();
         showSuccessPopup(t('language_changed'));
 
-        // Persist to backend
         if (user?.driverId) {
             try {
                 await updateDriver({
@@ -129,8 +123,6 @@ const ProfileSettingsScreen = () => {
 
     const confirmLogout = async () => {
         setIsLogoutModalVisible(false);
-        
-        // Use a small delay to allow modal dismissal to start smoothly
         setTimeout(async () => {
             try {
                 await logoutUser(dispatch);
@@ -159,57 +151,33 @@ const ProfileSettingsScreen = () => {
         ),
         []
     );
+    
+    // Grouped list background color
+    const bgColor = isDark ? theme.colors.background : '#F2F2F7';
 
     return (
-        <View style={[styles.mainContainer, { backgroundColor: theme.colors.background }]}>
-            <AppStatusBar forceLight />
-            {/* PREMIUM GRADIENT HEADER */}
-            <LinearGradient
-                colors={isDark ? [theme.colors.card, theme.colors.background] : ['#1e3a8a', '#1e40af']}
-                style={[styles.premiumHeader, { paddingTop: insets.top + vs(10) }]}
-            >
-                <View style={styles.headerContent}>
-                    <TouchableOpacity
-                        onPress={() => {
-                            triggerHaptic();
-                            navigation.goBack();
-                        }}
-                        style={styles.backButton}
-                    >
-                        <Ionicons name="chevron-back" size={ms(24)} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <Text style={styles.premiumHeaderTitle} numberOfLines={1} adjustsFontSizeToFit>{t('settings')}</Text>
-                    <View style={{ width: ms(40) }} />
-                </View>
-            </LinearGradient>
+        <View style={[styles.mainContainer, { backgroundColor: bgColor }]}>
+            <AppStatusBar />
+            
+            {/* MINIMAL HEADER */}
+            <View style={[styles.header, { paddingTop: insets.top + vs(10), backgroundColor: bgColor }]}>
+                <TouchableOpacity
+                    onPress={() => {
+                        triggerHaptic();
+                        navigation.goBack();
+                    }}
+                    style={styles.backButton}
+                >
+                    <Ionicons name="chevron-back" size={ms(24)} color={isDark ? '#FFFFFF' : '#111827'} />
+                </TouchableOpacity>
+                <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1}>{t('settings')}</Text>
+                <View style={{ width: ms(40) }} />
+            </View>
 
             <ScrollView
                 contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + vs(40) }]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* ACCOUNT SECTION */}
-                <AnimatedSection title={t('account')} index={0}>
-                    <Item
-                        icon="person-outline"
-                        label={t('profile_info')}
-                        onPress={() => {
-                            triggerHaptic();
-                            navigation.navigate(ProfileDetails_Nav);
-                        }}
-                        theme={theme}
-                        isDark={isDark}
-                    />
-                    <Item
-                        icon="document-text-outline"
-                        label={t('documents')}
-                        onPress={() => {
-                            triggerHaptic();
-                            navigation.navigate(ProfileDocuments_Nav);
-                        }}
-                        theme={theme}
-                        isDark={isDark}
-                    />
-                </AnimatedSection>
 
                 {/* DRIVER PREFERENCES SECTION */}
                 <AnimatedSection title={t('driver_preferences_text') || 'DRIVER PREFERENCES'} index={1}>
@@ -220,6 +188,7 @@ const ProfileSettingsScreen = () => {
                         onChange={toggleVibration}
                         theme={theme}
                         isDark={isDark}
+                        isLast
                     />
                 </AnimatedSection>
 
@@ -240,6 +209,7 @@ const ProfileSettingsScreen = () => {
                         theme={theme}
                         value={languagesList.find(l => l.value === currentLanguage)?.nativeName}
                         isDark={isDark}
+                        isLast
                     />
                 </AnimatedSection>
 
@@ -272,6 +242,7 @@ const ProfileSettingsScreen = () => {
                         onPress={() => navigation.navigate(AboutApp_Nav)}
                         theme={theme}
                         isDark={isDark}
+                        isLast
                     />
                 </AnimatedSection>
 
@@ -284,11 +255,12 @@ const ProfileSettingsScreen = () => {
                         onPress={handleLogout}
                         theme={theme}
                         isDark={isDark}
+                        isLast
                     />
                 </AnimatedSection>
 
-                <View style={[styles.footer, { borderTopColor: theme.colors.border }]}>
-                    <Text style={[styles.versionText, { color: theme.colors.textMuted }]}>
+                <View style={styles.footer}>
+                    <Text style={[styles.versionText, { color: isDark ? theme.colors.textMuted : '#9CA3AF' }]}>
                         {t('version')} 1.0.4 (Production)
                     </Text>
                 </View>
@@ -361,83 +333,68 @@ const AnimatedSection = ({ title, children, index }: any) => {
             entering={FadeInDown.delay(index * 100).duration(500)}
             style={styles.section}
         >
-            <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.text : theme.colors.primary }]}>{title.toUpperCase()}</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>{title.toUpperCase()}</Text>
+            <View style={[styles.sectionContent, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#2C2C2E' : '#E5E7EB' }]}>
                 {children}
             </View>
         </Animated.View>
     );
 };
 
-const Item = ({ icon, label, onPress, danger, theme, value, isDark }: any) => (
+const Item = ({ icon, label, onPress, danger, theme, value, isDark, isLast }: any) => (
     <TouchableOpacity
-        style={[styles.item, { borderBottomColor: theme.colors.border }]}
+        style={[styles.item, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? '#2C2C2E' : '#E5E7EB' }]}
         onPress={onPress}
         activeOpacity={0.7}
     >
         <View style={styles.left}>
             <View style={[
                 styles.iconContainer,
-                {
-                    backgroundColor: danger ? (isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2') : (isDark ? theme.colors.background : theme.colors.background),
-                    borderColor: danger ? (isDark ? 'rgba(239,68,68,0.2)' : '#FEE2E2') : (isDark ? theme.colors.border : theme.colors.border + '30')
-                }
+                { backgroundColor: danger ? (isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2') : (isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6') }
             ]}>
                 <Ionicons
                     name={icon}
-                    size={ms(20)}
-                    color={danger ? '#EF4444' : (isDark ? '#FFFFFF' : theme.colors.primary)}
+                    size={ms(18)}
+                    color={danger ? '#EF4444' : (isDark ? '#FFFFFF' : '#4B5563')}
                 />
             </View>
             <View style={styles.textContainer}>
                 <Text
                     numberOfLines={1}
-                    ellipsizeMode="tail"
                     style={[
                         styles.itemText,
-                        { color: theme.colors.text },
-                        danger && { color: '#EF4444', fontWeight: '600' },
+                        { color: isDark ? '#FFFFFF' : '#111827' },
+                        danger && { color: '#EF4444' },
                     ]}
-                    adjustsFontSizeToFit
                 >
                     {label}
                 </Text>
-                {value && (
-                    <Text 
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                        style={[styles.itemSubText, { color: theme.colors.textMuted }]}
-                    >
-                        {value}
-                    </Text>
-                )}
             </View>
         </View>
-        {!danger && (
-            <Ionicons name="chevron-forward" size={ms(18)} color={isDark ? '#FFFFFF' : theme.colors.border} />
-        )}
+        <View style={styles.right}>
+            {value && (
+                <Text numberOfLines={1} style={[styles.itemSubText, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>
+                    {value}
+                </Text>
+            )}
+            {!danger && (
+                <Ionicons name="chevron-forward" size={ms(18)} color={isDark ? '#4B5563' : '#9CA3AF'} />
+            )}
+        </View>
     </TouchableOpacity>
 );
 
-const SwitchItem = ({ icon, label, value, onChange, theme, isDark }: any) => (
-    <View style={[styles.item, { borderBottomColor: theme.colors.border }]}>
+const SwitchItem = ({ icon, label, value, onChange, theme, isDark, isLast }: any) => (
+    <View style={[styles.item, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? '#2C2C2E' : '#E5E7EB' }]}>
         <View style={styles.left}>
             <View style={[
                 styles.iconContainer,
-                {
-                    backgroundColor: isDark ? theme.colors.background : theme.colors.background,
-                    borderColor: isDark ? theme.colors.border : theme.colors.border + '30'
-                }
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6' }
             ]}>
-                <Ionicons name={icon} size={ms(20)} color={isDark ? '#FFFFFF' : theme.colors.primary} />
+                <Ionicons name={icon} size={ms(18)} color={isDark ? '#FFFFFF' : '#4B5563'} />
             </View>
             <View style={styles.textContainer}>
-                <Text 
-                    numberOfLines={1} 
-                    ellipsizeMode="tail"
-                    style={[styles.itemText, { color: theme.colors.text }]}
-                    adjustsFontSizeToFit
-                >
+                <Text numberOfLines={1} style={[styles.itemText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
                     {label}
                 </Text>
             </View>
@@ -445,9 +402,9 @@ const SwitchItem = ({ icon, label, value, onChange, theme, isDark }: any) => (
         <Switch
             value={value}
             onValueChange={onChange}
-            trackColor={{ false: isDark ? theme.colors.border : '#E5E7EB', true: theme.colors.primary }}
-            thumbColor={value ? '#FFFFFF' : (isDark ? theme.colors.textMuted : '#f4f3f4')}
-            ios_backgroundColor={isDark ? theme.colors.border : '#3e3e3e'}
+            trackColor={{ false: isDark ? theme.colors.border : '#E5E7EB', true: '#34C759' }}
+            thumbColor={'#FFFFFF'}
+            ios_backgroundColor={isDark ? theme.colors.border : '#E5E7EB'}
             style={{ transform: [{ scaleX: 0.9 }, { scaleY: 0.9 }] }}
         />
     </View>
@@ -459,32 +416,24 @@ const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
     },
-    premiumHeader: {
-        width: width,
-        paddingBottom: vs(20),
-        borderBottomLeftRadius: ms(24),
-        borderBottomRightRadius: ms(24),
-    },
-    headerContent: {
+    header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: ms(20),
-        paddingTop: vs(20),
+        paddingHorizontal: ms(16),
+        paddingBottom: vs(12),
     },
     backButton: {
         width: ms(40),
         height: ms(40),
-        borderRadius: ms(20),
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'center',
     },
-    premiumHeaderTitle: {
-        fontSize: ms(22),
-        fontWeight: '800',
-        color: '#FFFFFF',
-        letterSpacing: -0.5,
+    headerTitle: {
+        fontSize: ms(18),
+        fontWeight: '600',
+        textAlign: 'center',
+        flex: 1,
     },
     scrollContent: {
         paddingHorizontal: ms(16),
@@ -495,23 +444,23 @@ const styles = StyleSheet.create({
         marginBottom: vs(24),
     },
     sectionTitle: {
-        fontSize: ms(12),
-        fontWeight: '800',
-        marginBottom: vs(12),
-        marginLeft: ms(4),
-        letterSpacing: 1.2,
-        opacity: 0.6,
+        fontSize: ms(13),
+        fontWeight: '600',
+        marginBottom: vs(8),
+        marginLeft: ms(16),
+        textTransform: 'uppercase',
     },
     sectionContent: {
-        // Premium list view - refined borders and separators
+        borderRadius: ms(12),
+        borderWidth: 1,
+        overflow: 'hidden',
     },
     item: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: vs(14),
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0,0,0,0.03)',
+        paddingVertical: vs(12),
+        paddingHorizontal: ms(16),
     },
     left: {
         flexDirection: 'row',
@@ -519,39 +468,40 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     iconContainer: {
-        width: ms(42),
-        height: ms(42),
-        borderRadius: ms(14),
+        width: ms(32),
+        height: ms(32),
+        borderRadius: ms(8),
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
-        marginRight: ms(16),
+        marginRight: ms(12),
     },
     textContainer: {
         flex: 1,
     },
     itemText: {
-        fontSize: ms(16),
-        fontWeight: '600',
-        letterSpacing: -0.2,
+        fontSize: ms(15),
+        fontWeight: '500',
+    },
+    right: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: ms(8),
     },
     itemSubText: {
-        fontSize: ms(13),
-        marginTop: vs(2),
+        fontSize: ms(15),
         fontWeight: '400',
     },
     footer: {
         alignItems: 'center',
-        marginTop: vs(20),
-        paddingTop: vs(20),
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(0,0,0,0.03)',
+        marginTop: vs(10),
+        marginBottom: vs(20),
     },
     versionText: {
         fontSize: ms(12),
         fontWeight: '500',
-        opacity: 0.4,
     },
+    
+    // Bottom Sheet
     bottomSheetContent: {
         flex: 1,
         padding: ms(24),

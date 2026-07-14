@@ -158,22 +158,10 @@ export const useLocationTracker = ({
 
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // App going to background — start the foreground service
-        if (!isBackgroundLocationRunning()) {
-          const config = TRACKING_CONFIG[mode] || TRACKING_CONFIG.idle;
-          startBackgroundLocation({
-            driverId,
-            tripId,
-            highAccuracy: mode === 'moving',
-            distanceFilter: config.distance,
-          });
-        }
-        // Stop foreground watcher (background service handles it now)
+        // App going to background — stop foreground watcher
         stopForegroundTracking();
       } else if (nextAppState === 'active') {
-        // App back to foreground — stop background service, resume foreground
-        stopBackgroundLocation();
-
+        // App back to foreground — resume foreground watcher
         // If there was an error, re-check
         if (hasReportedError.current) {
           consecutiveFailures.current = 0;
@@ -280,11 +268,15 @@ export const useLocationTracker = ({
       
       permissionRequested.current = true;
 
-      // Only start foreground tracking if app is in foreground
+      // Always start foreground tracking when app is active
       if (AppState.currentState === 'active') {
         startForegroundWatcher();
-      } else {
-        // App is already in background (e.g., notification launched tracking)
+      }
+
+      // Android 14+: To prevent SecurityException, the Foreground Service MUST be started
+      // while the app is in the foreground. It will continue running silently and emit
+      // socket updates only when the app moves to the background (due to our AppState check in the service).
+      if (Platform.OS === 'android') {
         const config = TRACKING_CONFIG[mode] || TRACKING_CONFIG.idle;
         startBackgroundLocation({
           driverId,
@@ -292,6 +284,11 @@ export const useLocationTracker = ({
           highAccuracy: mode === 'moving',
           distanceFilter: config.distance,
         });
+      } else {
+        // On iOS, if we are in the background, we rely on the native UIBackgroundModes watcher
+        if (AppState.currentState !== 'active') {
+           startForegroundWatcher();
+        }
       }
     });
 

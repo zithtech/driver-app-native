@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
   },
   genderRow: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 4,
     marginTop: 0,

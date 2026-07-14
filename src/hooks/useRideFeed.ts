@@ -117,6 +117,14 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             }
         }
 
+        const isCancelledOrCompleted = ['CANCELLED', 'CANCEL', 'COMPLETED', 'REJECTED', 'DELETED'].includes(standardizedStatus);
+        
+        if (isCancelledOrCompleted) {
+            console.log(`[useRideFeed] Ride ${tripId} is cancelled/completed/deleted (Status: ${standardizedStatus}), removing from queue.`);
+            setRideQueue(prev => prev.filter(r => String(r.id) !== String(tripId) && String(r.trip_id) !== String(tripId)));
+            return;
+        }
+
         const newRide: RideItem = {
             id: tripId,
             trip_id: tripId,

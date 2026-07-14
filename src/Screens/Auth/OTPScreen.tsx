@@ -85,7 +85,6 @@ const OTPScreen = ({ navigation }: any) => {
   const buttonScale = useSharedValue(1);
   const successScale = useSharedValue(1);
   const successOpacity = useSharedValue(0);
-  const iconRotate = useSharedValue(0);
   const processingRef = useRef(false);
 
   const [verifyOtp, { isLoading }] = useVerifyOtpMutation();
@@ -135,8 +134,7 @@ const OTPScreen = ({ navigation }: any) => {
 
   const successIconStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: withSpring(successScale.value, { damping: 12, stiffness: 100 }) },
-      { rotate: `${iconRotate.value}deg` }
+      { scale: withSpring(successScale.value, { damping: 12, stiffness: 100 }) }
     ],
   }));
 
@@ -212,7 +210,6 @@ const OTPScreen = ({ navigation }: any) => {
         setShowSuccess(true);
         successScale.value = 1.2;
         successOpacity.value = 1;
-        iconRotate.value = withSpring(360, { damping: 15 });
 
         // 🛡️ DELAYED TRANSITION: Wait 1.5s to show the "Success" state before updating global auth
         setTimeout(() => {
@@ -260,7 +257,7 @@ const OTPScreen = ({ navigation }: any) => {
     } finally {
       processingRef.current = false;
     }
-  }, [user, otp, deviceId, verifyOtp, t, buttonScale, successScale, successOpacity, iconRotate, triggerHaptic, triggerShake, dispatch]);
+  }, [user, otp, deviceId, verifyOtp, t, buttonScale, successScale, successOpacity, triggerHaptic, triggerShake, dispatch]);
 
 
   /* ================= AUTO-VERIFY ================= */
@@ -276,12 +273,17 @@ const OTPScreen = ({ navigation }: any) => {
     if (!canResend || isResending || !user?.phone_number || !deviceId) { return; }
 
     try {
-      await sendOtp({
+      const result = await sendOtp({
         phone_number: user.phone_number,
         role: 'driver',
         device_id: deviceId,
         allow_new_device: true,
       }).unwrap();
+
+      const newOtp = result?.otp || result?.data?.otp || '';
+      if (newOtp) {
+        dispatch(setUser({ otp: newOtp }));
+      }
 
       setResendTimer(RESEND_TIME);
       setCanResend(false);
@@ -377,6 +379,14 @@ const OTPScreen = ({ navigation }: any) => {
                         </Text>
                       </TouchableOpacity>
                     </View>
+
+                    {user?.otp ? (
+                      <View style={{ marginTop: 16, backgroundColor: colors.primary + '20', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, alignSelf: 'center' }}>
+                        <Text style={[fonts.bold, { fontSize: 16, color: colors.primary, textAlign: 'center' }]}>
+                          Demo OTP: {user.otp}
+                        </Text>
+                      </View>
+                    ) : null}
 
                     <View style={styles.disclaimerContainer}>
                       <MaterialCommunityIcons name="information-outline" size={14} color={colors.text + '60'} />

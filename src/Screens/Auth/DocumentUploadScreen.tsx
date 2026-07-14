@@ -30,9 +30,15 @@ import { useTranslation } from 'react-i18next';
 import DocGuidelines from '../../Components/DocGuidelines';
 import { useHaptic } from '../../hooks/useHaptic';
 import ImageZoomModal from '../../Components/ImageZoomModal';
-import { ImageSourcePicker } from '../../Components';
+import { ImageSourcePicker, DocSubmissionResultModal } from '../../Components';
 import type { ImageSourcePickerRef } from '../../Components/ImageSourcePicker';
+import type { OCRErrorCode } from '../../Components/DocSubmissionResultModal';
 import { checkCameraPermission, checkPhotoLibraryPermission, goToSettings } from '../../utils/permissionUtils';
+
+/* ================= IMAGE VALIDATION ================= */
+
+const MIN_FILE_SIZE = 50 * 1024; // 50KB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 /* ================= SCREEN ================= */
 
@@ -41,7 +47,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
   const { side, labelKey, backendType, key: docKey } = doc;
 
   const { colors, fonts } = useTheme() as any;
-  const { theme } = useAppTheme();
+  const { theme, isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -56,6 +62,10 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
   const [successfulUploads, setSuccessfulUploads] = useState<Record<string, string>>({});
   const [uploadErrors, setUploadErrors] = useState<Record<string, boolean>>({});
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<'success' | 'failed' | null>(null);
+  const [ocrErrorCode, setOcrErrorCode] = useState<OCRErrorCode | null>(null);
+  const [ocrErrorMessage, setOcrErrorMessage] = useState<string | null>(null);
+  const [uploadStage, setUploadStage] = useState<'uploading' | 'verifying' | 'saving' | null>(null);
 
   const imagePickerRef = useRef<ImageSourcePickerRef>(null);
 
@@ -225,6 +235,36 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
   const rejectionReason = currentStatus?.rejection_reason || currentStatus?.remarks;
 
+  /* ---------------- IMAGE PRE-VALIDATION ---------------- */
+  const validateImageLocally = async (filePath: string): Promise<{ valid: boolean; error?: string }> => {
+    try {
+      // Check file size via fetch (works for file:// URIs)
+      const response = await fetch(filePath);
+      const blob = await response.blob();
+      const fileSize = blob.size;
+
+      if (fileSize < MIN_FILE_SIZE) {
+        return {
+          valid: false,
+          error: t('image_too_small', 'Image quality is too low. Please capture a clearer photo.'),
+        };
+      }
+
+      if (fileSize > MAX_FILE_SIZE) {
+        return {
+          valid: false,
+          error: t('image_too_large', 'Image file is too large. Please use a lower resolution.'),
+        };
+      }
+
+      return { valid: true };
+    } catch (err) {
+      // If pre-validation fails, allow the upload anyway — backend OCR will catch issues
+      console.warn('[PreValidation] Could not validate image locally:', err);
+      return { valid: true };
+    }
+  };
+
   /* ---------------- CONTINUE ---------------- */
   const handleContinue = async () => {
     if (Object.keys(images).length !== side.length) {
@@ -247,8 +287,32 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       return;
     }
 
+    // Reset OCR error state
+    setOcrErrorCode(null);
+    setOcrErrorMessage(null);
+
     try {
       setIsSubmitting(true);
+
+      // --- Stage 0: Client-side pre-validation ---
+      for (const s of side) {
+        if (images[s]) {
+          const { valid, error } = await validateImageLocally(images[s]);
+          if (!valid) {
+            setIsSubmitting(false);
+            showAlert({
+              title: t('image_quality_issue', 'Image Quality Issue'),
+              message: error || t('image_quality_generic', 'Please re-capture the document.'),
+              singleButton: true,
+              icon: 'image-outline',
+            });
+            return;
+          }
+        }
+      }
+
+      // --- Stage 1: Upload to S3 ---
+      setUploadStage('uploading');
       const documentUrl: Record<string, string> = {};
 
       const uploadPromises = side.map(async (s: string) => {
@@ -291,7 +355,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
           setSuccessfulUploads(prev => ({ ...prev, [s]: fileUrl }));
         } catch (err) {
           setUploadErrors(prev => ({ ...prev, [s]: true }));
-          throw err; // Re-throw to stop the overall handleContinue from finishing
+          throw err;
         } finally {
           setCurrentlyUploading(prev => ({ ...prev, [s]: false }));
         }
@@ -299,16 +363,20 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
       await Promise.all(uploadPromises);
 
-      await saveDocument({
+      // --- Stage 2: Save & AI Verification ---
+      setUploadStage('verifying');
+
+      const saveResult = await saveDocument({
         driverId: user.driverId,
         documentType: backendType,
         documentUrl,
       }).unwrap();
 
+      // --- Stage 3: Saving ---
+      setUploadStage('saving');
+
       // Update local state
       const updatedDocs = { ...(user.documents || {}) };
-      // Use LOCAL file path for preview (displayable immediately)
-      // S3 URLs are private and won't load in Image component without signing
       const localPreview = images.front || images.photo || Object.values(images)[0];
       const s3Url = documentUrl.front || Object.values(documentUrl)[0];
 
@@ -319,24 +387,44 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
       const profileUpdate: any = { documents: updatedDocs };
 
-      // 🛡️ Sync profile picture immediately if this is a selfie
       if (docKey === 'Profile_Selfie' || backendType === 'profile_selfie') {
         profileUpdate.profile_picture = localPreview;
-        profileUpdate.profile_pic_url = s3Url; // Keep S3 URL for backend reference
+        profileUpdate.profile_pic_url = s3Url;
       }
 
       dispatch(setUser(profileUpdate));
       setIsSubmitting(false);
-      navigation.goBack();
-    } catch (error) {
+      setUploadStage(null);
+      setSubmissionStatus('success');
+    } catch (error: any) {
       setIsSubmitting(false);
-      console.error('Upload Error:', error);
-      showAlert({
-        title: t('docs_submit_failed'),
-        message: t('upload_failed_msg'),
-        singleButton: true,
-        icon: 'close-circle-outline',
-      });
+      setUploadStage(null);
+      console.error('Upload Error:', JSON.stringify(error, null, 2));
+
+      // --- Handle OCR validation errors from backend ---
+      // RTK Query .unwrap() error shapes:
+      // 1. { status: 400, data: { errorCode, message, ... } }  — FetchBaseQueryError
+      // 2. { data: { errorCode, message } }                     — direct
+      // 3. { errorCode, message }                                — re-thrown from service
+      const errorBody =
+        error?.data?.errorCode ? error.data :
+        error?.error?.data?.errorCode ? error.error.data :
+        error?.errorCode ? error :
+        null;
+
+      if (errorBody?.errorCode && ['BLURRY', 'WRONG_DOCUMENT', 'EXPIRED', 'INSUFFICIENT_TEXT'].includes(errorBody.errorCode)) {
+        setOcrErrorCode(errorBody.errorCode as OCRErrorCode);
+        setOcrErrorMessage(errorBody.message || null);
+        // Clear uploads AND images so the user MUST re-capture
+        setSuccessfulUploads({});
+        setImages({});
+        setUploadProgress({});
+        setUploadErrors({});
+        setSubmissionStatus('failed');
+        triggerHaptic(HapticFeedbackTypes.notificationError);
+      } else {
+        setSubmissionStatus('failed');
+      }
     }
   };
 
@@ -361,7 +449,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       <View style={[Styles.flex, styles.container]}>
         {/* HEADER */}
         <View style={{ marginBottom: 20 }}>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, styles.title, { color: colors.text }]}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.title, { color: colors.text }]}>
             {t('upload_doc')} {t(labelKey)}
           </Text>
           <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.subtitle, { color: colors.text }]}>{getTip()}</Text>
@@ -372,10 +460,10 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
         {/* REJECTION REASON */}
         {rejectionReason && (
-          <View style={styles.rejectionBox}>
+          <View style={[styles.rejectionBox, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FCA5A5' }]}>
             <Ionicons name="alert-circle" size={20} color="#DC2626" />
-            <Text style={styles.rejectionText}>
-              <Text style={[fonts.bold, { color: '#DC2626' }]}>{t('rejection_reason')}: </Text>
+            <Text style={[styles.rejectionText, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>
+              <Text style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>{t('rejection_reason')}: </Text>
               {rejectionReason}
             </Text>
           </View>
@@ -390,7 +478,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
             return (
               <View key={s} style={[styles.col, isSelfie && styles.selfieCol]}>
-                {!isSelfie && <Text adjustsFontSizeToFit numberOfLines={1} style={styles.sideLabel}>{getSideLabel(s)}</Text>}
+                {!isSelfie && <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.sideLabel, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>{getSideLabel(s)}</Text>}
 
                 <TouchableOpacity
                   activeOpacity={0.85}
@@ -400,9 +488,10 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                     styles.uploadBox,
                     isSelfie && styles.selfieBox,
                     {
+                      backgroundColor: isDark ? '#374151' : '#F9FAFB',
                       borderColor: hasImage
                         ? '#2E7D32'
-                        : colors.border,
+                        : (isDark ? '#4B5563' : '#E5E7EB'),
                     },
                   ]}
                 >
@@ -490,32 +579,23 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                         <ActivityIndicator color={colors.primary} />
                       ) : (
                         <>
-                          {isSelfie && (
-                            <Animated.View
-                              style={[
-                                StyleSheet.absoluteFill,
-                                {
-                                  borderRadius: 100,
-                                  borderWidth: 2,
-                                  borderColor: colors.primary,
-                                  borderStyle: 'dashed',
-                                  transform: [{ rotate: spin }],
-                                  opacity: 0.4
-                                }
-                              ]}
-                            />
-                          )}
-                          <Animated.View style={isSelfie && { transform: [{ scale: pulseAnim }] }}>
+
+                          <View>
                             <Ionicons
                               name={isSelfie ? "person-outline" : "camera-outline"}
                               size={isSelfie ? 40 : 26}
                               color={isSelfie ? colors.primary : colors.border}
                               style={isSelfie && { opacity: 0.8 }}
                             />
-                          </Animated.View>
-                          <Text style={styles.placeholderText} numberOfLines={1} adjustsFontSizeToFit>
+                          </View>
+                          <Text style={[styles.placeholderText, { color: isDark ? '#6B7280' : '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>
                             {isSelfie ? t('profile_selfie') : t('tap_to_upload')}
                           </Text>
+                          {isSelfie && (
+                            <Text style={[styles.placeholderText, { fontSize: 12, marginTop: 4, color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+                              {t('tap_to_upload')}
+                            </Text>
+                          )}
                         </>
                       )}
                     </View>
@@ -544,7 +624,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
           <Ionicons
             name="shield-checkmark-outline"
             size={16}
-            color={colors.border}
+            color={colors.text}
           />
           <Text style={[styles.secureText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
             {t('docs_secure_note')}
@@ -557,7 +637,16 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
           onPress={handleContinue}
           style={{ height: 56, borderRadius: 16 }}
         >
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : t('save_continue')}
+          {isSubmitting ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator color="#fff" size="small" />
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                {uploadStage === 'uploading' ? t('uploading_doc', 'Uploading...') :
+                 uploadStage === 'verifying' ? t('verifying_doc', 'Verifying document...') :
+                 uploadStage === 'saving' ? t('saving_doc', 'Saving...') : t('processing', 'Processing...')}
+              </Text>
+            </View>
+          ) : t('save_continue')}
         </Button>
       </View>
 
@@ -572,6 +661,35 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         onCameraSelect={(side) => pickImage(side, true)}
         onGallerySelect={(side) => pickImage(side, false)}
       />
+
+      <DocSubmissionResultModal
+        visible={submissionStatus !== null}
+        status={submissionStatus || 'failed'}
+        ocrErrorCode={ocrErrorCode}
+        message={ocrErrorMessage || undefined}
+        onClose={() => {
+          if (submissionStatus === 'success') {
+            setSubmissionStatus(null);
+            setOcrErrorCode(null);
+            setOcrErrorMessage(null);
+            navigation.goBack();
+          } else {
+            setSubmissionStatus(null);
+            setOcrErrorCode(null);
+            setOcrErrorMessage(null);
+          }
+        }}
+        onRetake={() => {
+          setSubmissionStatus(null);
+          setOcrErrorCode(null);
+          setOcrErrorMessage(null);
+          // Open camera directly for the first side
+          const firstSide = side[0];
+          if (firstSide) {
+            imagePickerRef.current?.present(firstSide);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -584,7 +702,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    marginBottom: 6,
+    fontWeight: '600',
+    marginBottom: 4,
     color: '#111827',
   },
   subtitle: {
@@ -619,7 +738,7 @@ const styles = StyleSheet.create({
   uploadBox: {
     height: 180,
     borderRadius: 16,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderStyle: 'dashed',
     overflow: 'hidden',
     justifyContent: 'center',
@@ -632,8 +751,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     overflow: 'visible',
     alignSelf: 'center',
-    backgroundColor: '#F3F4F6',
-    borderStyle: 'solid',
+    backgroundColor: '#F9FAFB',
   },
   selfieImage: {
     width: 200,
@@ -723,9 +841,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 20,
     marginBottom: 24,
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 8,
-    borderRadius: 12,
   },
   secureText: {
     marginLeft: 8,

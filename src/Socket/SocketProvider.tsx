@@ -26,7 +26,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
     const currentRide = useSelector((state: RootState) => state.ride.currentRide);
     const driverId = useSelector((state: RootState) => state.userSlice.user?.driverId);
     const role = useSelector((state: RootState) => state.userSlice.user?.role) || 'driver';
-    
+
     const currentRideRef = useRef(currentRide);
 
     // Keep ref in sync for socket listeners to avoid closure issues
@@ -37,7 +37,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
     useEffect(() => {
         // 🔄 Use the centralized socket service
         socketService.connect(driverId, role);
-        
+
         const connectionListener = async (connected: boolean) => {
             setIsConnected(connected);
             if (connected && driverId) {
@@ -50,13 +50,23 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     console.log('Failed to fetch active trip on connect', e);
                 }
             }
+            if (connected && driverId) {
+                try {
+                    const res = await dispatch(driverApi.endpoints.getActiveTrip.initiate(driverId, { forceRefetch: true }) as any);
+                    if (res?.data?.data) {
+                        dispatch(setCurrentRide(res.data.data));
+                    }
+                } catch (e) {
+                    console.log('Failed to fetch active trip on connect', e);
+                }
+            }
         };
-        
+
         socketService.addConnectionListener(connectionListener);
 
         socketService.on("receiveChatMessage", (data: any) => {
             const { rideId } = data;
-            
+
             // Check if user is currently looking at this specific chat
             const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
             const isOnChatScreen = currentRoute?.name === 'ChatScreen';
@@ -72,7 +82,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             const cancelledTripId = data.trip_id || data.id || data.rideId || data.tripId || data.trip?.trip_id || data.trip?.id;
             const status = data.status || data.trip_status || data.trip?.status || data.trip?.trip_status;
             const activeRide = currentRideRef.current;
-            
+
             console.log('[SocketProvider] Cancellation event received:', { cancelledTripId, status, activeRideId: activeRide?.trip_id });
 
             // Only care if it matches our active ride
@@ -85,9 +95,9 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                 if (isCancellation) {
                     // 🔊 Announce voice alert
                     audioService.speak('The rider has cancelled the trip');
-                    
+
                     dispatch(clearAcceptedRide());
-                    
+
                     // Show global alert
                     showAlert({
                         title: 'Ride Cancelled',
@@ -143,7 +153,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                             dispatch(setUser(profile));
                         }
                     })
-                    .catch(() => {});
+                    .catch(() => { });
             }
         });
 

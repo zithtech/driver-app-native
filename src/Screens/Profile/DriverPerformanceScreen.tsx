@@ -312,8 +312,8 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
       from.setDate(to.getDate() - 30);
     }
     return { 
-      from: from.toISOString().split('T')[0], 
-      to: to.toISOString().split('T')[0] 
+      from: `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-${String(from.getDate()).padStart(2, '0')}`, 
+      to: `${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}` 
     };
   }, []);
 

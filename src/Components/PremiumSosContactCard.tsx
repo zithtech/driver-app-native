@@ -30,7 +30,7 @@ const PremiumSosContactCard: React.FC<PremiumSosContactCardProps> = ({
   onDelete,
   index
 }) => {
-  const { isDark, theme } = useAppTheme();
+  const { isDark } = useAppTheme();
   const avatarStyle = AVATAR_COLORS[index % AVATAR_COLORS.length];
 
   return (
@@ -40,24 +40,24 @@ const PremiumSosContactCard: React.FC<PremiumSosContactCardProps> = ({
       style={[
         styles.container,
         { 
-          backgroundColor: theme.colors.card, 
-          shadowColor: isDark ? '#000' : '#CBD5E1' 
+          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          borderColor: isDark ? '#374151' : '#E5E7EB',
         }
       ]}
     >
-      <View style={[styles.avatar, { backgroundColor: avatarStyle.bg }]}>
-        <Text style={[styles.avatarText, { color: avatarStyle.text }]}>
+      <View style={[styles.avatar, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : avatarStyle.bg }]}>
+        <Text style={[styles.avatarText, { color: isDark ? '#9CA3AF' : avatarStyle.text }]}>
           {name.charAt(0).toUpperCase()}
         </Text>
       </View>
       
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: isDark ? '#F3F4F6' : '#111827' }]} numberOfLines={1}>
             {name}
           </Text>
           {relationship && (
-            <View style={[styles.tag, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+            <View style={[styles.tag, { borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
               <Text style={[styles.tagText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
                 {relationship}
               </Text>
@@ -68,7 +68,7 @@ const PremiumSosContactCard: React.FC<PremiumSosContactCardProps> = ({
         
         <View style={styles.statusRow}>
           <Ionicons 
-            name={status === 'verified' ? "checkmark-circle" : "time"} 
+            name={status === 'verified' ? "shield-checkmark-outline" : "time-outline"} 
             size={14} 
             color={status === 'verified' ? '#10B981' : '#F59E0B'} 
           />
@@ -83,11 +83,10 @@ const PremiumSosContactCard: React.FC<PremiumSosContactCardProps> = ({
           onPress={onDelete} 
           style={({ pressed }) => [
             styles.deleteBtn,
-            { backgroundColor: isDark ? '#374151' : '#FEE2E2' },
-            pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+            pressed && { opacity: 0.5 }
           ]}
         >
-          <Ionicons name="trash" size={ms(20)} color="#EF4444" />
+          <Ionicons name="trash-outline" size={ms(20)} color={isDark ? '#EF4444' : '#DC2626'} />
         </Pressable>
       )}
     </Animated.View>
@@ -98,27 +97,22 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: ms(16),
-    borderRadius: ms(24),
-    marginBottom: vs(16),
-    elevation: 4,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    padding: ms(14),
+    borderRadius: ms(16),
+    marginBottom: vs(12),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   avatar: {
-    width: ms(56),
-    height: ms(56),
-    borderRadius: ms(28),
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: ms(16),
+    marginRight: ms(14),
   },
   avatarText: {
-    fontSize: ms(22),
-    fontWeight: '800',
+    fontSize: ms(18),
+    fontWeight: '700',
   },
   info: {
     flex: 1,
@@ -127,26 +121,27 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: vs(4),
+    marginBottom: vs(2),
     flexWrap: 'wrap',
   },
   name: {
-    fontSize: ms(17),
-    fontWeight: '800',
+    fontSize: ms(16),
+    fontWeight: '700',
     marginRight: ms(8),
   },
   tag: {
     paddingHorizontal: ms(8),
     paddingVertical: vs(2),
-    borderRadius: ms(6),
+    borderRadius: ms(12),
+    borderWidth: 1,
   },
   tagText: {
-    fontSize: ms(11),
-    fontWeight: '700',
+    fontSize: ms(10),
+    fontWeight: '600',
     textTransform: 'uppercase',
   },
   phone: {
-    fontSize: ms(14),
+    fontSize: ms(13),
     fontWeight: '500',
     marginBottom: vs(4),
   },
@@ -155,14 +150,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusText: {
-    fontSize: ms(12),
-    fontWeight: '700',
+    fontSize: ms(11),
+    fontWeight: '600',
     marginLeft: ms(4),
   },
   deleteBtn: {
-    width: ms(44),
-    height: ms(44),
-    borderRadius: ms(22),
+    width: ms(36),
+    height: ms(36),
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: ms(12),

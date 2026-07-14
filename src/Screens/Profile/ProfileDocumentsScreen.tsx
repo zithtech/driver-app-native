@@ -1,22 +1,20 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   Pressable,
   ScrollView,
   Image,
-  Animated,
   RefreshControl,
-  Dimensions,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '@react-navigation/native';
-import { useAlert } from '../../context/AlertContext';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSelector, useDispatch } from 'react-redux';
+
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
-import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { useGetDriverDocumentsQuery } from '../../service/driverApi';
 import { setUser } from '../../redux/userSlice';
@@ -29,10 +27,7 @@ import {
 } from '../../assets/svg';
 import { DocumentUploadScreen_Nav } from '../../Navigations/navigations';
 import ImageZoomModal from '../../Components/ImageZoomModal';
-import LinearGradient from 'react-native-linear-gradient';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
-
-const { width } = Dimensions.get('window');
 
 /* ================= TYPES ================= */
 
@@ -51,6 +46,15 @@ interface DocumentItem {
 /* ================= CONSTANTS ================= */
 
 const DOCUMENTS_CONFIG: DocumentItem[] = [
+  {
+    key: 'Profile_Selfie',
+    backendType: 'profile_selfie',
+    labelKey: 'profile_selfie',
+    subtitleKey: 'photo_subtitle',
+    Logo: ({ width }: any) => <Ionicons name="person-add-outline" size={width || 28} color="#2563EB" />,
+    side: ['front'],
+    required: true,
+  },
   {
     key: 'Driving_License',
     backendType: 'driving_license',
@@ -76,15 +80,6 @@ const DOCUMENTS_CONFIG: DocumentItem[] = [
     subtitleKey: 'aadhaar_subtitle',
     Logo: AadharCard,
     side: ['front', 'back'],
-    required: true,
-  },
-  {
-    key: 'Profile_Selfie',
-    backendType: 'profile_selfie',
-    labelKey: 'profile_selfie',
-    subtitleKey: 'photo_subtitle',
-    Logo: () => <Ionicons name="person-circle-outline" size={32} color="#2563EB" />,
-    side: ['front'],
     required: true,
   },
   {
@@ -128,7 +123,6 @@ const VerificationRoadmap = ({ status, t, isDark, theme }: { status: string | un
   const currentStepIndex = useMemo(() => {
     if (!status) return 0;
     const normalizedStatus = status.toUpperCase();
-    // Find the LAST step that includes this status for better visual progress
     for (let i = steps.length - 1; i >= 0; i--) {
       if (steps[i].status.includes(normalizedStatus)) return i;
     }
@@ -136,25 +130,24 @@ const VerificationRoadmap = ({ status, t, isDark, theme }: { status: string | un
   }, [status]);
   
   return (
-    <View style={[styles.roadmapContainer, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
-      <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827', marginTop: 0 }]} numberOfLines={1} adjustsFontSizeToFit>
-        {t('verification_plan') || 'Verification Roadmap'}
+    <View style={styles.roadmapContainer}>
+      <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.textMuted : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
+        {t('verification_plan') || 'Verification Progress'}
       </Text>
       <View style={styles.roadmapRow}>
         {steps.map((step, index) => {
           const isActive = index <= currentStepIndex;
-          const isProcessing = index === currentStepIndex && status === 'DOCS_SUBMITTED' && index === 1;
           
           return (
             <React.Fragment key={step.key}>
               <View style={styles.roadmapStep}>
                 <View style={[
                   styles.roadmapIconCircle, 
-                  { backgroundColor: isActive ? '#10B981' : (isDark ? theme.colors.border : '#F3F4F6') }
+                  { backgroundColor: isActive ? '#10B981' : (isDark ? '#2C2C2E' : '#F3F4F6') }
                 ]}>
                   <Ionicons 
                     name={step.icon} 
-                    size={20} 
+                    size={16} 
                     color={isActive ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#9CA3AF')} 
                   />
                 </View>
@@ -168,7 +161,7 @@ const VerificationRoadmap = ({ status, t, isDark, theme }: { status: string | un
               {index < steps.length - 1 && (
                 <View style={[
                   styles.roadmapLine, 
-                  { backgroundColor: index < currentStepIndex ? '#10B981' : (isDark ? theme.colors.border : '#E5E7EB') }
+                  { backgroundColor: index < currentStepIndex ? '#10B981' : (isDark ? '#2C2C2E' : '#E5E7EB') }
                 ]} />
               )}
             </React.Fragment>
@@ -179,28 +172,97 @@ const VerificationRoadmap = ({ status, t, isDark, theme }: { status: string | un
   );
 };
 
-const SmartSuggestions = ({ t, isDark, theme }: { t: any; isDark: boolean; theme: any }) => (
-  <View style={[styles.suggestionsContainer, { 
-    backgroundColor: isDark ? theme.colors.card : '#FFFFFF',
-    borderColor: isDark ? theme.colors.border : '#E5E7EB',
-    borderWidth: 1,
-  }]}>
-    <View style={styles.suggestionsHeader}>
-      <View style={[styles.bulbBg, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF' }]}>
-        <Ionicons name="bulb" size={18} color="#3B82F6" />
-      </View>
-      <Text style={[styles.suggestionsTitle, { color: isDark ? '#F3F4F6' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('smart_suggestions') || 'Tips for Fast Approval'}</Text>
-    </View>
-    <View style={styles.suggestionsList}>
-      {SUGGESTIONS.map((s, i) => (
-        <View key={i} style={styles.suggestionItem}>
-          <View style={[styles.suggestionDot, { backgroundColor: '#3B82F6' }]} />
-          <Text style={[styles.suggestionText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>{t(s.textKey)}</Text>
-        </View>
-      ))}
+const Section = ({ title, children, isDark, theme }: any) => (
+  <View style={styles.sectionContainer}>
+    {title && <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>{title.toUpperCase()}</Text>}
+    <View style={[styles.sectionContent, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#2C2C2E' : '#E5E7EB' }]}>
+      {children}
     </View>
   </View>
 );
+
+const DocumentRow = ({ doc, status, previews, reason, onUpload, onView, t, isDark, theme, isLast }: any) => {
+  const [loadError, setLoadError] = useState(false);
+  
+  useEffect(() => {
+    setLoadError(false);
+  }, [previews]);
+
+  const imageUri = previews && previews.length > 0 ? previews[0] : null;
+  const isDone = status === 'verified' || status === 'approved' || status === 'pending' || status === 'uploaded';
+  const isRejected = status === 'rejected';
+  
+  const statusColors: any = {
+    verified: { dot: '#10B981', text: isDark ? '#34D399' : '#059669' },
+    approved: { dot: '#10B981', text: isDark ? '#34D399' : '#059669' },
+    pending: { dot: '#F59E0B', text: isDark ? '#FBBF24' : '#D97706' },
+    uploaded: { dot: '#F59E0B', text: isDark ? '#FBBF24' : '#D97706' },
+    rejected: { dot: '#EF4444', text: isDark ? '#F87171' : '#DC2626' },
+    missing: { dot: isDark ? '#4B5563' : '#D1D5DB', text: isDark ? '#9CA3AF' : '#6B7280' },
+  };
+
+  const activeStatus = statusColors[status] || statusColors.missing;
+
+  return (
+    <View>
+      <Pressable 
+        onPress={isDone ? onView : onUpload}
+        style={[
+          styles.docRow,
+          !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? '#2C2C2E' : '#E5E7EB' },
+          isRejected && { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.05)' : 'rgba(239, 68, 68, 0.05)' }
+        ]}
+      >
+        <View style={styles.docRowLeft}>
+          <View style={styles.docIconBox}>
+            {imageUri && !loadError ? (
+              <Image 
+                source={{ uri: imageUri }} 
+                style={styles.thumbnail} 
+                onError={() => setLoadError(true)}
+              />
+            ) : (
+              <doc.Logo width={28} height={28} />
+            )}
+          </View>
+
+          <View style={styles.docInfo}>
+            <Text style={[styles.docTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1}>
+              {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
+            </Text>
+            
+            <View style={styles.statusWrapper}>
+              <View style={[styles.statusDot, { backgroundColor: activeStatus.dot }]} />
+              <Text style={[styles.statusText, { color: activeStatus.text }]}>
+                {t(status)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.docRowRight}>
+          {isRejected ? (
+             <Text style={[styles.reuploadText, { color: '#EF4444' }]}>{t('reupload') || 'Re-upload'}</Text>
+          ) : !imageUri ? (
+             <Text style={[styles.uploadText, { color: theme.colors.primary }]}>{t('upload') || 'Upload'}</Text>
+          ) : null}
+          <Ionicons name="chevron-forward" size={18} color={isDark ? '#4B5563' : '#9CA3AF'} />
+        </View>
+      </Pressable>
+      
+      {isRejected && reason && (
+        <View style={[styles.rejectionReasonBox, { 
+          borderBottomWidth: !isLast ? StyleSheet.hairlineWidth : 0, 
+          borderBottomColor: isDark ? '#2C2C2E' : '#E5E7EB',
+          backgroundColor: isDark ? 'rgba(239, 68, 68, 0.05)' : 'rgba(239, 68, 68, 0.05)'
+        }]}>
+          <Ionicons name="alert-circle" size={14} color="#EF4444" />
+          <Text style={styles.rejectionReasonText}>{reason}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
 
 /* ================= SCREEN ================= */
 
@@ -209,11 +271,13 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.userSlice.user);
+  
   const { data: remoteDocs, refetch, isFetching } = useGetDriverDocumentsQuery(user?.driverId || '', {
     skip: !user?.driverId,
   });
 
   const [zoomData, setZoomData] = useState<{ uris: string[]; title: string } | null>(null);
+  const [showTips, setShowTips] = useState(false);
 
   useEffect(() => {
     if (remoteDocs) {
@@ -223,28 +287,10 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
   }, [remoteDocs, dispatch]);
 
   const getDocStatusData = (backendType: string, docKey: string) => {
-    // SOURCE 1: Local Redux state (set by DocumentUploadScreen with LOCAL file paths)
-    // These previews are displayable immediately — they are local file:// paths
     const localDoc = user?.documents?.[docKey];
-    
-    // SOURCE 2: API response (set by useGetDriverDocumentsQuery)
-    // These may contain S3 URLs which are private and often fail to load
     const docsArray = Array.isArray(user?.documents_data) ? user.documents_data : [];
     const apiDoc = docsArray.find((d: any) => d.document_type === backendType);
     
-    // 🔍 DEBUG: Log what we find from each source
-    console.log(`[ProfileDocs] ${backendType} (${docKey}):`, {
-      hasLocalDoc: !!localDoc,
-      localPreview: localDoc?.preview ? localDoc.preview.substring(0, 80) + '...' : null,
-      localStatus: localDoc?.status,
-      hasApiDoc: !!apiDoc,
-      apiDocUrl: apiDoc?.document_url ? JSON.stringify(apiDoc.document_url).substring(0, 100) : null,
-      apiStatus: apiDoc?.status,
-      profilePic: user?.profile_picture ? user.profile_picture.substring(0, 80) + '...' : null,
-      profilePicUrl: user?.profile_pic_url ? user.profile_pic_url.substring(0, 80) + '...' : null,
-    });
-    
-    // Determine status: prefer API status (most authoritative), then local
     let status: DocumentStatus = 'missing';
     if (apiDoc) {
       status = (apiDoc.status || apiDoc.license_status || apiDoc.licenseStatus || 'missing').toLowerCase() as DocumentStatus;
@@ -252,16 +298,11 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
       status = localDoc.status.toLowerCase() as DocumentStatus;
     }
     
-    // Determine preview: prefer LOCAL preview (always loadable), then API URL
     let previews: string[] = [];
-    
-    // Priority 1: Local file preview from DocumentUploadScreen
-    // localDoc.preview could be a string or an object depending on DocumentUploadScreen
     if (localDoc?.preview) {
       previews = resolveAllImageUrls(localDoc.preview);
     }
     
-    // Priority 2: API document URL (various possible field names)
     if (previews.length === 0 && apiDoc) {
       previews = resolveAllImageUrls(
         apiDoc.document_url || 
@@ -275,7 +316,6 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
       );
     }
     
-    // Priority 3: Profile picture fallback for selfie
     if (previews.length === 0 && backendType === 'profile_selfie') {
       const profilePic = user?.profile_pic_url || user?.profile_picture;
       if (profilePic) {
@@ -284,57 +324,26 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
       }
     }
 
-    // If we found no doc at all but have a profile pic for selfie, mark as verified
     if (!apiDoc && !localDoc && backendType === 'profile_selfie' && previews.length > 0) {
       status = 'verified';
     }
 
-    // 🔍 DEBUG: Final resolved preview
-    console.log(`[ProfileDocs] ${backendType} RESOLVED:`, {
-      status,
-      previews: previews.map(p => p.substring(0, 100) + '...'),
-    });
-
     const reason = apiDoc?.rejection_reason || apiDoc?.remarks || null;
-
     return { status, previews, preview: previews[0] || null, reason };
   };
 
-  const onRefresh = () => {
-    refetch();
-  };
-
-  // Dynamically calculate the onboarding status based on the latest document statuses
-  // This ensures the roadmap updates immediately even if user.onboarding_status is stale
   const calculateDisplayStatus = () => {
     const currentStatus = user?.onboarding_status || 'PENDING';
-    if (currentStatus === 'ACTIVE' || currentStatus === 'SUBSCRIPTION_ACTIVE') {
-      return currentStatus;
-    }
+    if (currentStatus === 'ACTIVE' || currentStatus === 'SUBSCRIPTION_ACTIVE') return currentStatus;
 
     let allApproved = true;
     let allSubmitted = true;
-    const docStatuses: Record<string, string> = {};
-
     DOCUMENTS_CONFIG.forEach(doc => {
       if (!doc.required) return;
       const { status } = getDocStatusData(doc.backendType, doc.key);
-      docStatuses[doc.key] = status;
-      
       const normalizedStatus = status.toLowerCase();
-      if (normalizedStatus !== 'verified' && normalizedStatus !== 'approved') {
-        allApproved = false;
-      }
-      if (normalizedStatus === 'missing' || normalizedStatus === 'rejected') {
-        allSubmitted = false;
-      }
-    });
-
-    console.log('[ProfileDocs] Dynamic Status Calculation:', {
-      userOnboardingStatus: currentStatus,
-      docStatuses,
-      allApproved,
-      allSubmitted
+      if (normalizedStatus !== 'verified' && normalizedStatus !== 'approved') allApproved = false;
+      if (normalizedStatus === 'missing' || normalizedStatus === 'rejected') allSubmitted = false;
     });
 
     if (allApproved) return 'DOCUMENTS_APPROVED';
@@ -345,50 +354,54 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
   const displayStatus = calculateDisplayStatus();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}>
       <AppStatusBar />
-      <View style={[styles.header, { borderBottomColor: isDark ? theme.colors.border : '#E5E7EB' }]}>
+      <View style={[styles.header, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('documents')}</Text>
-        <View style={{ width: 40 }} />
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1}>{t('documents')}</Text>
+        <Pressable onPress={() => setShowTips(true)} style={styles.tipsBtn}>
+           <Ionicons name="bulb-outline" size={22} color={isDark ? '#F3F4F6' : '#111827'} />
+        </Pressable>
       </View>
 
       <ScrollView 
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={onRefresh} tintColor="#2563EB" />}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={theme.colors.primary} />}
       >
         <VerificationRoadmap status={displayStatus} t={t} isDark={isDark} theme={theme} />
         
-        <Text style={[styles.sectionLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('identity_documents') || 'Identity & Verification'}</Text>
-
-        {DOCUMENTS_CONFIG.map((doc) => {
-          const { status, previews, reason } = getDocStatusData(doc.backendType, doc.key);
-          
-          return (
-            <DocumentCard
-              key={doc.key}
-              doc={doc}
-              status={status}
-              previews={previews}
-              reason={reason}
-              onUpload={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
-              onView={() => {
-                if (previews && previews.length > 0) {
-                   setZoomData({ uris: previews, title: t(doc.labelKey) });
-                }
-              }}
-              t={t}
-              isDark={isDark}
-              theme={theme}
-            />
-          );
-        })}
+        <Section title={t('identity_documents') || 'Identity & Verification'} isDark={isDark} theme={theme}>
+          {DOCUMENTS_CONFIG.map((doc, index) => {
+            const { status, previews, reason } = getDocStatusData(doc.backendType, doc.key);
+            const isLast = index === DOCUMENTS_CONFIG.length - 1;
+            
+            return (
+              <DocumentRow
+                key={doc.key}
+                doc={doc}
+                status={status}
+                previews={previews}
+                reason={reason}
+                isLast={isLast}
+                onUpload={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
+                onView={() => {
+                  if (previews && previews.length > 0) {
+                     setZoomData({ uris: previews, title: t(doc.labelKey) });
+                  }
+                }}
+                t={t}
+                isDark={isDark}
+                theme={theme}
+              />
+            );
+          })}
+        </Section>
 
         <View style={styles.securityNote}>
           <Ionicons name="shield-checkmark" size={16} color="#10B981" />
-          <Text style={styles.securityNoteText}>{t('docs_secure_note')}</Text>
+          <Text style={[styles.securityNoteText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('docs_secure_note') || 'Your documents are encrypted and securely stored'}</Text>
         </View>
       </ScrollView>
 
@@ -398,111 +411,31 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
         imageUris={zoomData?.uris || []}
         title={zoomData?.title}
       />
-    </SafeAreaView>
-  );
-};
 
-const DocumentCard = ({ doc, status, previews, reason, onUpload, onView, t, isDark, theme }: any) => {
-  const [loadError, setLoadError] = useState(false);
-  
-  // Reset error state if the preview URL changes (e.g. after a re-upload or refresh)
-  React.useEffect(() => {
-    setLoadError(false);
-  }, [previews]);
-
-  const imageUri = previews && previews.length > 0 ? previews[0] : null; // Use first image for thumbnail
-
-  const isDone = status === 'verified' || status === 'approved' || status === 'pending' || status === 'uploaded';
-  const isRejected = status === 'rejected';
-  
-  const statusColors: any = {
-    verified: { bg: '#D1FAE5', text: '#059669', icon: 'checkmark-circle' },
-    approved: { bg: '#D1FAE5', text: '#059669', icon: 'checkmark-circle' },
-    pending: { bg: '#FEF3C7', text: '#D97706', icon: 'time' },
-    uploaded: { bg: '#FEF3C7', text: '#D97706', icon: 'time' },
-    rejected: { bg: '#FEE2E2', text: '#DC2626', icon: 'close-circle' },
-    missing: { bg: isDark ? theme.colors.border : '#F3F4F6', text: isDark ? theme.colors.textMuted : '#6B7280', icon: 'document-outline' },
-  };
-
-  const activeStatus = statusColors[status] || statusColors.missing;
-
-  return (
-    <Pressable 
-      onPress={isDone ? onView : onUpload}
-      style={[
-        styles.docCard, 
-        { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' },
-        isRejected && { borderColor: '#FCA5A5', borderWidth: 1 }
-      ]}
-    >
-      <View style={styles.docMainRow}>
-        <View style={[styles.docIconBox, { backgroundColor: isDark ? theme.colors.border : '#F8FAFC' }]}>
-          {imageUri && !loadError ? (
-            <Image 
-              source={{ uri: imageUri }} 
-              style={styles.thumbnail} 
-              onError={() => setLoadError(true)}
-            />
-          ) : (
-            <doc.Logo width={28} height={28} />
-          )}
-        </View>
-
-        <View style={styles.docInfo}>
-          <Text style={[styles.docTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
-            {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
-          </Text>
-          <Text style={[styles.docSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-            {t(doc.subtitleKey)}
-          </Text>
-          
-          <View style={[styles.statusChip, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : activeStatus.bg }]}>
-            <Ionicons name={activeStatus.icon} size={12} color={activeStatus.text} />
-            <Text style={[styles.statusChipText, { color: activeStatus.text }]}>
-              {t(status)}
-            </Text>
+      <Modal visible={showTips} transparent={true} animationType="fade" onRequestClose={() => setShowTips(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Ionicons name="bulb" size={20} color="#F59E0B" style={{ marginRight: 8 }} />
+                <Text style={[styles.modalTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>{t('smart_suggestions') || 'Tips for Fast Approval'}</Text>
+              </View>
+              <Pressable onPress={() => setShowTips(false)}>
+                <Ionicons name="close" size={24} color={isDark ? '#F3F4F6' : '#111827'} />
+              </Pressable>
+            </View>
+            <View style={styles.suggestionsList}>
+              {SUGGESTIONS.map((s, i) => (
+                <View key={i} style={styles.suggestionItem}>
+                  <View style={[styles.suggestionDot, { backgroundColor: theme.colors.primary }]} />
+                  <Text style={[styles.suggestionText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>{t(s.textKey)}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
-
-        <View style={styles.docRight}>
-          {!imageUri ? (
-            <Pressable 
-              onPress={onUpload}
-              style={[styles.uploadCircle, { backgroundColor: isDark ? theme.colors.border : '#EFF6FF' }]}
-            >
-              <Ionicons name="cloud-upload" size={20} color="#2563EB" />
-            </Pressable>
-          ) : (
-            <Ionicons 
-              name="chevron-forward" 
-              size={20} 
-              color={isDark ? '#4B5563' : '#9CA3AF'} 
-            />
-          )}
-        </View>
-      </View>
-
-      {isRejected && reason && (
-        <View style={styles.rejectionReasonBox}>
-          <Ionicons name="alert-circle" size={14} color="#DC2626" />
-          <Text style={styles.rejectionReasonText}>{reason}</Text>
-        </View>
-      )}
-
-      {!isDone && (
-        <Pressable onPress={onUpload} style={styles.actionFooter}>
-          <Text style={styles.actionFooterText} numberOfLines={1} adjustsFontSizeToFit>{t('tap_to_upload') || 'Tap to Upload'}</Text>
-          <Ionicons name="chevron-forward" size={14} color="#2563EB" />
-        </Pressable>
-      )}
-      
-      {isRejected && (
-        <Pressable onPress={onUpload} style={[styles.actionFooter, { borderTopColor: '#FEE2E2' }]}>
-          <Text style={[styles.actionFooterText, { color: '#DC2626' }]} numberOfLines={1} adjustsFontSizeToFit>{t('reupload') || 'Re-upload Document'}</Text>
-          <Ionicons name="refresh" size={14} color="#DC2626" />
-        </Pressable>
-      )}
-    </Pressable>
+      </Modal>
+    </SafeAreaView>
   );
 };
 
@@ -514,171 +447,114 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
+  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-start' },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', textAlign: 'center' },
+  tipsBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  
+  // Roadmap Styles
   roadmapContainer: {
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    marginBottom: 24,
+    paddingHorizontal: 8,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 20 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 12, marginTop: 12, marginLeft: 8 },
   roadmapRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
   },
   roadmapStep: { alignItems: 'center', flex: 1 },
   roadmapIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  roadmapStepText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  roadmapLine: { height: 2, flex: 1, marginBottom: 25 },
-  suggestionsContainer: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-    padding: 16,
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  suggestionsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  bulbBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  suggestionsTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  suggestionsList: {
-    gap: 12,
-  },
-  suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  suggestionDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 10,
-  },
-  suggestionText: {
-    fontSize: 13,
-    fontWeight: '500',
-    flex: 1,
-  },
-  sectionLabel: { fontSize: 15, fontWeight: '700', marginBottom: 16, marginTop: 8 },
-  docCard: {
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  docMainRow: { flexDirection: 'row', alignItems: 'center' },
-  docIconBox: {
-    width: 48,
-    height: 48,
+    width: 28,
+    height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 6,
+  },
+  roadmapStepText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  roadmapLine: { height: 2, flex: 1, marginBottom: 20 },
+  
+  // Section Styles
+  sectionContainer: { marginBottom: 24 },
+  sectionContent: {
+    borderRadius: 12,
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  docInfo: { flex: 1, marginLeft: 16 },
-  docTitle: { fontSize: 15, fontWeight: '700' },
-  docSubtitle: { fontSize: 12, marginTop: 2, opacity: 0.8 },
-  statusChip: {
+  
+  // Document Row Styles
+  docRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginTop: 8,
-    gap: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  statusChipText: { fontSize: 10, fontWeight: '700', textTransform: 'capitalize' },
-  docRight: { marginLeft: 12 },
-  previewContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
+  docRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  thumbnail: { width: '100%', height: '100%', resizeMode: 'cover' },
-  zoomIconOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 2,
-    borderTopLeftRadius: 4,
-  },
-  uploadCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  docIconBox: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
+  thumbnail: { width: '100%', height: '100%', resizeMode: 'cover' },
+  docInfo: { flex: 1 },
+  docTitle: { fontSize: 15, fontWeight: '500', marginBottom: 2 },
+  statusWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 12, fontWeight: '500', textTransform: 'capitalize' },
+  docRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 12,
+  },
+  uploadText: { fontSize: 14, fontWeight: '500' },
+  reuploadText: { fontSize: 14, fontWeight: '500' },
+  
   rejectionReasonBox: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(220, 38, 38, 0.05)',
-    padding: 10,
-    borderRadius: 10,
-    marginTop: 12,
-    gap: 8,
+    alignItems: 'flex-start',
+    padding: 12,
+    paddingLeft: 68,
+    paddingRight: 16,
+    gap: 6,
   },
-  rejectionReasonText: { fontSize: 12, color: '#DC2626', fontWeight: '500', flex: 1 },
-  actionFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 14,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  actionFooterText: { fontSize: 13, fontWeight: '600', color: '#2563EB' },
+  rejectionReasonText: { fontSize: 12, color: '#EF4444', flex: 1, lineHeight: 18 },
+  
+  // Misc
   securityNote: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
-    gap: 8,
-    opacity: 0.6,
+    marginTop: 8,
+    gap: 6,
   },
-  securityNoteText: { fontSize: 11, color: '#6B7280', fontWeight: '500' },
+  securityNoteText: { fontSize: 12, fontWeight: '500' },
+  
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 },
+  modalContent: { borderRadius: 16, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalHeaderLeft: { flexDirection: 'row', alignItems: 'center' },
+  modalTitle: { fontSize: 16, fontWeight: '600' },
+  suggestionsList: { gap: 12 },
+  suggestionItem: { flexDirection: 'row', alignItems: 'center' },
+  suggestionDot: { width: 6, height: 6, borderRadius: 3, marginRight: 10 },
+  suggestionText: { fontSize: 14, fontWeight: '500', flex: 1 },
 });
