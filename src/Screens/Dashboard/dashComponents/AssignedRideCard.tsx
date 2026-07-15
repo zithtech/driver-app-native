@@ -51,10 +51,16 @@ type Props = {
 const TripTypeBadge = ({ type }: { type: string }) => {
   let color = '#3b82f6'; 
   let bgColor = '#eff6ff';
+  let displayText = type;
 
-  if (type === 'OUTSTATION') {
+  if (type === 'OUTSTATION_ROUND_TRIP' || type === 'OUTSTATION_ONE_WAY') {
     color = '#8b5cf6'; 
     bgColor = '#f5f3ff';
+    if (type === 'OUTSTATION_ROUND_TRIP') {
+      displayText = 'OUTSTATION ROUND TRIP';
+    } else if (type === 'OUTSTATION_ONE_WAY') {
+      displayText = 'OUTSTATION ONE WAY';
+    }
   } else if (type === 'RENTAL') {
     color = '#f59e0b'; 
     bgColor = '#fffbeb';
@@ -62,7 +68,7 @@ const TripTypeBadge = ({ type }: { type: string }) => {
 
   return (
     <View style={[styles.tripTypeBadge, { backgroundColor: bgColor, borderColor: color }]}>
-      <Text style={[styles.tripTypeText, { color: color }]} numberOfLines={1}>{type}</Text>
+      <Text style={[styles.tripTypeText, { color: color }]} numberOfLines={1}>{displayText}</Text>
     </View>
   );
 };

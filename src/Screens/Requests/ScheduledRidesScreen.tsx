@@ -40,8 +40,15 @@ import socketService from '../../service/socketService';
 
 
 type SortOption = 'time' | 'price' | 'distance';
-type FilterType = 'all' | 'outstation' | 'one_way' | 'round_trip' | 'high_value';
+type FilterType = 'all' | 'outstation_one_way' | 'one_way' | 'round_trip' | 'outstation_round_trip' | 'high_value';
 
+
+const getRideTypeDisplayText = (rideType: string) => {
+  let displayType = rideType || 'ONE_WAY';
+  if (displayType === 'OUTSTATION_ROUND_TRIP') return 'OUTSTATION ROUND TRIP';
+  if (displayType === 'OUTSTATION_ONE_WAY') return 'OUTSTATION ONE WAY';
+  return displayType;
+};
 
 const SimpleRideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, ms, vs, s, styles, onPress }: any) => {
   const accepted = item.trip_status === 'ACCEPTED';
@@ -86,7 +93,7 @@ const SimpleRideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: vs(12) }}>
         <View style={{ flexDirection: 'row', gap: ms(8) }}>
           <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-            <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t(item.ride_type || 'ONE_WAY')}</Text>
+            <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t(getRideTypeDisplayText(item.ride_type))}</Text>
           </View>
           {!accepted && (
             <View style={[styles.remainingTag, { backgroundColor: '#FFF7ED' }]}>
@@ -204,7 +211,7 @@ const RideDetailsModalCard = ({ item, acceptedRide, getRemainingTime, theme, isD
           <View style={styles.badgeRow}>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
               <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
-                {t(item.ride_type || 'ONE_WAY')}
+                {t(getRideTypeDisplayText(item.ride_type))}
               </Text>
             </View>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
@@ -498,18 +505,21 @@ const ScheduledRidesScreen = () => {
   /* ================= HELPERS ================= */
 
   const switchTab = useCallback((tab: 'accepted' | 'today' | 'upcoming') => {
-    if (tab === activeTab) { return; }
+    setActiveTab(prevTab => {
+      if (prevTab === tab) { return prevTab; }
 
-    setActiveTab(tab);
-    triggerHaptic(HapticFeedbackTypes.impactLight);
+      triggerHaptic(HapticFeedbackTypes.impactLight);
 
-    Animated.spring(tabAnim, {
-      toValue: tab === 'accepted' ? 0 : tab === 'today' ? 1 : 2,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 50,
-    }).start();
-  }, [activeTab, triggerHaptic, tabAnim]);
+      Animated.spring(tabAnim, {
+        toValue: tab === 'accepted' ? 0 : tab === 'today' ? 1 : 2,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 50,
+      }).start();
+
+      return tab;
+    });
+  }, [triggerHaptic, tabAnim]);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -518,10 +528,10 @@ const ScheduledRidesScreen = () => {
   }, [route.params?.initialTab, switchTab]);
 
   useEffect(() => {
-    if (myAcceptedRideId) {
+    if (myAcceptedRideId && !acceptedSuccessId) {
       switchTab('accepted');
     }
-  }, [myAcceptedRideId, switchTab]);
+  }, [myAcceptedRideId, acceptedSuccessId, switchTab]);
 
   useEffect(() => {
     if (isTripsLoading && !rawTrips) {
@@ -655,7 +665,10 @@ const ScheduledRidesScreen = () => {
         const type = (ride.ride_type || ride.service_type || '').toLowerCase();
 
         // Local condition removed
-        if (filterType === 'outstation') { if (type !== 'outstation') return false; }
+        if (filterType === 'outstation_one_way') { if (type !== 'outstation_one_way') return false; }
+        else if (filterType === 'outstation_round_trip') { 
+          if (type !== 'outstation_round_trip') return false; 
+        }
         else if (filterType === 'one_way') { if (type !== 'one_way') return false; }
         else if (filterType === 'round_trip') { if (type !== 'round_trip') return false; }
         else if (filterType === 'high_value') {
@@ -769,15 +782,19 @@ const ScheduledRidesScreen = () => {
     const getCount = (type: FilterType) => {
       if (type === 'all') return sameTabRides.length;
       if (type === 'high_value') return sameTabRides.filter(r => r.total_fare >= 300).length;
+      if (type === 'outstation_round_trip') {
+        return sameTabRides.filter(r => (r.ride_type || r.service_type || '').toLowerCase() === 'outstation_round_trip').length;
+      }
       return sameTabRides.filter(r => (r.ride_type || r.service_type || '').toLowerCase() === type).length;
     };
 
     return {
       all: getCount('all'),
       // local: getCount('local'),
-      outstation: getCount('outstation'),
+      outstation_one_way: getCount('outstation_one_way'),
       one_way: getCount('one_way'),
       round_trip: getCount('round_trip'),
+      outstation_round_trip: getCount('outstation_round_trip'),
       high_value: getCount('high_value'),
     };
   }, [baseEligibleRides, activeTab, myAcceptedRideId]);
@@ -902,7 +919,10 @@ const ScheduledRidesScreen = () => {
       console.log('Accept ride attempt failed:', error?.data?.message || error?.message);
 
       const isAlreadyCancelled = error?.data?.message?.toLowerCase().includes('cancelled') || error?.status === 410;
-      const isAlreadyAccepted = error.status === 400 && (error.data?.message?.toLowerCase().includes('already') || error.data?.message?.toLowerCase().includes('taken'));
+      const isAlreadyAccepted = error.status === 400 && 
+        (error.data?.message?.toLowerCase().includes('already accepted') || 
+         error.data?.message?.toLowerCase().includes('taken') || 
+         error.data?.message?.toLowerCase().includes('no longer available'));
 
       if (isAlreadyCancelled) {
         showAlert({
@@ -1459,7 +1479,7 @@ const ScheduledRidesScreen = () => {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={['all', 'one_way', 'round_trip', 'outstation', 'high_value'] as FilterType[]}
+          data={['all', 'one_way', 'round_trip', 'outstation_one_way', 'outstation_round_trip', 'high_value'] as FilterType[]}
           keyExtractor={(item) => item}
           contentContainerStyle={styles.filterList}
           renderItem={({ item }) => {
@@ -1468,9 +1488,10 @@ const ScheduledRidesScreen = () => {
               switch (item) {
                 case 'all': return 'list-outline';
                 // case 'local': return 'car-outline';
-                case 'outstation': return 'map-outline';
+                case 'outstation_one_way': return 'map-outline';
                 case 'one_way': return 'arrow-forward-outline';
                 case 'round_trip': return 'repeat-outline';
+                case 'outstation_round_trip': return 'repeat-outline';
                 case 'high_value': return 'star-outline';
                 default: return 'filter-outline';
               }

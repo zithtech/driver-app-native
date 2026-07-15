@@ -208,7 +208,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     if (allowedTypes.includes('INSTANT') || feats.instant_requests) features.push({ key: 'instant_rides', icon: 'checkmark' });
     // else features.push({ key: 'local_rides', icon: 'checkmark' });
 
-    if (allowedTypes.includes('OUTSTATION') || feats.outstation_enabled) features.push({ key: 'outstation_trips', icon: 'checkmark' });
+    if (allowedTypes.includes('OUTSTATION') || allowedTypes.includes('OUTSTATION_ONE_WAY') || allowedTypes.includes('OUTSTATION_ROUND_TRIP') || feats.outstation_enabled) features.push({ key: 'outstation_trips', icon: 'checkmark' });
     if (allowedTypes.includes('ONE-WAY') || feats.oneway_enabled) features.push({ key: 'one_way_trips', icon: 'checkmark' });
 
     const sched = feats.scheduled_rides;
