@@ -185,7 +185,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                 tripId: targetTripId,
                 distance_km: actualDistance,
                 trip_duration_minutes: actualDuration,
-                rating: rating,
+                user_rating: rating,
             }).unwrap();
 
             dispatch(clearAcceptedRide());

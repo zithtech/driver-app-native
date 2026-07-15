@@ -188,11 +188,11 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
         return;
     }
 
-    let finishedPlayingSubscription: any = null;
-
     const playSound = () => {
       try {
+        SoundPlayer.setVolume(1.0);
         SoundPlayer.playSoundFile('incoming', 'mp3');
+        SoundPlayer.setNumberOfLoops(-1); // Indefinite native loop
         Vibration.vibrate([400, 600, 400], true);
       } catch (e) {
         console.log('SoundPlayer error:', e);
@@ -201,18 +201,8 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
     playSound();
 
-    // Loop the sound for incoming ride ringtone
-    finishedPlayingSubscription = SoundPlayer.addEventListener('FinishedPlaying', ({ success }) => {
-      if (success) {
-        playSound();
-      }
-    });
-
     return () => {
       try {
-        if (finishedPlayingSubscription) {
-          finishedPlayingSubscription.remove();
-        }
         SoundPlayer.stop();
         Vibration.cancel();
       } catch (e) {

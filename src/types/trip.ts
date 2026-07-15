@@ -54,9 +54,11 @@ export interface Ride {
   cancel_reason: string | null;
   cancel_by: string | null;
   notes: string | null;
-  rating: number | null;
+  driver_rating?: number | null;
+  user_rating?: number | null;
+  driver_feedback?: string | null;
+  user_feedback?: string | null;
   re_route_id: string | null;
-  feedback: string | null;
   assigned_at: string | null;
   started_at: string | null;
   ended_at: string | null;

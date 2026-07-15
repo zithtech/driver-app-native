@@ -208,7 +208,7 @@ const DriverDashboard = () => {
         startTime: new Date(timeVal).getTime(),
         customer: {
           name: tripData.user_details?.full_name || tripData.user_details?.first_name || tripData.passenger_details?.name || tripData.passenger_name || tripData.customer?.name || 'Customer',
-          ratingGiven: tripData.rating || tripData.user_rating || tripData.trip_rating || undefined,
+          ratingGiven: tripData.user_rating || tripData.trip_rating || undefined,
           comment: tripData.feedback || tripData.comment || tripData.user_feedback || '',
         },
       };
@@ -223,7 +223,7 @@ const DriverDashboard = () => {
   const todayRides = extractArray(todayRidesResult?.data);
   const computedEarnings = todayOverview?.totalEarnings !== undefined ? todayOverview.totalEarnings : todayRides.reduce((sum: number, ride: any) => {
     const amt = typeof ride.amount === 'string' ? parseFloat(ride.amount) : (ride.amount || 0);
-    const rating = ride.rating || ride.user_rating || ride.trip_rating ? parseFloat(ride.rating || ride.user_rating || ride.trip_rating) : undefined;
+    const rating = ride.driver_rating || ride.user_rating || ride.trip_rating ? parseFloat(ride.driver_rating || ride.user_rating || ride.trip_rating) : undefined;
     return sum + amt;
   }, 0);
   const computedCancellations = todayOverview?.cancellations !== undefined ? todayOverview.cancellations : todayRides.filter((ride: any) => ride.status === 'Cancelled' || ride.trip_status === 'CANCELLED').length;
@@ -412,37 +412,15 @@ const DriverDashboard = () => {
   }, [isOnline]);
 
   // ── Rating Calculation & Update ──
-  useEffect(() => {
-    if (allHistoryResult?.data && user?.driverId) {
-      const rides = extractArray(allHistoryResult.data);
-      const newRating = calculateAverageRating(rides);
-
-      if (newRating !== null) {
-
-        // Update only if if it's significant or different
-        if (Math.abs((user.rating || 0) - newRating) > 0.001) {
-          updateDriver({
-            id: user.driverId,
-            data: { rating: newRating }
-          }).unwrap()
-            .then(() => {
-              // Only update the rating in Redux to avoid stale overwrites
-              dispatch(setUser({ rating: newRating }));
-            })
-            .catch(err => {
-              console.error('[RatingCalc] Failed to update driver rating:', err);
-            });
-        }
-      }
-    }
-  }, [allHistoryResult, user?.driverId]);
+  // The rating is now calculated and managed entirely on the backend based on driver_rating.
+  // We no longer push client-side calculations to the server.
 
   useEffect(() => {
     if (!isOnline || !user?.driverId) return;
 
     const handleRating = (tripData: any) => {
       dispatch(setLastTripRating({
-        rating: tripData.rating || tripData.user_rating || tripData.trip_rating,
+        rating: tripData.driver_rating || tripData.user_rating || tripData.trip_rating,
         feedback: tripData.feedback || tripData.comment || tripData.user_feedback || ''
       }));
       setRatingModalVisible(true);

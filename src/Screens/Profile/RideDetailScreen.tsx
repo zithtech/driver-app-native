@@ -108,11 +108,17 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
         ...initialRide.customer,
         name: tripData.passenger_name || tripData.customer?.name || initialRide.customer?.name || 'Customer',
         ratingGiven: (() => {
-          const rawRating = tripData.rating ?? tripData.user_rating ?? tripData.trip_rating ?? initialRide.customer?.ratingGiven;
+          const rawRating = tripData.user_rating ?? initialRide.customer?.ratingGiven;
           const parsed = rawRating != null ? Number(rawRating) : NaN;
           return isNaN(parsed) ? undefined : parsed;
         })(),
-        comment: tripData.feedback || tripData.comment || tripData.user_feedback || initialRide.customer?.comment || '',
+        ratingReceived: (() => {
+          const rawRating = tripData.driver_rating ?? initialRide.customer?.ratingReceived;
+          const parsed = rawRating != null ? Number(rawRating) : NaN;
+          return isNaN(parsed) ? undefined : parsed;
+        })(),
+        comment: tripData.user_feedback ?? tripData.comment ?? initialRide.customer?.comment ?? '',
+        receivedComment: tripData.driver_feedback ?? initialRide.customer?.receivedComment ?? '',
       },
       fareDetails: {
         base: parseFloat(tripData.base_fare || tripData.fareDetails?.base || '0'),
@@ -275,11 +281,19 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                   <View style={styles.customerInfo}>
                     <Text style={[styles.customerName, { color: isDark ? '#F3F4F6' : '#1F2937' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.customer.name}</Text>
                     {ride.status === 'Completed' ? (
-                      <View style={[styles.ratingBox, isDark && { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: 'rgba(251, 191, 36, 0.2)' }]}>
-                        <Ionicons name="star" size={14} color="#FBBF24" />
-                        <Text style={[styles.ratingText, isDark && { color: '#FCD34D' }]}>
-                          {ride.customer.ratingGiven !== undefined ? ride.customer.ratingGiven.toFixed(1) : t('no_rating')}
-                        </Text>
+                      <View style={{ gap: 8, marginTop: 4 }}>
+                        <View style={[styles.ratingBox, isDark && { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: 'rgba(251, 191, 36, 0.2)' }]}>
+                          <Ionicons name="star" size={14} color="#FBBF24" />
+                          <Text style={[styles.ratingText, isDark && { color: '#FCD34D' }]}>
+                            {t('you_rated')}: {ride.customer.ratingGiven !== undefined ? ride.customer.ratingGiven.toFixed(1) : t('no_rating')}
+                          </Text>
+                        </View>
+                        <View style={[styles.ratingBox, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                          <Ionicons name="star" size={14} color="#10B981" />
+                          <Text style={[styles.ratingText, { color: '#059669' }, isDark && { color: '#34D399' }]}>
+                            {t('customer_rated')}: {ride.customer.ratingReceived !== undefined ? ride.customer.ratingReceived.toFixed(1) : t('no_rating')}
+                          </Text>
+                        </View>
                       </View>
                     ) : (
                       <Text style={[styles.noRatingText, isDark && { color: '#9CA3AF' }]}>
@@ -290,7 +304,12 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                 </View>
                 {ride.customer.comment && (
                   <View style={[styles.commentBox, isDark && { backgroundColor: theme.colors.border, borderLeftColor: '#4B5563' }]}>
-                    <Text style={[styles.commentText, isDark && { color: '#D1D5DB' }]}>"{ride.customer.comment}"</Text>
+                    <Text style={[styles.commentText, isDark && { color: '#D1D5DB' }]}>{t('your_feedback')}: "{ride.customer.comment}"</Text>
+                  </View>
+                )}
+                {ride.customer.receivedComment && (
+                  <View style={[styles.commentBox, { borderLeftColor: '#10B981', marginTop: 8 }, isDark && { backgroundColor: theme.colors.border, borderLeftColor: '#059669' }]}>
+                    <Text style={[styles.commentText, isDark && { color: '#D1D5DB' }]}>{t('customer_feedback')}: "{ride.customer.receivedComment}"</Text>
                   </View>
                 )}
               </View>
