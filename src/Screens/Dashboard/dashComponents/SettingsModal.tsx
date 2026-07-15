@@ -53,7 +53,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
         
         // Secondary check based on plan tier names for safety
         if (planName.includes('elite')) {
-            if (type === 'OUTSTATION' || type === 'ONE-WAY') return true;
+            if (type === 'OUTSTATION' || type === 'OUTSTATION_ONE_WAY' || type === 'OUTSTATION_ROUND_TRIP' || type === 'ONE-WAY' || type === 'ONE_WAY') return true;
         }
         if (planName.includes('premium')) {
             return true;
@@ -62,9 +62,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ visible, onClose }) => {
         return typeMatch;
     };
 
-    const isOutstationEnabled = isSubscribed('OUTSTATION');
-    const isRoundTripEnabled = isSubscribed('ROUND-TRIP');
-    const isOneWayEnabled = isSubscribed('ONE-WAY');
+    const isOutstationEnabled = isSubscribed('OUTSTATION') || isSubscribed('OUTSTATION_ONE_WAY') || isSubscribed('OUTSTATION_ROUND_TRIP');
+    const isRoundTripEnabled = isSubscribed('ROUND-TRIP') || isSubscribed('ROUND_TRIP');
+    const isOneWayEnabled = isSubscribed('ONE-WAY') || isSubscribed('ONE_WAY');
 
     const [isBatteryOptimized, setIsBatteryOptimized] = React.useState(false);
 

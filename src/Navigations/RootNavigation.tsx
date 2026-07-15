@@ -229,6 +229,58 @@ const RootNavigation = () => {
     }
   }, [tripData, handleCancellation]);
 
+  // 4. Active Trip Recovery Redirect
+  // After bootstrap finishes, if the Navigator already mounted on Dashboard
+  // but we have an active trip, programmatically redirect to the correct screen.
+  // This handles the race condition where initialRouteName was consumed before
+  // the trip data arrived from the API.
+  const hasRedirectedRef = useRef(false);
+
+  useEffect(() => {
+    // Only run after bootstrap is complete and we have a valid ride
+    if (isBootstrapping || !currentRide || hasRedirectedRef.current) return;
+
+    const rawStatus = (currentRide.trip_status || (currentRide as any).status || '').toUpperCase();
+    
+    // Skip if the trip is in a terminal/non-active state
+    if (['COMPLETED', 'CANCELLED', 'CANCEL', 'MID_CANCELLED'].includes(rawStatus)) return;
+
+    // Determine the expected screen for the current trip status
+    const isScheduled = (currentRide as any)?.booking_type === 'SCHEDULED' || (currentRide as any)?.is_scheduled;
+    let expectedScreen: string | null = null;
+
+    if ((['ARRIVING', 'ARRIVED'].includes(rawStatus)) || (rawStatus === 'ACCEPTED' && !isScheduled)) {
+      expectedScreen = PickupMapScreen_Nav;
+    } else if (rawStatus === 'VERIFICATION_PENDING') {
+      expectedScreen = 'VehicleVerificationScreen';
+    } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
+      expectedScreen = DropMapScreen_Nav;
+    } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
+      expectedScreen = WaitingScreen_Nav;
+    } else if (rawStatus === 'RETURN_STARTED') {
+      expectedScreen = ReturnTripMapScreen_Nav;
+    } else if (rawStatus === 'DESTINATION_REACHED' || rawStatus === 'RETURN_REACHED') {
+      expectedScreen = 'PaymentCollectionScreen';
+    }
+
+    if (!expectedScreen) return;
+
+    // Small delay to ensure navigator is fully ready and mounted
+    const timer = setTimeout(() => {
+      if (!navigationRef.isReady()) return;
+      const currentRoute = navigationRef.getCurrentRoute()?.name;
+
+      // Only redirect if we're on Dashboard but should be on a trip screen
+      if (currentRoute === Dashboard_Nav && expectedScreen) {
+        console.log(`[RootNavigation] 🔄 Trip Recovery Redirect: ${currentRoute} → ${expectedScreen} (status: ${rawStatus})`);
+        hasRedirectedRef.current = true;
+        navigationRef.dispatch(StackActions.replace(expectedScreen, { ride: currentRide }));
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isBootstrapping, currentRide]);
+
   /* ================= NAVIGATION LOGIC ================= */
 
   if (isBootstrapping) {
@@ -273,7 +325,7 @@ const RootNavigation = () => {
         initialRoute = 'VehicleVerificationScreen';
       } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
         initialRoute = DropMapScreen_Nav;
-      } else if (rawStatus === 'WAITING') {
+      } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
         initialRoute = WaitingScreen_Nav;
       } else if (rawStatus === 'RETURN_STARTED') {
         initialRoute = ReturnTripMapScreen_Nav;
