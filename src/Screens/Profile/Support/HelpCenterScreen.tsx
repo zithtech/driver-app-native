@@ -6,7 +6,17 @@ import {
     Pressable,
     TouchableOpacity,
     Linking,
+    LayoutAnimation,
+    Platform,
+    UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android') {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+        UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+}
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
@@ -76,15 +86,6 @@ const FAQ_DATA: FAQ[] = [
 const AccordionItem = ({ item, isExpanded, onPress }: { item: FAQ, isExpanded: boolean, onPress: () => void }) => {
     const { theme, isDark } = useAppTheme();
 
-    const accordionMarginTop = vs(12);
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            height: withTiming(isExpanded ? 'auto' : 0, { duration: 300 }),
-            opacity: withTiming(isExpanded ? 1 : 0, { duration: 250 }),
-            marginTop: withTiming(isExpanded ? accordionMarginTop : 0, { duration: 300 }),
-        };
-    });
-
     const rotateStyle = useAnimatedStyle(() => {
         return {
             transform: [{ rotate: withTiming(isExpanded ? '180deg' : '0deg') }],
@@ -99,10 +100,12 @@ const AccordionItem = ({ item, isExpanded, onPress }: { item: FAQ, isExpanded: b
                     <Ionicons name="chevron-down" size={s(20)} color={theme.colors.primary} />
                 </Animated.View>
             </Pressable>
-            <Animated.View style={[styles.answerContainer, animatedStyle]}>
-                <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-                <Text style={[styles.answerText, { color: isDark ? '#94A3B8' : '#64748B' }]}>{item.answer}</Text>
-            </Animated.View>
+            {isExpanded && (
+                <View style={[styles.answerContainer, { marginTop: vs(12) }]}>
+                    <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+                    <Text style={[styles.answerText, { color: isDark ? '#94A3B8' : '#64748B' }]}>{item.answer}</Text>
+                </View>
+            )}
         </View>
     );
 };
@@ -136,6 +139,11 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
 
     const handleCallSupport = () => {
         Linking.openURL('tel:18001234567');
+    };
+
+    const handleToggle = (id: number) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setExpandedId(expandedId === id ? null : id);
     };
 
     return (
@@ -209,7 +217,7 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                                 <AccordionItem
                                     item={faq}
                                     isExpanded={expandedId === faq.id}
-                                    onPress={() => setExpandedId(expandedId === faq.id ? null : faq.id)}
+                                    onPress={() => handleToggle(faq.id)}
                                 />
                             </Animated.View>
                         ))

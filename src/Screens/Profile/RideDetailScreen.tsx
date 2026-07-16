@@ -72,6 +72,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
       tripData.trip_changes.forEach((change: any) => {
         const time = new Date(change.changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (change.new_value?.trip_status === 'REQUESTED') timeline.requestedAt = time;
+        if (change.new_value?.trip_status === 'ACCEPTED') timeline.acceptedAt = time;
         if (change.new_value?.trip_status === 'ARRIVED') timeline.arrivedAt = time;
         if (change.new_value?.trip_status === 'LIVE' || change.new_value?.trip_status === 'STARTED') timeline.startedAt = time;
         if (change.new_value?.trip_status === 'COMPLETED') timeline.completedAt = time;
@@ -82,6 +83,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
     // fallback if timeline is empty
     if (Object.keys(timeline).length === 0) {
       if (tripData.created_at) timeline.requestedAt = new Date(tripData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (tripData.trip_status === 'ACCEPTED' && tripData.updated_at) timeline.acceptedAt = new Date(tripData.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       if (tripData.trip_status === 'COMPLETED' && tripData.updated_at) timeline.completedAt = new Date(tripData.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       if (tripData.trip_status === 'CANCELLED' && tripData.updated_at) timeline.cancelledAt = new Date(tripData.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
@@ -320,58 +322,42 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
               <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('trip_timeline')}</Text>
 
               {ride.timeline ? (
-                <>
-                  {ride.timeline.requestedAt && (
-                    <TimelineItem
-                      status={t('requested')}
-                      time={ride.timeline.requestedAt}
-                      completed={true}
-                      isLast={ride.status === 'Cancelled' ? !ride.timeline.cancelledAt : !ride.timeline.arrivedAt}
-                      isDark={isDark}
-                    />
-                  )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Ionicons name="time-outline" size={24} color={isDark ? '#60A5FA' : '#2563EB'} style={{ marginBottom: 4 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#E5E7EB' : '#1F2937' }}>{t('accepted')}</Text>
+                    <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                      {ride.timeline.acceptedAt || ride.timeline.requestedAt || ride.time}
+                    </Text>
+                  </View>
 
-                  {ride.status === 'Cancelled' && ride.timeline.cancelledAt && (
-                    <TimelineItem
-                      status={t('cancelled')}
-                      time={ride.timeline.cancelledAt}
-                      completed={true}
-                      isLast={true}
-                      color={isDark ? '#F87171' : '#DC2626'}
-                      isDark={isDark}
-                    />
-                  )}
+                  <View style={{ height: 2, flex: 1, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 4, marginTop: -20 }} />
 
-                  {ride.status !== 'Cancelled' && ride.timeline.arrivedAt && (
-                    <TimelineItem
-                      status={t('arrived')}
-                      time={ride.timeline.arrivedAt}
-                      completed={true}
-                      isLast={!ride.timeline.startedAt}
-                      isDark={isDark}
-                    />
-                  )}
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Ionicons name="play-circle-outline" size={24} color={ride.timeline.startedAt ? (isDark ? '#34D399' : '#10B981') : (isDark ? '#4B5563' : '#E5E7EB')} style={{ marginBottom: 4 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: ride.timeline.startedAt ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }}>{t('started')}</Text>
+                    <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                      {ride.timeline.startedAt || '-'}
+                    </Text>
+                  </View>
 
-                  {ride.status !== 'Cancelled' && ride.timeline.startedAt && (
-                    <TimelineItem
-                      status={t('started')}
-                      time={ride.timeline.startedAt}
-                      completed={true}
-                      isLast={!ride.timeline.completedAt}
-                      isDark={isDark}
-                    />
-                  )}
+                  <View style={{ height: 2, flex: 1, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 4, marginTop: -20 }} />
 
-                  {ride.status !== 'Cancelled' && ride.timeline.completedAt && (
-                    <TimelineItem
-                      status={t('completed')}
-                      time={ride.timeline.completedAt}
-                      completed={ride.status === 'Completed'}
-                      isLast={true}
-                      isDark={isDark}
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Ionicons 
+                      name={ride.status === 'Cancelled' ? 'close-circle-outline' : 'checkmark-done-circle-outline'} 
+                      size={24} 
+                      color={(ride.timeline.completedAt || ride.timeline.cancelledAt) ? (ride.status === 'Cancelled' ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#34D399' : '#10B981')) : (isDark ? '#4B5563' : '#E5E7EB')} 
+                      style={{ marginBottom: 4 }} 
                     />
-                  )}
-                </>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: (ride.timeline.completedAt || ride.timeline.cancelledAt) ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }}>
+                      {ride.status === 'Cancelled' ? t('cancelled') : t('completed')}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                      {ride.timeline.completedAt || ride.timeline.cancelledAt || '-'}
+                    </Text>
+                  </View>
+                </View>
               ) : (
                 <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 13, fontStyle: 'italic' }}>
                   {t('timeline_unavailable')}

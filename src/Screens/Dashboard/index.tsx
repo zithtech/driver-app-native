@@ -11,6 +11,7 @@ import {
   AppStateStatus,
   TouchableOpacity,
   Animated as RNAnimated,
+  ActivityIndicator,
   Linking,
   Platform,
 } from 'react-native';
@@ -69,7 +70,7 @@ import { parseOnlineTimeToSeconds, formatOnlineTime } from '../../utils/timeUtil
 import socketService from '../../service/socketService';
 import RatingReceivedModal from '../../Components/RatingReceivedModal';
 import AppStatusBar from '../../Components/AppStatusBar';
-import { setLastTripRating } from '../../redux/rideSlice';
+import { setLastTripRating, setCurrentRide } from '../../redux/rideSlice';
 import axiosInstance from '../../api/axiosInstance';
 // Use RideItem from the hook
 // Use RideItem from the hook, but for now we keep the local type for compatibility if needed.
@@ -241,6 +242,7 @@ const DriverDashboard = () => {
   const [showBatteryModal, setShowBatteryModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [acceptedRide, setAcceptedRide] = useState<RideItem | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     if (route.params?.showVerificationSuccess) {
@@ -857,7 +859,8 @@ const DriverDashboard = () => {
             </Text>
 
             <Pressable
-              style={[styles.confirmModalBtn, { backgroundColor: theme.colors.primary }]}
+              style={[styles.confirmModalBtn, { backgroundColor: theme.colors.primary, opacity: isNavigating ? 0.8 : 1 }]}
+              disabled={isNavigating}
               onPress={async () => {
                 if (!isOnline) {
                   showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
@@ -868,29 +871,38 @@ const DriverDashboard = () => {
                   const isScheduled = acceptedRide?.booking_type === 'SCHEDULED';
 
                   if (acceptedRide && !isScheduled) {
+                    setIsNavigating(true);
                     // 1. Transition status to ARRIVING for live rides
                     await arrivingTrip(acceptedRide.trip_id).unwrap();
 
-                    // 2. Hide modal and navigate
-                    setShowConfirmModal(false);
-                    navigation.navigate('PickupMapScreen', { ride: acceptedRide });
+                    // 2. Hide modal and navigate with a smooth delay
+                    dispatch(setCurrentRide(acceptedRide as any));
+                    setTimeout(() => {
+                      setShowConfirmModal(false);
+                      navigation.navigate('PickupMapScreen', { ride: acceptedRide });
+                      setIsNavigating(false);
+                    }, 500); // 500ms delay for smooth transition
                   } else {
                     // For scheduled rides, just hide the modal (we already accepted it)
                     setShowConfirmModal(false);
                   }
-                } catch (error) {
+                } catch (error: any) {
                   console.error('Failed to transition to arriving status (Live):', error);
-                  // In case of error (e.g. network), we still allow navigation but hide modal
+                  setIsNavigating(false);
                   setShowConfirmModal(false);
-                  if (acceptedRide && acceptedRide.booking_type !== 'SCHEDULED') {
-                    navigation.navigate('PickupMapScreen', { ride: acceptedRide });
-                  }
+                  
+                  const errorMessage = error?.data?.message || error?.message || t('failed_to_start_pickup') || 'Failed to start pickup. Please try again.';
+                  showAlert(t('error') || 'Error', errorMessage, { icon: 'alert-circle-outline', isDestructive: true });
                 }
               }}
             >
-              <Text style={styles.confirmModalBtnText}>
-                {acceptedRide?.booking_type === 'SCHEDULED' ? t('done', 'Done') : t('start_to_pickup', 'Start to pickup')}
-              </Text>
+              {isNavigating ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.confirmModalBtnText}>
+                  {acceptedRide?.booking_type === 'SCHEDULED' ? t('done', 'Done') : t('start_to_pickup', 'Start to pickup')}
+                </Text>
+              )}
             </Pressable>
           </Animated.View>
         </View>

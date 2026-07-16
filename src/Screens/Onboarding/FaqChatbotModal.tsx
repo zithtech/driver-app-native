@@ -110,6 +110,7 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
   // Live Chat State
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
+  const [showEndChatConfirm, setShowEndChatConfirm] = useState(false);
   const timeoutTimerRef = useRef<any>(null);
 
   const driver = useSelector((state: any) => state.userSlice?.user);
@@ -338,6 +339,7 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
   };
 
   const handleReturnToAI = () => {
+    setShowEndChatConfirm(false);
     if (activeTicketId) {
       socket.emit("endSupportChat", { ticketId: activeTicketId, driverId: driver?.driverId || driver?.userId });
     }
@@ -361,15 +363,7 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
   };
 
   const confirmEndChat = () => {
-    Alert.alert(
-      "End Support Chat",
-      "Has your issue been resolved?",
-      [
-        { text: "Issue Solved", onPress: handleReturnToAI, style: "destructive" },
-        { text: "Need More Help", style: "default" },
-        { text: "Cancel", style: "cancel" }
-      ]
-    );
+    setShowEndChatConfirm(true);
   };
 
   const handleSend = (text: string) => {
@@ -552,6 +546,20 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
           ) : null}
         />
 
+        {showEndChatConfirm && (
+          <View style={[styles.endChatConfirmContainer, { backgroundColor: dark ? '#2A2A2A' : '#F9FAFB', borderColor: colors.border }]}>
+             <Text style={[styles.endChatConfirmText, { color: colors.text }]}>Has your issue been resolved?</Text>
+             <View style={styles.endChatConfirmButtons}>
+                <TouchableOpacity onPress={() => setShowEndChatConfirm(false)} style={[styles.endChatConfirmBtn, { backgroundColor: colors.border }]}>
+                   <Text style={{ color: colors.text, fontWeight: '600', fontSize: mS(12) }}>Need More Help</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleReturnToAI} style={[styles.endChatConfirmBtn, { backgroundColor: '#10B981' }]}>
+                   <Text style={{ color: '#FFF', fontWeight: '600', fontSize: mS(12) }}>Issue Solved</Text>
+                </TouchableOpacity>
+             </View>
+          </View>
+        )}
+
         {!isLiveMode && !isTyping && (
           <View style={styles.quickRepliesContainer}>
             <FlatList
@@ -634,6 +642,10 @@ const styles = StyleSheet.create({
   inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: mS(24), paddingHorizontal: hS(12), paddingVertical: vS(4) },
   input: { flex: 1, minHeight: vS(36), maxHeight: vS(120), paddingTop: vS(10), paddingBottom: vS(10), fontSize: mS(14) },
   sendBtn: { width: mS(32), height: mS(32), borderRadius: mS(16), justifyContent: 'center', alignItems: 'center', marginLeft: hS(8) },
+  endChatConfirmContainer: { padding: mS(16), marginHorizontal: hS(16), marginBottom: vS(12), borderRadius: mS(12), borderWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
+  endChatConfirmText: { fontSize: mS(14), fontWeight: '600', marginBottom: vS(12) },
+  endChatConfirmButtons: { flexDirection: 'row', gap: hS(12) },
+  endChatConfirmBtn: { paddingVertical: vS(8), paddingHorizontal: hS(16), borderRadius: mS(8) },
 });
 
 export default FaqChatbotModal;

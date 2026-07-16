@@ -153,6 +153,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
       tripData.trip_changes.forEach((change: any) => {
         const time = new Date(change.changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (change.new_value?.trip_status === 'REQUESTED') timeline.requestedAt = time;
+        if (change.new_value?.trip_status === 'ACCEPTED') timeline.acceptedAt = time;
         if (change.new_value?.trip_status === 'ARRIVED') timeline.arrivedAt = time;
         if (change.new_value?.trip_status === 'LIVE' || change.new_value?.trip_status === 'STARTED') timeline.startedAt = time;
         if (change.new_value?.trip_status === 'COMPLETED') timeline.completedAt = time;
@@ -162,6 +163,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
 
     if (Object.keys(timeline).length === 0) {
       if (tripData.created_at) timeline.requestedAt = new Date(tripData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (tripData.trip_status === 'ACCEPTED' && tripData.updated_at) timeline.acceptedAt = new Date(tripData.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       if (tripData.trip_status === 'COMPLETED' && tripData.updated_at) timeline.completedAt = new Date(tripData.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       if (tripData.trip_status === 'CANCELLED' && tripData.updated_at) timeline.cancelledAt = new Date(tripData.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
@@ -364,9 +366,41 @@ const RideActivityScreen = ({ navigation, route }: any) => {
               }
             >
               <View style={styles.rideHeader}>
-                <Text style={[styles.rideDate, isDark && { color: theme.colors.textMuted }]}>
-                  {item.trip_code ? `#${item.trip_code}` : `#${item.id.slice(-6)}`} • {item.date} • {item.time}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rideDate, isDark && { color: theme.colors.textMuted }]} numberOfLines={1}>
+                    {item.trip_code ? `#${item.trip_code}` : `#${item.id.slice(-6)}`} • {item.date}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                      <Ionicons name="time-outline" size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                      <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                        Acc: {item.timeline?.acceptedAt || item.timeline?.requestedAt || item.time}
+                      </Text>
+                    </View>
+                    {item.timeline?.startedAt && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ fontSize: 11, color: isDark ? '#6B7280' : '#D1D5DB' }}>•</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Ionicons name="play-circle-outline" size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                          <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                            Start: {item.timeline.startedAt}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    {item.timeline?.completedAt && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ fontSize: 11, color: isDark ? '#6B7280' : '#D1D5DB' }}>•</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                          <Ionicons name="checkmark-done-circle-outline" size={12} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                          <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>
+                            End: {item.timeline.completedAt}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
                 <StatusBadge status={item.status} isDark={isDark} />
               </View>
 

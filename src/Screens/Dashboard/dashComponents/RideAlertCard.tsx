@@ -179,7 +179,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
     ).start();
   }, [headerPulse]);
 
-  const totalTime = useRef(item.remaining || 15).current;
+  const totalTime = useRef(item.remaining || 20).current;
 
   /* ---------- SOUND + VIBRATION ---------- */
   useEffect(() => {

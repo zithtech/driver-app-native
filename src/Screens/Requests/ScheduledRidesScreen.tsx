@@ -14,6 +14,7 @@ import {
   Modal,
   Image,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -450,6 +451,7 @@ const ScheduledRidesScreen = () => {
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [otherReasonText, setOtherReasonText] = useState<string>('');
+  const [isCancelling, setIsCancelling] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const dispatch = useDispatch();
   const myAcceptedRideId = useSelector((state: any) => state.ride.myAcceptedRideId);
@@ -905,7 +907,11 @@ const ScheduledRidesScreen = () => {
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
 
       // Schedule reminders for the accepted ride
-      await scheduledRideService.scheduleRideReminders(ride.trip_id, ride.scheduled_start_time);
+      try {
+        await scheduledRideService.scheduleRideReminders(ride.trip_id, ride.scheduled_start_time);
+      } catch (reminderError) {
+        console.log('Failed to schedule reminders:', reminderError);
+      }
 
       // Delay to let the driver see the success state
       setTimeout(() => {
@@ -1057,6 +1063,8 @@ const ScheduledRidesScreen = () => {
     if (!rideToCancel || !selectedReason) { return; }
     if (selectedReason === 'reason_other' && !otherReasonText.trim()) { return; }
 
+    setIsCancelling(true);
+
     const backendReasonMap: Record<string, string> = {
       'reason_vehicle_problem': 'VEHICLE_PROBLEM',
       'reason_personal_emergency': 'PERSONAL_EMERGENCY',
@@ -1103,6 +1111,8 @@ const ScheduledRidesScreen = () => {
         dispatch(setMyAcceptedRideId(null));
         refetchTrips();
       }
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -1173,32 +1183,46 @@ const ScheduledRidesScreen = () => {
   const renderNavigateModal = () => (
     <Modal visible={showNavigateModal} transparent animationType="slide">
       <Pressable style={styles.modalOverlay} onPress={() => setShowNavigateModal(false)}>
-        <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-          <View style={styles.dragHandle} />
+        <Pressable style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', paddingHorizontal: ms(24), paddingBottom: vs(32), paddingTop: vs(16), borderTopLeftRadius: ms(32), borderTopRightRadius: ms(32) }]} onPress={(e) => e.stopPropagation()}>
+          <View style={[styles.dragHandle, { backgroundColor: isDark ? '#333' : '#E2E8F0', width: ms(48), marginBottom: vs(28) }]} />
           
-          <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
-            {t('start_ride_confirmation')}
+          <View style={{
+            width: ms(68),
+            height: ms(68),
+            borderRadius: ms(34),
+            backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: vs(24)
+          }}>
+            <Ionicons name="navigate-outline" size={ms(32)} color="#16A34A" style={{ marginLeft: ms(4), marginTop: ms(4) }} />
+          </View>
+
+          <Text style={[styles.sheetTitle, { color: theme.colors.text, fontSize: ms(24), fontWeight: '800', marginBottom: vs(12) }]}>
+            {t('start_ride_confirmation') || 'Heading to Pickup?'}
           </Text>
-          <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginHorizontal: ms(20) }]}>
+          <Text style={[styles.sheetSubtitle, { color: theme.colors.paragraphText, textAlign: 'center', marginHorizontal: ms(16), fontSize: ms(15), lineHeight: vs(22), marginBottom: vs(36) }]}>
             {t('confirm_start_heading_pickup')}
           </Text>
 
-          <View style={styles.sheetButtonsRow}>
+          <View style={{ width: '100%', gap: vs(16) }}>
             <TouchableOpacity 
-              style={styles.sheetCancelBtn} 
-              onPress={() => setShowNavigateModal(false)}
+              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary, width: '100%', paddingVertical: vs(16), borderRadius: ms(16) }]} 
+              onPress={confirmNavigation}
+              activeOpacity={0.8}
             >
-              <Text style={styles.sheetCancelBtnText}>{t('cancel')}</Text>
+              <Text style={[styles.sheetConfirmBtnText, { fontSize: ms(16), fontWeight: '700' }]}>{t('confirm')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
-              onPress={confirmNavigation}
+              style={{ width: '100%', paddingVertical: vs(12), alignItems: 'center' }} 
+              onPress={() => setShowNavigateModal(false)}
+              activeOpacity={0.6}
             >
-              <Text style={styles.sheetConfirmBtnText}>{t('confirm')}</Text>
+              <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: ms(15), fontWeight: '600' }}>{t('cancel')}</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );
@@ -1296,11 +1320,13 @@ const ScheduledRidesScreen = () => {
 
           <View style={{ flexDirection: 'row', gap: ms(12) }}>
             <TouchableOpacity
+              disabled={isCancelling}
               style={[
                 styles.confirmCancelBtn,
                 { 
                   flex: 1,
                   backgroundColor: isDark ? theme.colors.border : '#F3F4F6',
+                  opacity: isCancelling ? 0.5 : 1
                 },
               ]}
               onPress={() => setShowCancelModal(false)}
@@ -1311,7 +1337,7 @@ const ScheduledRidesScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              disabled={!selectedReason || (selectedReason === 'reason_other' && !otherReasonText.trim())}
+              disabled={!selectedReason || (selectedReason === 'reason_other' && !otherReasonText.trim()) || isCancelling}
               style={[
                 styles.confirmCancelBtn,
                 { 
@@ -1321,9 +1347,13 @@ const ScheduledRidesScreen = () => {
               ]}
               onPress={confirmCancelRide}
             >
-              <Text style={[styles.confirmCancelBtnText, { color: selectedReason ? '#EF4444' : (isDark ? theme.colors.textMuted : '#9CA3AF') }]}>
-                {t('confirm_cancellation')}
-              </Text>
+              {isCancelling ? (
+                <ActivityIndicator color="#EF4444" size="small" />
+              ) : (
+                <Text style={[styles.confirmCancelBtnText, { color: selectedReason ? '#EF4444' : (isDark ? theme.colors.textMuted : '#9CA3AF') }]}>
+                  {t('confirm_cancellation')}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
