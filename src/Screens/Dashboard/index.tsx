@@ -838,74 +838,113 @@ const DriverDashboard = () => {
         }}
       />
 
-      {/* ── ACCEPT RIDE CONFIRM MODAL ── */}
+      {/* ── ACCEPT RIDE CONFIRM MODAL (SCHEDULED RIDES) ── */}
       <Modal
-        visible={showConfirmModal}
+        visible={showConfirmModal && acceptedRide?.booking_type === 'SCHEDULED'}
         transparent
         animationType="fade"
       >
         <View style={styles.confirmModalOverlay}>
           <Animated.View style={[styles.confirmModalBox, { transform: [{ scale: 1 }], backgroundColor: theme.colors.card }]}>
             <View style={styles.confirmIconRing}>
-              <Ionicons name={acceptedRide?.booking_type === 'SCHEDULED' ? "calendar" : "checkmark-circle"} size={ms(60)} color={acceptedRide?.booking_type === 'SCHEDULED' ? theme.colors.primary : "#22C55E"} />
+              <Ionicons name="calendar" size={ms(60)} color={theme.colors.primary} />
             </View>
             <Text style={[styles.confirmModalTitle, { color: theme.colors.text }]}>
-              {acceptedRide?.booking_type === 'SCHEDULED' ? t('ride_scheduled', 'Ride Scheduled!') : t('ride_accepted', 'Ride Accepted!')}
+              {t('ride_scheduled', 'Ride Scheduled!')}
             </Text>
             <Text style={[styles.confirmModalSub, isDark && { color: theme.colors.textMuted }]}>
-              {acceptedRide?.booking_type === 'SCHEDULED'
-                ? t('scheduled_success_msg', 'You can find this ride in your upcoming list.')
-                : t('navigating_to_pickup', 'Navigating to pickup location...')}
+              {t('scheduled_success_msg', 'You can find this ride in your upcoming list.')}
             </Text>
 
             <Pressable
-              style={[styles.confirmModalBtn, { backgroundColor: theme.colors.primary, opacity: isNavigating ? 0.8 : 1 }]}
-              disabled={isNavigating}
-              onPress={async () => {
-                if (!isOnline) {
-                  showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
-                  return;
-                }
-
-                try {
-                  const isScheduled = acceptedRide?.booking_type === 'SCHEDULED';
-
-                  if (acceptedRide && !isScheduled) {
-                    setIsNavigating(true);
-                    // 1. Transition status to ARRIVING for live rides
-                    await arrivingTrip(acceptedRide.trip_id).unwrap();
-
-                    // 2. Hide modal and navigate with a smooth delay
-                    dispatch(setCurrentRide(acceptedRide as any));
-                    setTimeout(() => {
-                      setShowConfirmModal(false);
-                      navigation.navigate('PickupMapScreen', { ride: acceptedRide });
-                      setIsNavigating(false);
-                    }, 500); // 500ms delay for smooth transition
-                  } else {
-                    // For scheduled rides, just hide the modal (we already accepted it)
-                    setShowConfirmModal(false);
-                  }
-                } catch (error: any) {
-                  console.error('Failed to transition to arriving status (Live):', error);
-                  setIsNavigating(false);
-                  setShowConfirmModal(false);
-                  
-                  const errorMessage = error?.data?.message || error?.message || t('failed_to_start_pickup') || 'Failed to start pickup. Please try again.';
-                  showAlert(t('error') || 'Error', errorMessage, { icon: 'alert-circle-outline', isDestructive: true });
-                }
-              }}
+              style={[styles.confirmModalBtn, { backgroundColor: theme.colors.primary }]}
+              onPress={() => setShowConfirmModal(false)}
             >
-              {isNavigating ? (
-                <ActivityIndicator color="#FFF" size="small" />
-              ) : (
-                <Text style={styles.confirmModalBtnText}>
-                  {acceptedRide?.booking_type === 'SCHEDULED' ? t('done', 'Done') : t('start_to_pickup', 'Start to pickup')}
-                </Text>
-              )}
+              <Text style={styles.confirmModalBtnText}>
+                {t('done', 'Done')}
+              </Text>
             </Pressable>
           </Animated.View>
         </View>
+      </Modal>
+
+      {/* ── LIVE RIDE NAVIGATE TO PICKUP BOTTOM SHEET ── */}
+      <Modal
+        visible={showConfirmModal && acceptedRide?.booking_type !== 'SCHEDULED'}
+        transparent
+        animationType="slide"
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowConfirmModal(false)}>
+          <Pressable style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', paddingHorizontal: ms(24), paddingBottom: vs(32), paddingTop: vs(16), borderTopLeftRadius: ms(32), borderTopRightRadius: ms(32) }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.dragHandle, { backgroundColor: isDark ? '#333' : '#E2E8F0', width: ms(48), marginBottom: vs(28) }]} />
+            
+            <View style={{
+              width: ms(68),
+              height: ms(68),
+              borderRadius: ms(34),
+              backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: vs(24)
+            }}>
+              <Ionicons name="navigate-outline" size={ms(32)} color="#16A34A" style={{ marginLeft: ms(4), marginTop: ms(4) }} />
+            </View>
+
+            <Text style={[styles.sheetTitle, { color: theme.colors.text, fontSize: ms(24), fontWeight: '800', marginBottom: vs(12) }]}>
+              {t('start_ride_confirmation', 'Start Heading to Pickup?')}
+            </Text>
+            <Text style={[styles.sheetSubtitle, { color: isDark ? theme.colors.textMuted : '#4B5563', textAlign: 'center', marginHorizontal: ms(16), fontSize: ms(15), lineHeight: vs(22), marginBottom: vs(36) }]}>
+              {t('confirm_start_heading_pickup', 'Are you sure you want to start navigating to the passenger\'s location now?')}
+            </Text>
+
+            <View style={{ width: '100%', gap: vs(16) }}>
+              <TouchableOpacity 
+                style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary, width: '100%', paddingVertical: vs(16), borderRadius: ms(16), opacity: isNavigating ? 0.7 : 1 }]} 
+                onPress={async () => {
+                  if (!isOnline) {
+                    showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
+                    return;
+                  }
+
+                  try {
+                    if (acceptedRide) {
+                      setIsNavigating(true);
+                      await arrivingTrip(acceptedRide.trip_id).unwrap();
+                      dispatch(setCurrentRide(acceptedRide as any));
+                      setTimeout(() => {
+                        setShowConfirmModal(false);
+                        navigation.navigate('PickupMapScreen', { ride: acceptedRide });
+                        setIsNavigating(false);
+                      }, 500);
+                    }
+                  } catch (error: any) {
+                    console.error('Failed to transition to arriving status (Live):', error);
+                    setIsNavigating(false);
+                    setShowConfirmModal(false);
+                    const errorMessage = error?.data?.message || error?.message || t('failed_to_start_pickup') || 'Failed to start pickup. Please try again.';
+                    showAlert(t('error') || 'Error', errorMessage, { icon: 'alert-circle-outline', isDestructive: true });
+                  }
+                }}
+                disabled={isNavigating}
+                activeOpacity={0.8}
+              >
+                {isNavigating ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={[styles.sheetConfirmBtnText, { fontSize: ms(16), fontWeight: '700', color: '#FFF' }]}>{t('confirm', 'Confirm')}</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{ width: '100%', paddingVertical: vs(12), alignItems: 'center' }} 
+                onPress={() => setShowConfirmModal(false)}
+                activeOpacity={0.6}
+              >
+                <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: ms(15), fontWeight: '600' }}>{t('cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <ConfirmationModal
@@ -1160,6 +1199,49 @@ const styles = StyleSheet.create({
   sosCardButtonText: {
     color: '#fff',
     fontSize: ms(13),
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    padding: ms(24),
+    paddingTop: ms(12),
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    alignItems: 'center',
+    width: '100%',
+  },
+  dragHandle: {
+    width: ms(40),
+    height: ms(4),
+    backgroundColor: '#E2E8F0',
+    borderRadius: ms(2),
+    marginBottom: vs(16),
+  },
+  sheetTitle: {
+    fontSize: ms(20),
+    fontWeight: '700',
+    marginBottom: vs(8),
+    textAlign: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: ms(14),
+    textAlign: 'center',
+    marginBottom: vs(24),
+  },
+  sheetConfirmBtn: {
+    paddingVertical: vs(14),
+    borderRadius: ms(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: vs(12),
+  },
+  sheetConfirmBtnText: {
+    color: '#fff',
+    fontSize: ms(16),
     fontWeight: '700',
   },
 });

@@ -327,18 +327,18 @@ const RideDetailsModalCard = ({ item, acceptedRide, getRemainingTime, theme, isD
 
       <View style={styles.footerActions}>
         {accepted ? (
-          <View style={styles.buttonGroupHorizontal}>
+          <View style={{ width: '100%' }}>
             <TouchableOpacity
-              style={[styles.textBtn, { flex: 0.5 }]}
-              onPress={() => cancelRide(item)}
-            >
-              <Text style={styles.textBtnRed} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.primaryBtnLarge, { flex: 1, backgroundColor: theme.colors.primary, marginBottom: 0 }]}
+              style={[styles.primaryBtnLarge, { width: '100%', backgroundColor: theme.colors.primary, marginBottom: vs(16) }]}
               onPress={() => startHeadingToPickup(item)}
             >
               <Text style={styles.primaryBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('navigate_pickup')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ alignSelf: 'center', paddingVertical: vs(8) }}
+              onPress={() => cancelRide(item)}
+            >
+              <Text style={[styles.textBtnRed, { fontSize: ms(13) }]} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -445,8 +445,6 @@ const ScheduledRidesScreen = () => {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showNavigateModal, setShowNavigateModal] = useState(false);
-  const [rideToNavigate, setRideToNavigate] = useState<Ride | null>(null);
   const [rideToCancel, setRideToCancel] = useState<Ride | null>(null);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [selectedReason, setSelectedReason] = useState<string>('');
@@ -668,8 +666,8 @@ const ScheduledRidesScreen = () => {
 
         // Local condition removed
         if (filterType === 'outstation_one_way') { if (type !== 'outstation_one_way') return false; }
-        else if (filterType === 'outstation_round_trip') { 
-          if (type !== 'outstation_round_trip') return false; 
+        else if (filterType === 'outstation_round_trip') {
+          if (type !== 'outstation_round_trip') return false;
         }
         else if (filterType === 'one_way') { if (type !== 'one_way') return false; }
         else if (filterType === 'round_trip') { if (type !== 'round_trip') return false; }
@@ -925,10 +923,10 @@ const ScheduledRidesScreen = () => {
       console.log('Accept ride attempt failed:', error?.data?.message || error?.message);
 
       const isAlreadyCancelled = error?.data?.message?.toLowerCase().includes('cancelled') || error?.status === 410;
-      const isAlreadyAccepted = error.status === 400 && 
-        (error.data?.message?.toLowerCase().includes('already accepted') || 
-         error.data?.message?.toLowerCase().includes('taken') || 
-         error.data?.message?.toLowerCase().includes('no longer available'));
+      const isAlreadyAccepted = error.status === 400 &&
+        (error.data?.message?.toLowerCase().includes('already accepted') ||
+          error.data?.message?.toLowerCase().includes('taken') ||
+          error.data?.message?.toLowerCase().includes('no longer available'));
 
       if (isAlreadyCancelled) {
         showAlert({
@@ -1024,39 +1022,38 @@ const ScheduledRidesScreen = () => {
     }
 
     // 3. Open Custom Confirmation Modal
-    setRideToNavigate(ride);
-    setShowNavigateModal(true);
-  };
+    showAlert({
+      title: t('start_ride_confirmation') || 'Heading to Pickup?',
+      message: t('confirm_start_heading_pickup') || 'Are you sure you want to start navigating to the passenger\'s location now?',
+      confirmText: t('confirm') || 'Confirm',
+      cancelText: t('cancel') || 'Cancel',
+      onConfirm: async () => {
+        try {
+          triggerHaptic(HapticFeedbackTypes.impactMedium);
 
-  const confirmNavigation = async () => {
-    if (!rideToNavigate) return;
-    try {
-      triggerHaptic(HapticFeedbackTypes.impactMedium);
+          // 1. Notify backend (Updates status to ARRIVING)
+          await arrivingTrip(ride.trip_id).unwrap();
 
-      // 1. Notify backend (Updates status to ARRIVING)
-      await arrivingTrip(rideToNavigate.trip_id).unwrap();
+          // 2. Production Flow: Ensure driver state is updated before navigating
+          const { setDriverStatus } = require('../../redux/userSlice');
+          dispatch(setDriverStatus('ON_TRIP'));
+          dispatch(setMyAcceptedRideId(ride.trip_id));
+          dispatch(setCurrentRide(ride));
 
-      // 2. Production Flow: Ensure driver state is updated before navigating
-      const { setDriverStatus } = require('../../redux/userSlice');
-      dispatch(setDriverStatus('ON_TRIP'));
-      dispatch(setMyAcceptedRideId(rideToNavigate.trip_id));
-      dispatch(setCurrentRide(rideToNavigate));
+          // 3. Notify rider via socket (Redundant but good for legacy / real-time)
+          socketService.emitEnRoute(ride.trip_id, user.driverId || user.id);
 
-      // 3. Notify rider via socket (Redundant but good for legacy / real-time)
-      socketService.emitEnRoute(rideToNavigate.trip_id, user.driverId || user.id);
-
-      // 4. Navigate
-      setShowNavigateModal(false);
-      setRideToNavigate(null);
-      navigation.navigate(PickupMapScreen_Nav, { ride: rideToNavigate });
-    } catch (error) {
-      console.error('Failed to transition to arriving status:', error);
-      showToast({
-        message: t('failed_to_start_navigation'),
-        type: 'error'
-      });
-      setShowNavigateModal(false);
-    }
+          // 4. Navigate
+          navigation.navigate(PickupMapScreen_Nav, { ride });
+        } catch (error) {
+          console.error('Failed to transition to arriving status:', error);
+          showToast({
+            message: t('failed_to_start_navigation'),
+            type: 'error'
+          });
+        }
+      }
+    });
   };
 
   const confirmCancelRide = async () => {
@@ -1180,53 +1177,6 @@ const ScheduledRidesScreen = () => {
     </Modal>
   );
 
-  const renderNavigateModal = () => (
-    <Modal visible={showNavigateModal} transparent animationType="slide">
-      <Pressable style={styles.modalOverlay} onPress={() => setShowNavigateModal(false)}>
-        <Pressable style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', paddingHorizontal: ms(24), paddingBottom: vs(32), paddingTop: vs(16), borderTopLeftRadius: ms(32), borderTopRightRadius: ms(32) }]} onPress={(e) => e.stopPropagation()}>
-          <View style={[styles.dragHandle, { backgroundColor: isDark ? '#333' : '#E2E8F0', width: ms(48), marginBottom: vs(28) }]} />
-          
-          <View style={{
-            width: ms(68),
-            height: ms(68),
-            borderRadius: ms(34),
-            backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: vs(24)
-          }}>
-            <Ionicons name="navigate-outline" size={ms(32)} color="#16A34A" style={{ marginLeft: ms(4), marginTop: ms(4) }} />
-          </View>
-
-          <Text style={[styles.sheetTitle, { color: theme.colors.text, fontSize: ms(24), fontWeight: '800', marginBottom: vs(12) }]}>
-            {t('start_ride_confirmation') || 'Heading to Pickup?'}
-          </Text>
-          <Text style={[styles.sheetSubtitle, { color: theme.colors.paragraphText, textAlign: 'center', marginHorizontal: ms(16), fontSize: ms(15), lineHeight: vs(22), marginBottom: vs(36) }]}>
-            {t('confirm_start_heading_pickup')}
-          </Text>
-
-          <View style={{ width: '100%', gap: vs(16) }}>
-            <TouchableOpacity 
-              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary, width: '100%', paddingVertical: vs(16), borderRadius: ms(16) }]} 
-              onPress={confirmNavigation}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.sheetConfirmBtnText, { fontSize: ms(16), fontWeight: '700' }]}>{t('confirm')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={{ width: '100%', paddingVertical: vs(12), alignItems: 'center' }} 
-              onPress={() => setShowNavigateModal(false)}
-              activeOpacity={0.6}
-            >
-              <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: ms(15), fontWeight: '600' }}>{t('cancel')}</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-
   const renderCancelModal = () => (
     <Modal
       visible={showCancelModal}
@@ -1299,11 +1249,11 @@ const ScheduledRidesScreen = () => {
                   <View style={{ paddingHorizontal: ms(16), paddingBottom: vs(12), backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC', borderBottomLeftRadius: ms(12), borderBottomRightRadius: ms(12) }}>
                     <TextInput
                       style={[
-                        styles.otherReasonInput, 
-                        { 
-                          color: theme.colors.text, 
-                          borderColor: isDark ? theme.colors.border : '#E2E8F0', 
-                          backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFF' 
+                        styles.otherReasonInput,
+                        {
+                          color: theme.colors.text,
+                          borderColor: isDark ? theme.colors.border : '#E2E8F0',
+                          backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFF'
                         }
                       ]}
                       placeholder={t('type_reason_here', 'Please specify...')}
@@ -1323,7 +1273,7 @@ const ScheduledRidesScreen = () => {
               disabled={isCancelling}
               style={[
                 styles.confirmCancelBtn,
-                { 
+                {
                   flex: 1,
                   backgroundColor: isDark ? theme.colors.border : '#F3F4F6',
                   opacity: isCancelling ? 0.5 : 1
@@ -1340,7 +1290,7 @@ const ScheduledRidesScreen = () => {
               disabled={!selectedReason || (selectedReason === 'reason_other' && !otherReasonText.trim()) || isCancelling}
               style={[
                 styles.confirmCancelBtn,
-                { 
+                {
                   flex: 1,
                   backgroundColor: 'transparent',
                 },
@@ -1708,7 +1658,6 @@ const ScheduledRidesScreen = () => {
 
       {renderSortModal()}
       {renderCancelModal()}
-      {renderNavigateModal()}
     </SafeAreaView>
   );
 };

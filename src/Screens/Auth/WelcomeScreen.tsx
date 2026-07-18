@@ -42,7 +42,7 @@ import vdriveImg from '../../assets/images/wee.png';
 import t2dLogo from '../../assets/images/t2dLogo.png';
 
 import { OTPScreen_Nav } from '../../Navigations/navigations';
-import { setUser } from '../../redux/userSlice';
+import { setUser, clearUser } from '../../redux/userSlice';
 import { RootState } from '../../redux/store';
 import { useSendOtpMutation } from '../../service/userApi';
 import { useApplyReferralCodeMutation } from '../../service/driverApi';
@@ -97,6 +97,10 @@ const WelcomeScreen = ({ navigation }: any) => {
 
   /* ================= DEVICE ID ================= */
   useEffect(() => {
+    // 1. Force a completely clean state to prevent stale login data bugs
+    dispatch(clearUser());
+
+    // 2. Load device ID
     const loadDeviceId = async () => {
       try {
         const id = await getDeviceId();
@@ -106,7 +110,7 @@ const WelcomeScreen = ({ navigation }: any) => {
       }
     };
     loadDeviceId();
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
