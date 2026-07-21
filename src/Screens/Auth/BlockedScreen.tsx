@@ -8,6 +8,7 @@ import colors from '../../constant/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { clearUser } from '../../redux/userSlice';
 import { useTranslation } from 'react-i18next';
+import { logoutUser } from '../../service/utils/logoutHelper';
 
 const BlockedScreen = () => {
     const user = useSelector((state: RootState) => state.userSlice.user);
@@ -17,8 +18,8 @@ const BlockedScreen = () => {
     const isBlocked = user?.status === 'blocked';
     const reason = user?.status_reason || 'No specific reason provided by administrator.';
 
-    const handleLogout = () => {
-        dispatch(clearUser());
+    const handleLogout = async () => {
+        await logoutUser(dispatch);
     };
 
     return (

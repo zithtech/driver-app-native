@@ -343,14 +343,14 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                   key={i}
                   style={[
                     styles.progressBar,
-                    { backgroundColor: i <= 3 ? '#2563EB' : '#E5E7EB' }
+                    { backgroundColor: i <= 3 ? colors.primary : '#E5E7EB' }
                   ]}
                 />
               ))}
             </View>
             <View style={styles.progressLabelRow}>
               <Text style={styles.progressText}>
-                {t('step_address_label', 'Address Details')} <Text style={styles.activeProgressText}>• {t('step_3_of_4')}</Text>
+                {t('step_address_label', 'Address Details')} <Text style={[styles.activeProgressText, { color: colors.primary }]}>• {t('step_3_of_4')}</Text>
               </Text>
             </View>
           </Animated.View>
@@ -416,13 +416,13 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                   value={street}
                   scrollable={true}
                   autoCapitalize="words"
-                  placeholder="House no, building, street"
+                  placeholder={t('placeholder_street', 'House no, building, street')}
                   onChangeText={setStreet}
                   onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
                   containerStyle={styles.flatInputContainer}
                   inputContainerStyle={styles.flatInputInner}
                   style={styles.flatInput}
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor="#9CA3AF"
                 />
               </View>
 
@@ -435,13 +435,13 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 <Input
                   value={city}
                   scrollable={true}
-                  placeholder="e.g. Bengaluru"
+                  placeholder={t('placeholder_city', 'e.g. Bengaluru')}
                   onChangeText={handleCityChange}
                   onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
                   containerStyle={styles.flatInputContainer}
                   inputContainerStyle={styles.flatInputInner}
                   style={styles.flatInput}
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor="#9CA3AF"
                 />
 
                 {citySuggestions.length > 0 && (
@@ -468,13 +468,13 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 <Input
                   value={district}
                   scrollable={true}
-                  placeholder="e.g. Coimbatore"
+                  placeholder={t('placeholder_district', 'e.g. Coimbatore')}
                   onChangeText={handleDistrictChange}
                   onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
                   containerStyle={styles.flatInputContainer}
                   inputContainerStyle={styles.flatInputInner}
                   style={styles.flatInput}
-                  placeholderTextColor="#6B7280"
+                  placeholderTextColor="#9CA3AF"
                 />
 
                 {districtSuggestions.length > 0 && (
@@ -502,13 +502,13 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                   <Input
                     value={stateName}
                     scrollable={true}
-                    placeholder="State"
+                    placeholder={t('placeholder_state', 'State')}
                     onChangeText={handleStateChange}
                     onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
                     containerStyle={styles.flatInputContainer}
                     inputContainerStyle={styles.flatInputInner}
                     style={styles.flatInput}
-                    placeholderTextColor="#6B7280"
+                    placeholderTextColor="#9CA3AF"
                   />
 
                   {stateSuggestions.length > 0 && (
@@ -536,13 +536,13 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                     value={pincode}
                     keyboardType="number-pad"
                     maxLength={6}
-                    placeholder="e.g. 560001"
+                    placeholder={t('placeholder_pincode', 'e.g. 560001')}
                     onChangeText={v => setPincode(v.replace(/[^0-9]/g, ''))}
                     onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
                     containerStyle={styles.flatInputContainer}
                     inputContainerStyle={styles.flatInputInner}
                     style={styles.flatInput}
-                    placeholderTextColor="#6B7280"
+                    placeholderTextColor="#9CA3AF"
                   />
                   {pincode.length > 0 && pincode.length < 6 && (
                     <Text style={styles.errorText}>{t('enter_valid_pincode')}</Text>
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
     height: 54,
   },
   flatInput: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#111827',
     fontWeight: '500',
     paddingVertical: 0,
