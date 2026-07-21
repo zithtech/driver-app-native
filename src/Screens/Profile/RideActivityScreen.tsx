@@ -187,7 +187,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
       duration: tripData.duration || (tripData.trip_duration_minutes ? `${tripData.trip_duration_minutes} ${t('m')}` : ''),
       status: finalStatus,
       trip_code: tripData.trip_code || tripData.booking_code || '',
-      paymentMethod: tripData.payment_status === 'PAID' ? 'Wallet' : (tripData.payment_method || tripData.paymentMethod || 'Cash'),
+      paymentMethod: tripData.payment_method || tripData.paymentMethod || 'Cash',
       timeline: Object.keys(timeline).length > 0 ? timeline : (tripData.timeline || {}),
       customer: {
         name: tripData.customer?.name || tripData.passenger_name || 'Customer',

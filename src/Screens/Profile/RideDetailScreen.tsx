@@ -129,7 +129,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
         platformFee: parseFloat(tripData.platform_fee || tripData.fareDetails?.platformFee || '0'),
       },
       timeline: Object.keys(timeline).length > 0 ? timeline : (tripData.timeline || initialRide.timeline || {}),
-      paymentMethod: tripData.payment_status === 'PAID' ? 'Wallet' : (tripData.payment_method || tripData.paymentMethod || initialRide.paymentMethod || 'Cash'),
+      paymentMethod: tripData.payment_method || tripData.paymentMethod || initialRide.paymentMethod || 'Cash',
     };
   };
 

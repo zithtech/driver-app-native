@@ -101,6 +101,16 @@ async function ensureChannel(): Promise<string> {
     });
 }
 
+async function ensureScheduledChannel(): Promise<string> {
+    return await notifee.createChannel({
+        id: 'scheduled_alerts_custom',
+        name: 'Scheduled Ride Alerts',
+        importance: AndroidImportance.HIGH,
+        sound: '3',
+        vibration: true,
+    });
+}
+
 /* ================================================================
    REQUEST PERMISSION
    ================================================================ */
@@ -173,9 +183,9 @@ export function setupForegroundHandler(): () => void {
                 return;
             }
 
-            // Skip system notification for support replies (Live Agent Chat) when app is OPEN
-            if (type === 'SUPPORT_REPLY') {
-                console.log('📩 [Foreground] Support reply handled in-app, skipping system tray.');
+            // Skip system notification for support replies and chat messages when app is OPEN
+            if (type === 'SUPPORT_REPLY' || type === 'CHAT_MESSAGE') {
+                console.log(`📩 [Foreground] ${type} handled in-app, skipping system tray.`);
                 return;
             }
 
@@ -186,7 +196,9 @@ export function setupForegroundHandler(): () => void {
             // 3. Display all other notifications in the system tray
             const { store } = require('../redux/store');
             const isVibrationEnabled = store.getState()?.userSlice?.user?.isVibrationEnabled ?? true;
-            const channelId = await ensureChannel();
+            
+            const isScheduledAlert = type.startsWith('SCHEDULED_');
+            const channelId = isScheduledAlert ? await ensureScheduledChannel() : await ensureChannel();
 
             await notifee.displayNotification({
                 id: (remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now()).toString(),
@@ -197,7 +209,7 @@ export function setupForegroundHandler(): () => void {
                     importance: AndroidImportance.HIGH,
                     smallIcon: 'ic_launcher',
                     pressAction: { id: 'default' },
-                    sound: 'default',
+                    sound: isScheduledAlert ? '3' : 'default',
                     vibrationPattern: isVibrationEnabled ? [300, 500] : [],
                 },
                 ios: {
@@ -206,7 +218,7 @@ export function setupForegroundHandler(): () => void {
                         sound: true,
                         banner: true,
                     },
-                    sound: 'default',
+                    sound: isScheduledAlert ? '3.mp3' : 'default',
                 },
                 data: remoteMessage.data,
             });
@@ -234,20 +246,17 @@ export function setupBackgroundHandler(): void {
 
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
-        // 🛡️ For BROADCAST ride requests (NEW_RIDE_REQUEST), skip system notification.
-        // These expire in ~15 seconds and the socket/AppState resume will handle them.
-        // But for DIRECT ASSIGNMENTS (ASSIGNED_RIDE/TRIP_ASSIGNED), we MUST show
-        // a notification because socket is disconnected in background/killed state
-        // and the driver needs to be alerted immediately.
+        // 🛡️ All valid ride notifications (NEW_RIDE_REQUEST, ASSIGNED_RIDE, etc) 
+        // will show a high priority notification. For broadcast requests, we add a timeout.
         if (isValidRideNotification(remoteMessage.data as Record<string, string>)) {
-            if (!ASSIGNMENT_TYPES.has(type)) {
-                console.log('📩 [Background] Broadcast ride notification — skipping system tray.');
-                return;
-            }
-            console.log('📩 [Background] Direct ride ASSIGNMENT — showing system notification.');
+            console.log(`📩 [Background] Valid ride notification (${type}) — showing system notification.`);
         }
 
-        const channelId = await ensureChannel();
+        const isLiveRideRequest = type === 'NEW_RIDE_REQUEST' || type === 'RIDE_REQUEST';
+        const isScheduledAlert = type.startsWith('SCHEDULED_');
+        const isBroadcast = isLiveRideRequest; // Live ride requests auto-expire
+
+        const channelId = isScheduledAlert ? await ensureScheduledChannel() : await ensureChannel();
 
         // For data-only messages, read title/body from data field
         const title = String(remoteMessage.notification?.title ?? remoteMessage.data?.title ?? 'New Notification');
@@ -262,10 +271,12 @@ export function setupBackgroundHandler(): void {
                 importance: AndroidImportance.HIGH,
                 smallIcon: 'ic_launcher',
                 pressAction: { id: 'default' },
-                sound: 'default',
+                sound: isScheduledAlert ? '3' : 'default',
+                ...(isBroadcast ? { timeoutAfter: 20000 } : {}),
+                ...(isLiveRideRequest ? { fullScreenAction: { id: 'default' } } : {}),
             },
             ios: {
-                sound: 'default',
+                sound: isScheduledAlert ? '3.mp3' : 'default',
             },
             data: remoteMessage.data,
         });
