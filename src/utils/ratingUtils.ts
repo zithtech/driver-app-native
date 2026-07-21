@@ -17,7 +17,7 @@ export const calculateAverageRating = (rides: any[]): number | null => {
         ride.status?.toUpperCase() === 'COMPLETED' || 
         ride.trip_status?.toUpperCase() === 'COMPLETED';
     
-    const rating = parseFloat(ride.rating || ride.user_rating || ride.trip_rating || ride.passenger_rating || ride.customer_rating || 0);
+    const rating = parseFloat(ride.driver_rating || ride.passenger_rating || ride.customer_rating || 0);
     return isCompleted && !isNaN(rating) && rating > 0;
   });
 
@@ -26,7 +26,7 @@ export const calculateAverageRating = (rides: any[]): number | null => {
   }
 
   const totalRating = ratedRides.reduce((sum: number, ride: any) => {
-    const rating = parseFloat(ride.rating || ride.user_rating || ride.trip_rating || ride.passenger_rating || ride.customer_rating || 0);
+    const rating = parseFloat(ride.driver_rating || ride.passenger_rating || ride.customer_rating || 0);
     return sum + rating;
   }, 0);
 

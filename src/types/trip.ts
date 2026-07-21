@@ -14,6 +14,7 @@ export enum TripStatus {
   CANCELLED = 'CANCELLED',
   MID_CANCELLED = 'MID_CANCELLED',
   WAITING = 'WAITING',
+  DAY_HALT = 'DAY_HALT',
   RETURN_STARTED = 'RETURN_STARTED',
   RETURN_REACHED = 'RETURN_REACHED',
 }
@@ -31,7 +32,7 @@ export interface Ride {
   user_id: string;
   driver_id: string | null;
   vehicle_id: string | null;
-  ride_type: 'ONE_WAY' | 'OUTSTATION' | 'ROUND_TRIP';
+  ride_type: 'ONE_WAY' | 'ROUND_TRIP' | 'OUTSTATION_ONE_WAY' | 'OUTSTATION_ROUND_TRIP';
   service_type: string;
   trip_status: TripStatus | string;
   original_scheduled_start_time: string;
@@ -57,17 +58,20 @@ export interface Ride {
   cancel_reason: string | null;
   cancel_by: string | null;
   notes: string | null;
-  rating: number | null;
+  driver_rating?: number | null;
+  user_rating?: number | null;
+  driver_feedback?: string | null;
+  user_feedback?: string | null;
   re_route_id: string | null;
-  feedback: string | null;
   assigned_at: string | null;
   started_at: string | null;
   ended_at: string | null;
   created_at: string;
   updated_at: string;
   booking_type: 'LIVE' | 'SCHEDULED';
+  outstation_trip_type?: string;
   is_for_self: boolean;
-  otp?: string; 
+  otp?: string;
   trip_code?: string;
   user_details?: {
     id: string;

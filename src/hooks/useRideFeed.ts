@@ -40,6 +40,7 @@ export type RideItem = {
     paymentMethod?: string;
     noVibrate?: boolean;
     isAssigned?: boolean;
+    [key: string]: any;
 };
 
 interface UseRideFeedProps {
@@ -102,12 +103,12 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         const isDirectAssignment = isAssigned || isAcceptedOrActive;
 
         // 🕒 [Time Sync] Calculate true remaining time
-        let calculatedRemaining = isDirectAssignment ? 99999 : 15;
+        let calculatedRemaining = isDirectAssignment ? 99999 : 20;
         if (!isDirectAssignment && data?.createdAt) {
             const createdAt = new Date(data.createdAt).getTime();
             const now = Date.now();
             const elapsed = Math.floor((now - createdAt) / 1000);
-            calculatedRemaining = Math.min(15, Math.max(0, 15 - elapsed));
+            calculatedRemaining = Math.min(20, Math.max(0, 20 - elapsed));
             
             console.log(`[useRideFeed] Timer Sync: CreatedAt: ${data.createdAt}, Now: ${new Date().toISOString()}, Elapsed: ${elapsed}s, Calculated: ${calculatedRemaining}s`);
             
@@ -126,6 +127,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         }
 
         const newRide: RideItem = {
+            ...data,
             id: tripId,
             trip_id: tripId,
             trip_code: data?.trip_code || data?.booking_code,
@@ -381,7 +383,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                                 const createdAt = trip.created_at || trip.createdAt;
                                 if (createdAt) {
                                     const elapsed = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
-                                    if (elapsed >= 15) {
+                                    if (elapsed >= 20) {
                                         console.log(`[useRideFeed] Resume: REQUESTED ride ${tripId} expired (${elapsed}s old), skipping.`);
                                         return;
                                     }

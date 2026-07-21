@@ -581,7 +581,7 @@ const DropMapScreen = ({ route }: any) => {
         ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
         : (initialEta.current || 15);
 
-      if (ride?.ride_type === 'ROUND_TRIP') {
+      if (ride?.ride_type === 'ROUND_TRIP' || ride?.ride_type === 'OUTSTATION_ROUND_TRIP') {
         await waitingTripApi(trip_id.toString()).unwrap();
         triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
         navigation.replace('WaitingScreen', { ride });

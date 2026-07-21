@@ -24,6 +24,7 @@ export interface Ride {
     platform_fee: number;
     total_fare: number;
     booking_type: string;
+    outstation_trip_type?: string;
     otp?: string;
     passenger?: string; // Adding for UI compatibility if needed
     phone?: string;

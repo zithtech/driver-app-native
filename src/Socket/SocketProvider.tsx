@@ -7,7 +7,7 @@ import { incrementUnreadCount } from "../redux/chatSlice";
 import { navigationRef } from "../Navigations/navigationRef";
 import { RootState, AppDispatch } from "../redux/store";
 import { clearAcceptedRide } from "../redux/rideSlice";
-import { useAlert } from "../context/AlertContext";
+import { useToast } from "../context/ToastContext";
 import { StackActions } from "@react-navigation/native";
 import audioService from "../utils/audioService";
 import { setUser } from "../redux/userSlice";
@@ -22,7 +22,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
     const [isConnected, setIsConnected] = useState<boolean>(false);
     const [socketId, setSocketId] = useState<string | null>(null);
     const dispatch = useDispatch<AppDispatch>();
-    const { showAlert } = useAlert();
+    const { showToast } = useToast();
     const currentRide = useSelector((state: RootState) => state.ride.currentRide);
     const driverId = useSelector((state: RootState) => state.userSlice.user?.driverId);
     const role = useSelector((state: RootState) => state.userSlice.user?.role) || 'driver';
@@ -98,18 +98,16 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
 
                     dispatch(clearAcceptedRide());
 
-                    // Show global alert
-                    showAlert({
-                        title: 'Ride Cancelled',
+                    // Show toast notification
+                    showToast({
                         message: 'The rider has cancelled the trip.',
-                        singleButton: true,
-                        icon: 'close-circle-outline',
-                        onConfirm: () => {
-                            if (navigationRef.isReady()) {
-                                navigationRef.dispatch(StackActions.replace('DashboardScreen'));
-                            }
-                        }
+                        type: 'error',
+                        duration: 4000
                     });
+
+                    if (navigationRef.isReady()) {
+                        navigationRef.dispatch(StackActions.replace('DashboardScreen'));
+                    }
                 }
             }
         };

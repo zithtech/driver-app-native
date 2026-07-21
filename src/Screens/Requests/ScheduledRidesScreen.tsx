@@ -14,6 +14,7 @@ import {
   Modal,
   Image,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -40,8 +41,15 @@ import socketService from '../../service/socketService';
 
 
 type SortOption = 'time' | 'price' | 'distance';
-type FilterType = 'all' | 'outstation' | 'one_way' | 'round_trip' | 'high_value';
+type FilterType = 'all' | 'outstation_one_way' | 'one_way' | 'round_trip' | 'outstation_round_trip' | 'high_value';
 
+
+const getRideTypeDisplayText = (rideType: string) => {
+  let displayType = rideType || 'ONE_WAY';
+  if (displayType === 'OUTSTATION_ROUND_TRIP') return 'OUTSTATION ROUND TRIP';
+  if (displayType === 'OUTSTATION_ONE_WAY') return 'OUTSTATION ONE WAY';
+  return displayType;
+};
 
 const SimpleRideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, ms, vs, s, styles, onPress }: any) => {
   const accepted = item.trip_status === 'ACCEPTED';
@@ -86,7 +94,7 @@ const SimpleRideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: vs(12) }}>
         <View style={{ flexDirection: 'row', gap: ms(8) }}>
           <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-            <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t(item.ride_type || 'ONE_WAY')}</Text>
+            <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t(getRideTypeDisplayText(item.ride_type))}</Text>
           </View>
           {!accepted && (
             <View style={[styles.remainingTag, { backgroundColor: '#FFF7ED' }]}>
@@ -204,7 +212,7 @@ const RideDetailsModalCard = ({ item, acceptedRide, getRemainingTime, theme, isD
           <View style={styles.badgeRow}>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
               <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
-                {t(item.ride_type || 'ONE_WAY')}
+                {t(getRideTypeDisplayText(item.ride_type))}
               </Text>
             </View>
             <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
@@ -319,18 +327,18 @@ const RideDetailsModalCard = ({ item, acceptedRide, getRemainingTime, theme, isD
 
       <View style={styles.footerActions}>
         {accepted ? (
-          <View style={styles.buttonGroupHorizontal}>
+          <View style={{ width: '100%' }}>
             <TouchableOpacity
-              style={[styles.textBtn, { flex: 0.5 }]}
-              onPress={() => cancelRide(item)}
-            >
-              <Text style={styles.textBtnRed} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.primaryBtnLarge, { flex: 1, backgroundColor: theme.colors.primary, marginBottom: 0 }]}
+              style={[styles.primaryBtnLarge, { width: '100%', backgroundColor: theme.colors.primary, marginBottom: vs(16) }]}
               onPress={() => startHeadingToPickup(item)}
             >
               <Text style={styles.primaryBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('navigate_pickup')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ alignSelf: 'center', paddingVertical: vs(8) }}
+              onPress={() => cancelRide(item)}
+            >
+              <Text style={[styles.textBtnRed, { fontSize: ms(13) }]} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -437,12 +445,11 @@ const ScheduledRidesScreen = () => {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [showSortModal, setShowSortModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showNavigateModal, setShowNavigateModal] = useState(false);
-  const [rideToNavigate, setRideToNavigate] = useState<Ride | null>(null);
   const [rideToCancel, setRideToCancel] = useState<Ride | null>(null);
   const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [otherReasonText, setOtherReasonText] = useState<string>('');
+  const [isCancelling, setIsCancelling] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const dispatch = useDispatch();
   const myAcceptedRideId = useSelector((state: any) => state.ride.myAcceptedRideId);
@@ -498,18 +505,21 @@ const ScheduledRidesScreen = () => {
   /* ================= HELPERS ================= */
 
   const switchTab = useCallback((tab: 'accepted' | 'today' | 'upcoming') => {
-    if (tab === activeTab) { return; }
+    setActiveTab(prevTab => {
+      if (prevTab === tab) { return prevTab; }
 
-    setActiveTab(tab);
-    triggerHaptic(HapticFeedbackTypes.impactLight);
+      triggerHaptic(HapticFeedbackTypes.impactLight);
 
-    Animated.spring(tabAnim, {
-      toValue: tab === 'accepted' ? 0 : tab === 'today' ? 1 : 2,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 50,
-    }).start();
-  }, [activeTab, triggerHaptic, tabAnim]);
+      Animated.spring(tabAnim, {
+        toValue: tab === 'accepted' ? 0 : tab === 'today' ? 1 : 2,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 50,
+      }).start();
+
+      return tab;
+    });
+  }, [triggerHaptic, tabAnim]);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -518,10 +528,10 @@ const ScheduledRidesScreen = () => {
   }, [route.params?.initialTab, switchTab]);
 
   useEffect(() => {
-    if (myAcceptedRideId) {
+    if (myAcceptedRideId && !acceptedSuccessId) {
       switchTab('accepted');
     }
-  }, [myAcceptedRideId, switchTab]);
+  }, [myAcceptedRideId, acceptedSuccessId, switchTab]);
 
   useEffect(() => {
     if (isTripsLoading && !rawTrips) {
@@ -655,7 +665,10 @@ const ScheduledRidesScreen = () => {
         const type = (ride.ride_type || ride.service_type || '').toLowerCase();
 
         // Local condition removed
-        if (filterType === 'outstation') { if (type !== 'outstation') return false; }
+        if (filterType === 'outstation_one_way') { if (type !== 'outstation_one_way') return false; }
+        else if (filterType === 'outstation_round_trip') {
+          if (type !== 'outstation_round_trip') return false;
+        }
         else if (filterType === 'one_way') { if (type !== 'one_way') return false; }
         else if (filterType === 'round_trip') { if (type !== 'round_trip') return false; }
         else if (filterType === 'high_value') {
@@ -769,15 +782,19 @@ const ScheduledRidesScreen = () => {
     const getCount = (type: FilterType) => {
       if (type === 'all') return sameTabRides.length;
       if (type === 'high_value') return sameTabRides.filter(r => r.total_fare >= 300).length;
+      if (type === 'outstation_round_trip') {
+        return sameTabRides.filter(r => (r.ride_type || r.service_type || '').toLowerCase() === 'outstation_round_trip').length;
+      }
       return sameTabRides.filter(r => (r.ride_type || r.service_type || '').toLowerCase() === type).length;
     };
 
     return {
       all: getCount('all'),
       // local: getCount('local'),
-      outstation: getCount('outstation'),
+      outstation_one_way: getCount('outstation_one_way'),
       one_way: getCount('one_way'),
       round_trip: getCount('round_trip'),
+      outstation_round_trip: getCount('outstation_round_trip'),
       high_value: getCount('high_value'),
     };
   }, [baseEligibleRides, activeTab, myAcceptedRideId]);
@@ -888,7 +905,11 @@ const ScheduledRidesScreen = () => {
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
 
       // Schedule reminders for the accepted ride
-      await scheduledRideService.scheduleRideReminders(ride.trip_id, ride.scheduled_start_time);
+      try {
+        await scheduledRideService.scheduleRideReminders(ride.trip_id, ride.scheduled_start_time);
+      } catch (reminderError) {
+        console.log('Failed to schedule reminders:', reminderError);
+      }
 
       // Delay to let the driver see the success state
       setTimeout(() => {
@@ -902,7 +923,10 @@ const ScheduledRidesScreen = () => {
       console.log('Accept ride attempt failed:', error?.data?.message || error?.message);
 
       const isAlreadyCancelled = error?.data?.message?.toLowerCase().includes('cancelled') || error?.status === 410;
-      const isAlreadyAccepted = error.status === 400 && (error.data?.message?.toLowerCase().includes('already') || error.data?.message?.toLowerCase().includes('taken'));
+      const isAlreadyAccepted = error.status === 400 &&
+        (error.data?.message?.toLowerCase().includes('already accepted') ||
+          error.data?.message?.toLowerCase().includes('taken') ||
+          error.data?.message?.toLowerCase().includes('no longer available'));
 
       if (isAlreadyCancelled) {
         showAlert({
@@ -998,44 +1022,45 @@ const ScheduledRidesScreen = () => {
     }
 
     // 3. Open Custom Confirmation Modal
-    setRideToNavigate(ride);
-    setShowNavigateModal(true);
-  };
+    showAlert({
+      title: t('start_ride_confirmation') || 'Heading to Pickup?',
+      message: t('confirm_start_heading_pickup') || 'Are you sure you want to start navigating to the passenger\'s location now?',
+      confirmText: t('confirm') || 'Confirm',
+      cancelText: t('cancel') || 'Cancel',
+      onConfirm: async () => {
+        try {
+          triggerHaptic(HapticFeedbackTypes.impactMedium);
 
-  const confirmNavigation = async () => {
-    if (!rideToNavigate) return;
-    try {
-      triggerHaptic(HapticFeedbackTypes.impactMedium);
+          // 1. Notify backend (Updates status to ARRIVING)
+          await arrivingTrip(ride.trip_id).unwrap();
 
-      // 1. Notify backend (Updates status to ARRIVING)
-      await arrivingTrip(rideToNavigate.trip_id).unwrap();
+          // 2. Production Flow: Ensure driver state is updated before navigating
+          const { setDriverStatus } = require('../../redux/userSlice');
+          dispatch(setDriverStatus('ON_TRIP'));
+          dispatch(setMyAcceptedRideId(ride.trip_id));
+          dispatch(setCurrentRide(ride));
 
-      // 2. Production Flow: Ensure driver state is updated before navigating
-      const { setDriverStatus } = require('../../redux/userSlice');
-      dispatch(setDriverStatus('ON_TRIP'));
-      dispatch(setMyAcceptedRideId(rideToNavigate.trip_id));
-      dispatch(setCurrentRide(rideToNavigate));
+          // 3. Notify rider via socket (Redundant but good for legacy / real-time)
+          socketService.emitEnRoute(ride.trip_id, user.driverId || user.id);
 
-      // 3. Notify rider via socket (Redundant but good for legacy / real-time)
-      socketService.emitEnRoute(rideToNavigate.trip_id, user.driverId || user.id);
-
-      // 4. Navigate
-      setShowNavigateModal(false);
-      setRideToNavigate(null);
-      navigation.navigate(PickupMapScreen_Nav, { ride: rideToNavigate });
-    } catch (error) {
-      console.error('Failed to transition to arriving status:', error);
-      showToast({
-        message: t('failed_to_start_navigation'),
-        type: 'error'
-      });
-      setShowNavigateModal(false);
-    }
+          // 4. Navigate
+          navigation.navigate(PickupMapScreen_Nav, { ride });
+        } catch (error) {
+          console.error('Failed to transition to arriving status:', error);
+          showToast({
+            message: t('failed_to_start_navigation'),
+            type: 'error'
+          });
+        }
+      }
+    });
   };
 
   const confirmCancelRide = async () => {
     if (!rideToCancel || !selectedReason) { return; }
     if (selectedReason === 'reason_other' && !otherReasonText.trim()) { return; }
+
+    setIsCancelling(true);
 
     const backendReasonMap: Record<string, string> = {
       'reason_vehicle_problem': 'VEHICLE_PROBLEM',
@@ -1083,6 +1108,8 @@ const ScheduledRidesScreen = () => {
         dispatch(setMyAcceptedRideId(null));
         refetchTrips();
       }
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -1145,39 +1172,6 @@ const ScheduledRidesScreen = () => {
               {t('distance_low_high')}
             </Text>
           </TouchableOpacity>
-        </View>
-      </Pressable>
-    </Modal>
-  );
-
-  const renderNavigateModal = () => (
-    <Modal visible={showNavigateModal} transparent animationType="slide">
-      <Pressable style={styles.modalOverlay} onPress={() => setShowNavigateModal(false)}>
-        <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-          <View style={styles.dragHandle} />
-          
-          <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
-            {t('start_ride_confirmation')}
-          </Text>
-          <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginHorizontal: ms(20) }]}>
-            {t('confirm_start_heading_pickup')}
-          </Text>
-
-          <View style={styles.sheetButtonsRow}>
-            <TouchableOpacity 
-              style={styles.sheetCancelBtn} 
-              onPress={() => setShowNavigateModal(false)}
-            >
-              <Text style={styles.sheetCancelBtnText}>{t('cancel')}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
-              onPress={confirmNavigation}
-            >
-              <Text style={styles.sheetConfirmBtnText}>{t('confirm')}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </Pressable>
     </Modal>
@@ -1255,11 +1249,11 @@ const ScheduledRidesScreen = () => {
                   <View style={{ paddingHorizontal: ms(16), paddingBottom: vs(12), backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC', borderBottomLeftRadius: ms(12), borderBottomRightRadius: ms(12) }}>
                     <TextInput
                       style={[
-                        styles.otherReasonInput, 
-                        { 
-                          color: theme.colors.text, 
-                          borderColor: isDark ? theme.colors.border : '#E2E8F0', 
-                          backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFF' 
+                        styles.otherReasonInput,
+                        {
+                          color: theme.colors.text,
+                          borderColor: isDark ? theme.colors.border : '#E2E8F0',
+                          backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFF'
                         }
                       ]}
                       placeholder={t('type_reason_here', 'Please specify...')}
@@ -1276,11 +1270,13 @@ const ScheduledRidesScreen = () => {
 
           <View style={{ flexDirection: 'row', gap: ms(12) }}>
             <TouchableOpacity
+              disabled={isCancelling}
               style={[
                 styles.confirmCancelBtn,
-                { 
+                {
                   flex: 1,
                   backgroundColor: isDark ? theme.colors.border : '#F3F4F6',
+                  opacity: isCancelling ? 0.5 : 1
                 },
               ]}
               onPress={() => setShowCancelModal(false)}
@@ -1291,19 +1287,23 @@ const ScheduledRidesScreen = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              disabled={!selectedReason || (selectedReason === 'reason_other' && !otherReasonText.trim())}
+              disabled={!selectedReason || (selectedReason === 'reason_other' && !otherReasonText.trim()) || isCancelling}
               style={[
                 styles.confirmCancelBtn,
-                { 
+                {
                   flex: 1,
                   backgroundColor: 'transparent',
                 },
               ]}
               onPress={confirmCancelRide}
             >
-              <Text style={[styles.confirmCancelBtnText, { color: selectedReason ? '#EF4444' : (isDark ? theme.colors.textMuted : '#9CA3AF') }]}>
-                {t('confirm_cancellation')}
-              </Text>
+              {isCancelling ? (
+                <ActivityIndicator color="#EF4444" size="small" />
+              ) : (
+                <Text style={[styles.confirmCancelBtnText, { color: selectedReason ? '#EF4444' : (isDark ? theme.colors.textMuted : '#9CA3AF') }]}>
+                  {t('confirm_cancellation')}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -1459,7 +1459,7 @@ const ScheduledRidesScreen = () => {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={['all', 'one_way', 'round_trip', 'outstation', 'high_value'] as FilterType[]}
+          data={['all', 'one_way', 'round_trip', 'outstation_one_way', 'outstation_round_trip', 'high_value'] as FilterType[]}
           keyExtractor={(item) => item}
           contentContainerStyle={styles.filterList}
           renderItem={({ item }) => {
@@ -1468,9 +1468,10 @@ const ScheduledRidesScreen = () => {
               switch (item) {
                 case 'all': return 'list-outline';
                 // case 'local': return 'car-outline';
-                case 'outstation': return 'map-outline';
+                case 'outstation_one_way': return 'map-outline';
                 case 'one_way': return 'arrow-forward-outline';
                 case 'round_trip': return 'repeat-outline';
+                case 'outstation_round_trip': return 'repeat-outline';
                 case 'high_value': return 'star-outline';
                 default: return 'filter-outline';
               }
@@ -1657,7 +1658,6 @@ const ScheduledRidesScreen = () => {
 
       {renderSortModal()}
       {renderCancelModal()}
-      {renderNavigateModal()}
     </SafeAreaView>
   );
 };

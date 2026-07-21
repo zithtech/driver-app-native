@@ -11,6 +11,7 @@ import {
   AppStateStatus,
   TouchableOpacity,
   Animated as RNAnimated,
+  ActivityIndicator,
   Linking,
   Platform,
 } from 'react-native';
@@ -69,7 +70,7 @@ import { parseOnlineTimeToSeconds, formatOnlineTime } from '../../utils/timeUtil
 import socketService from '../../service/socketService';
 import RatingReceivedModal from '../../Components/RatingReceivedModal';
 import AppStatusBar from '../../Components/AppStatusBar';
-import { setLastTripRating, setCurrentRide, setMyAcceptedRideId } from '../../redux/rideSlice';
+import { setLastTripRating, setCurrentRide } from '../../redux/rideSlice';
 import axiosInstance from '../../api/axiosInstance';
 // Use RideItem from the hook
 // Use RideItem from the hook, but for now we keep the local type for compatibility if needed.
@@ -101,9 +102,9 @@ const DriverDashboard = () => {
     const kycStatus = user?.kyc_status;
     const kycStatusStr = typeof kycStatus === 'object' ? kycStatus?.overallStatus : kycStatus;
 
-    const isApproved = 
-      (status && APPROVED_STATUSES.includes(status)) || 
-      accountStatus === 'active' || 
+    const isApproved =
+      (status && APPROVED_STATUSES.includes(status)) ||
+      accountStatus === 'active' ||
       kycStatusStr === 'verified';
 
     if (user && !isApproved) {
@@ -208,7 +209,7 @@ const DriverDashboard = () => {
         startTime: new Date(timeVal).getTime(),
         customer: {
           name: tripData.user_details?.full_name || tripData.user_details?.first_name || tripData.passenger_details?.name || tripData.passenger_name || tripData.customer?.name || 'Customer',
-          ratingGiven: tripData.rating || tripData.user_rating || tripData.trip_rating || undefined,
+          ratingGiven: tripData.user_rating || tripData.trip_rating || undefined,
           comment: tripData.feedback || tripData.comment || tripData.user_feedback || '',
         },
       };
@@ -223,7 +224,7 @@ const DriverDashboard = () => {
   const todayRides = extractArray(todayRidesResult?.data);
   const computedEarnings = todayOverview?.totalEarnings !== undefined ? todayOverview.totalEarnings : todayRides.reduce((sum: number, ride: any) => {
     const amt = typeof ride.amount === 'string' ? parseFloat(ride.amount) : (ride.amount || 0);
-    const rating = ride.rating || ride.user_rating || ride.trip_rating ? parseFloat(ride.rating || ride.user_rating || ride.trip_rating) : undefined;
+    const rating = ride.driver_rating || ride.user_rating || ride.trip_rating ? parseFloat(ride.driver_rating || ride.user_rating || ride.trip_rating) : undefined;
     return sum + amt;
   }, 0);
   const computedCancellations = todayOverview?.cancellations !== undefined ? todayOverview.cancellations : todayRides.filter((ride: any) => ride.status === 'Cancelled' || ride.trip_status === 'CANCELLED').length;
@@ -241,6 +242,7 @@ const DriverDashboard = () => {
   const [showBatteryModal, setShowBatteryModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [acceptedRide, setAcceptedRide] = useState<RideItem | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     if (route.params?.showVerificationSuccess) {
@@ -412,37 +414,15 @@ const DriverDashboard = () => {
   }, [isOnline]);
 
   // ── Rating Calculation & Update ──
-  useEffect(() => {
-    if (allHistoryResult?.data && user?.driverId) {
-      const rides = extractArray(allHistoryResult.data);
-      const newRating = calculateAverageRating(rides);
-
-      if (newRating !== null) {
-
-        // Update only if if it's significant or different
-        if (Math.abs((user.rating || 0) - newRating) > 0.001) {
-          updateDriver({
-            id: user.driverId,
-            data: { rating: newRating }
-          }).unwrap()
-            .then(() => {
-              // Only update the rating in Redux to avoid stale overwrites
-              dispatch(setUser({ rating: newRating }));
-            })
-            .catch(err => {
-              console.error('[RatingCalc] Failed to update driver rating:', err);
-            });
-        }
-      }
-    }
-  }, [allHistoryResult, user?.driverId]);
+  // The rating is now calculated and managed entirely on the backend based on driver_rating.
+  // We no longer push client-side calculations to the server.
 
   useEffect(() => {
     if (!isOnline || !user?.driverId) return;
 
     const handleRating = (tripData: any) => {
       dispatch(setLastTripRating({
-        rating: tripData.rating || tripData.user_rating || tripData.trip_rating,
+        rating: tripData.driver_rating || tripData.user_rating || tripData.trip_rating,
         feedback: tripData.feedback || tripData.comment || tripData.user_feedback || ''
       }));
       setRatingModalVisible(true);
@@ -512,8 +492,8 @@ const DriverDashboard = () => {
   const displayTotalTrips = useMemo(() => {
     if (allHistoryResult?.data) {
       const rides = extractArray(allHistoryResult.data);
-      const completedRides = rides.filter((ride: any) => 
-        ride.status?.toUpperCase() === 'COMPLETED' || 
+      const completedRides = rides.filter((ride: any) =>
+        ride.status?.toUpperCase() === 'COMPLETED' ||
         ride.trip_status?.toUpperCase() === 'COMPLETED'
       );
       if (completedRides.length > 0) return completedRides.length;
@@ -862,64 +842,113 @@ const DriverDashboard = () => {
         }}
       />
 
-      {/* ── ACCEPT RIDE CONFIRM MODAL ── */}
+      {/* ── ACCEPT RIDE CONFIRM MODAL (SCHEDULED RIDES) ── */}
       <Modal
-        visible={showConfirmModal}
+        visible={showConfirmModal && acceptedRide?.booking_type === 'SCHEDULED'}
         transparent
         animationType="fade"
       >
         <View style={styles.confirmModalOverlay}>
           <Animated.View style={[styles.confirmModalBox, { transform: [{ scale: 1 }], backgroundColor: theme.colors.card }]}>
             <View style={styles.confirmIconRing}>
-              <Ionicons name={acceptedRide?.booking_type === 'SCHEDULED' ? "calendar" : "checkmark-circle"} size={ms(60)} color={acceptedRide?.booking_type === 'SCHEDULED' ? theme.colors.primary : "#22C55E"} />
+              <Ionicons name="calendar" size={ms(60)} color={theme.colors.primary} />
             </View>
             <Text style={[styles.confirmModalTitle, { color: theme.colors.text }]}>
-              {acceptedRide?.booking_type === 'SCHEDULED' ? t('ride_scheduled', 'Ride Scheduled!') : t('ride_accepted', 'Ride Accepted!')}
+              {t('ride_scheduled', 'Ride Scheduled!')}
             </Text>
             <Text style={[styles.confirmModalSub, isDark && { color: theme.colors.textMuted }]}>
-              {acceptedRide?.booking_type === 'SCHEDULED'
-                ? t('scheduled_success_msg', 'You can find this ride in your upcoming list.')
-                : t('navigating_to_pickup', 'Navigating to pickup location...')}
+              {t('scheduled_success_msg', 'You can find this ride in your upcoming list.')}
             </Text>
 
             <Pressable
               style={[styles.confirmModalBtn, { backgroundColor: theme.colors.primary }]}
-              onPress={async () => {
-                if (!isOnline) {
-                  showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
-                  return;
-                }
-
-                try {
-                  const isScheduled = acceptedRide?.booking_type === 'SCHEDULED';
-
-                  if (acceptedRide && !isScheduled) {
-                    // 1. Transition status to ARRIVING for live rides
-                    await arrivingTrip(acceptedRide.trip_id).unwrap();
-
-                    // 2. Hide modal and navigate
-                    setShowConfirmModal(false);
-                    navigation.navigate('PickupMapScreen', { ride: acceptedRide });
-                  } else {
-                    // For scheduled rides, just hide the modal (we already accepted it)
-                    setShowConfirmModal(false);
-                  }
-                } catch (error) {
-                  console.error('Failed to transition to arriving status (Live):', error);
-                  // In case of error (e.g. network), we still allow navigation but hide modal
-                  setShowConfirmModal(false);
-                  if (acceptedRide && acceptedRide.booking_type !== 'SCHEDULED') {
-                    navigation.navigate('PickupMapScreen', { ride: acceptedRide });
-                  }
-                }
-              }}
+              onPress={() => setShowConfirmModal(false)}
             >
               <Text style={styles.confirmModalBtnText}>
-                {acceptedRide?.booking_type === 'SCHEDULED' ? t('done', 'Done') : t('start_to_pickup', 'Start to pickup')}
+                {t('done', 'Done')}
               </Text>
             </Pressable>
           </Animated.View>
         </View>
+      </Modal>
+
+      {/* ── LIVE RIDE NAVIGATE TO PICKUP BOTTOM SHEET ── */}
+      <Modal
+        visible={showConfirmModal && acceptedRide?.booking_type !== 'SCHEDULED'}
+        transparent
+        animationType="slide"
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowConfirmModal(false)}>
+          <Pressable style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', paddingHorizontal: ms(24), paddingBottom: vs(32), paddingTop: vs(16), borderTopLeftRadius: ms(32), borderTopRightRadius: ms(32) }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.dragHandle, { backgroundColor: isDark ? '#333' : '#E2E8F0', width: ms(48), marginBottom: vs(28) }]} />
+
+            <View style={{
+              width: ms(68),
+              height: ms(68),
+              borderRadius: ms(34),
+              backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: vs(24)
+            }}>
+              <Ionicons name="navigate-outline" size={ms(32)} color="#16A34A" style={{ marginLeft: ms(4), marginTop: ms(4) }} />
+            </View>
+
+            <Text style={[styles.sheetTitle, { color: theme.colors.text, fontSize: ms(24), fontWeight: '800', marginBottom: vs(12) }]}>
+              {t('start_ride_confirmation', 'Start Heading to Pickup?')}
+            </Text>
+            <Text style={[styles.sheetSubtitle, { color: isDark ? theme.colors.textMuted : '#4B5563', textAlign: 'center', marginHorizontal: ms(16), fontSize: ms(15), lineHeight: vs(22), marginBottom: vs(36) }]}>
+              {t('confirm_start_heading_pickup', 'Are you sure you want to start navigating to the passenger\'s location now?')}
+            </Text>
+
+            <View style={{ width: '100%', gap: vs(16) }}>
+              <TouchableOpacity
+                style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary, width: '100%', paddingVertical: vs(16), borderRadius: ms(16), opacity: isNavigating ? 0.7 : 1 }]}
+                onPress={async () => {
+                  if (!isOnline) {
+                    showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
+                    return;
+                  }
+
+                  try {
+                    if (acceptedRide) {
+                      setIsNavigating(true);
+                      await arrivingTrip(acceptedRide.trip_id).unwrap();
+                      dispatch(setCurrentRide(acceptedRide as any));
+                      setTimeout(() => {
+                        setShowConfirmModal(false);
+                        navigation.navigate('PickupMapScreen', { ride: acceptedRide });
+                        setIsNavigating(false);
+                      }, 500);
+                    }
+                  } catch (error: any) {
+                    console.error('Failed to transition to arriving status (Live):', error);
+                    setIsNavigating(false);
+                    setShowConfirmModal(false);
+                    const errorMessage = error?.data?.message || error?.message || t('failed_to_start_pickup') || 'Failed to start pickup. Please try again.';
+                    showAlert(t('error') || 'Error', errorMessage, { icon: 'alert-circle-outline', isDestructive: true });
+                  }
+                }}
+                disabled={isNavigating}
+                activeOpacity={0.8}
+              >
+                {isNavigating ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={[styles.sheetConfirmBtnText, { fontSize: ms(16), fontWeight: '700', color: '#FFF' }]}>{t('confirm', 'Confirm')}</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{ width: '100%', paddingVertical: vs(12), alignItems: 'center' }}
+                onPress={() => setShowConfirmModal(false)}
+                activeOpacity={0.6}
+              >
+                <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: ms(15), fontWeight: '600' }}>{t('cancel', 'Cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <ConfirmationModal
@@ -947,13 +976,13 @@ const DriverDashboard = () => {
           dispatch(setLastTripRating(null));
         }}
       />
-      <BatteryOptimizationModal 
-        visible={showBatteryModal} 
-        onClose={() => setShowBatteryModal(false)} 
+      <BatteryOptimizationModal
+        visible={showBatteryModal}
+        onClose={() => setShowBatteryModal(false)}
         onFix={() => {
           setShowBatteryModal(false);
           setShowOfflineSwipe(false);
-        }} 
+        }}
       />
     </SafeAreaView>
   );
@@ -1174,6 +1203,49 @@ const styles = StyleSheet.create({
   sosCardButtonText: {
     color: '#fff',
     fontSize: ms(13),
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    padding: ms(24),
+    paddingTop: ms(12),
+    borderTopLeftRadius: ms(24),
+    borderTopRightRadius: ms(24),
+    alignItems: 'center',
+    width: '100%',
+  },
+  dragHandle: {
+    width: ms(40),
+    height: ms(4),
+    backgroundColor: '#E2E8F0',
+    borderRadius: ms(2),
+    marginBottom: vs(16),
+  },
+  sheetTitle: {
+    fontSize: ms(20),
+    fontWeight: '700',
+    marginBottom: vs(8),
+    textAlign: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: ms(14),
+    textAlign: 'center',
+    marginBottom: vs(24),
+  },
+  sheetConfirmBtn: {
+    paddingVertical: vs(14),
+    borderRadius: ms(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: vs(12),
+  },
+  sheetConfirmBtnText: {
+    color: '#fff',
+    fontSize: ms(16),
     fontWeight: '700',
   },
 });

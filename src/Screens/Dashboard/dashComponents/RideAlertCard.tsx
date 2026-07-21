@@ -61,10 +61,16 @@ type Props = {
 const TripTypeBadge = ({ type }: { type: string }) => {
   let color = '#3b82f6'; // Local - Blue
   let bgColor = '#eff6ff';
+  let displayText = type;
 
-  if (type === 'OUTSTATION') {
+  if (type === 'OUTSTATION_ROUND_TRIP' || type === 'OUTSTATION_ONE_WAY') {
     color = '#8b5cf6'; // Purple
     bgColor = '#f5f3ff';
+    if (type === 'OUTSTATION_ROUND_TRIP') {
+      displayText = 'OUTSTATION ROUND TRIP';
+    } else if (type === 'OUTSTATION_ONE_WAY') {
+      displayText = 'OUTSTATION ONE WAY';
+    }
   } else if (type === 'RENTAL') {
     color = '#f59e0b'; // Amber
     bgColor = '#fffbeb';
@@ -72,7 +78,7 @@ const TripTypeBadge = ({ type }: { type: string }) => {
 
   return (
     <View style={[styles.tripTypeBadge, { backgroundColor: bgColor, borderColor: color }]}>
-      <Text style={[styles.tripTypeText, { color: color }]}>{type}</Text>
+      <Text style={[styles.tripTypeText, { color: color }]}>{displayText}</Text>
     </View>
   );
 };
@@ -173,7 +179,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
     ).start();
   }, [headerPulse]);
 
-  const totalTime = useRef(item.remaining || 15).current;
+  const totalTime = useRef(item.remaining || 20).current;
 
   /* ---------- SOUND + VIBRATION ---------- */
   useEffect(() => {
@@ -182,11 +188,11 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
         return;
     }
 
-    let finishedPlayingSubscription: any = null;
-
     const playSound = () => {
       try {
+        SoundPlayer.setVolume(1.0);
         SoundPlayer.playSoundFile('incoming', 'mp3');
+        SoundPlayer.setNumberOfLoops(-1); // Indefinite native loop
         Vibration.vibrate([400, 600, 400], true);
       } catch (e) {
         console.log('SoundPlayer error:', e);
@@ -195,18 +201,8 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
     playSound();
 
-    // Loop the sound for incoming ride ringtone
-    finishedPlayingSubscription = SoundPlayer.addEventListener('FinishedPlaying', ({ success }) => {
-      if (success) {
-        playSound();
-      }
-    });
-
     return () => {
       try {
-        if (finishedPlayingSubscription) {
-          finishedPlayingSubscription.remove();
-        }
         SoundPlayer.stop();
         Vibration.cancel();
       } catch (e) {

@@ -209,6 +209,15 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
+    toggleDayHalt: builder.mutation<any, { tripId: string; is_day_halt: boolean }>({
+      query: ({ tripId, is_day_halt }) => ({
+        url: `/trips/${tripId}/toggle-day-halt`,
+        method: 'POST',
+        body: { is_day_halt },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
     returnReachedTrip: builder.mutation<any, string>({
       query: (tripId) => ({
         url: `/trips/${tripId}/return-reached`,
@@ -226,7 +235,7 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
-    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; rating?: number }>({
+    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; user_rating?: number }>({
       query: ({ tripId, ...body }) => ({
         url: `/trips/${tripId}/complete`,
         method: 'POST',
@@ -463,6 +472,7 @@ export const {
   useDestinationReachedTripMutation,
   useWaitingTripMutation,
   useStartReturnTripMutation,
+  useToggleDayHaltMutation,
   useReturnReachedTripMutation,
   useCancelTripMutation,
   useSkipTripMutation,

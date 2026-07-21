@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
-  Modal,
   View,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import {
+  BottomSheetModal,
+  BottomSheetView,
+  BottomSheetBackdrop,
+} from '@gorhom/bottom-sheet';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { ms, vs } from '../../../lib/scale';
@@ -27,61 +31,73 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
 }) => {
   const { theme, isDark } = useAppTheme();
   const { t } = useTranslation();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
+
+  useEffect(() => {
+    if (visible) {
+      bottomSheetRef.current?.present();
+    } else {
+      bottomSheetRef.current?.dismiss();
+    }
+  }, [visible]);
+
+  const handleSheetChanges = useCallback((index: number) => {
+    if (index === -1) {
+      onClose();
+    }
+  }, [onClose]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.6}
+      />
+    ),
+    []
+  );
 
   const benefits = [
-    { icon: 'shield-checkmark-outline', label: t('zero_commission', 'Zero commission on all rides') },
+    { icon: 'headset-outline', label: t('support_24_7', '24/7 Support') },
     { icon: 'car-outline', label: t('instant_requests', 'Instant Requests') },
     { icon: 'map-outline', label: t('unlock_all_trips', 'Unlock All Trip Types') },
-    { icon: 'headset-outline', label: t('support_24_7', '24/7 Support') },
+    { icon: 'shield-checkmark-outline', label: t('zero_commission', 'Zero commission on all rides') },
   ];
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      onRequestClose={onClose}
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={['65%']}
+      onChange={handleSheetChanges}
+      backdropComponent={renderBackdrop}
+      handleIndicatorStyle={{ backgroundColor: isDark ? 'rgba(252,211,77,0.4)' : '#FCD34D' }}
+      backgroundStyle={{ backgroundColor: isDark ? '#451A03' : '#FFFBEB' }}
+      enablePanDownToClose={true}
     >
-      <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: theme.colors.card }]}>
+      <BottomSheetView style={styles.contentContainer}>
 
-
-          <View style={styles.contentContainer}>
-            <View style={styles.planTextWrapper}>
-              <View style={styles.planBadge}>
-                <Ionicons name="star-outline" size={ms(14)} color={isDark ? '#94A3B8' : '#64748B'} style={{ marginRight: ms(4) }} />
-                <Text style={[styles.planText, { color: isDark ? '#94A3B8' : '#64748B' }]}>Basic</Text>
-              </View>
-              
-              <View style={styles.planBadge}>
-                <Ionicons name="flash-outline" size={ms(14)} color={isDark ? '#94A3B8' : '#64748B'} style={{ marginRight: ms(4) }} />
-                <Text style={[styles.planText, { color: isDark ? '#94A3B8' : '#64748B' }]}>Elite</Text>
-              </View>
-              
-              <View style={[styles.planBadge, styles.premiumBadge]}>
-                <Ionicons name="diamond" size={ms(14)} color={isDark ? '#FFF' : theme.colors.primary} style={{ marginRight: ms(4) }} />
-                <Text style={[styles.planText, { color: isDark ? '#FFF' : theme.colors.primary, fontWeight: '800' }]}>Premium</Text>
-              </View>
+            <View style={styles.titleRow}>
+              <Ionicons name="warning" size={ms(26)} color={isDark ? '#FCD34D' : '#F59E0B'} style={{ marginRight: ms(8) }} />
+              <Text style={[styles.title, { color: isDark ? '#FCD34D' : '#F59E0B', marginBottom: 0 }]}>
+                {t('subscription_required', 'Recharge Plan Required')}
+              </Text>
             </View>
 
-            <Text style={[styles.title, { color: isDark ? theme.colors.text : theme.colors.primary }]}>
-              {t('subscription_required', 'Recharge Plan Required')}
-            </Text>
-
-            <Text style={[styles.description, { color: isDark ? 'rgba(255,255,255,0.5)' : '#94A3B8' }]}>
+            <Text style={[styles.description, { color: isDark ? 'rgba(252,211,77,0.7)' : '#78350F' }]}>
               {t('active_plan_start_earning', 'Active the plan then start earning')}
             </Text>
 
-            <View style={[styles.separator, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }]} />
+            <View style={[styles.separator, { backgroundColor: isDark ? 'rgba(252,211,77,0.2)' : '#FDE68A' }]} />
 
             <View style={styles.benefitsContainer}>
               {benefits.map((benefit, index) => (
                 <View key={index} style={styles.benefitItem}>
-                  <View style={[styles.benefitIconWrapper, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : '#EFF6FF' }]}>
-                    <Ionicons name={benefit.icon} size={ms(14)} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                  <View style={[styles.benefitIconWrapper, { backgroundColor: isDark ? 'rgba(245,158,11,0.15)' : '#FEF3C7' }]}>
+                    <Ionicons name={benefit.icon} size={ms(13)} color={isDark ? '#FCD34D' : '#F59E0B'} />
                   </View>
-                  <Text style={[styles.benefitText, { color: theme.colors.text }]}>
+                  <Text style={[styles.benefitText, { color: isDark ? '#FDE68A' : '#78350F' }]}>
                     {benefit.label}
                   </Text>
                 </View>
@@ -91,7 +107,7 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
             <View style={styles.footer}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.subscribeButton, { backgroundColor: theme.colors.primary }]}
+                style={[styles.subscribeButton, { backgroundColor: '#F59E0B' }]}
                 onPress={onSubscribe}
               >
                 <Text style={styles.subscribeButtonText}>
@@ -101,80 +117,35 @@ const SubscriptionRequiredModal: React.FC<SubscriptionRequiredModalProps> = ({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.cancelButton, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#CBD5E1' }]}
-                onPress={onClose}
+                style={[styles.cancelButton, { borderColor: isDark ? 'rgba(252,211,77,0.3)' : '#FCD34D' }]}
+                onPress={() => bottomSheetRef.current?.dismiss()}
               >
-                <Text style={[styles.cancelButtonText, { color: isDark ? theme.colors.textMuted : '#475569' }]}>
+                <Text style={[styles.cancelButtonText, { color: isDark ? '#FCD34D' : '#F59E0B' }]}>
                   {t('not_now', 'Not Now')}
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
+      </BottomSheetView>
+    </BottomSheetModal>
   );
 };
 
 export default SubscriptionRequiredModal;
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: ms(20),
-  },
-  container: {
-    width: '100%',
-    maxWidth: ms(320),
-    borderRadius: ms(16),
-    overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-  },
-
   contentContainer: {
-    paddingHorizontal: ms(20),
-    paddingTop: vs(32),
-    paddingBottom: vs(24),
+    paddingHorizontal: ms(24),
+    paddingTop: vs(16),
+    paddingBottom: vs(32),
     alignItems: 'center',
   },
 
-  planTextWrapper: {
+
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: vs(16),
-    gap: ms(8),
-  },
-  planBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-    paddingHorizontal: ms(10),
-    paddingVertical: vs(6),
-    borderRadius: ms(12),
-  },
-  premiumBadge: {
-    backgroundColor: 'rgba(21, 45, 94, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(21, 45, 94, 0.3)',
-    shadowColor: '#152D5E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  planText: {
-    fontSize: ms(11),
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: vs(8),
   },
   title: {
     fontSize: ms(22),
@@ -195,25 +166,32 @@ const styles = StyleSheet.create({
     marginBottom: vs(20),
   },
   benefitsContainer: {
-    alignSelf: 'center',
-    gap: vs(8),
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    rowGap: vs(16),
     marginBottom: vs(24),
   },
   benefitItem: {
+    width: '48%',
     flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
   },
   benefitIconWrapper: {
-    width: ms(28),
-    height: ms(28),
+    width: ms(26),
+    height: ms(26),
     borderRadius: ms(8),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: ms(12),
+    marginRight: ms(8),
+    marginTop: vs(2),
   },
   benefitText: {
-    fontSize: ms(13),
+    flex: 1,
+    flexShrink: 1,
+    fontSize: ms(11),
+    lineHeight: ms(16),
     fontWeight: '500',
   },
   footer: {

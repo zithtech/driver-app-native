@@ -7,14 +7,15 @@ import { userApi } from '../userApi';
 export const logoutUser = async (dispatch: any) => {
   console.log('[logoutHelper] Starting logout process');
   
-  // 1. Clear Redux State and RTK Query caches immediately
+  // 1. Clear RTK Query caches first, then Redux State
+  // This prevents useAuthBootstrap from reading stale cache when the user state becomes null
   try {
-    dispatch(clearUser());
     dispatch(driverApi.util.resetApiState());
     dispatch(userApi.util.resetApiState());
-    console.log('[logoutHelper] Redux state cleared');
+    dispatch(clearUser());
+    console.log('[logoutHelper] Caches and Redux state cleared');
   } catch (e) {
-    console.error('[logoutHelper] Error clearing Redux:', e);
+    console.error('[logoutHelper] Error clearing Redux/Caches:', e);
   }
 
   // 2. Clear secure tokens from Keychain and AsyncStorage
