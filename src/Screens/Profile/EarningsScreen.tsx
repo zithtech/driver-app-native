@@ -396,21 +396,7 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
               />
             </View>
 
-            {/* ================= PAYOUT ================= */}
-            <View style={[styles.payoutCard, { backgroundColor: theme.colors.card }]}>
-              <View>
-                <Text style={[styles.payoutTitle, isDark && { color: '#F3F4F6' }]}>{t('next_payout')}</Text>
-                <Text style={[styles.payoutDate, isDark && { color: '#D1D5DB' }]}>
-                  Monday, 15 Jan
-                </Text>
-              </View>
 
-              <Pressable style={[styles.payoutBtn, isDark && { backgroundColor: 'rgba(21, 45, 94, 0.2)' }]}>
-                <Text style={[styles.payoutBtnText, isDark && { color: '#60A5FA' }]}>
-                  {t('view_details')}
-                </Text>
-              </Pressable>
-            </View>
 
             {/* ================= TRANSACTIONS ================= */}
             <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('transactions')}</Text>

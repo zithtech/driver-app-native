@@ -312,9 +312,9 @@ const RideActivityScreen = ({ navigation, route }: any) => {
       </Text>
 
       <View style={styles.statsSummary}>
-        <View style={[styles.statItem, { backgroundColor: theme.colors.card }]}>
-          <Ionicons name="car-sport-outline" size={22} color={theme.colors.primary} style={{ marginBottom: 4 }} />
-          <Text style={[styles.statValue, { color: theme.colors.text }]}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.card, borderColor: isDark ? '#333' : '#E0E7FF' }]}>
+          <Ionicons name="car-sport-outline" size={20} color={theme.colors.primary} style={{ marginBottom: 4 }} />
+          <Text style={[styles.statValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
             {earningsSummary?.data?.tripsCompleted || 0}
           </Text>
           <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -322,9 +322,9 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           </Text>
         </View>
 
-        <View style={[styles.statItem, { backgroundColor: theme.colors.card }]}>
-          <Ionicons name="wallet-outline" size={22} color="#10B981" style={{ marginBottom: 4 }} />
-          <Text style={[styles.statValue, { color: theme.colors.primary }]}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.card, borderColor: isDark ? '#333' : '#E0E7FF' }]}>
+          <Ionicons name="wallet-outline" size={20} color="#10B981" style={{ marginBottom: 4 }} />
+          <Text style={[styles.statValue, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>
             {formatCurrency(earningsSummary?.data?.totalEarnings || 0)}
           </Text>
           <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -332,9 +332,9 @@ const RideActivityScreen = ({ navigation, route }: any) => {
           </Text>
         </View>
 
-        <View style={[styles.statItem, { backgroundColor: theme.colors.card }]}>
-          <Ionicons name="star" size={22} color="#EAB308" style={{ marginBottom: 4 }} />
-          <Text style={[styles.statValue, { color: '#EAB308' }]}>
+        <View style={[styles.statItem, { backgroundColor: theme.colors.card, borderColor: isDark ? '#333' : '#E0E7FF' }]}>
+          <Ionicons name="star" size={20} color="#EAB308" style={{ marginBottom: 4 }} />
+          <Text style={[styles.statValue, { color: '#EAB308' }]} numberOfLines={1} adjustsFontSizeToFit>
             {avgRating}
           </Text>
           <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -659,26 +659,26 @@ const styles = StyleSheet.create({
   statsSummary: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginBottom: 8,
-    gap: 12,
-
+    marginBottom: 12,
+    gap: 8,
   },
   statItem: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E7FF',
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
+    textAlign: 'center',
   },
 
   headerTitle: {
@@ -748,6 +748,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
+    position: 'relative',
+    overflow: 'hidden',
   },
 
   rideHeader: {
@@ -759,12 +761,16 @@ const styles = StyleSheet.create({
   rideDate: {
     fontSize: 12,
     color: '#6B7280',
+    marginTop: 4,
   },
 
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderBottomLeftRadius: 16,
   },
 
   success: { backgroundColor: '#DCFCE7' },
@@ -772,7 +778,7 @@ const styles = StyleSheet.create({
 
   badgeText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 
   routeRow: {

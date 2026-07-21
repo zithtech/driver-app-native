@@ -7,15 +7,16 @@ export const scheduledRideService = {
    */
   setupNotificationChannels: async () => {
     await notifee.createChannel({
-      id: 'scheduled_rides',
+      id: 'scheduled_rides_v2',
       name: 'Scheduled Ride Reminders',
       importance: AndroidImportance.HIGH,
+      sound: 'sound_3',
     });
     await notifee.createChannel({
-      id: 'scheduled_alerts_loud',
+      id: 'scheduled_alerts_loud_v2',
       name: 'Scheduled Ride Urgent Alerts',
       importance: AndroidImportance.HIGH,
-      sound: 'siren',
+      sound: 'sound_3',
     });
   },
 
@@ -34,10 +35,11 @@ export const scheduledRideService = {
           title: 'Scheduled Ride Reminder',
           body: 'Your scheduled ride starts in 1 hour. Please prepare and stay online!',
           android: {
-            channelId: 'scheduled_rides',
+            channelId: 'scheduled_rides_v2',
             importance: AndroidImportance.HIGH,
             category: AndroidCategory.REMINDER,
           },
+          ios: { sound: 'sound_3.mp3' },
         },
         {
           type: TriggerType.TIMESTAMP,
@@ -55,18 +57,57 @@ export const scheduledRideService = {
           title: '⚠️ CRITICAL: Go Online Now!',
           body: 'Final warning: Your scheduled ride will be re-dispatched in 10 minutes if you aren\'t online!',
           android: {
-            channelId: 'scheduled_alerts_loud',
+            channelId: 'scheduled_alerts_loud_v2',
             importance: AndroidImportance.HIGH,
             category: AndroidCategory.ALARM,
             fullScreenAction: {
                 id: 'default',
             },
           },
+          ios: { sound: 'sound_3.mp3', critical: true },
         },
         {
           type: TriggerType.TIMESTAMP,
           timestamp: thirtyMinsBefore,
         }
+      );
+    }
+    // 3. Ten Minute Final Warning (10 mins before)
+    const tenMinsBefore = rideTime - (10 * 60 * 1000);
+    if (tenMinsBefore > Date.now()) {
+      await notifee.createTriggerNotification(
+        {
+          id: `ride_warning_10m_${rideId}`,
+          title: '🚨 CRITICAL: Ride starts in 10 minutes!',
+          body: 'You must be online and ready to start the ride immediately.',
+          android: {
+            channelId: 'scheduled_alerts_loud_v2',
+            importance: AndroidImportance.HIGH,
+            category: AndroidCategory.ALARM,
+            fullScreenAction: { id: 'default' },
+          },
+          ios: { sound: 'sound_3.mp3', critical: true },
+        },
+        { type: TriggerType.TIMESTAMP, timestamp: tenMinsBefore }
+      );
+    }
+
+    // 4. Start Time Alert (0 mins)
+    if (rideTime > Date.now()) {
+      await notifee.createTriggerNotification(
+        {
+          id: `ride_warning_0m_${rideId}`,
+          title: '✅ Ride is starting NOW!',
+          body: 'Please proceed to the pickup location.',
+          android: {
+            channelId: 'scheduled_alerts_loud_v2',
+            importance: AndroidImportance.HIGH,
+            category: AndroidCategory.ALARM,
+            fullScreenAction: { id: 'default' },
+          },
+          ios: { sound: 'sound_3.mp3', critical: true },
+        },
+        { type: TriggerType.TIMESTAMP, timestamp: rideTime }
       );
     }
   },
@@ -76,7 +117,7 @@ export const scheduledRideService = {
    */
   playLoudAlert: () => {
     try {
-      SoundPlayer.playSoundFile('siren', 'mp3'); // Ensure siren.mp3 exists in raw/res
+      SoundPlayer.playSoundFile('sound_3', 'mp3'); // Ensure sound_3.mp3 exists in raw/res
     } catch (e) {
       console.log('Cannot play sound file', e);
     }
@@ -89,5 +130,7 @@ export const scheduledRideService = {
   cancelRideReminders: async (rideId: string) => {
     await notifee.cancelNotification(`ride_reminder_1h_${rideId}`);
     await notifee.cancelNotification(`ride_warning_30m_${rideId}`);
+    await notifee.cancelNotification(`ride_warning_10m_${rideId}`);
+    await notifee.cancelNotification(`ride_warning_0m_${rideId}`);
   }
 };

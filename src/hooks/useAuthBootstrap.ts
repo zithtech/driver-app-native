@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { storage } from '../service/utils/storage';
-import { useGetDriverByIdQuery, useGetActiveTripQuery } from '../service/driverApi';
+import { useGetDriverByIdQuery, useGetActiveTripQuery, useLazyGetTripByIdQuery } from '../service/driverApi';
 import { useGetMeQuery } from '../service/userApi';
 import { setUser, clearUser } from '../redux/userSlice';
-import { setCurrentRide } from '../redux/rideSlice';
+import { setCurrentRide, setMyAcceptedRideId } from '../redux/rideSlice';
 import { RootState } from '../redux/store';
 
 export const useAuthBootstrap = () => {
@@ -15,6 +15,8 @@ export const useAuthBootstrap = () => {
     const [profileProcessed, setProfileProcessed] = useState(false);
     const [tripProcessed, setTripProcessed] = useState(false);
     const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+    
+    const [getTripById] = useLazyGetTripByIdQuery();
 
     // Cleanup on unmount
     useEffect(() => {
@@ -342,8 +344,27 @@ export const useAuthBootstrap = () => {
             if (!activeTripData?.data && !isPersistedScheduled && !isRecentlyAcceptedLive) {
                 console.log('[AuthBootstrap] No active trip found on backend, clearing non-scheduled currentRide');
                 dispatch(setCurrentRide(null));
-            } else if (isPersistedScheduled || isRecentlyAcceptedLive) {
-                console.log('[AuthBootstrap] Preserving ride state during bootstrap to avoid race conditions. Scheduled:', !!isPersistedScheduled, 'Live:', !!isRecentlyAcceptedLive);
+            } else if (isPersistedScheduled) {
+                console.log('[AuthBootstrap] Preserving scheduled ride state... verifying with backend.');
+                const tripId = currentRideObj?.trip_id || currentRideObj?.id;
+                if (tripId) {
+                    getTripById(tripId).unwrap().then((tripResponse) => {
+                         const trip = tripResponse?.data || tripResponse;
+                         const status = trip?.trip_status || trip?.status;
+                         if (['CANCELLED', 'REJECTED', 'COMPLETED'].includes(status) || (trip?.driver_id !== activeDriverId && trip?.driver_details?.id !== activeDriverId)) {
+                             console.log('[AuthBootstrap] ❌ Scheduled ride is no longer valid or assigned to this driver. Wiping it.');
+                             dispatch(setCurrentRide(null));
+                             dispatch(setMyAcceptedRideId(null));
+                         } else {
+                             console.log('[AuthBootstrap] ✅ Scheduled ride is still valid and assigned.');
+                             dispatch(setCurrentRide(trip)); // refresh local state
+                         }
+                    }).catch(err => {
+                         console.error('[AuthBootstrap] Error verifying scheduled ride:', err);
+                    });
+                }
+            } else if (isRecentlyAcceptedLive) {
+                console.log('[AuthBootstrap] Preserving live ride state during bootstrap to avoid race conditions.');
             }
 
             setTripProcessed(true);

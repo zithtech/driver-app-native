@@ -10,6 +10,10 @@ import {
   Dimensions,
   Image,
   Share,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +28,7 @@ import { formatCurrency } from '../../lib/currency';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { useIsFocused } from '@react-navigation/native';
-import { useGetTripByIdQuery } from '../../service/driverApi';
+import { useGetTripByIdQuery, useCreateSupportTicketMutation } from '../../service/driverApi';
 
 const { width } = Dimensions.get('window');
 
@@ -35,6 +39,11 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   const { t } = useTranslation();
   const { ride: initialRide } = route.params;
   const { triggerHaptic } = useHaptic();
+  
+  const [createTicket, { isLoading: isSubmittingTicket }] = useCreateSupportTicketMutation();
+  const [isReportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedIssueCategory, setSelectedIssueCategory] = useState('');
+  const [issueDescription, setIssueDescription] = useState('');
 
   // Fetch full details
   const { data: tripResult, isLoading: isFirstLoading } = useGetTripByIdQuery(initialRide.id, {
@@ -207,19 +216,47 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
 
   const handleReportIssue = () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
-    showAlert({
-      title: t('report_issue'),
-      message: t('report_issue_desc', { id: ride.id }),
-      confirmText: t('report') || 'Report',
-      cancelText: t('cancel'),
-      onConfirm: () =>
-        showAlert({
-          title: 'Success',
-          message: 'Support request sent. We will contact you soon.',
-          singleButton: true,
-          icon: 'checkmark-circle-outline',
-        }),
-    });
+    setReportModalVisible(true);
+  };
+
+  const submitReport = async () => {
+    if (!selectedIssueCategory) {
+      showAlert({
+        title: t('error') || 'Error',
+        message: 'Please select an issue category.',
+        singleButton: true,
+      });
+      return;
+    }
+
+    try {
+      await createTicket({
+        driver_id: ride.driver_id || 'UNKNOWN',
+        subject: `Issue with Ride #${ride.trip_code || ride.id}`,
+        description: `Category: ${selectedIssueCategory}\n\nDetails: ${issueDescription}`,
+        category: 'ride_issue',
+        priority: 'medium',
+      }).unwrap();
+
+      triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+      setReportModalVisible(false);
+      setSelectedIssueCategory('');
+      setIssueDescription('');
+
+      showAlert({
+        title: 'Success',
+        message: 'Support request sent. We will contact you soon.',
+        singleButton: true,
+        icon: 'checkmark-circle-outline',
+      });
+    } catch (error) {
+      triggerHaptic(HapticFeedbackTypes.notificationError);
+      showAlert({
+        title: t('error') || 'Error',
+        message: 'Failed to submit the report. Please try again.',
+        singleButton: true,
+      });
+    }
   };
 
   return (
@@ -324,36 +361,46 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
               {ride.timeline ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
                   <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Ionicons name="time-outline" size={24} color={isDark ? '#60A5FA' : '#2563EB'} style={{ marginBottom: 4 }} />
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#E5E7EB' : '#1F2937' }}>{t('accepted')}</Text>
-                    <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
-                      {ride.timeline.acceptedAt || ride.timeline.requestedAt || ride.time}
+                    <Ionicons name="time-outline" size={22} color={isDark ? '#60A5FA' : '#2563EB'} style={{ marginBottom: 4 }} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? '#E5E7EB' : '#1F2937' }} numberOfLines={1} adjustsFontSizeToFit>{t('accepted') || 'Accepted'}</Text>
+                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                      {ride.timeline.acceptedAt || ride.timeline.requestedAt || ride.time || '-'}
                     </Text>
                   </View>
 
-                  <View style={{ height: 2, flex: 1, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 4, marginTop: -20 }} />
+                  <View style={{ height: 2, flex: 0.6, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 2, marginTop: -20 }} />
 
                   <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Ionicons name="play-circle-outline" size={24} color={ride.timeline.startedAt ? (isDark ? '#34D399' : '#10B981') : (isDark ? '#4B5563' : '#E5E7EB')} style={{ marginBottom: 4 }} />
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: ride.timeline.startedAt ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }}>{t('started')}</Text>
-                    <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                    <Ionicons name="navigate-outline" size={22} color={ride.timeline.arrivedAt ? (isDark ? '#FBBF24' : '#F59E0B') : (isDark ? '#4B5563' : '#E5E7EB')} style={{ marginBottom: 4 }} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: ride.timeline.arrivedAt ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }} numberOfLines={1} adjustsFontSizeToFit>{t('arrived') || 'Arrived'}</Text>
+                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                      {ride.timeline.arrivedAt || '-'}
+                    </Text>
+                  </View>
+
+                  <View style={{ height: 2, flex: 0.6, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 2, marginTop: -20 }} />
+
+                  <View style={{ alignItems: 'center', flex: 1 }}>
+                    <Ionicons name="play-circle-outline" size={22} color={ride.timeline.startedAt ? (isDark ? '#34D399' : '#10B981') : (isDark ? '#4B5563' : '#E5E7EB')} style={{ marginBottom: 4 }} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: ride.timeline.startedAt ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }} numberOfLines={1} adjustsFontSizeToFit>{t('started') || 'Started'}</Text>
+                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
                       {ride.timeline.startedAt || '-'}
                     </Text>
                   </View>
 
-                  <View style={{ height: 2, flex: 1, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 4, marginTop: -20 }} />
+                  <View style={{ height: 2, flex: 0.6, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 2, marginTop: -20 }} />
 
                   <View style={{ alignItems: 'center', flex: 1 }}>
                     <Ionicons 
                       name={ride.status === 'Cancelled' ? 'close-circle-outline' : 'checkmark-done-circle-outline'} 
-                      size={24} 
+                      size={22} 
                       color={(ride.timeline.completedAt || ride.timeline.cancelledAt) ? (ride.status === 'Cancelled' ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#34D399' : '#10B981')) : (isDark ? '#4B5563' : '#E5E7EB')} 
                       style={{ marginBottom: 4 }} 
                     />
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: (ride.timeline.completedAt || ride.timeline.cancelledAt) ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }}>
-                      {ride.status === 'Cancelled' ? t('cancelled') : t('completed')}
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: (ride.timeline.completedAt || ride.timeline.cancelledAt) ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }} numberOfLines={1} adjustsFontSizeToFit>
+                      {ride.status === 'Cancelled' ? (t('cancelled') || 'Cancelled') : (t('completed') || 'Completed')}
                     </Text>
-                    <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
+                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
                       {ride.timeline.completedAt || ride.timeline.cancelledAt || '-'}
                     </Text>
                   </View>
@@ -370,21 +417,35 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
               <View style={[styles.receiptTopEdge, isDark && { borderBottomColor: theme.colors.background }]} />
 
               <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('fare_breakdown')}</Text>
-              <FareRow label={t('base_fare')} value={formatCurrency(ride.fareDetails?.base || 0)} isDark={isDark} />
-              <FareRow label={t('distance_fare', { distance: ride.distance || '0 km' })} value={formatCurrency(ride.fareDetails?.distance || 0)} isDark={isDark} />
-              <FareRow label={t('time_fare')} value={formatCurrency(ride.fareDetails?.time || 0)} isDark={isDark} />
-              <FareRow label={t('platform_fee')} value={`- ${formatCurrency(ride.fareDetails?.platformFee || 0)}`} color={isDark ? '#F87171' : '#DC2626'} isDark={isDark} />
+              
+              {(() => {
+                const isCancelled = ride.status?.toUpperCase() === 'CANCELLED';
+                const baseFare = isCancelled ? 0 : (ride.fareDetails?.base || 0);
+                const distanceFare = isCancelled ? 0 : (ride.fareDetails?.distance || 0);
+                const timeFare = isCancelled ? 0 : (ride.fareDetails?.time || 0);
+                const platformFee = isCancelled ? 0 : (ride.fareDetails?.platformFee || 0);
+                const totalAmount = isCancelled ? 0 : Math.abs(ride.amount || 0);
 
-              <View style={[styles.receiptDashedLine, isDark && { borderColor: '#4B5563' }]} />
+                return (
+                  <>
+                    <FareRow label={t('base_fare')} value={formatCurrency(baseFare)} isDark={isDark} />
+                    <FareRow label={t('distance_fare', { distance: isCancelled ? '0 km' : (ride.distance || '0 km') })} value={formatCurrency(distanceFare)} isDark={isDark} />
+                    <FareRow label={t('time_fare')} value={formatCurrency(timeFare)} isDark={isDark} />
+                    <FareRow label={t('platform_fee')} value={`- ${formatCurrency(platformFee)}`} color={isDark ? '#F87171' : '#DC2626'} isDark={isDark} />
 
-              <View style={styles.totalRow}>
-                <Text style={[styles.totalLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {ride.status === 'Cancelled' ? t('cancellation_charge') : t('your_earnings')}
-                </Text>
-                <Text style={[styles.totalValue, isDark && { color: ride.status === 'Cancelled' ? '#9CA3AF' : '#34D399' }]}>
-                  {formatCurrency(Math.abs(ride.amount))}
-                </Text>
-              </View>
+                    <View style={[styles.receiptDashedLine, isDark && { borderColor: '#4B5563' }]} />
+
+                    <View style={styles.totalRow}>
+                      <Text style={[styles.totalLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
+                        {isCancelled ? t('cancellation_charge') : t('your_earnings')}
+                      </Text>
+                      <Text style={[styles.totalValue, isDark && { color: isCancelled ? '#9CA3AF' : '#34D399' }]}>
+                        {formatCurrency(totalAmount)}
+                      </Text>
+                    </View>
+                  </>
+                );
+              })()}
 
               <View style={[styles.receiptBottomEdge, isDark && { borderTopColor: theme.colors.background }]} />
             </View>
@@ -411,16 +472,16 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
 
             <View style={styles.actionsGrid}>
               <View style={styles.actionRow}>
-                <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]}>
-                  <Ionicons name="headset-outline" size={20} color={isDark ? '#E5E7EB' : '#4B5563'} />
-                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('support')}</Text>
-                </Pressable>
                 <Pressable
                   style={[styles.actionBtnPrimary, ride.status === 'Cancelled' && styles.disabledBtn]}
                   onPress={() => ride.status !== 'Cancelled' && downloadInvoice(ride)}
                 >
                   <Ionicons name="download-outline" size={20} color="#fff" />
                   <Text style={styles.actionBtnPrimaryText} numberOfLines={1} adjustsFontSizeToFit>{t('invoice')}</Text>
+                </Pressable>
+                <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]} onPress={handleShare}>
+                  <Ionicons name="share-social-outline" size={20} color={isDark ? '#E5E7EB' : '#4B5563'} />
+                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('share_details')}</Text>
                 </Pressable>
               </View>
 
@@ -429,15 +490,86 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                   <Ionicons name="warning-outline" size={20} color={isDark ? '#F87171' : '#DC2626'} />
                   <Text style={[styles.actionBtnText, { color: isDark ? '#F87171' : '#DC2626' }]} numberOfLines={1} adjustsFontSizeToFit>{t('report_issue')}</Text>
                 </Pressable>
-                <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]} onPress={handleShare}>
-                  <Ionicons name="share-social-outline" size={20} color={isDark ? '#E5E7EB' : '#4B5563'} />
-                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('share_details')}</Text>
-                </Pressable>
               </View>
             </View>
           </>
         )}
       </ScrollView>
+
+      {/* Report Issue Modal */}
+      <Modal
+        visible={isReportModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReportModalVisible(false)}
+      >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={[styles.modalContent, isDark && { backgroundColor: theme.colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, isDark && { color: '#FFFFFF' }]}>Report an Issue</Text>
+              <Pressable onPress={() => setReportModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={24} color={isDark ? '#9CA3AF' : '#4B5563'} />
+              </Pressable>
+            </View>
+
+            <Text style={[styles.modalSubtitle, isDark && { color: '#9CA3AF' }]}>
+              What went wrong with Ride #{ride.trip_code || ride.id}?
+            </Text>
+
+            <View style={styles.issueTags}>
+              {['Payment Issue', 'Passenger Behavior', 'Wrong Route', 'App Glitch', 'Other'].map((tag) => (
+                <Pressable
+                  key={tag}
+                  style={[
+                    styles.issueTag,
+                    isDark && { backgroundColor: '#374151', borderColor: '#4B5563' },
+                    selectedIssueCategory === tag && styles.issueTagSelected,
+                  ]}
+                  onPress={() => {
+                    triggerHaptic(HapticFeedbackTypes.selection);
+                    setSelectedIssueCategory(tag);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.issueTagText,
+                      isDark && { color: '#E5E7EB' },
+                      selectedIssueCategory === tag && styles.issueTagTextSelected,
+                    ]}
+                  >
+                    {tag}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              style={[
+                styles.issueInput,
+                isDark && { backgroundColor: '#374151', color: '#FFFFFF', borderColor: '#4B5563' },
+              ]}
+              placeholder="Additional Details (Optional)"
+              placeholderTextColor={isDark ? '#9CA3AF' : '#9CA3AF'}
+              multiline
+              numberOfLines={4}
+              value={issueDescription}
+              onChangeText={setIssueDescription}
+              textAlignVertical="top"
+            />
+
+            <Pressable
+              style={[styles.submitReportBtn, (!selectedIssueCategory || isSubmittingTicket) && styles.disabledBtn]}
+              onPress={submitReport}
+              disabled={!selectedIssueCategory || isSubmittingTicket}
+            >
+              <Text style={styles.submitReportBtnText}>
+                {isSubmittingTicket ? 'Submitting...' : 'Submit Report'}
+              </Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -778,6 +910,88 @@ const styles = StyleSheet.create({
     height: 14,
     backgroundColor: '#E5E7EB',
     borderRadius: 4,
+  },
+
+  /* Modal Styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalCloseBtn: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 20,
+  },
+  issueTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  issueTag: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  issueTagSelected: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#3B82F6',
+  },
+  issueTagText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  issueTagTextSelected: {
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  issueInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    height: 120,
+    fontSize: 16,
+    color: '#111827',
+    marginBottom: 24,
+    backgroundColor: '#F9FAFB',
+  },
+  submitReportBtn: {
+    backgroundColor: '#DC2626',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  submitReportBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
 
