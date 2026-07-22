@@ -147,10 +147,28 @@ const RootNavigation = () => {
     // 2. Clear Redux State Immediately
     dispatch(clearAcceptedRide());
 
+    // Format detailed message for driver
+    let displayMessage = t(msgKey) || 'The ride has been cancelled.';
+    if (cancelledBy === 'USER') {
+      if (data?.passengerName) {
+        displayMessage = `Passenger ${data.passengerName} cancelled the ride.`;
+      } else {
+        displayMessage = `Passenger cancelled the ride.`;
+      }
+    }
+    const cancelReason = data?.cancelReason || data?.reason;
+    if (cancelReason) {
+      displayMessage += `\nReason: ${cancelReason}`;
+    }
+    const tripIdToDisplay = data?.trip_id || data?.tripId;
+    if (tripIdToDisplay) {
+      displayMessage += `\nRide ID: ${tripIdToDisplay}`;
+    }
+
     // 3. Show Alert and Redirect
     showAlert({
       title: t('ride_cancelled') || 'Ride Cancelled',
-      message: t(msgKey) || 'The ride has been cancelled.',
+      message: displayMessage,
       singleButton: true,
       icon: 'close-circle-outline',
       onConfirm: () => {
