@@ -41,15 +41,16 @@ const { width } = Dimensions.get('window');
 const PaymentCollectionScreen = ({ route, navigation }: any) => {
     const rideFromStore = useSelector((state: RootState) => state.ride.currentRide);
     const ride = rideFromStore || route.params?.ride || {};
+    const tripId = ride?.trip_id || ride?.id;
     const actualDistance = route.params?.actualDistance;
     const actualDuration = route.params?.actualDuration;
     const [isFinished, setIsFinished] = useState(false);
 
     React.useEffect(() => {
-        if (!rideFromStore && !isFinished) {
+        if (!tripId && !isFinished) {
             navigation.navigate(Dashboard_Nav);
         }
-    }, [rideFromStore, isFinished, navigation]);
+    }, [tripId, isFinished, navigation]);
 
     React.useEffect(() => {
         if (isFinished) {

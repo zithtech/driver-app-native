@@ -7,6 +7,7 @@ import {
 import type { RootState } from '../redux/store';
 import { setUser, clearUser } from '../redux/userSlice';
 import { getDeviceId } from './utils/device';
+import { logoutUser } from './utils/logoutHelper';
 import { storage } from './utils/storage';
 import { API_URL } from '../constant/config';
 
@@ -115,8 +116,7 @@ export const baseQueryWithReauth: BaseQueryFn<
 
               if (errorStatus === 401 || errorStatus === 403) {
                 // Refresh token is definitely invalid/expired -> logout immediately
-                await storage.clearAll();
-                api.dispatch(clearUser());
+                await logoutUser(api.dispatch);
                 return;
               }
 
@@ -136,8 +136,7 @@ export const baseQueryWithReauth: BaseQueryFn<
           }
 
           // If we exhausted retries and never succeeded
-          await storage.clearAll();
-          api.dispatch(clearUser());
+          await logoutUser(api.dispatch);
         })();
 
         try {
@@ -159,8 +158,7 @@ export const baseQueryWithReauth: BaseQueryFn<
       }
     } else {
       // 401 but NOT token-expired (invalid token, etc.) → force logout
-      await storage.clearAll();
-      api.dispatch(clearUser());
+      await logoutUser(api.dispatch);
     }
   }
 

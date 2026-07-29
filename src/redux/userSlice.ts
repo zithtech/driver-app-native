@@ -125,6 +125,13 @@ export interface UserState {
 
   /** Raw document metadata from backend */
   documents_data?: any[];
+
+  /* Subscription Eligibility */
+  subscription_eligibility?: {
+    basic: boolean;
+    elite: boolean;
+    premium: boolean;
+  };
 }
 
 /* ================= REQUEST STATUS ================= */

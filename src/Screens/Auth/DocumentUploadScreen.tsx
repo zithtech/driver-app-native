@@ -25,6 +25,7 @@ import { useGetDocUploadUrlMutation, useSaveDocumentMutation } from '../../servi
 import { documentApi } from '../../api/documentApi';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { useAlert } from '../../context/AlertContext';
+import { useToast } from '../../context/ToastContext';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import DocGuidelines from '../../Components/DocGuidelines';
@@ -51,6 +52,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
   const { showAlert } = useAlert();
   const dispatch = useDispatch();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { triggerHaptic } = useHaptic();
   const user = useSelector((state: any) => state.userSlice.user);
 
@@ -395,7 +397,16 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       dispatch(setUser(profileUpdate));
       setIsSubmitting(false);
       setUploadStage(null);
-      setSubmissionStatus('success');
+      
+      showToast({
+        type: 'success',
+        message: t('upload_successful_msg', 'Your document uploaded successfully.'),
+        duration: 3000,
+      });
+
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1500);
     } catch (error: any) {
       setIsSubmitting(false);
       setUploadStage(null);
@@ -668,16 +679,9 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         ocrErrorCode={ocrErrorCode}
         message={ocrErrorMessage || undefined}
         onClose={() => {
-          if (submissionStatus === 'success') {
-            setSubmissionStatus(null);
-            setOcrErrorCode(null);
-            setOcrErrorMessage(null);
-            navigation.goBack();
-          } else {
-            setSubmissionStatus(null);
-            setOcrErrorCode(null);
-            setOcrErrorMessage(null);
-          }
+          setSubmissionStatus(null);
+          setOcrErrorCode(null);
+          setOcrErrorMessage(null);
         }}
         onRetake={() => {
           setSubmissionStatus(null);
