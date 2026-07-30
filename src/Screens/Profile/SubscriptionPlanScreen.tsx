@@ -1,35 +1,38 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   Platform,
-  StatusBar,
   RefreshControl,
   ScrollView,
-  TextInput,
   ActivityIndicator,
-  Animated
+  Alert,
+  Image,
+  Modal,
+  Linking
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useIsFocused } from '@react-navigation/native';
 import { useAlert } from '../../context/AlertContext';
 import { useTranslation } from 'react-i18next';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import RazorpayCheckout from 'react-native-razorpay';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { useSelector } from 'react-redux';
 import { useHaptic } from '../../hooks/useHaptic';
 import { RootState } from '../../redux/store';
 import {
-  useCreateSubscriptionOrderMutation,
-  useVerifySubscriptionPaymentMutation,
   useGetMySubscriptionQuery,
   useGetSubscriptionPlansQuery,
-  useValidatePromoMutation,
-  useGetAvailablePromosQuery,
+  useCreateAutoSubscriptionMutation,
+  useVerifyAutoSubscriptionPaymentMutation,
+  useLazyPreviewPlanChangeQuery,
+  useToggleAutoRenewMutation,
+  useCreateSubscriptionOrderMutation,
+  useVerifySubscriptionPaymentMutation,
 } from '../../service/userApi';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
@@ -39,7 +42,7 @@ import AppStatusBar from '../../Components/AppStatusBar';
 interface PlanFeature {
   key: string;
   icon: string;
-  params?: Record<string, any>;
+  label: string;
   isBlocked?: boolean;
 }
 
@@ -47,7 +50,11 @@ interface PlanTier {
   id: number;
   name: string;
   color: string;
+  lightColor: string;
   icon: string;
+  iconType: 'ionicons' | 'material';
+  subtitle: string;
+  highlight: string;
   features: PlanFeature[];
   pricing: {
     daily: number;
@@ -55,23 +62,13 @@ interface PlanTier {
     monthly: number;
   };
   isPopular?: boolean;
-  savings?: number | null;
-  tag?: string | null;
+  tag?: string;
 }
 
 type Duration = 'daily' | 'weekly' | 'monthly';
 
 /* ================= CONSTANTS ================= */
 const RAZORPAY_KEY = 'rzp_test_SCjewpaZ96XBWa'; // Replace with real key in prod
-
-const FALLBACK_COLORS = ['#3B82F6', '#1E3A8A', '#F59E0B'];
-const FALLBACK_ICONS = ['shield-outline', 'diamond-outline', 'trophy-outline'];
-
-const PLAN_COLORS: Record<string, { color: string, icon: string }> = {
-  basic: { color: '#3B82F6', icon: 'shield-outline' },
-  elite: { color: '#1E3A8A', icon: 'diamond-outline' },
-  premium: { color: '#F59E0B', icon: 'trophy-outline' },
-};
 
 const DURATIONS: { key: Duration; label: string }[] = [
   { key: 'daily', label: 'Daily' },
@@ -80,32 +77,6 @@ const DURATIONS: { key: Duration; label: string }[] = [
 ];
 
 /* ================= SCREEN ================= */
-
-const MinimalPromoCoupon = ({ promo, tierColor, onApply, onCopy, isDark }: { promo: any; tierColor: string; onApply: (code: string) => void; onCopy: (code: string) => void; isDark: boolean }) => {
-  const isPercentage = promo.discount_type === 'percentage';
-  
-  return (
-    <View style={[styles.minimalCoupon, { borderColor: isDark ? '#334155' : '#E2E8F0', backgroundColor: isDark ? '#1E293B' : '#F8FAFC' }]}>
-      <View style={styles.couponLeft}>
-        <Text style={[styles.couponValue, { color: tierColor }]}>
-          {isPercentage ? `${promo.discount_value}%` : `₹${promo.discount_value}`} OFF
-        </Text>
-        <Text style={[styles.couponDesc, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
-          {promo.description || 'Limited time offer'}
-        </Text>
-      </View>
-      <View style={styles.couponRight}>
-        <Pressable style={styles.couponCodeBox} onPress={() => onCopy(promo.code)}>
-          <Text style={[styles.couponCodeText, { color: isDark ? '#E2E8F0' : '#334155' }]}>{promo.code}</Text>
-          <Ionicons name="copy-outline" size={12} color={isDark ? '#94A3B8' : '#64748B'} style={{ marginLeft: 4 }} />
-        </Pressable>
-        <Pressable onPress={() => onApply(promo.code)}>
-          <Text style={[styles.couponApplyText, { color: tierColor }]}>APPLY</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-};
 
 const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   const { colors } = useTheme();
@@ -116,76 +87,50 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
   const { data: plansData, isLoading: isPlansLoading } = useGetSubscriptionPlansQuery();
   const { data: subscriptionData, isLoading: isSubLoading, refetch: refetchSub } = useGetMySubscriptionQuery();
+  const [createAutoSubscription] = useCreateAutoSubscriptionMutation();
+  const [verifyAutoSubscriptionPayment] = useVerifyAutoSubscriptionPaymentMutation();
+  const [triggerPreviewPlanChange] = useLazyPreviewPlanChangeQuery();
+  const [toggleAutoRenew, { isLoading: isTogglingAutoRenew }] = useToggleAutoRenewMutation();
   const [createSubscriptionOrder] = useCreateSubscriptionOrderMutation();
   const [verifySubscriptionPayment] = useVerifySubscriptionPaymentMutation();
-  const [validatePromo] = useValidatePromoMutation();
-  const { data: availablePromos } = useGetAvailablePromosQuery();
 
-  const [selectedTierId, setSelectedTierId] = useState<number | null>(null);
-  const [selectedDuration, setSelectedDuration] = useState<Duration>('weekly');
+  const [selectedDuration, setSelectedDuration] = useState<Duration>('daily');
   const [isProcessing, setIsProcessing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isSwitchPlanMode, setIsSwitchPlanMode] = useState(false);
 
-  // Promo State
-  const [promoInput, setPromoInput] = useState('');
-  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
-  const [useRewardBalance, setUseRewardBalance] = useState(false);
+  // Eligibility Modal State
+  const [eligibilityModalVisible, setEligibilityModalVisible] = useState(false);
+  const [ineligiblePlanName, setIneligiblePlanName] = useState('');
+
+  useEffect(() => {
+    if (subscriptionData?.data?.subscription?.billing_cycle) {
+      setSelectedDuration(getDurationKey(subscriptionData.data.subscription.billing_cycle));
+    }
+  }, [subscriptionData]);
 
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { triggerHaptic } = useHaptic();
 
-  useEffect(() => {
-    setAppliedPromoCode(null);
-    setDiscountAmount(0);
-    setUseRewardBalance(false);
-  }, [selectedTierId, selectedDuration]);
-
-  const handleApplyPromo = async (codeOverride?: string) => {
-    const codeToUse = codeOverride || promoInput;
-    if (!codeToUse.trim()) return;
-
-    setIsValidatingPromo(true);
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-
-    try {
-      const result = await validatePromo({ code: codeToUse, amount: currentPrice }).unwrap();
-      if (result.success && result.data.isValid) {
-        setAppliedPromoCode(codeToUse);
-        setPromoInput(codeToUse);
-        setDiscountAmount(result.data.discountAmount);
-        triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-      } else {
-        throw new Error(result.message || 'Invalid promo code');
-      }
-    } catch (error: any) {
-      setAppliedPromoCode(null);
-      setDiscountAmount(0);
-      triggerHaptic(HapticFeedbackTypes.notificationError);
-      showAlert({ title: 'Invalid Promo', message: error.data?.message || error.message || 'Could not apply promo code', singleButton: true, icon: 'close-circle-outline' });
-    } finally {
-      setIsValidatingPromo(false);
-    }
-  };
-
-  const handleCopyPromo = (code: string) => {
-    Clipboard.setString(code);
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-    showAlert({ title: 'Copied!', message: 'Promo code copied to clipboard', singleButton: true, icon: 'copy-outline' });
-  };
-
-  const getFeatureLabel = (key: string) => {
+  const getFeatureLabel = (key: string, duration: Duration) => {
     const labels: Record<string, string> = {
-      zero_commission: 'Zero Commission',
-      instant_rides: 'Instant Requests',
-      // local_rides: 'Local Rides',
-      outstation_trips: 'Outstation Trips',
-      one_way_trips: 'One-Way Trips',
-      scheduled_rides: 'Scheduled Rides',
-      priority_support: '24/7 Priority Support',
-      priority_matching: 'Priority Matching',
+      local_trips_one_way: 'Local trips (One-way)',
+      local_trips_round: 'Local trips (One-way & Round trip)',
+      all_local_trips: 'All Local trips (One-way & Round trip)',
+      up_to_25_km: 'Up to 25 km per trip',
+      up_to_50_km: 'Up to 50 km per trip',
+      no_distance_limit: 'No distance limit',
+      standard_support: 'Standard support',
+      priority_support: 'Priority support',
+      high_priority_support: 'High priority support',
+      trip_earnings_visible: 'Trip earnings visible',
+      trip_earnings_incentives: 'Trip earnings & incentives',
+      better_earnings_incentives: 'Better earnings & incentives',
+      scheduled_rides: 'Scheduled rides',
+      scheduled_rides_all: 'Scheduled rides (Day/Week/Month)',
+      outstation_trips: 'Outstation trips',
+      outstation_trips_all: 'Outstation trips (All types)',
     };
     return labels[key] || key.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -196,33 +141,25 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     setRefreshing(false);
   }, [refetchSub]);
 
-  const getDisplayFeatures = (plan: any, duration: Duration): PlanFeature[] => {
-    const features: PlanFeature[] = [];
-    const featObj = plan.features;
-    if (Array.isArray(featObj)) return featObj.map(f => ({ key: f.toLowerCase().replace(/ /g, '_'), icon: 'checkmark' }));
+  // Dynamically extract features from API response
+  const extractFeatures = (plan: any): PlanFeature[] => {
+    const rawFeatures = plan.features;
+    let labels: string[] = [];
     
-    const feats = featObj || {};
-    features.push({ key: 'zero_commission', icon: 'checkmark' });
-    
-    const allowedTypes = feats.allowed_ride_types || [];
-    if (allowedTypes.includes('INSTANT') || feats.instant_requests) features.push({ key: 'instant_rides', icon: 'checkmark' });
-    // else features.push({ key: 'local_rides', icon: 'checkmark' });
-
-    if (allowedTypes.includes('OUTSTATION') || allowedTypes.includes('OUTSTATION_ONE_WAY') || allowedTypes.includes('OUTSTATION_ROUND_TRIP') || feats.outstation_enabled) features.push({ key: 'outstation_trips', icon: 'checkmark' });
-    if (allowedTypes.includes('ONE-WAY') || feats.oneway_enabled) features.push({ key: 'one_way_trips', icon: 'checkmark' });
-
-    const sched = feats.scheduled_rides;
-    let isScheduledAllowed = false;
-    if (sched) {
-      if (duration === 'daily') isScheduledAllowed = !!sched.daily_allowed;
-      else if (duration === 'weekly') isScheduledAllowed = !!sched.weekly_allowed;
-      else if (duration === 'monthly') isScheduledAllowed = !!sched.monthly_allowed;
-      features.push({ key: 'scheduled_rides', icon: 'checkmark', isBlocked: !isScheduledAllowed });
+    if (Array.isArray(rawFeatures)) {
+      labels = rawFeatures.filter((f: any) => typeof f === 'string' && f.trim().length > 0);
+    } else if (typeof rawFeatures === 'object' && rawFeatures !== null) {
+      labels = Object.entries(rawFeatures)
+        .filter(([_, val]) => val === true || val === 'true')
+        .map(([key]) => key.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
     }
 
-    if (feats.support === '24/7 Priority Support' || feats.priority_support) features.push({ key: 'priority_support', icon: 'checkmark' });
-    if (feats.premium_driver_rank || (plan.plan_name || plan.name || '').toLowerCase().includes('premium')) features.push({ key: 'priority_matching', icon: 'checkmark' });
-    return features;
+    return labels.map((label: string) => ({
+      key: label,
+      label: label,
+      icon: 'checkmark',
+      isBlocked: false,
+    }));
   };
 
   const planTiers: PlanTier[] = (plansData?.data?.plans || plansData?.data || []).map((plan: any, index: number) => {
@@ -230,45 +167,46 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     const weekly = Number(plan.weekly_price || 0);
     const monthly = Number(plan.monthly_price || 0);
 
-    let savingsPercent = 0;
-    if (selectedDuration === 'weekly' && daily > 0) savingsPercent = Math.round((1 - (weekly / (daily * 7))) * 100);
-    else if (selectedDuration === 'monthly' && daily > 0) savingsPercent = Math.round((1 - (monthly / (daily * 30))) * 100);
-
-    const name = plan.plan_name || plan.name || '';
+    const rawName = plan.plan_name || plan.name || '';
+    const name = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const lowerName = name.toLowerCase();
 
-    let colorScheme = { color: FALLBACK_COLORS[index % 3], icon: FALLBACK_ICONS[index % 3] };
-    if (lowerName.includes('basic')) colorScheme = PLAN_COLORS.basic;
-    else if (lowerName.includes('elite')) colorScheme = PLAN_COLORS.elite;
-    else if (lowerName.includes('premium')) colorScheme = PLAN_COLORS.premium;
+    let colorScheme: Pick<PlanTier, 'color' | 'lightColor' | 'icon' | 'iconType' | 'subtitle' | 'highlight'> = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'car', iconType: 'ionicons', subtitle: 'For getting started', highlight: 'Perfect for new drivers and local one-way trips.' };
+    
+    if (lowerName.includes('basic')) {
+      colorScheme = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'medal', iconType: 'ionicons', subtitle: 'For getting started', highlight: 'Perfect for new drivers and\nlocal one-way trips.' };
+    } else if (lowerName.includes('elite')) {
+      colorScheme = { color: '#6D28D9', lightColor: '#F5F3FF', icon: 'flash', iconType: 'ionicons', subtitle: 'More trips, more earnings', highlight: 'For drivers who want more rides\nand better opportunities.' };
+    } else if (lowerName.includes('premium')) {
+      colorScheme = { color: '#D97706', lightColor: '#FEF3C7', icon: 'crown', iconType: 'material', subtitle: 'All trips. All access.', highlight: 'For professional drivers who want\nmaximum earnings.' };
+    }
 
     return {
       id: plan.id,
       name: name,
       ...colorScheme,
-      features: getDisplayFeatures(plan, selectedDuration),
+      features: extractFeatures(plan),
       pricing: { daily, weekly, monthly },
-      savings: savingsPercent > 0 ? savingsPercent : null,
-      isPopular: !!plan.is_popular,
-      tag: plan.tag || null,
+      isPopular: !!plan.tag,
+      tag: plan.tag || '',
     };
+  }).sort((a: PlanTier, b: PlanTier) => {
+    const getWeight = (n: string) => {
+      const lower = n.toLowerCase();
+      if (lower.includes('basic')) return 1;
+      if (lower.includes('elite')) return 2;
+      if (lower.includes('premium')) return 3;
+      return 4;
+    };
+    return getWeight(a.name) - getWeight(b.name);
   });
 
-  useEffect(() => {
-    if (planTiers.length > 0 && selectedTierId === null) {
-      setSelectedTierId(planTiers[0].id);
-    }
-  }, [planTiers, selectedTierId]);
-
-  const currentTier = planTiers.find((p) => p.id === selectedTierId) || planTiers[0];
-  const currentPrice = currentTier?.pricing[selectedDuration] || 0;
-  const finalPrice = Math.max(0, currentPrice - discountAmount - (useRewardBalance ? Number(user?.credit?.balance || 0) : 0));
-
   const getDurationKey = (cycle: string): Duration => {
-    if (cycle === 'day') return 'daily';
-    if (cycle === 'week') return 'weekly';
-    if (cycle === 'month') return 'monthly';
-    return 'daily';
+    if (!cycle) return 'monthly';
+    if (cycle === 'day' || cycle === 'daily') return 'daily';
+    if (cycle === 'week' || cycle === 'weekly') return 'weekly';
+    if (cycle === 'month' || cycle === 'monthly') return 'monthly';
+    return 'monthly';
   };
 
   const getBillingCycle = (dur: Duration): 'day' | 'week' | 'month' => {
@@ -279,73 +217,270 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   };
 
   const activePlan = subscriptionData?.data?.subscription;
-  const isActivePlan = activePlan?.plan_id === selectedTierId &&
-    getDurationKey(activePlan?.billing_cycle) === selectedDuration &&
-    activePlan?.status?.toUpperCase() === 'ACTIVE';
 
-  const handleTierSelect = (id: number) => {
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-    setSelectedTierId(id);
-  };
+  const handleChoosePlan = async (tier: PlanTier, isDowngrade: boolean) => {
+    // Determine Eligibility
+    const lowerTierName = tier.name.toLowerCase();
+    const isBasic = lowerTierName.includes('basic');
+    const isElite = lowerTierName.includes('elite');
+    const isPremium = lowerTierName.includes('premium');
+    
+    let isEligible = false;
+    const eligibility = user?.subscription_eligibility;
+    if (eligibility) {
+      if (isBasic) isEligible = !!eligibility.basic;
+      else if (isElite) isEligible = !!eligibility.elite;
+      else if (isPremium) isEligible = !!eligibility.premium;
+      else isEligible = true; // Fallback for unknown plans
+    } else {
+      // Default: If no eligibility object, only Basic is allowed
+      if (isBasic) isEligible = true;
+      else isEligible = false;
+    }
 
-  const handleSubscribe = async () => {
-    if (!selectedTierId || isActivePlan) return;
+    if (!isEligible) {
+      setIneligiblePlanName(tier.name);
+      setEligibilityModalVisible(true);
+      return;
+    }
+
+    const isActivePlan = activePlan?.plan_id === tier.id && getDurationKey(activePlan?.billing_cycle) === selectedDuration && activePlan?.status?.toUpperCase() === 'ACTIVE';
+    if (isActivePlan) {
+      showAlert({ title: 'Already Active', message: 'You are currently subscribed to this plan.', singleButton: true, icon: 'checkmark-circle-outline' });
+      return;
+    }
+
+    if (isDowngrade) {
+      Alert.alert(
+        'Downgrade Not Allowed',
+        'You cannot downgrade an active plan. To switch to this cheaper plan, please cancel your auto-renewal from the My Plan screen and wait for your current plan to expire.'
+      );
+      return;
+    }
+
+    const isPlanChange = activePlan?.status?.toUpperCase() === 'ACTIVE' && activePlan?.plan_id;
+
     triggerHaptic(HapticFeedbackTypes.impactMedium);
     setIsProcessing(true);
 
     try {
-      const orderResponse = await createSubscriptionOrder({
-        plan_id: selectedTierId,
-        billing_cycle: getBillingCycle(selectedDuration),
-        promo_code: appliedPromoCode || undefined,
-        use_reward_balance: useRewardBalance,
-      }).unwrap();
+      if (isPlanChange) {
+        // Upgrade flow: fetch preview and prompt user
+        const res = await triggerPreviewPlanChange({ plan_id: tier.id, billing_cycle: getBillingCycle(selectedDuration) }).unwrap();
+        const proration = res?.data?.proration;
+        
+        if (proration) {
+           Alert.alert(
+             'Confirm Upgrade',
+             `Unused credit: ₹${proration.unused_credit}\nNew plan cost: ₹${proration.new_plan_cost}\nYou pay today: ₹${proration.amount_to_pay}`,
+             [
+               { text: 'Cancel', style: 'cancel', onPress: () => setIsProcessing(false) },
+               { text: 'Proceed', onPress: () => executeSubscription(tier) }
+             ]
+           );
+           return;
+        }
+      }
+      
+      // Direct subscription or upgrade without preview data
+      await executeSubscription(tier);
 
-      const options = {
-        description: `${currentTier.name} - ${selectedDuration.toUpperCase()} Recharge`,
-        image: 'https://vdrive.com/logo.png',
-        currency: 'INR',
-        key: RAZORPAY_KEY,
-        amount: orderResponse.data.amount,
-        name: 'VDRIVE',
-        order_id: orderResponse.data.order_id,
-        prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
-        theme: { color: currentTier?.color || '#152D5E' },
-      };
+    } catch (error: any) {
+      setIsProcessing(false);
+      showAlert({ title: 'Error', message: error.message || 'Something went wrong', singleButton: true, icon: 'close-circle-outline' });
+    }
+  };
 
-      const data = await RazorpayCheckout.open(options);
+  const executeSubscription = async (tier: PlanTier) => {
+    try {
+      if (selectedDuration === 'daily') {
+        // ONE-TIME PAYMENT FOR DAILY PLANS
+        const orderResponse = await createSubscriptionOrder({
+          plan_id: tier.id,
+          billing_cycle: 'day',
+        }).unwrap();
 
-      const verifyResult = await verifySubscriptionPayment({
-        razorpay_order_id: data.razorpay_order_id || '',
-        razorpay_payment_id: data.razorpay_payment_id || '',
-        razorpay_signature: data.razorpay_signature || '',
-      }).unwrap();
+        const orderData = orderResponse.data;
 
-      if (verifyResult.success) {
+        const options = {
+          description: `${tier.name} - DAILY (One-Time)`,
+          image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
+          currency: 'INR',
+          key: RAZORPAY_KEY,
+          order_id: orderData.order_id,
+          name: 'T2drive',
+          prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
+          theme: { color: tier.color },
+        };
+
+        const data = await RazorpayCheckout.open(options as any);
+
+        await verifySubscriptionPayment({
+          razorpay_order_id: orderData.order_id,
+          razorpay_payment_id: data.razorpay_payment_id || '',
+          razorpay_signature: data.razorpay_signature || '',
+        }).unwrap();
+
         triggerHaptic(HapticFeedbackTypes.notificationSuccess);
         refetchSub();
         navigation.replace('SubscriptionSuccessScreen', {
-          planName: currentTier.name,
-          planColor: currentTier.color,
-          amountPaid: finalPrice,
-          duration: selectedDuration,
-          transactionId: data.razorpay_payment_id || 'Free/Promo'
+          planName: tier.name,
+          planColor: tier.color,
+          amountPaid: orderData.amount,
+          duration: 'daily',
+          transactionId: data.razorpay_payment_id || 'One-Time',
+          isUpgrade: false,
+          isDowngrade: false,
+          proratedCredit: 0,
         });
       } else {
-        throw new Error('Verification failed');
+        // AUTO-RENEW SUBSCRIPTION FOR WEEKLY/MONTHLY
+        const autoSubResponse = await createAutoSubscription({
+          plan_id: tier.id,
+          billing_cycle: getBillingCycle(selectedDuration),
+        }).unwrap();
+
+        const subData = autoSubResponse.data;
+
+        const actionText = subData.is_upgrade ? 'Upgrade' : (subData.is_downgrade ? 'Downgrade' : 'Subscription');
+        const options = {
+          description: `${tier.name} - ${selectedDuration.toUpperCase()} ${actionText}`,
+          image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
+          currency: 'INR',
+          key: RAZORPAY_KEY,
+          subscription_id: subData.subscription_id,
+          name: 'T2drive',
+          prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
+          theme: { color: tier.color },
+        };
+
+        const data = await RazorpayCheckout.open(options as any);
+
+        await verifyAutoSubscriptionPayment({
+          razorpay_subscription_id: subData.subscription_id,
+          razorpay_payment_id: data.razorpay_payment_id || '',
+          razorpay_signature: data.razorpay_signature || '',
+        }).unwrap();
+
+        triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+        refetchSub();
+        navigation.replace('SubscriptionSuccessScreen', {
+          planName: tier.name,
+          planColor: tier.color,
+          amountPaid: subData.amount_to_pay,
+          duration: selectedDuration,
+          transactionId: data.razorpay_payment_id || 'Auto-Subscription',
+          isUpgrade: subData.is_upgrade,
+          isDowngrade: subData.is_downgrade,
+          proratedCredit: subData.prorated_credit,
+        });
       }
     } catch (error: any) {
-      showAlert({ title: 'Payment Failed', message: error.message || 'Something went wrong', singleButton: true, icon: 'close-circle-outline' });
+      const errorMsg = error.description || error.error?.description || error.message || (typeof error === 'string' ? error : JSON.stringify(error));
+      showAlert({ title: 'Payment Failed', message: errorMsg, singleButton: true, icon: 'close-circle-outline' });
     } finally {
       setIsProcessing(false);
     }
   };
 
   const getFriendlyDuration = (dur: Duration) => {
-    if (dur === 'daily') return 'Day';
-    if (dur === 'weekly') return 'Week';
-    if (dur === 'monthly') return 'Month';
-    return 'Day';
+    if (dur === 'daily') return 'day';
+    if (dur === 'weekly') return 'week';
+    if (dur === 'monthly') return 'month';
+    return 'day';
+  };
+
+  const handleCancelAutoRenew = async () => {
+    Alert.alert(
+      'Cancel Auto-Renew',
+      'Are you sure you want to cancel auto-renewal? Your plan will remain active until the end of the current billing cycle, but you will need to recharge manually next time.',
+      [
+        { text: 'No, Keep it', style: 'cancel' },
+        { 
+            text: 'Yes, Cancel', 
+            style: 'destructive',
+            onPress: async () => {
+                try {
+                    await toggleAutoRenew({ auto_renew: false }).unwrap();
+                    refetchSub();
+                    showAlert({ title: 'Cancelled', message: 'Auto-renew cancelled successfully.', singleButton: true, icon: 'checkmark-circle-outline' });
+                } catch (error: any) {
+                    showAlert({ title: 'Error', message: error.message || 'Failed to cancel auto-renew', singleButton: true, icon: 'close-circle-outline' });
+                }
+            }
+        }
+      ]
+    );
+  };
+
+  const renderActivePlanStatus = () => {
+    const activePlan = subscriptionData?.data?.subscription;
+    if (!activePlan || activePlan.status?.toUpperCase() !== 'ACTIVE') return null;
+
+    const startDate = new Date(activePlan.start_date);
+    const endDate = new Date(activePlan.expiry_date);
+    const now = new Date();
+    
+    const diffTime = endDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let remainingText = '';
+    if (diffTime > 0) {
+      if (diffDays > 1) {
+        remainingText = `${diffDays} days remaining`;
+      } else {
+        const hours = Math.floor(diffTime / (1000 * 60 * 60));
+        const mins = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+        remainingText = `${hours}h ${mins}m remaining`;
+      }
+    } else {
+      remainingText = 'Expired';
+    }
+
+    return (
+      <View style={[styles.activeStatusCard, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+        <Text style={[styles.activeStatusTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Live Plan Status</Text>
+        
+        <View style={styles.statusRow}>
+          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Start Date</Text>
+          <Text style={[styles.statusValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>{startDate.toLocaleDateString()}</Text>
+        </View>
+
+        <View style={styles.statusRow}>
+          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>End Date</Text>
+          <Text style={[styles.statusValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>{endDate.toLocaleDateString()}</Text>
+        </View>
+
+        <View style={[styles.statusRow, { borderTopWidth: 1, borderTopColor: isDark ? '#374151' : '#E5E7EB', paddingTop: 12, marginTop: 4, marginBottom: 0 }]}>
+          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280', fontWeight: 'bold' }]}>Time Remaining</Text>
+          <Text style={[styles.statusValue, { color: '#10B981', fontWeight: 'bold' }]}>{remainingText}</Text>
+        </View>
+
+        {activePlan.razorpay_subscription_id && (
+          <View style={[styles.statusRow, { borderTopWidth: 1, borderTopColor: isDark ? '#374151' : '#E5E7EB', paddingTop: 12, marginTop: 12, marginBottom: 0 }]}>
+            <View>
+              <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280', fontWeight: 'bold', marginBottom: 2 }]}>Auto-Renew Status</Text>
+              <Text style={{ color: activePlan.auto_renew ? '#2563EB' : '#EF4444', fontSize: 13, fontWeight: '600' }}>
+                {activePlan.auto_renew ? 'Active' : 'Cancelled'}
+              </Text>
+            </View>
+            {activePlan.auto_renew && (
+              <Pressable 
+                style={[styles.cancelRenewBtn, isTogglingAutoRenew && { opacity: 0.7 }]}
+                onPress={handleCancelAutoRenew}
+                disabled={isTogglingAutoRenew}
+              >
+                {isTogglingAutoRenew ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <Text style={styles.cancelRenewBtnText}>Cancel</Text>
+                )}
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
+    );
   };
 
   if (isPlansLoading || isSubLoading) {
@@ -359,30 +494,20 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     );
   }
 
-  if (planTiers.length === 0) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]} edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.emptyContainer}>
-          <Ionicons name="information-circle-outline" size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
-          <Text style={[styles.emptyText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>No plans available</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]} edges={['bottom', 'left', 'right']}>
       {isFocused && <AppStatusBar forceLight={false} />}
       
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('choose_plan') || 'Choose Plan'}</Text>
-        <Pressable onPress={() => navigation.navigate('MySubscriptionScreen')} style={styles.mySubBtn}>
-          <Text style={[styles.mySubBtnText, { color: colors?.primary || '#3B82F6' }]}>{t('my_plan') || 'My Plan'}</Text>
-        </Pressable>
+        <View style={styles.headerTop}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+          </Pressable>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>Subscription Plans</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Choose the best plan to maximize your earnings</Text>
       </View>
 
       <ScrollView
@@ -390,186 +515,259 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors?.primary || '#1E3A8A']} />}
       >
-        {/* Duration Tabs (Sleek) */}
-        <View style={[styles.durationTabs, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
-          {DURATIONS.map((dur) => {
-            const isSelected = selectedDuration === dur.key;
-            return (
-              <Pressable
-                key={dur.key}
-                onPress={() => setSelectedDuration(dur.key)}
-                style={[styles.durationTab, isSelected && { backgroundColor: isDark ? '#374151' : '#FFFFFF', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 }]}
-              >
-                <Text style={[styles.durationTabText, { color: isSelected ? (isDark ? '#FFFFFF' : '#111827') : (isDark ? '#9CA3AF' : '#6B7280') }, isSelected && { fontWeight: '600' }]}>
-                  {dur.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* Tabs */}
+        {(!activePlan || activePlan.status?.toUpperCase() !== 'ACTIVE' || isSwitchPlanMode) && (
+          <View style={[styles.tabsContainer, { borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+            {DURATIONS.map((dur) => {
+              const isSelected = selectedDuration === dur.key;
+              return (
+                <Pressable
+                  key={dur.key}
+                  onPress={() => setSelectedDuration(dur.key)}
+                  style={[
+                    styles.tab,
+                    isSelected && styles.activeTab,
+                    isSelected && { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+                    !isSelected && { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }
+                  ]}
+                >
+                  <Ionicons 
+                    name={dur.key === 'daily' ? 'today-outline' : dur.key === 'weekly' ? 'calendar-clear-outline' : 'calendar-outline'} 
+                    size={16} 
+                    color={isSelected ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280')} 
+                  />
+                  <Text style={[
+                    styles.tabText,
+                    { color: isSelected ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#6B7280') }
+                  ]}>
+                    {dur.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
-        {/* Plan Cards (Vertical Stack) */}
+        {/* Plan Cards */}
         <View style={styles.planStack}>
-          {planTiers.map((tier) => {
-            const isSelected = selectedTierId === tier.id;
+          {planTiers
+            .filter((tier) => !activePlan || activePlan.status?.toUpperCase() !== 'ACTIVE' || isSwitchPlanMode || tier.id === activePlan.plan_id)
+            .map((tier) => {
+            const isActivePlan = activePlan?.plan_id === tier.id && getDurationKey(activePlan?.billing_cycle) === selectedDuration && activePlan?.status?.toUpperCase() === 'ACTIVE';
+            
+            const isPlanChange = activePlan?.status?.toUpperCase() === 'ACTIVE' && activePlan?.plan_id;
+            const durationValues: Record<string, number> = { daily: 1, weekly: 7, monthly: 30 };
+            const oldDurationVal = durationValues[getDurationKey(activePlan?.billing_cycle || 'monthly')] || 0;
+            const newDurationVal = durationValues[selectedDuration] || 0;
+            const isDowngrade = isPlanChange && (tier.id < activePlan.plan_id || (tier.id === activePlan.plan_id && newDurationVal < oldDurationVal));
+
+            // Check if rendering the basic card (it has slightly different styling in design)
+            const isBasic = tier.name.toLowerCase().includes('basic');
+            
             return (
-              <Pressable
+              <View
                 key={tier.id}
-                onPress={() => handleTierSelect(tier.id)}
                 style={[
                   styles.planCard,
                   { 
-                    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                    borderColor: isSelected ? (tier.color || '#3B82F6') : (isDark ? '#374151' : '#E5E7EB'),
-                    borderWidth: isSelected ? 2 : 1
+                    backgroundColor: 'transparent',
+                    borderColor: isDark ? '#374151' : '#E5E7EB',
+                    borderWidth: 1
                   }
                 ]}
               >
                 {tier.isPopular && (
                   <View style={[styles.popularBadge, { backgroundColor: tier.color }]}>
-                    <Text style={styles.popularBadgeText}>{tier.tag || 'POPULAR'}</Text>
+                    <Ionicons name="star" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.popularBadgeText}>{tier.tag || 'Most Popular'}</Text>
                   </View>
                 )}
                 
-                <View style={styles.planCardRow}>
-                  <View style={styles.planCardLeft}>
-                    <Text style={[styles.planNameText, { color: isDark ? '#F3F4F6' : '#111827' }]}>{tier.name}</Text>
-                    {tier.savings ? (
-                      <Text style={[styles.savingsText, { color: tier.color }]}>Save {tier.savings}%</Text>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.iconCircle, { backgroundColor: tier.lightColor }]}>
+                    {tier.iconType === 'ionicons' ? (
+                       <Ionicons name={tier.icon} size={22} color={tier.color} />
                     ) : (
-                      <Text style={[styles.savingsText, { color: 'transparent' }]}>-</Text>
+                       <MaterialCommunityIcons name={tier.icon} size={22} color={tier.color} />
                     )}
                   </View>
-                  <View style={styles.planCardRight}>
-                    <Text style={[styles.planPriceText, { color: isDark ? '#F9FAFB' : '#111827' }]}>₹{tier.pricing[selectedDuration]}</Text>
+                  <View style={styles.titleArea}>
+                    <Text style={[styles.planNameText, { color: isDark ? '#F3F4F6' : '#111827' }]}>{tier.name}</Text>
+                    <Text style={[styles.planSubtitleText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{tier.subtitle}</Text>
+                  </View>
+                  <View style={styles.priceArea}>
+                    <Text style={[styles.planPriceText, { color: tier.color }]}>₹{tier.pricing[selectedDuration]}</Text>
                     <Text style={[styles.planDurationText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>/ {getFriendlyDuration(selectedDuration)}</Text>
                   </View>
-                  
-                  {/* Selection Indicator */}
-                  <View style={[styles.radioCircle, { borderColor: isSelected ? tier.color : (isDark ? '#4B5563' : '#D1D5DB') }]}>
-                    {isSelected && <View style={[styles.radioDot, { backgroundColor: tier.color }]} />}
-                  </View>
                 </View>
-              </Pressable>
+
+                <View style={[styles.highlightBox, { backgroundColor: tier.lightColor }]}>
+                   <Text style={[styles.highlightText, { color: tier.color }]}>{tier.highlight}</Text>
+                </View>
+
+                <Text style={[styles.featuresLabel, { color: tier.color }]}>Features</Text>
+                
+                <View style={styles.featuresList}>
+                  {tier.features.reduce<React.ReactNode[]>((acc, feature, idx) => {
+                    // Two-column layout if needed, but design shows one column
+                    acc.push(
+                      <View key={idx} style={styles.featureRow}>
+                        {feature.isBlocked ? (
+                          <View style={styles.blockedIconContainer}>
+                            <View style={styles.blockedMinus} />
+                          </View>
+                        ) : (
+                          <View style={[styles.checkIconContainer, { backgroundColor: tier.color }]}>
+                            <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                          </View>
+                        )}
+                        <Text style={[
+                          styles.featureText, 
+                          { color: isDark ? '#D1D5DB' : '#374151' },
+                          feature.isBlocked && { color: isDark ? '#6B7280' : '#9CA3AF' }
+                        ]}>
+                          {feature.label}
+                        </Text>
+                      </View>
+                    );
+                    return acc;
+                  }, [])}
+                </View>
+
+                <Pressable
+                  onPress={() => handleChoosePlan(tier, !!isDowngrade)}
+                  disabled={isProcessing || isDowngrade}
+                  style={[
+                    styles.chooseBtn,
+                    isDowngrade 
+                      ? { backgroundColor: isDark ? '#374151' : '#D1D5DB' }
+                      : isBasic 
+                        ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: tier.color } 
+                        : { backgroundColor: tier.color },
+                    (isProcessing || isDowngrade) && { opacity: 0.7 }
+                  ]}
+                >
+                  <Text style={[
+                    styles.chooseBtnText,
+                    isDowngrade 
+                      ? { color: isDark ? '#9CA3AF' : '#6B7280' }
+                      : isBasic 
+                        ? { color: tier.color } 
+                        : { color: '#FFFFFF' }
+                  ]}>
+                    {isActivePlan ? 'Current Plan' : isDowngrade ? 'Unavailable' : `Choose ${tier.name}`}
+                  </Text>
+                </Pressable>
+              </View>
             );
           })}
         </View>
 
-        <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
-
-        {/* Features List */}
-        <View style={styles.featuresSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>INCLUDES</Text>
-          {currentTier?.features.map((feature, idx) => (
-            <View key={idx} style={styles.featureRow}>
-              <Ionicons 
-                name={feature.isBlocked ? "close" : "checkmark"} 
-                size={18} 
-                color={feature.isBlocked ? (isDark ? '#6B7280' : '#9CA3AF') : (currentTier.color || '#10B981')} 
-                style={styles.featureIcon} 
-              />
-              <Text style={[
-                styles.featureText, 
-                { color: isDark ? '#D1D5DB' : '#374151' },
-                feature.isBlocked && { textDecorationLine: 'line-through', color: isDark ? '#6B7280' : '#9CA3AF' }
-              ]}>
-                {getFeatureLabel(feature.key)}
-              </Text>
-            </View>
-          ))}
+        {/* Bottom Features */}
+        <View style={[styles.bottomFeaturesContainer, { backgroundColor: isDark ? '#1F2937' : '#F8FAFC' }]}>
+           <View style={styles.bottomFeatureItem}>
+             <Ionicons name="shield-checkmark" size={24} color="#2563EB" />
+             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Secure Payments</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>100% secure{'\n'}transactions</Text>
+           </View>
+           <View style={styles.bottomFeatureDivider} />
+           <View style={styles.bottomFeatureItem}>
+             <Ionicons name="flash" size={24} color="#2563EB" />
+             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Instant Activation</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Activate your plan{'\n'}immediately</Text>
+           </View>
+           <View style={styles.bottomFeatureDivider} />
+           <View style={styles.bottomFeatureItem}>
+             <Ionicons name="sync" size={24} color="#10B981" />
+             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Flexible Plans</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Change or renew{'\n'}your plan anytime</Text>
+           </View>
+           <View style={styles.bottomFeatureDivider} />
+           <View style={styles.bottomFeatureItem}>
+             <Ionicons name="headset" size={24} color="#2563EB" />
+             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>24/7 Support</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>We're here to{'\n'}help you</Text>
+           </View>
         </View>
 
-        <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
-
-        {/* Offers Section */}
-        <View style={styles.offersSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>PROMO CODE</Text>
-          
-          <View style={[styles.promoInputRow, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
-            <Ionicons name="pricetag-outline" size={18} color={isDark ? '#9CA3AF' : '#6B7280'} style={styles.promoIcon} />
-            <TextInput
-              style={[styles.promoInput, { color: isDark ? '#FFFFFF' : '#111827' }]}
-              placeholder="Enter code"
-              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
-              value={promoInput}
-              onChangeText={setPromoInput}
-              autoCapitalize="characters"
-              editable={!isValidatingPromo && !appliedPromoCode}
-            />
-            {appliedPromoCode ? (
-              <Pressable onPress={() => { setAppliedPromoCode(null); setDiscountAmount(0); setPromoInput(''); }} style={styles.promoActionBtn}>
-                <Ionicons name="close-circle" size={20} color="#EF4444" />
-              </Pressable>
-            ) : (
-              <Pressable 
-                onPress={() => handleApplyPromo()} 
-                disabled={isValidatingPromo || !promoInput.trim()}
-                style={[styles.promoActionBtn, (!promoInput.trim() || isValidatingPromo) && { opacity: 0.4 }]}
-              >
-                <Text style={[styles.applyText, { color: currentTier?.color || '#3B82F6' }]}>Apply</Text>
-              </Pressable>
-            )}
+        {/* Switch Plan Button and Status for Active Subscriptions */}
+        {activePlan && activePlan.status?.toUpperCase() === 'ACTIVE' && !isSwitchPlanMode && (
+          <View>
+            {renderActivePlanStatus()}
+            <Pressable 
+              style={[styles.chooseBtn, { backgroundColor: '#2563EB', marginHorizontal: 16, marginBottom: 24 }]}
+              onPress={() => setIsSwitchPlanMode(true)}
+            >
+              <Text style={[styles.chooseBtnText, { color: '#FFFFFF' }]}>Switch Plan</Text>
+            </Pressable>
           </View>
+        )}
 
-          {/* Available Promos List (Minimal) */}
-          {availablePromos?.data?.length > 0 && !appliedPromoCode && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.promosScroll} contentContainerStyle={{ paddingRight: 20 }}>
-              {availablePromos.data.map((promo: any) => (
-                <MinimalPromoCoupon 
-                  key={promo.id} 
-                  promo={promo} 
-                  tierColor={currentTier?.color || '#3B82F6'} 
-                  onApply={handleApplyPromo} 
-                  onCopy={handleCopyPromo} 
-                  isDark={isDark} 
-                />
-              ))}
-            </ScrollView>
-          )}
-
-          {/* Reward Balance */}
-          {Number(user?.credit?.balance || 0) > 0 && (
-            <View style={[styles.rewardCard, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
-              <View style={styles.rewardLeft}>
-                <Ionicons name="gift-outline" size={20} color="#0EA5E9" />
-                <View style={{ marginLeft: 12 }}>
-                  <Text style={[styles.rewardTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Wallet Balance</Text>
-                  <Text style={[styles.rewardSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Available: ₹{user?.credit?.balance || 0}</Text>
-                </View>
-              </View>
-              <Pressable
-                onPress={() => { triggerHaptic(HapticFeedbackTypes.impactLight); setUseRewardBalance(!useRewardBalance); }}
-                style={[styles.rewardToggleBtn, useRewardBalance && { backgroundColor: '#0EA5E9' }]}
-              >
-                <Text style={[styles.rewardToggleText, { color: useRewardBalance ? '#FFFFFF' : '#0EA5E9' }]}>{useRewardBalance ? 'Applied' : 'Use'}</Text>
-              </Pressable>
-            </View>
-          )}
+        <View style={styles.footer}>
+          <Ionicons name="shield-checkmark" size={16} color="#6B7280" style={{ marginRight: 6 }} />
+          <Text style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Your subscription is valid across all devices</Text>
         </View>
 
       </ScrollView>
 
-      {/* Floating Bottom Bar */}
-      <View style={[styles.bottomBar, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderTopColor: isDark ? '#374151' : '#F3F4F6' }]}>
-        <View style={styles.bottomPriceInfo}>
-          <Text style={[styles.totalLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Total</Text>
-          <Text style={[styles.finalPrice, { color: isDark ? '#FFFFFF' : '#111827' }]}>₹{finalPrice}</Text>
-          {(discountAmount > 0 || useRewardBalance) && (
-            <Text style={[styles.originalPrice, { color: isDark ? '#6B7280' : '#9CA3AF' }]}>₹{currentPrice}</Text>
-          )}
+      {/* Eligibility Modal */}
+      <Modal
+        visible={eligibilityModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setEligibilityModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="lock-closed" size={32} color="#EF4444" />
+            </View>
+            <Text style={[styles.modalTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+              Plan Locked
+            </Text>
+            <Text style={[styles.modalDesc, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>
+              You are currently not eligible to subscribe to the <Text style={{ fontWeight: 'bold' }}>{ineligiblePlanName}</Text> plan.
+            </Text>
+            
+            <View style={[styles.keyPointsContainer, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+              <Text style={[styles.keyPointsTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>How to unlock?</Text>
+              <View style={styles.keyPointRow}>
+                <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Maintain high trip completion rate</Text>
+              </View>
+              <View style={styles.keyPointRow}>
+                <Ionicons name="star" size={16} color="#F59E0B" />
+                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Keep good customer ratings</Text>
+              </View>
+              <View style={styles.keyPointRow}>
+                <Ionicons name="time" size={16} color="#3B82F6" />
+                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Complete minimum tenure as a Basic driver</Text>
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnOutline, { borderColor: isDark ? '#4B5563' : '#D1D5DB' }]}
+                onPress={() => setEligibilityModalVisible(false)}
+              >
+                <Text style={[styles.modalBtnOutlineText, { color: isDark ? '#F9FAFB' : '#374151' }]}>Okay</Text>
+              </Pressable>
+              
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnPrimary]}
+                onPress={() => {
+                  setEligibilityModalVisible(false);
+                  Linking.openURL('tel:+918000000000'); // TODO: Replace with actual admin number
+                }}
+              >
+                <Ionicons name="call" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.modalBtnPrimaryText}>Contact Admin</Text>
+              </Pressable>
+            </View>
+          </View>
         </View>
-        <Pressable
-          onPress={handleSubscribe}
-          disabled={isProcessing || isActivePlan}
-          style={[styles.subscribeBtn, { backgroundColor: isActivePlan ? '#10B981' : (currentTier?.color || '#3B82F6') }, isProcessing && { opacity: 0.7 }]}
-        >
-          {isProcessing ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.subscribeBtnText}>{isActivePlan ? 'Current Plan' : 'Subscribe'}</Text>
-          )}
-        </Pressable>
-      </View>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -577,72 +775,81 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { marginTop: 12, fontSize: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16 },
+  
+  header: { alignItems: 'center', paddingHorizontal: 16, paddingBottom: 20 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 8 },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '600' },
-  mySubBtn: { padding: 4, paddingHorizontal: 8, backgroundColor: 'rgba(150,150,150,0.1)', borderRadius: 8 },
-  mySubBtnText: { fontSize: 14, fontWeight: '700' },
-  scrollContent: { paddingBottom: 100 }, // Space for bottom bar
+  headerTitle: { fontSize: 20, fontWeight: '700' },
+  headerSubtitle: { fontSize: 14, textAlign: 'center' },
   
-  durationTabs: { flexDirection: 'row', marginHorizontal: 20, borderRadius: 12, padding: 4, marginBottom: 16 },
-  durationTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 8 },
-  durationTabText: { fontSize: 13, fontWeight: '500' },
+  scrollContent: { paddingBottom: 40 },
+  
+  tabsContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 24, justifyContent: 'center', gap: 8 },
+  tab: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1 },
+  activeTab: { shadowColor: '#2563EB', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2 },
+  tabText: { fontSize: 14, fontWeight: '600', marginLeft: 6 },
 
-  planStack: { paddingHorizontal: 20, gap: 12 },
+  planStack: { paddingHorizontal: 16, gap: 12, marginBottom: 24 },
   planCard: { borderRadius: 16, padding: 16, position: 'relative' },
-  popularBadge: { position: 'absolute', top: -10, left: 16, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  popularBadgeText: { color: 'white', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  planCardRow: { flexDirection: 'row', alignItems: 'center' },
-  planCardLeft: { flex: 1 },
-  planNameText: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  savingsText: { fontSize: 12, fontWeight: '600' },
-  planCardRight: { alignItems: 'flex-end', marginRight: 16 },
-  planPriceText: { fontSize: 18, fontWeight: '800' },
-  planDurationText: { fontSize: 12 },
-  radioCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center' },
-  radioDot: { width: 12, height: 12, borderRadius: 6 },
-
-  divider: { height: 1, marginHorizontal: 20, marginVertical: 16 },
+  popularBadge: { position: 'absolute', top: -12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  popularBadgeText: { color: 'white', fontSize: 11, fontWeight: '700' },
   
-  featuresSection: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  iconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  titleArea: { flex: 1 },
+  planNameText: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  planSubtitleText: { fontSize: 12 },
+  priceArea: { alignItems: 'flex-end' },
+  planPriceText: { fontSize: 24, fontWeight: '800', lineHeight: 28 },
+  planDurationText: { fontSize: 12, marginTop: -2 },
+  
+  highlightBox: { padding: 10, borderRadius: 8, marginBottom: 16 },
+  highlightText: { fontSize: 12, fontWeight: '500', lineHeight: 16 },
+  
+  featuresLabel: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
+  featuresList: { marginBottom: 16 },
   featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  featureIcon: { marginRight: 12, width: 20, textAlign: 'center' },
-  featureText: { fontSize: 15 },
-
-  offersSection: { paddingHorizontal: 20 },
-  promoInputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 48 },
-  promoIcon: { marginRight: 8 },
-  promoInput: { flex: 1, fontSize: 14, padding: 0 },
-  promoActionBtn: { paddingVertical: 8, paddingHorizontal: 12 },
-  applyText: { fontWeight: '600', fontSize: 14 },
+  checkIconContainer: { width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  blockedIconContainer: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  blockedMinus: { width: 6, height: 2, backgroundColor: '#9CA3AF', borderRadius: 1 },
+  featureText: { fontSize: 13, flex: 1 },
   
-  promosScroll: { marginTop: 12 },
-  minimalCoupon: { flexDirection: 'row', borderWidth: 1, borderRadius: 12, padding: 12, marginRight: 12, width: 240 },
-  couponLeft: { flex: 1, borderRightWidth: 1, borderRightColor: 'rgba(150,150,150,0.2)', paddingRight: 12 },
-  couponValue: { fontSize: 14, fontWeight: '700' },
-  couponDesc: { fontSize: 11, marginTop: 4 },
-  couponRight: { paddingLeft: 12, justifyContent: 'center', alignItems: 'center' },
-  couponCodeBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(150,150,150,0.1)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginBottom: 6 },
-  couponCodeText: { fontSize: 10, fontWeight: '600' },
-  couponApplyText: { fontSize: 12, fontWeight: '700' },
+  chooseBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  chooseBtnText: { fontSize: 15, fontWeight: '700' },
 
-  rewardCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderRadius: 12, padding: 12, marginTop: 12 },
-  rewardLeft: { flexDirection: 'row', alignItems: 'center' },
-  rewardTitle: { fontSize: 14, fontWeight: '600' },
-  rewardSubtitle: { fontSize: 12, marginTop: 2 },
-  rewardToggleBtn: { borderWidth: 1, borderColor: '#0EA5E9', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  rewardToggleText: { fontSize: 13, fontWeight: '600' },
+  bottomFeaturesContainer: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 12, padding: 16, justifyContent: 'space-between', marginBottom: 24 },
+  bottomFeatureItem: { flex: 1, alignItems: 'center' },
+  bottomFeatureDivider: { width: 1, backgroundColor: '#E5E7EB', marginHorizontal: 4 },
+  bfTitle: { fontSize: 11, fontWeight: '700', marginTop: 8, textAlign: 'center' },
+  bfSubtitle: { fontSize: 9, textAlign: 'center', marginTop: 4, lineHeight: 12 },
 
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 10 },
-  bottomPriceInfo: { flex: 1 },
-  totalLabel: { fontSize: 12, marginBottom: 2 },
-  finalPrice: { fontSize: 24, fontWeight: '800' },
-  originalPrice: { fontSize: 14, textDecorationLine: 'line-through' },
-  subscribeBtn: { paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12 },
-  subscribeBtnText: { color: 'white', fontSize: 16, fontWeight: '700' }
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  footerText: { fontSize: 12, fontWeight: '500' },
+
+  activeStatusCard: { marginHorizontal: 16, marginBottom: 20, padding: 16, borderRadius: 12, borderWidth: 1 },
+  activeStatusTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16 },
+  statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  statusLabel: { fontSize: 14 },
+  statusValue: { fontSize: 14, fontWeight: '600' },
+  cancelRenewBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#EF4444', backgroundColor: 'transparent' },
+  cancelRenewBtnText: { color: '#EF4444', fontSize: 12, fontWeight: '600' },
+
+  // Modal Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', borderRadius: 16, padding: 24, alignItems: 'center' },
+  modalIconContainer: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
+  modalDesc: { fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  keyPointsContainer: { width: '100%', padding: 16, borderRadius: 12, marginBottom: 24 },
+  keyPointsTitle: { fontSize: 14, fontWeight: '700', marginBottom: 12 },
+  keyPointRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  keyPointText: { fontSize: 13, marginLeft: 8, flex: 1 },
+  modalActions: { flexDirection: 'row', width: '100%', gap: 12 },
+  modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
+  modalBtnOutline: { borderWidth: 1 },
+  modalBtnOutlineText: { fontSize: 15, fontWeight: '600' },
+  modalBtnPrimary: { backgroundColor: '#2563EB' },
+  modalBtnPrimaryText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' }
 });
 
 export default RechargePlanScreen;

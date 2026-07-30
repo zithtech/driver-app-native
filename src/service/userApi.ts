@@ -36,10 +36,11 @@ export const userApi = createApi({
       providesTags: ['Profile'],
     }),
 
-    signOut: builder.mutation<any, string>({
-      query: (id) => ({
+    signOut: builder.mutation<any, { id: string; device_id: string; role: string }>({
+      query: ({ id, device_id, role }) => ({
         url: `/auth/signout/${id}`,
-        method: 'GET',
+        method: 'POST',
+        body: { device_id, role },
       }),
       invalidatesTags: ['Profile'],
     }),
@@ -71,6 +72,37 @@ export const userApi = createApi({
         body,
       }),
       invalidatesTags: ['Subscription', 'Profile'],
+    }),
+
+    // Auto-Subscription (Razorpay Subscriptions API)
+    createAutoSubscription: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month' }>({
+      query: (body) => ({
+        url: '/subscriptions/auto-subscribe',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    verifyAutoSubscriptionPayment: builder.mutation<any, { razorpay_subscription_id: string; razorpay_payment_id: string; razorpay_signature: string }>({
+      query: (body) => ({
+        url: '/subscriptions/verify-subscription',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Subscription', 'Profile'],
+    }),
+
+    previewPlanChange: builder.query<any, { plan_id: number; billing_cycle: string }>({
+      query: ({ plan_id, billing_cycle }) => `/subscriptions/preview-plan-change?plan_id=${plan_id}&billing_cycle=${billing_cycle}`,
+    }),
+
+    toggleAutoRenew: builder.mutation<any, { auto_renew: boolean }>({
+      query: (body) => ({
+        url: '/subscriptions/auto-renew',
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Subscription'],
     }),
 
     getMySubscription: builder.query<any, void>({
@@ -169,6 +201,11 @@ export const {
   // Subscriptions
   useCreateSubscriptionOrderMutation,
   useVerifySubscriptionPaymentMutation,
+  useCreateAutoSubscriptionMutation,
+  useVerifyAutoSubscriptionPaymentMutation,
+  usePreviewPlanChangeQuery,
+  useLazyPreviewPlanChangeQuery,
+  useToggleAutoRenewMutation,
   useGetMySubscriptionQuery,
   useLazyGetMySubscriptionQuery,
   useGetSubscriptionPlansQuery,
