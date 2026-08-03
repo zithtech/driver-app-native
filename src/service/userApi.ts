@@ -65,6 +65,24 @@ export const userApi = createApi({
       }),
     }),
 
+    buySubscriptionWithWallet: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month'; promo_code?: string; pin?: string }>({
+      query: (body) => ({
+        url: '/subscriptions/buy-with-wallet',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Subscription', 'Profile'],
+    }),
+
+    setupWalletPin: builder.mutation<any, { id: string; pin: string }>({
+      query: (body) => ({
+        url: `/drivers/wallet/${body.id}/setup-pin`,
+        method: 'POST',
+        body: { pin: body.pin },
+      }),
+      invalidatesTags: ['Profile'],
+    }),
+
     verifySubscriptionPayment: builder.mutation<any, { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }>({
       query: (body) => ({
         url: '/subscriptions/verify-payment',
@@ -200,6 +218,8 @@ export const {
 
   // Subscriptions
   useCreateSubscriptionOrderMutation,
+  useBuySubscriptionWithWalletMutation,
+  useSetupWalletPinMutation,
   useVerifySubscriptionPaymentMutation,
   useCreateAutoSubscriptionMutation,
   useVerifyAutoSubscriptionPaymentMutation,
