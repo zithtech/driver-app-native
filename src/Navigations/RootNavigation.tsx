@@ -61,8 +61,11 @@ import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
 import RechargePlanScreen from '../Screens/Profile/SubscriptionPlanScreen';
 
 import WalletScreen from '../Screens/Profile/WalletScreen';
+import WalletSuccessScreen from '../Screens/Profile/WalletSuccessScreen';
+import WalletPinSetupScreen from '../Screens/Profile/WalletPinSetupScreen';
 import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
 import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
+import PaymentFailedScreen from '../Screens/Profile/PaymentFailedScreen';
 
 import PickupMapScreen from '../Screens/Requests/PickupMapScreen';
 import PickupOTPScreen from '../Screens/Requests/PickupOTPScreen';
@@ -435,6 +438,9 @@ const RootNavigation = () => {
 
           <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="WalletScreen" component={WalletScreen} />
+          <Stack.Screen name="WalletPinSetupScreen" component={WalletPinSetupScreen} />
+          <Stack.Screen name="WalletSuccessScreen" component={WalletSuccessScreen} options={{ gestureEnabled: false }} />
+          <Stack.Screen name="PaymentFailedScreen" component={PaymentFailedScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />
 
           {/* -------- TRIP FLOW -------- */}

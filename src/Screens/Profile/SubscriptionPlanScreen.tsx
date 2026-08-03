@@ -21,6 +21,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import RazorpayCheckout from 'react-native-razorpay';
+import Config from 'react-native-config';
 import { useSelector } from 'react-redux';
 import { useHaptic } from '../../hooks/useHaptic';
 import { RootState } from '../../redux/store';
@@ -33,9 +34,12 @@ import {
   useToggleAutoRenewMutation,
   useCreateSubscriptionOrderMutation,
   useVerifySubscriptionPaymentMutation,
+  useBuySubscriptionWithWalletMutation,
 } from '../../service/userApi';
+import { useGetWalletBalanceQuery } from '../../service/driverApi';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
+import PaymentMethodModal from '../../Components/PaymentMethodModal';
 
 /* ================= TYPES ================= */
 
@@ -68,7 +72,7 @@ interface PlanTier {
 type Duration = 'daily' | 'weekly' | 'monthly';
 
 /* ================= CONSTANTS ================= */
-const RAZORPAY_KEY = 'rzp_test_SCjewpaZ96XBWa'; // Replace with real key in prod
+
 
 const DURATIONS: { key: Duration; label: string }[] = [
   { key: 'daily', label: 'Daily' },
@@ -93,6 +97,12 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   const [toggleAutoRenew, { isLoading: isTogglingAutoRenew }] = useToggleAutoRenewMutation();
   const [createSubscriptionOrder] = useCreateSubscriptionOrderMutation();
   const [verifySubscriptionPayment] = useVerifySubscriptionPaymentMutation();
+  const [buySubscriptionWithWallet] = useBuySubscriptionWithWalletMutation();
+  const { data: walletData, refetch: refetchWallet } = useGetWalletBalanceQuery(user?.driverId || '', { skip: !user?.driverId });
+  const walletBalance = walletData?.data?.balance || 0;
+  
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [modalData, setModalData] = useState<{ tier: PlanTier | null, amountToPay: number }>({ tier: null, amountToPay: 0 });
 
   const [selectedDuration, setSelectedDuration] = useState<Duration>('daily');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -102,6 +112,13 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   // Eligibility Modal State
   const [eligibilityModalVisible, setEligibilityModalVisible] = useState(false);
   const [ineligiblePlanName, setIneligiblePlanName] = useState('');
+  const [upgradeConfirmData, setUpgradeConfirmData] = useState<{
+    visible: boolean;
+    unusedCredit: number;
+    newPlanCost: number;
+    amountToPay: number;
+    tier: PlanTier | null;
+  }>({ visible: false, unusedCredit: 0, newPlanCost: 0, amountToPay: 0, tier: null });
 
   useEffect(() => {
     if (subscriptionData?.data?.subscription?.billing_cycle) {
@@ -270,20 +287,19 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         const proration = res?.data?.proration;
         
         if (proration) {
-           Alert.alert(
-             'Confirm Upgrade',
-             `Unused credit: ₹${proration.unused_credit}\nNew plan cost: ₹${proration.new_plan_cost}\nYou pay today: ₹${proration.amount_to_pay}`,
-             [
-               { text: 'Cancel', style: 'cancel', onPress: () => setIsProcessing(false) },
-               { text: 'Proceed', onPress: () => executeSubscription(tier) }
-             ]
-           );
+           setUpgradeConfirmData({
+             visible: true,
+             unusedCredit: proration.unused_credit,
+             newPlanCost: proration.new_plan_cost,
+             amountToPay: proration.amount_to_pay,
+             tier
+           });
            return;
         }
       }
       
       // Direct subscription or upgrade without preview data
-      await executeSubscription(tier);
+      checkWalletAndExecute(tier);
 
     } catch (error: any) {
       setIsProcessing(false);
@@ -291,7 +307,69 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     }
   };
 
-  const executeSubscription = async (tier: PlanTier) => {
+  const checkWalletAndExecute = (tier: PlanTier, amountToPay?: number) => {
+    let price = amountToPay;
+    if (price === undefined) {
+      if (selectedDuration === 'daily') price = tier.pricing.daily;
+      if (selectedDuration === 'weekly') price = tier.pricing.weekly;
+      if (selectedDuration === 'monthly') price = tier.pricing.monthly;
+    }
+
+    setModalData({ tier, amountToPay: price || 0 });
+    setPaymentModalVisible(true);
+    setIsProcessing(false); // Enable interactions, modal handles the rest
+  };
+
+  const executeWalletSubscription = async (pin: string) => {
+    if (!modalData.tier) return;
+    setIsProcessing(true);
+    
+    // Enforce a 3-second processing time to show the loader
+    await new Promise(resolve => setTimeout(() => resolve(undefined), 3000));
+
+    try {
+      const res = await buySubscriptionWithWallet({
+        plan_id: modalData.tier.id,
+        billing_cycle: getBillingCycle(selectedDuration) as 'day'|'week'|'month',
+        pin: pin,
+      }).unwrap();
+
+      triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+      refetchSub();
+      refetchWallet();
+       setPaymentModalVisible(false);
+      navigation.replace('SubscriptionSuccessScreen', {
+        planName: modalData.tier.name,
+        planColor: modalData.tier.color,
+        amountPaid: res.amount_paid || 0,
+        duration: selectedDuration,
+        transactionId: 'Wallet Payment',
+        isUpgrade: false,
+        isDowngrade: false,
+        proratedCredit: 0,
+      });
+    } catch (error: any) {
+      setIsProcessing(false);
+      setPaymentModalVisible(false);
+      const errorMsg = error?.data?.message || error?.message || 'Could not deduct from wallet';
+      const price = modalData.amountToPay || 0;
+      
+      // Add a slight delay to ensure the modal is fully closed before navigating
+      setTimeout(() => {
+        navigation.replace('PaymentFailedScreen', { 
+          amount: price, 
+          returnScreen: 'RechargePlanScreen', 
+          errorReason: errorMsg 
+        });
+      }, 300);
+    }
+  };
+
+  const executeSubscription = async () => {
+    const tier = modalData.tier;
+    if (!tier) return;
+    setPaymentModalVisible(false);
+    setIsProcessing(true);
     try {
       if (selectedDuration === 'daily') {
         // ONE-TIME PAYMENT FOR DAILY PLANS
@@ -306,7 +384,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
           description: `${tier.name} - DAILY (One-Time)`,
           image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
           currency: 'INR',
-          key: RAZORPAY_KEY,
+          key: Config.RAZORPAY_KEY_ID || 'rzp_test_SCjewpaZ96XBWa',
           order_id: orderData.order_id,
           name: 'T2drive',
           prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
@@ -347,7 +425,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
           description: `${tier.name} - ${selectedDuration.toUpperCase()} ${actionText}`,
           image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
           currency: 'INR',
-          key: RAZORPAY_KEY,
+          key: Config.RAZORPAY_KEY_ID || 'rzp_test_SCjewpaZ96XBWa',
           subscription_id: subData.subscription_id,
           name: 'T2drive',
           prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
@@ -376,8 +454,33 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         });
       }
     } catch (error: any) {
-      const errorMsg = error.description || error.error?.description || error.message || (typeof error === 'string' ? error : JSON.stringify(error));
-      showAlert({ title: 'Payment Failed', message: errorMsg, singleButton: true, icon: 'close-circle-outline' });
+      const price = selectedDuration === 'daily' ? tier.pricing.daily : selectedDuration === 'weekly' ? tier.pricing.weekly : tier.pricing.monthly;
+      
+      let errorMsg = 'Payment cancelled or failed';
+      try {
+        let parsedError = error;
+        if (typeof error === 'string') {
+          try { parsedError = JSON.parse(error); } catch (e) {}
+        }
+        
+        if (parsedError?.error?.description && parsedError.error.description !== 'undefined') {
+          errorMsg = parsedError.error.description;
+        } else if (parsedError?.error?.reason) {
+          errorMsg = parsedError.error.reason.replace(/_/g, ' ');
+          // capitalize first letter
+          errorMsg = errorMsg.charAt(0).toUpperCase() + errorMsg.slice(1);
+        } else if (parsedError?.description) {
+          errorMsg = parsedError.description;
+        } else if (parsedError?.message) {
+          errorMsg = parsedError.message;
+        } else if (typeof error === 'string' && !error.includes('{"error":')) {
+          errorMsg = error;
+        }
+      } catch (e) {
+        console.log("Error parsing payment error", e);
+      }
+      
+      navigation.replace('PaymentFailedScreen', { amount: price, returnScreen: 'RechargePlanScreen', errorReason: errorMsg });
     } finally {
       setIsProcessing(false);
     }
@@ -768,6 +871,83 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         </View>
       </Modal>
 
+      <Modal
+        visible={upgradeConfirmData.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setUpgradeConfirmData({ ...upgradeConfirmData, visible: false });
+          setIsProcessing(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.customModalContainer, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
+            <View style={[styles.modalIconCircle, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#EFF6FF' }]}>
+              <Ionicons name="arrow-up-circle" size={32} color="#2563EB" />
+            </View>
+            <Text style={[styles.modalTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+              Confirm Upgrade
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+              Review your upgrade details below before proceeding.
+            </Text>
+            
+            <View style={[styles.modalDetailsBox, { backgroundColor: isDark ? '#374151' : '#F9FAFB' }]}>
+              <View style={styles.modalDetailRow}>
+                <Text style={[styles.modalDetailLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Unused credit</Text>
+                <Text style={[styles.modalDetailValue, { color: '#10B981' }]}>- ₹{upgradeConfirmData.unusedCredit}</Text>
+              </View>
+              <View style={styles.modalDetailRow}>
+                <Text style={[styles.modalDetailLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>New plan cost</Text>
+                <Text style={[styles.modalDetailValue, { color: isDark ? '#F9FAFB' : '#111827' }]}>₹{upgradeConfirmData.newPlanCost}</Text>
+              </View>
+              <View style={[styles.modalDivider, { backgroundColor: isDark ? '#4B5563' : '#E5E7EB' }]} />
+              <View style={styles.modalDetailRow}>
+                <Text style={[styles.modalTotalLabel, { color: isDark ? '#F9FAFB' : '#111827' }]}>You pay today</Text>
+                <Text style={[styles.modalTotalValue, { color: '#2563EB' }]}>₹{upgradeConfirmData.amountToPay}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnCancel, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}
+                onPress={() => {
+                  setUpgradeConfirmData({ ...upgradeConfirmData, visible: false });
+                  setIsProcessing(false);
+                }}
+              >
+                <Text style={[styles.modalBtnCancelText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalBtn, styles.modalBtnProceed]}
+                onPress={() => {
+                  setUpgradeConfirmData({ ...upgradeConfirmData, visible: false });
+                  if (upgradeConfirmData.tier) {
+                    checkWalletAndExecute(upgradeConfirmData.tier, upgradeConfirmData.amountToPay);
+                  } else {
+                    setIsProcessing(false);
+                  }
+                }}
+              >
+                <Text style={styles.modalBtnProceedText}>Proceed</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <PaymentMethodModal
+        isVisible={paymentModalVisible}
+        onClose={() => setPaymentModalVisible(false)}
+        amountToPay={modalData.amountToPay}
+        walletBalance={walletBalance}
+        hasWalletPin={user?.has_wallet_pin || false}
+        onSelectWallet={executeWalletSubscription}
+        onSelectRazorpay={executeSubscription}
+        onSetupPin={() => navigation.navigate('WalletPinSetupScreen')}
+        isProcessing={isProcessing}
+      />
+
     </SafeAreaView>
   );
 };
@@ -834,7 +1014,24 @@ const styles = StyleSheet.create({
   cancelRenewBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#EF4444', backgroundColor: 'transparent' },
   cancelRenewBtnText: { color: '#EF4444', fontSize: 12, fontWeight: '600' },
 
-  // Modal Styles
+  // Custom Modal Styles
+  customModalContainer: { width: '100%', borderRadius: 16, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  modalIconCircle: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  modalSubtitle: { fontSize: 14, textAlign: 'center', marginBottom: 24, paddingHorizontal: 10 },
+  modalDetailsBox: { width: '100%', borderRadius: 12, padding: 16, marginBottom: 24 },
+  modalDetailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 6 },
+  modalDetailLabel: { fontSize: 14, fontWeight: '500' },
+  modalDetailValue: { fontSize: 14, fontWeight: '600' },
+  modalDivider: { height: 1, width: '100%', marginVertical: 12 },
+  modalTotalLabel: { fontSize: 16, fontWeight: '700' },
+  modalTotalValue: { fontSize: 20, fontWeight: '800' },
+
+  modalBtnCancel: {},
+  modalBtnCancelText: { fontSize: 15, fontWeight: '600' },
+  modalBtnProceed: { backgroundColor: '#2563EB' },
+  modalBtnProceedText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+
+  // Shared Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', borderRadius: 16, padding: 24, alignItems: 'center' },
   modalIconContainer: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },

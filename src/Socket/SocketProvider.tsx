@@ -188,6 +188,41 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             }
         });
 
+        // 🛡️ Plan Eligibility Update Listener
+        socketService.on("PLAN_ELIGIBILITY_UPDATE", async (data: any) => {
+            console.log('[SocketProvider] Plan eligibility update received:', data);
+            if (data.eligibility) {
+                dispatch(setUser({
+                    subscription_eligibility: data.eligibility
+                }));
+
+                try {
+                    const notifee = (await import('@notifee/react-native')).default;
+                    let planNames = [];
+                    if (data.eligibility.premium) planNames.push('Premium');
+                    if (data.eligibility.elite) planNames.push('Elite');
+
+                    if (planNames.length > 0) {
+                        const channelId = await notifee.createChannel({
+                            id: 'default',
+                            name: 'Default Channel',
+                        });
+                        
+                        await notifee.displayNotification({
+                            title: 'Subscription Update',
+                            body: `Admin has granted you access to ${planNames.join(' & ')} plan(s).`,
+                            android: {
+                                channelId,
+                                smallIcon: 'ic_launcher', // standard RN icon name
+                            },
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to display plan eligibility notification:', error);
+                }
+            }
+        });
+
         return () => {
             socketService.removeConnectionListener(connectionListener);
             socketService.off("receiveChatMessage");
@@ -197,6 +232,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             socketService.off("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
             socketService.off("ACCOUNT_STATUS_UPDATE");
             socketService.off("DOCUMENT_STATUS_UPDATE");
+            socketService.off("PLAN_ELIGIBILITY_UPDATE");
             // Do NOT disconnect the service here as it might be used globally
         };
     }, [driverId, role]);

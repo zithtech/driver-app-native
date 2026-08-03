@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Animated, StatusBar, ImageBackground } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -103,10 +103,15 @@ const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#000000' : '#F9FAFB' }]} edges={['top', 'bottom']}>
-      <AppStatusBar forceLight={!isDark} />
+    <ImageBackground 
+        source={require('../../assets/images/paysuccess.png')} 
+        style={styles.container}
+        resizeMode="cover"
+    >
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.75)' }]} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
       
-      <Animated.View style={[styles.content, { opacity: opacityAnim, transform: [{ translateY: slideAnim }] }]}>
+      <Animated.View style={[styles.content, { opacity: opacityAnim, transform: [{ translateY: slideAnim }], paddingTop: insets.top }]}>
         
         {/* Sleek Header */}
         <View style={styles.headerArea}>
@@ -184,7 +189,7 @@ const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
           <Text style={[styles.dashboardBtnText, { color: isDark ? '#111827' : '#FFFFFF' }]}>Done</Text>
         </Pressable>
       </Animated.View>
-    </SafeAreaView>
+    </ImageBackground>
   );
 };
 
