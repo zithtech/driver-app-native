@@ -11,6 +11,7 @@ export interface DocumentState {
 /* ================= USER TYPE ================= */
 
 export interface UserState {
+  has_wallet_pin?: boolean;
   userId?: string;
   driverId?: string;
   device_id?: string;
@@ -125,6 +126,13 @@ export interface UserState {
 
   /** Raw document metadata from backend */
   documents_data?: any[];
+
+  /* Subscription Eligibility */
+  subscription_eligibility?: {
+    basic: boolean;
+    elite: boolean;
+    premium: boolean;
+  };
 }
 
 /* ================= REQUEST STATUS ================= */

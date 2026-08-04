@@ -101,12 +101,22 @@ async function ensureChannel(): Promise<string> {
     });
 }
 
+async function ensureGeneralChannel(): Promise<string> {
+    return await notifee.createChannel({
+        id: GENERAL_CHANNEL_ID,
+        name: 'General Alerts',
+        importance: AndroidImportance.HIGH,
+        sound: 'default',
+        vibration: true,
+    });
+}
+
 async function ensureScheduledChannel(): Promise<string> {
     return await notifee.createChannel({
-        id: 'scheduled_alerts_custom',
+        id: 'scheduled_alerts_v2',
         name: 'Scheduled Ride Alerts',
         importance: AndroidImportance.HIGH,
-        sound: '3',
+        sound: 'sound_3',
         vibration: true,
     });
 }
@@ -197,11 +207,27 @@ export function setupForegroundHandler(): () => void {
             const { store } = require('../redux/store');
             const isVibrationEnabled = store.getState()?.userSlice?.user?.isVibrationEnabled ?? true;
             
-            const isScheduledAlert = type.startsWith('SCHEDULED_');
-            const channelId = isScheduledAlert ? await ensureScheduledChannel() : await ensureChannel();
+            const isScheduledAlert = type === 'SCHEDULED_REMINDER' || type === 'SCHEDULED_RIDE_STARTED';
+            const isCancellation = CANCELLATION_TYPES.has(type);
+            
+            let channelId;
+            if (isScheduledAlert) {
+                channelId = await ensureScheduledChannel();
+            } else if (isCancellation) {
+                channelId = await ensureGeneralChannel();
+            } else {
+                channelId = await ensureChannel();
+            }
+            
+            const notificationId = (remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now()).toString();
+            
+            // If it's a cancellation, cancel any existing ringing notification first
+            if (isCancellation) {
+                await notifee.cancelNotification(notificationId);
+            }
 
             await notifee.displayNotification({
-                id: (remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now()).toString(),
+                id: notificationId,
                 title,
                 body,
                 android: {
@@ -209,7 +235,7 @@ export function setupForegroundHandler(): () => void {
                     importance: AndroidImportance.HIGH,
                     smallIcon: 'ic_launcher',
                     pressAction: { id: 'default' },
-                    sound: isScheduledAlert ? '3' : 'default',
+                    sound: isScheduledAlert ? 'sound_3' : 'default',
                     vibrationPattern: isVibrationEnabled ? [300, 500] : [],
                 },
                 ios: {
@@ -218,7 +244,7 @@ export function setupForegroundHandler(): () => void {
                         sound: true,
                         banner: true,
                     },
-                    sound: isScheduledAlert ? '3.mp3' : 'default',
+                    sound: isScheduledAlert ? 'sound_3.mp3' : 'default',
                 },
                 data: remoteMessage.data,
             });
@@ -253,17 +279,31 @@ export function setupBackgroundHandler(): void {
         }
 
         const isLiveRideRequest = type === 'NEW_RIDE_REQUEST' || type === 'RIDE_REQUEST';
-        const isScheduledAlert = type.startsWith('SCHEDULED_');
+        const isScheduledAlert = type === 'SCHEDULED_REMINDER' || type === 'SCHEDULED_RIDE_STARTED';
         const isBroadcast = isLiveRideRequest; // Live ride requests auto-expire
+        const isCancellation = CANCELLATION_TYPES.has(type);
 
-        const channelId = isScheduledAlert ? await ensureScheduledChannel() : await ensureChannel();
+        let channelId;
+        if (isScheduledAlert) {
+            channelId = await ensureScheduledChannel();
+        } else if (isCancellation) {
+            channelId = await ensureGeneralChannel();
+        } else {
+            channelId = await ensureChannel();
+        }
 
         // For data-only messages, read title/body from data field
         const title = String(remoteMessage.notification?.title ?? remoteMessage.data?.title ?? 'New Notification');
         const body = String(remoteMessage.notification?.body ?? remoteMessage.data?.body ?? '');
+        const notificationId = String(remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now());
+
+        // If it's a cancellation, cancel any existing ringing notification first
+        if (isCancellation) {
+            await notifee.cancelNotification(notificationId);
+        }
 
         await notifee.displayNotification({
-            id: String(remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now()),
+            id: notificationId,
             title,
             body,
             android: {
@@ -271,12 +311,12 @@ export function setupBackgroundHandler(): void {
                 importance: AndroidImportance.HIGH,
                 smallIcon: 'ic_launcher',
                 pressAction: { id: 'default' },
-                sound: isScheduledAlert ? '3' : 'default',
+                sound: isScheduledAlert ? 'sound_3' : 'default',
                 ...(isBroadcast ? { timeoutAfter: 20000 } : {}),
                 ...(isLiveRideRequest ? { fullScreenAction: { id: 'default' } } : {}),
             },
             ios: {
-                sound: isScheduledAlert ? '3.mp3' : 'default',
+                sound: isScheduledAlert ? 'sound_3.mp3' : 'default',
             },
             data: remoteMessage.data,
         });

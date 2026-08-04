@@ -45,6 +45,19 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     const res = await dispatch(driverApi.endpoints.getActiveTrip.initiate(driverId, { forceRefetch: true }) as any);
                     if (res?.data?.data) {
                         dispatch(setCurrentRide(res.data.data));
+                    } else {
+                        // 🛡️ PRODUCTION FIX: Don't wipe currentRide if it's a persisted scheduled ride.
+                        // Scheduled rides in ACCEPTED status are returned by getActiveTrip,
+                        // but during brief network blips or reconnects we may get null.
+                        // Only wipe if the current ride is NOT a scheduled ride.
+                        const existing = currentRideRef.current;
+                        const isScheduled = existing?.booking_type === 'SCHEDULED' || (existing as any)?.is_scheduled;
+                        if (existing && !isScheduled) {
+                            console.log('[SocketProvider] getActiveTrip returned null on connect, clearing non-scheduled ride');
+                            dispatch(setCurrentRide(null));
+                        } else if (isScheduled) {
+                            console.log('[SocketProvider] getActiveTrip returned null on connect, preserving scheduled ride:', existing?.trip_id);
+                        }
                     }
                 } catch (e) {
                     console.log('Failed to fetch active trip on connect', e);
@@ -118,6 +131,16 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     const res = await dispatch(driverApi.endpoints.getActiveTrip.initiate(driverId, { forceRefetch: true }) as any);
                     if (res?.data?.data) {
                         dispatch(setCurrentRide(res.data.data));
+                    } else {
+                        // 🛡️ Same guard as connectionListener — don't wipe scheduled rides on null
+                        const existing = currentRideRef.current;
+                        const isScheduled = existing?.booking_type === 'SCHEDULED' || (existing as any)?.is_scheduled;
+                        if (existing && !isScheduled) {
+                            console.log('[SocketProvider] getActiveTrip returned null on trip_updated, clearing non-scheduled ride');
+                            dispatch(setCurrentRide(null));
+                        } else if (isScheduled) {
+                            console.log('[SocketProvider] getActiveTrip returned null on trip_updated, preserving scheduled ride:', existing?.trip_id);
+                        }
                     }
                 } catch (e) {
                     console.log('Failed to fetch active trip on trip_updated', e);
@@ -169,6 +192,41 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             }
         });
 
+        // 🛡️ Plan Eligibility Update Listener
+        socketService.on("PLAN_ELIGIBILITY_UPDATE", async (data: any) => {
+            console.log('[SocketProvider] Plan eligibility update received:', data);
+            if (data.eligibility) {
+                dispatch(setUser({
+                    subscription_eligibility: data.eligibility
+                }));
+
+                try {
+                    const notifee = (await import('@notifee/react-native')).default;
+                    let planNames = [];
+                    if (data.eligibility.premium) planNames.push('Premium');
+                    if (data.eligibility.elite) planNames.push('Elite');
+
+                    if (planNames.length > 0) {
+                        const channelId = await notifee.createChannel({
+                            id: 'default',
+                            name: 'Default Channel',
+                        });
+                        
+                        await notifee.displayNotification({
+                            title: 'Subscription Update',
+                            body: `Admin has granted you access to ${planNames.join(' & ')} plan(s).`,
+                            android: {
+                                channelId,
+                                smallIcon: 'ic_launcher', // standard RN icon name
+                            },
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to display plan eligibility notification:', error);
+                }
+            }
+        });
+
         return () => {
             socketService.removeConnectionListener(connectionListener);
             socketService.off("receiveChatMessage");
@@ -178,6 +236,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             socketService.off("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
             socketService.off("ACCOUNT_STATUS_UPDATE");
             socketService.off("DOCUMENT_STATUS_UPDATE");
+            socketService.off("PLAN_ELIGIBILITY_UPDATE");
             // Do NOT disconnect the service here as it might be used globally
         };
     }, [driverId, role]);

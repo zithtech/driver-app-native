@@ -11,6 +11,7 @@ import {
   Modal,
   Linking,
   TouchableWithoutFeedback,
+  ImageBackground,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useFocusEffect, StackActions } from '@react-navigation/native';
@@ -27,6 +28,7 @@ import SwipeButton from '../Dashboard/dashComponents/SwipeButton';
 import { mS as ms, vS as vs } from '../../lib/scale';
 import { ChatScreen_Nav, HelpCenter_Nav } from '../../Navigations/navigations';
 import { setCurrentRide } from '../../redux/rideSlice';
+import LinearGradient from 'react-native-linear-gradient';
 
 const WaitingScreen = ({ route }: any) => {
   const { t } = useTranslation();
@@ -48,6 +50,7 @@ const WaitingScreen = ({ route }: any) => {
   const [isDayHaltModalVisible, setIsDayHaltModalVisible] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isTripDetailsModalVisible, setIsTripDetailsModalVisible] = useState(false);
+  const [isReturnTripModalVisible, setIsReturnTripModalVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const isOutstationRoundTrip = ride?.ride_type === 'OUTSTATION_ROUND_TRIP';
@@ -119,6 +122,15 @@ const WaitingScreen = ({ route }: any) => {
     }
   };
 
+  const handleSwipeSuccess = () => {
+    setIsReturnTripModalVisible(true);
+  };
+
+  const confirmReturnTrip = () => {
+    setIsReturnTripModalVisible(false);
+    handleStartReturnTrip();
+  };
+
   const handleToggleChange = (value: boolean) => {
     if (value) {
       setIsDayHaltModalVisible(true);
@@ -131,7 +143,6 @@ const WaitingScreen = ({ route }: any) => {
     try {
       if (!trip_id) return;
       const result = await toggleDayHaltApi({ tripId: trip_id.toString(), is_day_halt }).unwrap();
-      // ✅ Update Redux so persisted state stays in sync with backend
       if (result?.data) {
         dispatch(setCurrentRide(result.data));
       }
@@ -154,14 +165,20 @@ const WaitingScreen = ({ route }: any) => {
       userId: user?.driverId,
       userName: ride?.passenger_details?.name || ride?.user_details?.full_name || t('rider'),
       userImage: ride?.passenger_details?.image,
-      userPhone: ride?.phone || ride?.passenger_phone,
+      userPhone: ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone,
     });
   };
 
   const handleCallPress = () => {
-    const phone = ride?.phone || ride?.passenger_phone;
+    const phone = ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone;
     if (phone) {
       Linking.openURL(`tel:${phone}`);
+    } else {
+      showAlert({
+        title: t('error') || 'Error',
+        message: t('phone_number_not_found') || 'Passenger phone number is not available.',
+        singleButton: true,
+      });
     }
   };
 
@@ -176,241 +193,318 @@ const WaitingScreen = ({ route }: any) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <TouchableWithoutFeedback onPress={() => showMenu && setShowMenu(false)}>
-        <View style={styles.container}>
-          <View style={styles.content}>
-            <View style={styles.headerContainer}>
-              <View style={styles.headerLeft} />
-              <View style={styles.headerCenter}>
-                <Ionicons name="time-outline" size={ms(40)} color={theme.colors.primary} />
-              </View>
-              <TouchableOpacity onPress={() => setShowMenu(!showMenu)} style={styles.headerRight}>
-                <Ionicons name="ellipsis-vertical" size={ms(24)} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {showMenu && (
-              <View style={[styles.dropdownMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <TouchableOpacity style={styles.dropdownItem} onPress={handleViewTrip}>
-                  <Ionicons name="map-outline" size={ms(20)} color={theme.colors.text} />
-                  <Text style={[styles.dropdownText, { color: theme.colors.text }]}>{t('view_trip', 'View Trip')}</Text>
+    <ImageBackground 
+      source={require('../../assets/images/map6.png')} 
+      style={styles.backgroundContainer}
+      resizeMode="cover"
+    >
+      <LinearGradient 
+        colors={isDark ? ['rgba(18, 18, 18, 0.8)', 'rgba(18, 18, 18, 1)'] : ['rgba(255, 255, 255, 0.75)', 'rgba(255, 255, 255, 1)']}
+        style={styles.gradientOverlay}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <TouchableWithoutFeedback onPress={() => showMenu && setShowMenu(false)}>
+            <View style={styles.container}>
+              
+              <View style={styles.headerContainer}>
+                <TouchableOpacity style={styles.iconBtnMinimal} onPress={() => {}}>
+                  {/* Empty space for balance */}
                 </TouchableOpacity>
-                <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
-                <TouchableOpacity style={styles.dropdownItem} onPress={handleHelpCenter}>
-                  <Ionicons name="help-circle-outline" size={ms(20)} color={theme.colors.text} />
-                  <Text style={[styles.dropdownText, { color: theme.colors.text }]}>{t('help_center', 'Help Center')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <Text style={[styles.title, { color: theme.colors.text }]}>
-              {t('waiting_at_destination', 'Waiting at Destination')}
-            </Text>
-            <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              {t('waiting_for_rider_return', 'Waiting for the rider to complete their work before returning.')}
-            </Text>
-
-            {isOutstationRoundTrip && (
-              <View style={[styles.toggleContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <View style={styles.toggleTextContainer}>
-                  <Text style={[styles.toggleTitle, { color: theme.colors.text }]}>
-                    {t('day_halt', 'Day Halt')}
-                  </Text>
-                  <Text style={[styles.toggleSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                    {t('day_halt_desc', 'Pause trip to halt for the day')}
-                  </Text>
+                <View style={styles.headerCenter}>
+                  <View style={[styles.statusBadge, { backgroundColor: theme.colors.primary + '15' }]}>
+                    <View style={[styles.dotIndicator, { backgroundColor: theme.colors.primary }]} />
+                    <Text style={[styles.statusText, { color: theme.colors.primary }]}>{t('waiting', 'Waiting')}</Text>
+                  </View>
                 </View>
-                <Switch
-                  trackColor={{ false: '#767577', true: theme.colors.primary }}
-                  thumbColor={isDayHalt ? '#f4f3f4' : '#f4f3f4'}
-                  ios_backgroundColor="#3e3e3e"
-                  onValueChange={handleToggleChange}
-                  value={isDayHalt}
-                />
+                <TouchableOpacity onPress={() => setShowMenu(!showMenu)} style={styles.iconBtnMinimal}>
+                  <Ionicons name="ellipsis-vertical" size={ms(24)} color={theme.colors.text} />
+                </TouchableOpacity>
               </View>
-            )}
 
-            <View style={styles.timerContainer}>
-              <Text style={[styles.timerLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                {t('waiting_time', 'Waiting Time')}
-              </Text>
-              <Text style={[styles.timerValue, { color: theme.colors.primary }]}>
-                {formatTime(waitingSeconds)}
-              </Text>
-            </View>
+              {showMenu && (
+                <View style={[styles.dropdownMenu, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={handleViewTrip}>
+                    <Ionicons name="map-outline" size={ms(20)} color={theme.colors.text} />
+                    <Text style={[styles.dropdownText, { color: theme.colors.text }]}>{t('view_trip', 'View Trip')}</Text>
+                  </TouchableOpacity>
+                  <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
+                  <TouchableOpacity style={styles.dropdownItem} onPress={handleHelpCenter}>
+                    <Ionicons name="help-circle-outline" size={ms(20)} color={theme.colors.text} />
+                    <Text style={[styles.dropdownText, { color: theme.colors.text }]}>{t('help_center', 'Help Center')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
-            <View style={[
-              styles.contactCard, 
-              { 
-                backgroundColor: theme.colors.card, 
-                borderColor: theme.colors.border,
-                shadowColor: isDark ? '#000' : '#d1d5db',
-              }
-            ]}>
-                <View style={styles.riderInfo}>
-                    <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary + '20' }]}>
-                        <Ionicons name="person" size={ms(24)} color={theme.colors.primary} />
+              <View style={styles.content}>
+                
+                <View style={[styles.mainCard, { 
+                  backgroundColor: isDark ? 'rgba(30, 30, 30, 0.7)' : 'rgba(255, 255, 255, 0.9)', 
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  shadowColor: isDark ? '#000' : '#888' 
+                }]}>
+                  <View style={styles.timerHeader}>
+                    <Ionicons name="hourglass-outline" size={ms(20)} color={theme.colors.primary} />
+                    <Text style={[styles.timerTitle, { color: theme.colors.text }]}>
+                      {t('waiting_at_destination', 'Waiting at Destination')}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.timerValue, { color: theme.colors.primary }]}>
+                    {formatTime(waitingSeconds)}
+                  </Text>
+                  <Text style={[styles.timerLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {t('waiting_time', 'ELAPSED TIME')}
+                  </Text>
+
+                  <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} />
+
+                  <View style={styles.riderInfoCompact}>
+                    <View style={styles.riderAvatar}>
+                      <Ionicons name="person" size={ms(20)} color={theme.colors.primary} />
                     </View>
                     <View style={styles.riderDetails}>
-                        <Text style={[styles.riderName, { color: theme.colors.text }]}>
-                            {ride?.passenger_details?.name || ride?.user_details?.full_name || t('rider')}
+                      <Text style={[styles.riderName, { color: theme.colors.text }]} numberOfLines={1}>
+                        {ride?.passenger_details?.name || ride?.user_details?.full_name || t('rider')}
+                      </Text>
+                      <Text style={[styles.riderSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        {t('contact_rider_if_needed', 'Contact if needed')}
+                      </Text>
+                    </View>
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity onPress={handleCallPress} style={styles.compactBtn}>
+                        <Ionicons name="call" size={ms(20)} color="#10B981" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={handleChatPress} style={styles.compactBtn}>
+                        <Ionicons name="chatbubble-ellipses" size={ms(20)} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {isOutstationRoundTrip && (
+                    <View style={[styles.toggleContainer, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }]}>
+                      <View style={styles.toggleTextContainer}>
+                        <Text style={[styles.toggleTitle, { color: theme.colors.text }]}>
+                          {t('day_halt', 'Day Halt')}
                         </Text>
-                        <Text style={[styles.riderSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                            {t('contact_rider_if_needed', 'Contact rider if needed')}
+                        <Text style={[styles.toggleSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                          {t('day_halt_desc', 'Pause trip for the day')}
                         </Text>
+                      </View>
+                      <Switch
+                        trackColor={{ false: '#767577', true: theme.colors.primary }}
+                        thumbColor="#f4f3f4"
+                        ios_backgroundColor="#3e3e3e"
+                        onValueChange={handleToggleChange}
+                        value={isDayHalt}
+                        style={{ transform: [{ scale: 0.9 }] }}
+                      />
+                    </View>
+                  )}
+                </View>
+
+              </View>
+
+              <View style={styles.footer}>
+                {isLoading ? (
+                  <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: vs(20) }} />
+                ) : isDayHalt ? (
+                  <View style={styles.dayHaltActiveContainer}>
+                    <Ionicons name="pause" size={ms(20)} color="#EAB308" />
+                    <Text style={[styles.dayHaltActiveText, { color: '#EAB308' }]}>
+                      {t('day_halt_active', 'Day Halt Active - Return Disabled')}
+                    </Text>
+                  </View>
+                ) : (
+                  <SwipeButton
+                    title={t('start_return_trip', 'Swipe to Start Return')}
+                    onSwipeSuccess={handleSwipeSuccess}
+                  />
+                )}
+              </View>
+
+            </View>
+          </TouchableWithoutFeedback>
+
+          {/* Return Trip Confirmation Modal */}
+          <Modal
+            visible={isReturnTripModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setIsReturnTripModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContentCompact, { backgroundColor: theme.colors.card }]}>
+                <View style={[styles.modalIconWrapper, { backgroundColor: theme.colors.primary + '15' }]}>
+                  <Ionicons name="arrow-undo-circle" size={ms(40)} color={theme.colors.primary} />
+                </View>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  {t('confirm_return', 'Start Return Trip?')}
+                </Text>
+                <Text style={[styles.modalDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  {t('confirm_return_desc', 'Are you sure you want to start the return trip? This action cannot be undone.')}
+                </Text>
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnSecondary, { borderColor: theme.colors.border }]}
+                    onPress={() => setIsReturnTripModalVisible(false)}
+                  >
+                    <Text style={[styles.modalBtnText, { color: theme.colors.text }]}>{t('cancel', 'Cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: theme.colors.primary }]}
+                    onPress={confirmReturnTrip}
+                  >
+                    <Text style={[styles.modalBtnText, { color: '#fff' }]}>{t('confirm', 'Confirm')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Trip Details Modal */}
+          <Modal
+            visible={isTripDetailsModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setIsTripDetailsModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+                <View style={[styles.modalIconWrapper, { backgroundColor: theme.colors.primary + '20' }]}>
+                  <Ionicons name="map" size={ms(32)} color={theme.colors.primary} />
+                </View>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  {t('trip_details', 'Trip Details')}
+                </Text>
+                <View style={{ width: '100%', marginBottom: vs(24), gap: vs(16) }}>
+                    <View style={styles.tripDetailRow}>
+                       <Ionicons name="location" size={ms(20)} color={theme.colors.primary} style={{ marginTop: vs(2) }} />
+                       <View style={{ flex: 1, marginLeft: ms(12) }}>
+                         <Text style={{fontSize: ms(12), color: isDark ? '#9CA3AF' : '#6B7280'}}>{t('pickup', 'Pickup Location')}</Text>
+                         <Text style={{fontSize: ms(14), color: theme.colors.text, fontWeight: '600', marginTop: vs(2)}}>{ride?.pickup_address || t('na', 'N/A')}</Text>
+                       </View>
+                    </View>
+                    <View style={styles.tripDetailRow}>
+                       <Ionicons name="pin" size={ms(20)} color="#F43F5E" style={{ marginTop: vs(2) }} />
+                       <View style={{ flex: 1, marginLeft: ms(12) }}>
+                         <Text style={{fontSize: ms(12), color: isDark ? '#9CA3AF' : '#6B7280'}}>{t('drop', 'Drop Location')}</Text>
+                         <Text style={{fontSize: ms(14), color: theme.colors.text, fontWeight: '600', marginTop: vs(2)}}>{ride?.drop_address || t('na', 'N/A')}</Text>
+                       </View>
                     </View>
                 </View>
-                <View style={styles.actionButtons}>
-                    <TouchableOpacity onPress={handleCallPress} style={[styles.iconBtn, { backgroundColor: '#10B981' + '15' }]}>
-                        <Ionicons name="call" size={ms(20)} color="#10B981" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleChatPress} style={[styles.iconBtn, { backgroundColor: theme.colors.primary + '15' }]}>
-                        <Ionicons name="chatbubble-ellipses" size={ms(20)} color={theme.colors.primary} />
-                    </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: theme.colors.primary, width: '100%' }]}
+                    onPress={() => setIsTripDetailsModalVisible(false)}
+                >
+                    <Text style={[styles.modalBtnText, { color: '#fff' }]}>{t('close', 'Close')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Day Halt Modal */}
+          <Modal
+            visible={isDayHaltModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => !isToggling && setIsDayHaltModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+                <View style={[styles.modalIconWrapper, { backgroundColor: theme.colors.primary + '20' }]}>
+                  <Ionicons name="pause-circle" size={ms(40)} color={theme.colors.primary} />
                 </View>
-            </View>
-
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-
-      <View style={[styles.footer, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-        {isLoading ? (
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        ) : isDayHalt ? (
-          <View style={styles.dayHaltActiveContainer}>
-            <Ionicons name="pause" size={ms(20)} color={theme.colors.primary} />
-            <Text style={[styles.dayHaltActiveText, { color: theme.colors.primary }]}>
-              {t('day_halt_active', 'Day Halt Active - Return Trip Disabled')}
-            </Text>
-          </View>
-        ) : (
-          <SwipeButton
-            title={t('start_return_trip', 'Swipe to Start Return')}
-            onSwipeSuccess={handleStartReturnTrip}
-          />
-        )}
-      </View>
-
-      {/* Trip Details Modal */}
-      <Modal
-        visible={isTripDetailsModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsTripDetailsModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.modalIconWrapper, { backgroundColor: theme.colors.primary + '20' }]}>
-              <Ionicons name="map" size={ms(32)} color={theme.colors.primary} />
-            </View>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-              {t('trip_details', 'Trip Details')}
-            </Text>
-            <View style={{ width: '100%', marginBottom: vs(24), gap: vs(16) }}>
-                <View style={styles.tripDetailRow}>
-                   <Ionicons name="location" size={ms(20)} color={theme.colors.primary} style={{ marginTop: vs(2) }} />
-                   <View style={{ flex: 1, marginLeft: ms(12) }}>
-                     <Text style={{fontSize: ms(12), color: isDark ? '#9CA3AF' : '#6B7280'}}>{t('pickup', 'Pickup Location')}</Text>
-                     <Text style={{fontSize: ms(14), color: theme.colors.text, fontWeight: '600', marginTop: vs(2)}}>{ride?.pickup_address || t('na', 'N/A')}</Text>
-                   </View>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                  {t('confirm_day_halt', 'Confirm Day Halt')}
+                </Text>
+                <Text style={[styles.modalDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  {t('confirm_day_halt_desc', 'Turning on day halt will pause location sharing and hold the trip until you resume.')}
+                </Text>
+                
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnSecondary, { borderColor: theme.colors.border }]}
+                    onPress={() => setIsDayHaltModalVisible(false)}
+                    disabled={isToggling}
+                  >
+                    <Text style={[styles.modalBtnText, { color: theme.colors.text }]}>{t('cancel', 'Cancel')}</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: theme.colors.primary }]}
+                    onPress={() => toggleDayHalt(true)}
+                    disabled={isToggling}
+                  >
+                    {isToggling ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={[styles.modalBtnText, { color: '#fff' }]}>{t('confirm', 'Confirm')}</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.tripDetailRow}>
-                   <Ionicons name="pin" size={ms(20)} color="#F43F5E" style={{ marginTop: vs(2) }} />
-                   <View style={{ flex: 1, marginLeft: ms(12) }}>
-                     <Text style={{fontSize: ms(12), color: isDark ? '#9CA3AF' : '#6B7280'}}>{t('drop', 'Drop Location')}</Text>
-                     <Text style={{fontSize: ms(14), color: theme.colors.text, fontWeight: '600', marginTop: vs(2)}}>{ride?.drop_address || t('na', 'N/A')}</Text>
-                   </View>
-                </View>
+              </View>
             </View>
-            <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: theme.colors.primary, width: '100%' }]}
-                onPress={() => setIsTripDetailsModalVisible(false)}
-            >
-                <Text style={[styles.modalBtnText, { color: '#fff' }]}>{t('close', 'Close')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
 
-      {/* Day Halt Modal */}
-      <Modal
-        visible={isDayHaltModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => !isToggling && setIsDayHaltModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.modalIconWrapper, { backgroundColor: theme.colors.primary + '20' }]}>
-              <Ionicons name="pause-circle" size={ms(40)} color={theme.colors.primary} />
-            </View>
-            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
-              {t('confirm_day_halt', 'Confirm Day Halt')}
-            </Text>
-            <Text style={[styles.modalDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-              {t('confirm_day_halt_desc', 'Turning on day halt will pause location sharing and hold the trip until you resume.')}
-            </Text>
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnSecondary, { borderColor: theme.colors.border }]}
-                onPress={() => setIsDayHaltModalVisible(false)}
-                disabled={isToggling}
-              >
-                <Text style={[styles.modalBtnText, { color: theme.colors.text }]}>{t('cancel', 'Cancel')}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: theme.colors.primary }]}
-                onPress={() => toggleDayHalt(true)}
-                disabled={isToggling}
-              >
-                {isToggling ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: '#fff' }]}>{t('confirm', 'Confirm')}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        </SafeAreaView>
+      </LinearGradient>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  backgroundContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  gradientOverlay: {
     flex: 1,
   },
-  content: {
+  safeArea: {
     flex: 1,
-    padding: ms(20),
-    alignItems: 'center',
-    justifyContent: 'flex-start', // Push items up
-    paddingTop: vs(20),
+  },
+  container: {
+    flex: 1,
   },
   headerContainer: {
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: vs(16),
+    paddingHorizontal: ms(20),
+    paddingTop: vs(12),
+    paddingBottom: vs(8),
   },
-  headerLeft: {
-    width: ms(40), // Balance the flex row
+  iconBtnMinimal: {
+    width: ms(40),
+    height: ms(40),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
-  },
-  headerRight: {
-    width: ms(40),
-    alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingVertical: vs(8),
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: ms(12),
+    paddingVertical: vs(6),
+    borderRadius: ms(20),
+    gap: ms(6),
+  },
+  dotIndicator: {
+    width: ms(8),
+    height: ms(8),
+    borderRadius: ms(4),
+  },
+  statusText: {
+    fontSize: ms(13),
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   dropdownMenu: {
     position: 'absolute',
@@ -424,7 +518,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 8,
-    zIndex: 100, // Ensure it's on top
+    zIndex: 100,
   },
   dropdownItem: {
     flexDirection: 'row',
@@ -440,60 +534,61 @@ const styles = StyleSheet.create({
     height: 1,
     width: '100%',
   },
-  title: {
-    fontSize: ms(24),
-    fontWeight: '700',
-    marginTop: vs(8),
-    marginBottom: vs(8),
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: ms(14),
-    textAlign: 'center',
-    paddingHorizontal: ms(10),
-    marginBottom: vs(30),
-  },
-  timerContainer: {
-    alignItems: 'center',
+  content: {
+    flex: 1,
+    paddingHorizontal: ms(20),
     justifyContent: 'center',
-    paddingVertical: vs(30),
-    marginBottom: vs(30),
-    width: '100%',
   },
-  timerLabel: {
-    fontSize: ms(14),
-    fontWeight: '600',
-    marginBottom: vs(10),
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
+  mainCard: {
+    width: '100%',
+    borderRadius: ms(24),
+    padding: ms(20),
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+    alignItems: 'center',
+  },
+  timerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(8),
+    marginBottom: vs(16),
+  },
+  timerTitle: {
+    fontSize: ms(18),
+    fontWeight: '700',
   },
   timerValue: {
     fontSize: ms(56),
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
+    lineHeight: ms(64),
   },
-  contactCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  timerLabel: {
+    fontSize: ms(12),
+    fontWeight: '600',
+    marginTop: vs(4),
+    marginBottom: vs(24),
+    letterSpacing: 1,
+  },
+  divider: {
     width: '100%',
-    padding: ms(16),
-    borderRadius: ms(20),
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    height: 1,
+    marginBottom: vs(20),
   },
-  riderInfo: {
+  riderInfoCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    width: '100%',
+    marginBottom: vs(8),
   },
-  avatarPlaceholder: {
-    width: ms(48),
-    height: ms(48),
-    borderRadius: ms(24),
+  riderAvatar: {
+    width: ms(44),
+    height: ms(44),
+    borderRadius: ms(22),
+    backgroundColor: 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: ms(12),
@@ -505,50 +600,49 @@ const styles = StyleSheet.create({
   riderName: {
     fontSize: ms(16),
     fontWeight: '700',
-    marginBottom: vs(4),
+    marginBottom: vs(2),
   },
   riderSub: {
     fontSize: ms(12),
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: ms(10),
+    gap: ms(8),
   },
-  iconBtn: {
-    width: ms(42),
-    height: ms(42),
-    borderRadius: ms(21),
+  compactBtn: {
+    width: ms(38),
+    height: ms(38),
+    borderRadius: ms(19),
+    backgroundColor: 'rgba(0,0,0,0.04)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  footer: {
-    paddingHorizontal: ms(20),
-    paddingBottom: vs(30),
-    paddingTop: vs(20),
-    borderTopWidth: 1,
-    width: '100%',
   },
   toggleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    padding: ms(16),
+    padding: ms(14),
     borderRadius: ms(16),
-    borderWidth: 1,
-    marginBottom: vs(24),
+    marginTop: vs(16),
   },
   toggleTextContainer: {
     flex: 1,
-    paddingRight: ms(16),
+    paddingRight: ms(12),
   },
   toggleTitle: {
-    fontSize: ms(16),
+    fontSize: ms(15),
     fontWeight: '600',
-    marginBottom: vs(4),
+    marginBottom: vs(2),
   },
   toggleSubtitle: {
-    fontSize: ms(14),
+    fontSize: ms(13),
+  },
+  footer: {
+    paddingHorizontal: ms(20),
+    paddingBottom: vs(30),
+    paddingTop: vs(10),
+    width: '100%',
   },
   dayHaltActiveContainer: {
     flexDirection: 'row',
@@ -560,24 +654,34 @@ const styles = StyleSheet.create({
     gap: ms(8),
   },
   dayHaltActiveText: {
-    fontSize: ms(16),
+    fontSize: ms(15),
     fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContentCompact: {
+    width: '85%',
+    borderRadius: ms(24),
+    padding: ms(24),
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalContent: {
+    width: '100%',
     borderTopLeftRadius: ms(24),
     borderTopRightRadius: ms(24),
     padding: ms(24),
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
+    position: 'absolute',
+    bottom: 0,
   },
   modalIconWrapper: {
     width: ms(64),
@@ -590,14 +694,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: ms(20),
     fontWeight: '700',
-    marginBottom: vs(20),
+    marginBottom: vs(12),
     textAlign: 'center',
   },
   modalDesc: {
-    fontSize: ms(16),
+    fontSize: ms(15),
     textAlign: 'center',
     marginBottom: vs(24),
-    lineHeight: vs(24),
+    lineHeight: vs(22),
   },
   modalActions: {
     flexDirection: 'row',
@@ -606,8 +710,8 @@ const styles = StyleSheet.create({
   },
   modalBtn: {
     flex: 1,
-    height: vs(52),
-    borderRadius: ms(26),
+    height: vs(50),
+    borderRadius: ms(25),
     alignItems: 'center',
     justifyContent: 'center',
   },

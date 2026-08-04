@@ -9,45 +9,65 @@ import {
   RefreshControl,
   Platform,
   InteractionManager,
+  Image,
+  Share,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { RootState } from '../../redux/store';
-import { useGetWalletBalanceQuery, useGetWalletTransactionsQuery } from '../../service/driverApi';
+import { useGetWalletBalanceQuery, useGetWalletTransactionsQuery, useCreateWalletTopupOrderMutation, useVerifyWalletTopupPaymentMutation } from '../../service/driverApi';
+import RazorpayCheckout from 'react-native-razorpay';
+import Config from 'react-native-config';
 import { useTheme } from '@react-navigation/native';
 import { useAlert } from '../../context/AlertContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetTextInput, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { useAppTheme } from '../../context/ThemeContext';
+import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import { trigger } from 'react-native-haptic-feedback';
+
+/* ================= SKELETON COMPONENT ================= */
+const Skeleton = ({ width, height, style, isDark, borderRadius = 8 }: { width?: number | string, height?: number | string, style?: any, isDark?: boolean, borderRadius?: number }) => {
+  const opacity = useSharedValue(0.3);
+
+  React.useEffect(() => {
+    opacity.value = withRepeat(
+      withTiming(0.7, { duration: 800, easing: Easing.ease }),
+      -1,
+      true
+    );
+  }, [opacity]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        {
+          width,
+          height,
+          backgroundColor: isDark ? '#374151' : '#E2E8F0',
+          borderRadius,
+        },
+        style,
+        animatedStyle,
+      ]}
+    />
+  );
+};
 
 /* ================= TYPES ================= */
 
-type TransactionType = 'INCENTIVE' | 'PENALTY' | 'WITHDRAW';
+type TransactionType = 'INCENTIVE' | 'PENALTY' | 'WITHDRAW' | 'WALLET_TOPUP';
 
 
-
-interface BankAccount {
-  id: string;
-  holderName: string;
-  bankName: string;
-  accountLast4: string;
-  isPrimary: boolean;
-}
 
 /* ================= CONSTANT DATA ================= */
-
-const INITIAL_BANKS: BankAccount[] = [
-  {
-    id: '1',
-    holderName: 'Karthi',
-    bankName: 'HDFC Bank',
-    accountLast4: '4321',
-    isPrimary: true,
-  },
-];
 
 /* ================= SCREEN ================= */
 
@@ -58,6 +78,7 @@ const WalletScreen = ({ navigation }: any) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const user = useSelector((state: RootState) => state.userSlice.user);
   const driverId = user?.driverId || '';
+  const hasWalletPin = user?.has_wallet_pin || false;
   const isFocused = useIsFocused();
 
   // API Hooks
@@ -65,33 +86,34 @@ const WalletScreen = ({ navigation }: any) => {
     data: balanceResult,
     refetch: refetchBalance,
     isFetching: isBalanceFetching,
+    isError: isBalanceError,
   } = useGetWalletBalanceQuery(driverId, { skip: !driverId });
 
   const {
     data: transactionsResult,
     refetch: refetchTransactions,
     isFetching: isTransactionsFetching,
+    isError: isTransactionsError,
   } = useGetWalletTransactionsQuery({ driverId }, { skip: !driverId });
 
   const balance = balanceResult?.data?.balance || 0;
   const transactions = transactionsResult?.data || [];
 
-  // const isLoading = isBalanceLoading || isTransactionsLoading;
+  const isLoading = (isBalanceFetching || isTransactionsFetching) && (!balanceResult && !transactionsResult);
+  const isError = isBalanceError || isTransactionsError;
 
-  const [banks, setBanks] = useState<BankAccount[]>(INITIAL_BANKS);
+  const [topupAmount, setTopupAmount] = useState('');
+  const addMoneySheetRef = useRef<BottomSheetModal>(null);
 
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [newBankName, setNewBankName] = useState('');
-  const [newAccountLast4, setNewAccountLast4] = useState('');
+  const [createOrder, { isLoading: isCreating }] = useCreateWalletTopupOrderMutation();
+  const [verifyPayment, { isLoading: isVerifying }] = useVerifyWalletTopupPaymentMutation();
 
-  const withdrawSheetRef = useRef<BottomSheet>(null);
-  const addBankSheetRef = useRef<BottomSheet>(null);
-
-  const primaryBank = banks.find(b => b.isPrimary);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const transactionSheetRef = useRef<BottomSheetModal>(null);
 
   // Snap points for Bottom Sheets
   const snapPoints = useMemo(() => ['40%', '50%'], []);
-  const bankSnapPoints = useMemo(() => ['50%', '60%'], []);
+  const transactionSnapPoints = useMemo(() => ['50%', '70%'], []);
   const insets = useSafeAreaInsets();
 
   /* ================= ACTIONS ================= */
@@ -102,76 +124,69 @@ const WalletScreen = ({ navigation }: any) => {
     setIsRefreshing(false);
   }, [refetchBalance, refetchTransactions]);
 
-  // Sync data on focus removed to prevent layout glitches on back navigation
-
-  const confirmWithdraw = () => {
-    const amount = Number(withdrawAmount);
-
-    if (!primaryBank) {
-    showAlert({
-      title: 'No Bank Account',
-      message: 'Please add a bank account first',
-      singleButton: true,
-      icon: 'business-outline',
-    });
-      return;
-    }
-
-    if (amount < 500) {
-    showAlert({
-      title: 'Minimum Withdrawal',
-      message: 'Minimum withdrawal is ₹500',
-      singleButton: true,
-      icon: 'alert-circle-outline',
-    });
-      return;
-    }
-
-    if (amount > balance) {
-    showAlert({
-      title: 'Insufficient Balance',
-      message: 'You do not have enough balance to withdraw.',
-      singleButton: true,
-      icon: 'wallet-outline',
-    });
-      return;
-    }
-
-    // For production, this should call a mutation endpoint
-    showAlert({
-      title: 'Withdrawal Requested',
-      message: `Your withdrawal of ₹${amount} is being processed.`,
-      singleButton: true,
-      icon: 'checkmark-circle-outline',
-    });
-    setWithdrawAmount('');
-    withdrawSheetRef.current?.close();
+  const openTransactionDetails = (txn: any) => {
+    setSelectedTransaction(txn);
+    transactionSheetRef.current?.present();
   };
 
-  const addBankAccount = () => {
-    if (!newBankName || !newAccountLast4) {
-    showAlert({
-      title: 'Invalid Details',
-      message: 'Please fill in all details',
-      singleButton: true,
-      icon: 'close-circle-outline',
-    });
+  const handleDownloadReceipt = async () => {
+    if (!selectedTransaction) return;
+    try {
+      const receiptText = `Transaction Receipt\n\nID: ${selectedTransaction.id}\nTitle: ${selectedTransaction.title}\nDate: ${selectedTransaction.date} ${selectedTransaction.time}\nAmount: ${selectedTransaction.amount > 0 ? '+' : ''}₹${Math.abs(selectedTransaction.amount)}\nStatus: ${selectedTransaction.status}`;
+      await Share.share({
+        title: 'Transaction Receipt',
+        message: receiptText,
+      });
+    } catch (error) {
+      console.log('Error sharing receipt', error);
+    }
+  };
+
+  // Sync data on focus removed to prevent layout glitches on back navigation
+
+  const handleTopup = async () => {
+    const amount = Number(topupAmount);
+    if (amount < 50) {
+      showAlert({ title: 'Minimum Amount', message: 'Minimum topup amount is ₹50', singleButton: true, icon: 'alert-circle-outline' });
       return;
     }
-
-    setBanks(prev =>
-      prev.map(b => ({ ...b, isPrimary: false })).concat({
-        id: Date.now().toString(),
-        holderName: 'Driver',
-        bankName: newBankName,
-        accountLast4: newAccountLast4,
-        isPrimary: true,
-      })
-    );
-
-    setNewBankName('');
-    setNewAccountLast4('');
-    addBankSheetRef.current?.close();
+    addMoneySheetRef.current?.dismiss();
+    try {
+      const orderResult = await createOrder({ driverId, amount }).unwrap();
+      const options = {
+        description: 'Wallet Topup',
+        image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
+        currency: orderResult.data?.currency || 'INR',
+        key: Config.RAZORPAY_KEY_ID || 'rzp_test_SCjewpaZ96XBWa',
+        amount: orderResult.data?.amount || String(amount * 100),
+        name: 'T2drive',
+        order_id: orderResult.data?.id,
+        prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
+        theme: { color: '#2563eb' }
+      };
+      const data = await RazorpayCheckout.open(options);
+      const verifyRes = await verifyPayment({
+        driverId, amount,
+        razorpay_order_id: data.razorpay_order_id || '',
+        razorpay_payment_id: data.razorpay_payment_id || '',
+        razorpay_signature: data.razorpay_signature || ''
+      }).unwrap();
+      if (verifyRes.success) {
+        trigger('notificationSuccess');
+        refetchBalance();
+        refetchTransactions();
+        navigation.replace('WalletSuccessScreen', { 
+          amount, 
+          transactionId: data.razorpay_payment_id, 
+          orderId: data.razorpay_order_id, 
+          date: new Date().toISOString() 
+        });
+      }
+    } catch (error: any) {
+      console.log('Payment error', error);
+      const errorMsg = error?.message || error?.error?.description || error?.description || (typeof error === 'string' ? error : 'Payment cancelled or failed');
+      navigation.replace('PaymentFailedScreen', { amount, returnScreen: 'WalletScreen', errorReason: errorMsg });
+    }
   };
 
   const renderBackdrop = useCallback(
@@ -196,6 +211,8 @@ const WalletScreen = ({ navigation }: any) => {
         return { name: 'arrow-up', color: '#dc2626', bg: '#fee2e2' };
       case 'WITHDRAW':
         return { name: 'business-outline', color: '#2563eb', bg: '#dbeafe' };
+      case 'WALLET_TOPUP':
+        return { name: 'add-circle-outline', color: '#16a34a', bg: '#dcfce7' };
       default:
         return { name: 'swap-horizontal', color: '#64748b', bg: '#f1f5f9' };
     }
@@ -223,69 +240,46 @@ const WalletScreen = ({ navigation }: any) => {
         }
         ListHeaderComponent={
           <>
-            {/* ================= BALANCE CARD ================= */}
-            <LinearGradient
-              colors={['#1e3a8a', '#3b82f6']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.balanceCard}
-            >
-              <View style={styles.balanceHeader}>
-                <Text style={styles.balanceLabel}>Total Balance</Text>
-                <Ionicons name="wallet-outline" size={24} color="#e0e7ff" />
-              </View>
-              <Text style={styles.balanceValue}>₹{balance.toLocaleString('en-IN')}</Text>
-
-              <View style={styles.cardActions}>
-                <Pressable
-                  style={[
-                    styles.withdrawBtn,
-                    balance < 500 && { opacity: 0.6 },
-                  ]}
-                  disabled={balance < 500}
-                  onPress={() => withdrawSheetRef.current?.expand()}
-                >
-                  <Ionicons name="push-outline" size={18} color="#1e3a8a" />
-                  <Text style={styles.withdrawText}>Withdraw</Text>
-                </Pressable>
-              </View>
-            </LinearGradient>
-
-            {/* ================= PRIMARY BANK ================= */}
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#1e293b' }]} numberOfLines={1} adjustsFontSizeToFit>Withdrawal Account</Text>
-            </View>
-
-            {primaryBank ? (
-              <View style={[styles.bankCard, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
-                <View style={[styles.bankIconContainer, isDark && { backgroundColor: 'rgba(37, 99, 235, 0.2)' }]}>
-                  <Ionicons name="business" size={24} color={isDark ? '#3B82F6' : '#2563eb'} />
-                </View>
-                <View style={styles.bankDetails}>
-                  <Text style={[styles.bankTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>{primaryBank.bankName}</Text>
-                  <Text style={[styles.bankSub, { color: isDark ? '#9CA3AF' : '#64748b' }]}>
-                    •••• •••• •••• {primaryBank.accountLast4}
-                  </Text>
-                  <Text style={[styles.bankHolder, { color: isDark ? '#6B7280' : '#94a3b8' }]}>{primaryBank.holderName}</Text>
-                </View>
-                <Pressable
-                  style={[styles.changeBankBtn, isDark && { backgroundColor: 'rgba(37, 99, 235, 0.2)' }]}
-                  onPress={() => addBankSheetRef.current?.expand()}
-                >
-                  <Text style={[styles.changeText, isDark && { color: '#60A5FA' }]} numberOfLines={1} adjustsFontSizeToFit>Change</Text>
-                </Pressable>
-              </View>
+            {isLoading ? (
+               <View style={styles.balanceCardSkeleton}>
+                  <Skeleton height={20} width={120} isDark={isDark} style={{ marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                  <Skeleton height={40} width={180} isDark={isDark} style={{ marginBottom: 24, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                  <Skeleton height={40} width={130} isDark={isDark} style={{ backgroundColor: 'rgba(255,255,255,0.2)' }} />
+               </View>
             ) : (
-              <Pressable
-                style={[styles.addBankCard, isDark && { backgroundColor: 'rgba(37, 99, 235, 0.1)', borderColor: 'rgba(37, 99, 235, 0.3)' }]}
-                onPress={() => addBankSheetRef.current?.expand()}
+              <LinearGradient
+                colors={['#1e3a8a', '#3b82f6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.balanceCard}
               >
-                <Ionicons name="add-circle-outline" size={24} color={isDark ? '#60A5FA' : '#2563eb'} />
-                <Text style={[styles.addBankText, isDark && { color: '#60A5FA' }]} numberOfLines={1} adjustsFontSizeToFit>Add Bank Account</Text>
-              </Pressable>
+                <View style={styles.balanceHeader}>
+                  <Text style={styles.balanceLabel}>Total Balance</Text>
+                  <Ionicons name="wallet-outline" size={24} color="#e0e7ff" />
+                </View>
+                <Text style={styles.balanceValue}>₹{balance.toLocaleString('en-IN')}</Text>
+
+                <View style={styles.cardActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.withdrawBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.96 }] }]}
+                    onPress={() => { trigger('impactLight'); addMoneySheetRef.current?.present(); }}
+                  >
+                    <Ionicons name="add-circle-outline" size={18} color="#1e3a8a" />
+                    <Text style={styles.withdrawText}>Add Money</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={({ pressed }) => [styles.withdrawBtn, pressed && { opacity: 0.8, transform: [{ scale: 0.96 }] }, { marginLeft: 12, backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                    onPress={() => { trigger('impactLight'); navigation.navigate('WalletPinSetupScreen'); }}
+                  >
+                    <Ionicons name="lock-closed-outline" size={18} color="#ffffff" />
+                    <Text style={[styles.withdrawText, { color: '#ffffff' }]}>{hasWalletPin ? 'Reset PIN' : 'Setup PIN'}</Text>
+                  </Pressable>
+                </View>
+              </LinearGradient>
             )}
 
-            <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+            <View style={[styles.sectionHeader, { marginTop: isLoading ? 0 : 24 }]}>
               <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>Recent Transactions</Text>
             </View>
           </>
@@ -294,7 +288,14 @@ const WalletScreen = ({ navigation }: any) => {
           const iconConfig = getTransactionIcon(item.type);
           const isPositive = item.amount > 0;
           return (
-            <View style={[styles.transactionItem, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
+            <Pressable 
+              onPress={() => openTransactionDetails(item)}
+              style={({ pressed }) => [
+                styles.transactionItem, 
+                { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : 'transparent', borderWidth: isDark ? 1 : 0 },
+                pressed && { opacity: 0.8, backgroundColor: isDark ? '#374151' : '#f1f5f9' }
+              ]}
+            >
               <View style={[styles.txnIconWrap, { backgroundColor: isDark ? iconConfig.bg.replace('0)', '0.2)') : iconConfig.bg }]}>
                 <Ionicons name={iconConfig.name} size={20} color={isDark ? '#FFFFFF' : iconConfig.color} />
               </View>
@@ -317,29 +318,54 @@ const WalletScreen = ({ navigation }: any) => {
                   <Text style={[styles.txnStatus, isDark && { backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#FCD34D' }]}>{item.status}</Text>
                 )}
               </View>
-            </View>
+            </Pressable>
           );
         }}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={48} color={isDark ? '#4B5563' : '#cbd5e1'} />
-            <Text style={[styles.emptyText, isDark && { color: '#9CA3AF' }]}>No recent transactions</Text>
-          </View>
+          isLoading ? (
+            <View>
+              {[1, 2, 3, 4].map((i) => (
+                <View key={i} style={[styles.transactionItem, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : 'transparent', borderWidth: isDark ? 1 : 0 }]}>
+                  <Skeleton width={44} height={44} borderRadius={22} isDark={isDark} />
+                  <View style={styles.txnBody}>
+                    <Skeleton width={120} height={16} isDark={isDark} style={{ marginBottom: 6 }} />
+                    <Skeleton width={80} height={12} isDark={isDark} />
+                  </View>
+                  <Skeleton width={60} height={20} isDark={isDark} />
+                </View>
+              ))}
+            </View>
+          ) : isError ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="alert-circle-outline" size={56} color="#EF4444" />
+              <Text style={[styles.emptyText, isDark && { color: '#9CA3AF' }]}>Failed to load wallet data</Text>
+              <Pressable style={styles.retryBtn} onPress={() => onRefresh()}>
+                <Text style={styles.retryBtnText}>Retry</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="receipt-outline" size={56} color={isDark ? '#4B5563' : '#cbd5e1'} />
+              <Text style={[styles.emptyText, isDark && { color: '#9CA3AF' }]}>No recent transactions</Text>
+              <Text style={{ color: isDark ? '#6B7280' : '#94a3b8', fontSize: 13, marginTop: 6, textAlign: 'center' }}>When you earn or add money,{'\n'}your transactions will appear here.</Text>
+            </View>
+          )
         }
       />
 
-      {/* ================= WITHDRAW BOTTOM SHEET ================= */}
-      <BottomSheet
-        ref={withdrawSheetRef}
-        index={-1}
+      {/* ================= ADD MONEY BOTTOM SHEET ================= */}
+      <BottomSheetModal
+        ref={addMoneySheetRef}
         snapPoints={snapPoints}
         enablePanDownToClose
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore"
         backdropComponent={renderBackdrop}
         backgroundStyle={[styles.sheetBackground, { backgroundColor: theme.colors.card }]}
         handleIndicatorStyle={[styles.sheetIndicator, isDark && { backgroundColor: '#4B5563' }]}
       >
-        <View style={styles.sheetContent}>
-          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]} numberOfLines={1} adjustsFontSizeToFit>Withdraw Funds</Text>
+        <BottomSheetScrollView style={styles.sheetContent} contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]} numberOfLines={1} adjustsFontSizeToFit>Add Money to Wallet</Text>
           <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#64748b' }]}>
             Available balance: <Text style={[styles.boldText, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>₹{balance.toLocaleString('en-IN')}</Text>
           </Text>
@@ -349,82 +375,100 @@ const WalletScreen = ({ navigation }: any) => {
             <BottomSheetTextInput
               placeholder="0"
               keyboardType="numeric"
-              value={withdrawAmount}
-              onChangeText={setWithdrawAmount}
+              value={topupAmount}
+              onChangeText={setTopupAmount}
               style={[styles.bottomSheetInput, { color: isDark ? '#FFFFFF' : '#0f172a' }]}
               placeholderTextColor={isDark ? '#6B7280' : '#94a3b8'}
             />
           </View>
 
           <View style={styles.quickAmounts}>
-            {[500, 1000, balance].map((amt, idx) => (
+            {[500, 1000, 2000].map((amt, idx) => (
               <Pressable
                 key={idx}
-                style={[styles.quickAmtBtn, isDark && { backgroundColor: '#374151' }]}
-                onPress={() => setWithdrawAmount(amt.toString())}
+                style={({ pressed }) => [styles.quickAmtBtn, isDark && { backgroundColor: '#374151' }, pressed && { opacity: 0.7, transform: [{ scale: 0.96 }] }]}
+                onPress={() => { trigger('impactLight'); setTopupAmount(amt.toString()); }}
               >
                 <Text style={[styles.quickAmtText, isDark && { color: '#D1D5DB' }]}>
-                  {amt === balance ? 'Max' : `₹${amt}`}
+                  ₹{amt}
                 </Text>
               </Pressable>
             ))}
           </View>
 
           <Pressable
-            style={[styles.primaryActionBtn, isDark && { backgroundColor: '#3B82F6', shadowOpacity: 0.1 }]}
-            onPress={confirmWithdraw}
+            style={({ pressed }) => [styles.primaryActionBtn, isDark && { backgroundColor: '#3B82F6', shadowOpacity: 0.1 }, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]} 
+            onPress={() => { trigger('impactMedium'); handleTopup(); }}
           >
-            <Text style={[styles.primaryActionText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>Confirm Withdrawal</Text>
+            <Text style={[styles.primaryActionText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{isCreating || isVerifying ? 'Processing...' : 'Proceed to Pay'}</Text>
           </Pressable>
-        </View>
-      </BottomSheet>
+        </BottomSheetScrollView>
+      </BottomSheetModal>
 
-      {/* ================= ADD BANK BOTTOM SHEET ================= */}
-      <BottomSheet
-        ref={addBankSheetRef}
-        index={-1}
-        snapPoints={bankSnapPoints}
+      {/* ================= TRANSACTION DETAILS BOTTOM SHEET ================= */}
+      <BottomSheetModal
+        ref={transactionSheetRef}
+        snapPoints={transactionSnapPoints}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
         backgroundStyle={[styles.sheetBackground, { backgroundColor: theme.colors.card }]}
         handleIndicatorStyle={[styles.sheetIndicator, isDark && { backgroundColor: '#4B5563' }]}
       >
-        <View style={styles.sheetContent}>
-          <Text style={[styles.sheetTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]} numberOfLines={1} adjustsFontSizeToFit>Add Bank Account</Text>
-          <Text style={[styles.sheetSubtitle, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Enter details to receive your earnings securely.</Text>
+        {selectedTransaction && (
+          <BottomSheetScrollView style={styles.sheetContent} contentContainerStyle={{ paddingBottom: 40 }}>
+            <View style={styles.txnDetailsHeader}>
+              <View style={[styles.txnIconWrap, { width: 64, height: 64, borderRadius: 32, backgroundColor: selectedTransaction.amount > 0 ? (isDark ? 'rgba(22,163,74,0.2)' : '#dcfce7') : (isDark ? 'rgba(239,68,68,0.2)' : '#fee2e2') }]}>
+                <Ionicons 
+                  name={selectedTransaction.amount > 0 ? 'arrow-down' : 'arrow-up'} 
+                  size={32} 
+                  color={selectedTransaction.amount > 0 ? (isDark ? '#34D399' : '#16a34a') : (isDark ? '#F87171' : '#dc2626')} 
+                />
+              </View>
+              <Text style={[styles.txnDetailsTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>{selectedTransaction.title}</Text>
+              <Text style={[styles.txnDetailsAmount, { color: selectedTransaction.amount > 0 ? (isDark ? '#34D399' : '#16a34a') : (isDark ? '#FFFFFF' : '#0f172a') }]}>
+                {selectedTransaction.amount > 0 ? '+' : ''}₹{Math.abs(selectedTransaction.amount).toLocaleString('en-IN')}
+              </Text>
+              {selectedTransaction.status && (
+                <View style={[styles.txnDetailsStatus, isDark && { backgroundColor: 'rgba(52, 211, 153, 0.2)' }]}>
+                  <Text style={[styles.txnDetailsStatusText, isDark && { color: '#34D399' }]}>{selectedTransaction.status}</Text>
+                </View>
+              )}
+            </View>
 
-          <View style={styles.formGroup}>
-            <Text style={[styles.inputLabel, { color: isDark ? '#D1D5DB' : '#475569' }]}>Bank Name</Text>
-            <BottomSheetTextInput
-              placeholder="e.g. State Bank of India"
-              value={newBankName}
-              onChangeText={setNewBankName}
-              style={[styles.formInput, isDark && { backgroundColor: '#374151', borderColor: '#4B5563', color: '#FFFFFF' }]}
-              placeholderTextColor={isDark ? '#6B7280' : '#94a3b8'}
-            />
-          </View>
+            <View style={[styles.txnDetailsCard, { backgroundColor: isDark ? '#1F2937' : '#f8fafc', borderColor: isDark ? '#374151' : '#e2e8f0' }]}>
+              <View style={styles.txnDetailsRow}>
+                <Text style={[styles.txnDetailsLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Transaction ID</Text>
+                <Text style={[styles.txnDetailsValue, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>{selectedTransaction.id}</Text>
+              </View>
+              <View style={styles.txnDetailsRow}>
+                <Text style={[styles.txnDetailsLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Date</Text>
+                <Text style={[styles.txnDetailsValue, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>{selectedTransaction.date}</Text>
+              </View>
+              <View style={styles.txnDetailsRow}>
+                <Text style={[styles.txnDetailsLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Time</Text>
+                <Text style={[styles.txnDetailsValue, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>{selectedTransaction.time}</Text>
+              </View>
+              <View style={styles.txnDetailsRow}>
+                <Text style={[styles.txnDetailsLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Type</Text>
+                <Text style={[styles.txnDetailsValue, { color: isDark ? '#FFFFFF' : '#1e293b' }]}>{selectedTransaction.type.replace('_', ' ')}</Text>
+              </View>
+            </View>
 
-          <View style={styles.formGroup}>
-            <Text style={[styles.inputLabel, { color: isDark ? '#D1D5DB' : '#475569' }]}>Account Number (Last 4 Digits)</Text>
-            <BottomSheetTextInput
-              placeholder="e.g. 1234"
-              keyboardType="numeric"
-              maxLength={4}
-              value={newAccountLast4}
-              onChangeText={setNewAccountLast4}
-              style={[styles.formInput, isDark && { backgroundColor: '#374151', borderColor: '#4B5563', color: '#FFFFFF' }]}
-              placeholderTextColor={isDark ? '#6B7280' : '#94a3b8'}
-            />
-          </View>
-
-          <Pressable
-            style={[styles.primaryActionBtn, { marginTop: 16 }, isDark && { backgroundColor: '#3B82F6', shadowOpacity: 0.1 }]}
-            onPress={addBankAccount}
-          >
-            <Text style={[styles.primaryActionText, isDark && { color: '#FFFFFF' }]}>Save & Set Primary</Text>
-          </Pressable>
-        </View>
-      </BottomSheet>
+            <Pressable
+              style={({ pressed }) => [
+                styles.primaryActionBtn, 
+                { backgroundColor: theme.colors.background, borderColor: theme.colors.primary, borderWidth: 1, marginTop: 16 },
+                isDark && { backgroundColor: '#1F2937' },
+                pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+              ]} 
+              onPress={() => { trigger('impactLight'); handleDownloadReceipt(); }}
+            >
+              <Ionicons name="share-outline" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.primaryActionText, { color: theme.colors.primary }]} numberOfLines={1}>Share Receipt</Text>
+            </Pressable>
+          </BottomSheetScrollView>
+        )}
+      </BottomSheetModal>
     </View>
   );
 };
@@ -459,6 +503,17 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingBottom: 40,
+  },
+  balanceCardSkeleton: {
+    padding: 24,
+    borderRadius: 20,
+    marginBottom: 24,
+    backgroundColor: '#3b82f6',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
   },
   balanceCard: {
     padding: 24,
@@ -597,9 +652,23 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     marginTop: 12,
-    fontSize: 15,
+    fontSize: 16,
     color: '#94a3b8',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  retryBtn: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  retryBtnText: {
+    color: '#2563eb',
+    fontWeight: '600',
+    fontSize: 14,
   },
   sheetBackground: {
     backgroundColor: '#fff',
@@ -610,7 +679,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#cbd5e1',
   },
   sheetContent: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 8,
   },
   sheetTitle: {
     fontSize: 22,
@@ -702,5 +772,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0f172a',
     backgroundColor: '#f8fafc',
+  },
+  txnDetailsHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  txnDetailsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  txnDetailsAmount: {
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  txnDetailsStatus: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  txnDetailsStatusText: {
+    color: '#16a34a',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  txnDetailsCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  txnDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  txnDetailsLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  txnDetailsValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'right',
+    flex: 1,
+    marginLeft: 16,
   },
 });

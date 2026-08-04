@@ -398,9 +398,17 @@ const DocumentScreen = ({ navigation }: any) => {
 
     try {
       await submitDocuments(user.driverId).unwrap();
-      // Delaying the dispatch until the success modal is closed to prevent iOS Modal overlap
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-      setSubmissionStatus('success');
+      
+      showToast({
+        type: 'success',
+        message: t('upload_successful_msg_plural', 'Your documents uploaded successfully.'),
+        duration: 3000,
+      });
+
+      setTimeout(() => {
+        dispatch(setUser({ onboarding_status: 'DOCS_SUBMITTED' }));
+      }, 1500);
     } catch (error: any) {
       console.error('Failed to submit docs:', error);
       setSubmissionStatus('failed');
@@ -622,9 +630,6 @@ const DocumentScreen = ({ navigation }: any) => {
         visible={submissionStatus !== null}
         status={submissionStatus || 'failed'}
         onClose={() => {
-          if (submissionStatus === 'success') {
-            dispatch(setUser({ onboarding_status: 'DOCS_SUBMITTED' }));
-          }
           setSubmissionStatus(null);
         }}
       />

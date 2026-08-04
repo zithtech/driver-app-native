@@ -22,14 +22,14 @@ import { ms, vs } from '../../lib/scale';
 import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl } from '../../utils/imageUtils';
 
-const ListRow = ({ icon, label, value, isLast, s, iconColor }: any) => (
+const ListRow = ({ icon, label, value, isLast, s, iconColor, valueAlign = 'right' }: any) => (
   <View style={[s.listRowItem, !isLast && s.listRowDivider]}>
     <View style={s.listRowLeft}>
       {icon && <Ionicons name={icon} size={18} color={iconColor} style={s.listRowIcon} />}
       <Text style={s.listRowLabel}>{label}</Text>
     </View>
-    <View style={s.listRowRight}>
-      <Text style={s.listRowValue} numberOfLines={2}>{value || '-'}</Text>
+    <View style={[s.listRowRight, { alignItems: valueAlign === 'left' ? 'flex-start' : 'flex-end' }]}>
+      <Text style={[s.listRowValue, { textAlign: valueAlign }]} numberOfLines={2}>{value || '-'}</Text>
     </View>
   </View>
 );
@@ -250,6 +250,8 @@ export default function ProfileDetailsScreen({ navigation }: any) {
       listRowLabel: {
         fontSize: ms(16),
         color: textPrimary,
+        flex: 1,
+        flexWrap: 'wrap',
       },
       listRowRight: {
         flex: 0.6,
@@ -456,16 +458,9 @@ export default function ProfileDetailsScreen({ navigation }: any) {
         </Section>
 
         <Section title={t('contact_information')} s={s}>
-          <ListRow label={t('email')} value={user?.email} icon="mail-outline" iconColor={iconColor} s={s} />
-          <MultiColRow 
-            items={[
-              { label: t('phone'), value: user?.phone_number },
-              { label: t('alternative_phone'), value: user?.alternate_contact },
-            ]}
-            s={s}
-            iconColor={iconColor}
-            isLast
-          />
+          <ListRow label={t('email')} value={user?.email} icon="mail-outline" iconColor={iconColor} s={s} valueAlign="left" />
+          <ListRow label={t('phone')} value={user?.phone_number} icon="call-outline" iconColor={iconColor} s={s} valueAlign="left" />
+          <ListRow label={t('alternative_phone')} value={user?.alternate_contact} icon="call-outline" iconColor={iconColor} s={s} valueAlign="left" isLast />
         </Section>
 
         <Section title={t('step_address_label')} s={s}>

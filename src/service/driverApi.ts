@@ -308,6 +308,25 @@ export const driverApi = createApi({
       providesTags: ['Driver'],
     }),
 
+    // Create topup order
+    createWalletTopupOrder: builder.mutation<any, { driverId: string; amount: number }>({
+      query: ({ driverId, amount }) => ({
+        url: `/drivers/wallet/${driverId}/topup/order`,
+        method: 'POST',
+        body: { amount },
+      }),
+    }),
+
+    // Verify topup payment
+    verifyWalletTopupPayment: builder.mutation<any, { driverId: string; amount: number; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; }>({
+      query: ({ driverId, amount, razorpay_order_id, razorpay_payment_id, razorpay_signature }) => ({
+        url: `/drivers/wallet/${driverId}/topup/verify`,
+        method: 'POST',
+        body: { amount, razorpay_order_id, razorpay_payment_id, razorpay_signature },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
     /* ─────────── RIDE ACTIVITY (/drivers/activity) ─────────── */
 
     // Get ride activity history
@@ -444,6 +463,8 @@ export const {
   useLazyGetWalletBalanceQuery,
   useGetWalletTransactionsQuery,
   useLazyGetWalletTransactionsQuery,
+  useCreateWalletTopupOrderMutation,
+  useVerifyWalletTopupPaymentMutation,
 
   // FCM Token
   useSaveFcmTokenMutation,

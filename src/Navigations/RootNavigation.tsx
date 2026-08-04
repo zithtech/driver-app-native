@@ -59,10 +59,13 @@ import ProfileDocumentsScreen from '../Screens/Profile/ProfileDocumentsScreen';
 import SosContactsScreen from '../Screens/Profile/SosContactsScreen';
 import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
 import RechargePlanScreen from '../Screens/Profile/SubscriptionPlanScreen';
-import MySubscriptionScreen from '../Screens/Profile/MySubscriptionScreen';
+
 import WalletScreen from '../Screens/Profile/WalletScreen';
+import WalletSuccessScreen from '../Screens/Profile/WalletSuccessScreen';
+import WalletPinSetupScreen from '../Screens/Profile/WalletPinSetupScreen';
 import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
 import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
+import PaymentFailedScreen from '../Screens/Profile/PaymentFailedScreen';
 
 import PickupMapScreen from '../Screens/Requests/PickupMapScreen';
 import PickupOTPScreen from '../Screens/Requests/PickupOTPScreen';
@@ -147,10 +150,28 @@ const RootNavigation = () => {
     // 2. Clear Redux State Immediately
     dispatch(clearAcceptedRide());
 
+    // Format detailed message for driver
+    let displayMessage = t(msgKey) || 'The ride has been cancelled.';
+    if (cancelledBy === 'USER') {
+      if (data?.passengerName) {
+        displayMessage = `Passenger ${data.passengerName} cancelled the ride.`;
+      } else {
+        displayMessage = `Passenger cancelled the ride.`;
+      }
+    }
+    const cancelReason = data?.cancelReason || data?.reason;
+    if (cancelReason) {
+      displayMessage += `\nReason: ${cancelReason}`;
+    }
+    const tripIdToDisplay = data?.trip_id || data?.tripId;
+    if (tripIdToDisplay) {
+      displayMessage += `\nRide ID: ${tripIdToDisplay}`;
+    }
+
     // 3. Show Alert and Redirect
     showAlert({
       title: t('ride_cancelled') || 'Ride Cancelled',
-      message: t(msgKey) || 'The ride has been cancelled.',
+      message: displayMessage,
       singleButton: true,
       icon: 'close-circle-outline',
       onConfirm: () => {
@@ -414,9 +435,12 @@ const RootNavigation = () => {
           <Stack.Screen name={EmergencySupport_Nav} component={EmergencySupportScreen} />
           <Stack.Screen name={LegalAgreements_Nav} component={LegalAgreementsScreen} />
           <Stack.Screen name="RechargePlanScreen" component={RechargePlanScreen} />
-          <Stack.Screen name="MySubscriptionScreen" component={MySubscriptionScreen} />
+
           <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="WalletScreen" component={WalletScreen} />
+          <Stack.Screen name="WalletPinSetupScreen" component={WalletPinSetupScreen} />
+          <Stack.Screen name="WalletSuccessScreen" component={WalletSuccessScreen} options={{ gestureEnabled: false }} />
+          <Stack.Screen name="PaymentFailedScreen" component={PaymentFailedScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />
 
           {/* -------- TRIP FLOW -------- */}

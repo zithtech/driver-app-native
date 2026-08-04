@@ -39,6 +39,7 @@ import { logoutUser } from '../../service/utils/logoutHelper';
 import { useAppTheme } from '../../context/ThemeContext';
 import { setUser } from '../../redux/userSlice';
 import { useUpdateDriverMutation } from '../../service/driverApi';
+import { useSignOutMutation } from '../../service/userApi';
 import i18n from '../../i18n/i18n';
 import { languagesList } from '../../constant/language';
 import { RootState } from '../../redux/store';
@@ -65,6 +66,7 @@ const ProfileSettingsScreen = () => {
 
     const { triggerHaptic } = useHaptic();
     const [updateDriver] = useUpdateDriverMutation();
+    const [signOut] = useSignOutMutation();
     const { showSuccessPopup } = React.useContext(RootContext);
 
     const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
@@ -125,12 +127,16 @@ const ProfileSettingsScreen = () => {
         setIsLogoutModalVisible(false);
         setTimeout(async () => {
             try {
+                if (user?.userId && user?.device_id) {
+                    await signOut({ id: user.userId, device_id: user.device_id, role: 'driver' }).unwrap();
+                }
                 await logoutUser(dispatch);
                 navigation.reset({
                     index: 0,
                     routes: [{ name: Auth_Nav }],
                 });
             } catch (e) {
+                console.error('[Settings] Error logging out', e);
             }
         }, 300);
     };

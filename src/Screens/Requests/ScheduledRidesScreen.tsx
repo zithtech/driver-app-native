@@ -453,9 +453,14 @@ const ScheduledRidesScreen = () => {
   const [containerWidth, setContainerWidth] = useState(0);
   const dispatch = useDispatch();
   const myAcceptedRideId = useSelector((state: any) => state.ride.myAcceptedRideId);
+  const currentRide = useSelector((state: any) => state.ride.currentRide);
   const [acceptingRideId, setAcceptingRideId] = useState<string | null>(null);
   const [acceptedSuccessId, setAcceptedSuccessId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
+
+  // 🛡️ Ref to always have the latest myAcceptedRideId inside socket callbacks (avoids stale closure)
+  const myAcceptedRideIdRef = useRef<string | null>(myAcceptedRideId);
+  useEffect(() => { myAcceptedRideIdRef.current = myAcceptedRideId; }, [myAcceptedRideId]);
   useEffect(() => {
     socketService.onTripUpdate(() => {
       refetchTrips();
@@ -465,7 +470,13 @@ const ScheduledRidesScreen = () => {
     socketService.on('NEW_SCHEDULED_RIDE', () => {
       refetchTrips();
     });
-    socketService.on('SCHEDULED_RIDE_TAKEN', () => {
+    socketService.on('SCHEDULED_RIDE_TAKEN', (data: any) => {
+      // 🛡️ Don't remove ride from local state if it's the one WE just accepted
+      const acceptedId = myAcceptedRideIdRef.current;
+      if (data?.tripId && acceptedId && String(data.tripId) === String(acceptedId)) {
+        console.log('[ScheduledRides] Ignoring SCHEDULED_RIDE_TAKEN for our own accepted ride:', acceptedId);
+        return;
+      }
       refetchTrips();
     });
     socketService.on('SCHEDULED_RIDE_CANCELLED', (data: any) => {
@@ -483,8 +494,12 @@ const ScheduledRidesScreen = () => {
     });
 
     socketService.on('TRIP_REMOVED', (data: any) => {
-      if (data?.tripId) {
+      // 🛡️ CRITICAL: Use ref (not closure) so we always have the latest accepted ride ID
+      const acceptedId = myAcceptedRideIdRef.current;
+      if (data?.tripId && String(data.tripId) !== String(acceptedId)) {
         setRides(prev => prev.filter(r => String(r.trip_id) !== String(data.tripId) && String(r.id) !== String(data.tripId)));
+      } else {
+        console.log('[ScheduledRides] Ignoring TRIP_REMOVED for our own accepted ride:', acceptedId);
       }
       refetchTrips();
     });
@@ -543,8 +558,10 @@ const ScheduledRidesScreen = () => {
 
   useEffect(() => {
     const tripsArray = Array.isArray(rawTrips) ? rawTrips : (rawTrips as any)?.data;
+    let mappedRides: Ride[] = [];
+    
     if (tripsArray && Array.isArray(tripsArray)) {
-      const mappedRides: Ride[] = tripsArray.map((trip: any) => {
+      mappedRides = tripsArray.map((trip: any) => {
         const timeVal = trip.scheduled_start_time || trip.startTime || new Date().toISOString();
         return {
           ...trip,
@@ -568,9 +585,41 @@ const ScheduledRidesScreen = () => {
           fuel_type: trip.fuel_type || trip.engine_type || 'Petrol',
         };
       });
-      setRides(mappedRides);
     }
-  }, [rawTrips]);
+
+    // 🛡️ RECOVERY FIX: Inject the persisted accepted ride if the backend didn't return it
+    if (currentRide && (currentRide.booking_type === 'SCHEDULED' || currentRide.is_scheduled)) {
+      const currentTripId = currentRide.trip_id || (currentRide as any).id;
+      const exists = mappedRides.some(r => String(r.trip_id) === String(currentTripId));
+      
+      if (!exists && String(currentTripId) === String(myAcceptedRideId)) {
+        const timeVal = currentRide.scheduled_start_time || currentRide.startTime || new Date().toISOString();
+        mappedRides.push({
+          ...currentRide,
+          trip_id: currentTripId,
+          pickup_address: currentRide.pickup_address || (currentRide as any).pickup,
+          drop_address: currentRide.drop_address || (currentRide as any).drop,
+          total_fare: typeof currentRide.total_fare === 'number' ? currentRide.total_fare : parseFloat(currentRide.total_fare || (currentRide as any).price || '0'),
+          distance_km: currentRide.distance_km ? parseFloat(currentRide.distance_km as any) : parseFloat((currentRide as any).distance || '0'),
+          trip_status: (currentRide.trip_status || (currentRide as any).status || 'ACCEPTED').toString().toUpperCase(),
+          booking_type: 'SCHEDULED',
+          scheduled_start_time: timeVal,
+          startTime: new Date(timeVal).getTime(),
+          passenger: currentRide.passenger || currentRide.passenger_details?.name || currentRide.user_details?.full_name || currentRide.user_details?.first_name || (currentRide as any).passenger_name || (currentRide as any).customer?.name || 'Customer',
+          phone: currentRide.phone || currentRide.passenger_details?.phone || currentRide.user_details?.phone_number || (currentRide as any).customer?.phone || (currentRide as any).passenger_phone || '',
+          rating: typeof currentRide.rating === 'number' ? currentRide.rating : (typeof currentRide.passenger_details?.rating === 'number' ? currentRide.passenger_details.rating : (typeof currentRide.user_details?.rating === 'number' ? currentRide.user_details.rating : (typeof (currentRide as any).customer?.rating === 'number' ? (currentRide as any).customer.rating : 5.0))),
+          paymentType: currentRide.paymentType || currentRide.payment_method || 'CASH',
+          scheduled_status: currentRide.scheduled_status,
+          re_dispatch_count: currentRide.re_dispatch_count,
+          car_name: currentRide.car_name || currentRide.vehicle_model || currentRide.vehicle_type || 'Standard Sedan',
+          transmission: currentRide.transmission || currentRide.transmission_type || 'Manual',
+          fuel_type: currentRide.fuel_type || currentRide.engine_type || 'Petrol',
+        } as Ride);
+      }
+    }
+
+    setRides(mappedRides);
+  }, [rawTrips, currentRide, myAcceptedRideId]);
 
   const loadRides = async (isRefresh = false) => {
     if (isRefresh) {
@@ -595,7 +644,7 @@ const ScheduledRidesScreen = () => {
   }, []);
 
   const acceptedRide = useMemo(
-    () => rides.find((r) => r.trip_id === myAcceptedRideId && r.trip_status === 'ACCEPTED'),
+    () => rides.find((r) => String(r.trip_id) === String(myAcceptedRideId) && r.trip_status === 'ACCEPTED'),
     [rides, myAcceptedRideId]
   );
 
@@ -610,10 +659,11 @@ const ScheduledRidesScreen = () => {
       // Strictly include ONLY scheduled rides in this screen
       if (ride.booking_type !== 'SCHEDULED') { return false; }
 
+      // ALWAYS allow my accepted ride to show in the accepted tab
+      if (String(ride.trip_id) === String(myAcceptedRideId)) return true;
+
       // 2. No new scheduled rides if it's a 'day' plan or no subscription
       if (billingCycle === 'day' || !billingCycle) {
-        // If it's my accepted ride, allow it anyway so it shows in the accepted tab
-        if (ride.trip_id === myAcceptedRideId) return true;
         return false;
       }
 
@@ -647,7 +697,7 @@ const ScheduledRidesScreen = () => {
 
       const rideDate = new Date(ride.scheduled_start_time);
       const isToday = rideDate >= today && rideDate < tomorrow;
-      const isMine = ride.trip_id === myAcceptedRideId;
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId);
 
       let matchesTab = false;
       if (activeTab === 'accepted') {
@@ -727,7 +777,7 @@ const ScheduledRidesScreen = () => {
         return false;
       }
 
-      const isMine = r.trip_id === myAcceptedRideId;
+      const isMine = String(r.trip_id) === String(myAcceptedRideId);
       if (!isMine) {
         // Exclude others' active/accepted rides
         if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
@@ -737,10 +787,10 @@ const ScheduledRidesScreen = () => {
       return true;
     });
 
-    const acceptedRides = visibleRides.filter(r => r.trip_id === myAcceptedRideId);
+    const acceptedRides = visibleRides.filter(r => String(r.trip_id) === String(myAcceptedRideId));
     const todayRides = visibleRides.filter(r => {
       const d = new Date(r.scheduled_start_time);
-      return d >= today && d < tomorrow && r.trip_id !== myAcceptedRideId;
+      return d >= today && d < tomorrow && String(r.trip_id) !== String(myAcceptedRideId);
     });
 
     return {
@@ -896,12 +946,27 @@ const ScheduledRidesScreen = () => {
     triggerHaptic(HapticFeedbackTypes.impactMedium);
 
     try {
-      await acceptTripMutation({ tripId: ride.trip_id, driverId: user.driverId || user.id }).unwrap();
+      const acceptResponse = await acceptTripMutation({ tripId: ride.trip_id, driverId: user.driverId || user.id }).unwrap();
+
+      // 🛡️ PRODUCTION FIX: Store the SERVER response (which has booking_type, driver_id, etc.)
+      // instead of the client-side ride object which may be missing critical fields.
+      const serverTrip = acceptResponse?.data || acceptResponse;
+      const rideToStore = {
+        ...ride,
+        ...serverTrip,
+        // Ensure the trip_id is always present (some responses nest differently)
+        trip_id: serverTrip?.trip_id || ride.trip_id,
+        // Preserve UI-only fields from the client-side ride object
+        startTime: ride.startTime || new Date(serverTrip?.scheduled_start_time || ride.scheduled_start_time).getTime(),
+        passenger: serverTrip?.user_details?.full_name || serverTrip?.user_details?.first_name || ride.passenger,
+        phone: serverTrip?.user_details?.phone_number || ride.phone,
+        rating: serverTrip?.user_details?.rating || ride.rating,
+      };
 
       // Show Success State
       setAcceptedSuccessId(ride.trip_id);
       dispatch(setMyAcceptedRideId(ride.trip_id));
-      dispatch(setCurrentRide(ride));
+      dispatch(setCurrentRide(rideToStore));
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
 
       // Schedule reminders for the accepted ride

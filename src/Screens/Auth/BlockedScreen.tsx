@@ -9,16 +9,25 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { clearUser } from '../../redux/userSlice';
 import { useTranslation } from 'react-i18next';
 import { logoutUser } from '../../service/utils/logoutHelper';
+import { useSignOutMutation } from '../../service/userApi';
 
 const BlockedScreen = () => {
     const user = useSelector((state: RootState) => state.userSlice.user);
     const dispatch = useDispatch();
     const { t } = useTranslation();
+    const [signOut] = useSignOutMutation();
 
     const isBlocked = user?.status === 'blocked';
     const reason = user?.status_reason || 'No specific reason provided by administrator.';
 
     const handleLogout = async () => {
+        try {
+            if (user?.userId && user?.device_id) {
+                await signOut({ id: user.userId, device_id: user.device_id, role: 'driver' }).unwrap();
+            }
+        } catch (e) {
+            console.error('[BlockedScreen] Error signing out', e);
+        }
         await logoutUser(dispatch);
     };
 
