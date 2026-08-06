@@ -609,7 +609,6 @@ const DriverDashboard = () => {
           earnings={String(computedEarnings.toFixed(2))}
           rides={computedCompletedRides}
           displayTimeFormatted={formatOnlineTime(onlineSecondsFromBackend || onlineSeconds, { h: t('h'), m: t('m'), s: t('s') })}
-          distance={0}
           cancellations={computedCancellations}
           timerPulseAnim={timerPulseAnim}
           onEarningsPress={() => navigation.navigate('EarningsScreen')}

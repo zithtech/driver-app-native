@@ -1011,7 +1011,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
                 <Ionicons name="location" size={ms(20)} color="#EF4444" />
               </View>
               <Text style={[styles.addressText, { color: theme.colors.text }]}>
-                {ride.drop_address || ride.drop || t('destination')}
+                {ride.pickup_address || ride.pickup || t('destination')}
               </Text>
             </View>
 

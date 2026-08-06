@@ -698,14 +698,15 @@ const ScheduledRidesScreen = () => {
       const rideDate = new Date(ride.scheduled_start_time);
       const isToday = rideDate >= today && rideDate < tomorrow;
       const isMine = String(ride.trip_id) === String(myAcceptedRideId);
+      const isSuccessAnimating = String(ride.trip_id) === String(acceptedSuccessId);
 
       let matchesTab = false;
       if (activeTab === 'accepted') {
         matchesTab = isMine;
       } else if (activeTab === 'today') {
-        matchesTab = isToday && !isMine;
+        matchesTab = (isToday && !isMine) || isSuccessAnimating;
       } else if (activeTab === 'upcoming') {
-        matchesTab = !isToday && !isMine;
+        matchesTab = (!isToday && !isMine) || isSuccessAnimating;
       }
 
       if (!matchesTab) { return false; }
@@ -978,6 +979,7 @@ const ScheduledRidesScreen = () => {
 
       // Delay to let the driver see the success state
       setTimeout(() => {
+        switchTab('accepted');
         setAcceptedSuccessId(null);
         setSelectedRide(null);
         refetchTrips();

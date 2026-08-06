@@ -38,6 +38,7 @@ import {
 } from '../../service/userApi';
 import { useGetWalletBalanceQuery } from '../../service/driverApi';
 import { useAppTheme } from '../../context/ThemeContext';
+import CurrentPlanDetailsView from './CurrentPlanDetailsView';
 import AppStatusBar from '../../Components/AppStatusBar';
 import PaymentMethodModal from '../../Components/PaymentMethodModal';
 
@@ -191,9 +192,9 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     let colorScheme: Pick<PlanTier, 'color' | 'lightColor' | 'icon' | 'iconType' | 'subtitle' | 'highlight'> = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'car', iconType: 'ionicons', subtitle: 'For getting started', highlight: 'Perfect for new drivers and local one-way trips.' };
     
     if (lowerName.includes('basic')) {
-      colorScheme = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'medal', iconType: 'ionicons', subtitle: 'For getting started', highlight: 'Perfect for new drivers and\nlocal one-way trips.' };
+      colorScheme = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'crown', iconType: 'material', subtitle: 'For getting started', highlight: 'Perfect for new drivers and\nlocal one-way trips.' };
     } else if (lowerName.includes('elite')) {
-      colorScheme = { color: '#6D28D9', lightColor: '#F5F3FF', icon: 'flash', iconType: 'ionicons', subtitle: 'More trips, more earnings', highlight: 'For drivers who want more rides\nand better opportunities.' };
+      colorScheme = { color: '#10B981', lightColor: '#ECFDF5', icon: 'crown', iconType: 'material', subtitle: 'More trips, more earnings', highlight: 'For drivers who want more rides\nand better opportunities.' };
     } else if (lowerName.includes('premium')) {
       colorScheme = { color: '#D97706', lightColor: '#FEF3C7', icon: 'crown', iconType: 'material', subtitle: 'All trips. All access.', highlight: 'For professional drivers who want\nmaximum earnings.' };
     }
@@ -250,9 +251,8 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
       else if (isPremium) isEligible = !!eligibility.premium;
       else isEligible = true; // Fallback for unknown plans
     } else {
-      // Default: If no eligibility object, only Basic is allowed
-      if (isBasic) isEligible = true;
-      else isEligible = false;
+      // Default: If no eligibility object, allow all plans so drivers can recharge
+      isEligible = true;
     }
 
     if (!isEligible) {
@@ -320,7 +320,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     setIsProcessing(false); // Enable interactions, modal handles the rest
   };
 
-  const executeWalletSubscription = async (pin: string) => {
+  const executeWalletSubscription = async (pin: string, promoCode?: string) => {
     if (!modalData.tier) return;
     setIsProcessing(true);
     
@@ -332,6 +332,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         plan_id: modalData.tier.id,
         billing_cycle: getBillingCycle(selectedDuration) as 'day'|'week'|'month',
         pin: pin,
+        promo_code: promoCode,
       }).unwrap();
 
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
@@ -341,7 +342,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
       navigation.replace('SubscriptionSuccessScreen', {
         planName: modalData.tier.name,
         planColor: modalData.tier.color,
-        amountPaid: res.amount_paid || 0,
+        amountPaid: res.amount_paid || (modalData.amountToPay * 100),
         duration: selectedDuration,
         transactionId: 'Wallet Payment',
         isUpgrade: false,
@@ -353,11 +354,13 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
       setPaymentModalVisible(false);
       const errorMsg = error?.data?.message || error?.message || 'Could not deduct from wallet';
       const price = modalData.amountToPay || 0;
+      const failedPlanName = modalData.tier?.name;
       
       // Add a slight delay to ensure the modal is fully closed before navigating
       setTimeout(() => {
         navigation.replace('PaymentFailedScreen', { 
           amount: price, 
+          planName: failedPlanName,
           returnScreen: 'RechargePlanScreen', 
           errorReason: errorMsg 
         });
@@ -365,7 +368,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     }
   };
 
-  const executeSubscription = async () => {
+  const executeSubscription = async (promoCode?: string, isRetry = false) => {
     const tier = modalData.tier;
     if (!tier) return;
     setPaymentModalVisible(false);
@@ -376,6 +379,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         const orderResponse = await createSubscriptionOrder({
           plan_id: tier.id,
           billing_cycle: 'day',
+          promo_code: promoCode,
         }).unwrap();
 
         const orderData = orderResponse.data;
@@ -401,21 +405,29 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
         triggerHaptic(HapticFeedbackTypes.notificationSuccess);
         refetchSub();
-        navigation.replace('SubscriptionSuccessScreen', {
-          planName: tier.name,
-          planColor: tier.color,
-          amountPaid: orderData.amount,
-          duration: 'daily',
-          transactionId: data.razorpay_payment_id || 'One-Time',
-          isUpgrade: false,
-          isDowngrade: false,
-          proratedCredit: 0,
+        navigation.reset({
+          index: 0,
+          routes: [{
+            name: 'SubscriptionSuccessScreen',
+            params: {
+              planName: tier.name,
+              planColor: tier.color,
+              amountPaid: orderData.amount,
+              duration: 'daily',
+              transactionId: data.razorpay_payment_id || 'One-Time',
+              isUpgrade: false,
+              isDowngrade: false,
+              proratedCredit: 0,
+            }
+          }]
         });
+        return Promise.resolve();
       } else {
         // AUTO-RENEW SUBSCRIPTION FOR WEEKLY/MONTHLY
         const autoSubResponse = await createAutoSubscription({
           plan_id: tier.id,
           billing_cycle: getBillingCycle(selectedDuration),
+          promo_code: promoCode,
         }).unwrap();
 
         const subData = autoSubResponse.data;
@@ -442,16 +454,23 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
         triggerHaptic(HapticFeedbackTypes.notificationSuccess);
         refetchSub();
-        navigation.replace('SubscriptionSuccessScreen', {
-          planName: tier.name,
-          planColor: tier.color,
-          amountPaid: subData.amount_to_pay,
-          duration: selectedDuration,
-          transactionId: data.razorpay_payment_id || 'Auto-Subscription',
-          isUpgrade: subData.is_upgrade,
-          isDowngrade: subData.is_downgrade,
-          proratedCredit: subData.prorated_credit,
+        navigation.reset({
+          index: 0,
+          routes: [{
+            name: 'SubscriptionSuccessScreen',
+            params: {
+              planName: tier.name,
+              planColor: tier.color,
+              amountPaid: subData.amount_to_pay,
+              duration: selectedDuration,
+              transactionId: data.razorpay_payment_id || 'Auto-Subscription',
+              isUpgrade: subData.is_upgrade,
+              isDowngrade: subData.is_downgrade,
+              proratedCredit: subData.prorated_credit,
+            }
+          }]
         });
+        return Promise.resolve();
       }
     } catch (error: any) {
       const price = selectedDuration === 'daily' ? tier.pricing.daily : selectedDuration === 'weekly' ? tier.pricing.weekly : tier.pricing.monthly;
@@ -479,10 +498,20 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
       } catch (e) {
         console.log("Error parsing payment error", e);
       }
-      
-      navigation.replace('PaymentFailedScreen', { amount: price, returnScreen: 'RechargePlanScreen', errorReason: errorMsg });
+      if (isRetry) {
+        setIsProcessing(false);
+        return Promise.reject(errorMsg);
+      } else {
+        navigation.navigate('PaymentFailedScreen', { 
+          amount: price, 
+          planName: tier.name, 
+          returnScreen: 'RechargePlanScreen', 
+          errorReason: errorMsg,
+          onRetry: () => executeSubscription(promoCode, true)
+        });
+      }
     } finally {
-      setIsProcessing(false);
+      if (!isRetry) setIsProcessing(false);
     }
   };
 
@@ -525,15 +554,16 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     const now = new Date();
     
     const diffTime = endDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     let remainingText = '';
     if (diffTime > 0) {
-      if (diffDays > 1) {
-        remainingText = `${diffDays} days remaining`;
+      const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        remainingText = `${days} day${days > 1 ? 's' : ''} ${hours}h remaining`;
       } else {
-        const hours = Math.floor(diffTime / (1000 * 60 * 60));
-        const mins = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
         remainingText = `${hours}h ${mins}m remaining`;
       }
     } else {
@@ -597,6 +627,19 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     );
   }
 
+  const isViewingCurrentPlan = activePlan && activePlan.status?.toUpperCase() === 'ACTIVE' && !isSwitchPlanMode;
+
+  if (isViewingCurrentPlan) {
+    return (
+      <CurrentPlanDetailsView 
+        activePlan={activePlan} 
+        user={user} 
+        onManagePlan={() => setIsSwitchPlanMode(true)} 
+        navigation={navigation}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]} edges={['bottom', 'left', 'right']}>
       {isFocused && <AppStatusBar forceLight={false} />}
@@ -608,7 +651,9 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>Subscription Plans</Text>
-          <View style={{ width: 24 }} />
+          <Pressable onPress={() => navigation.navigate('SubscriptionHistoryScreen')} style={styles.backButton}>
+            <Ionicons name="time-outline" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+          </Pressable>
         </View>
         <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Choose the best plan to maximize your earnings</Text>
       </View>
@@ -771,40 +816,27 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
            <View style={styles.bottomFeatureItem}>
              <Ionicons name="shield-checkmark" size={24} color="#2563EB" />
              <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Secure Payments</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>100% secure{'\n'}transactions</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>100% secure transactions</Text>
            </View>
            <View style={styles.bottomFeatureDivider} />
            <View style={styles.bottomFeatureItem}>
              <Ionicons name="flash" size={24} color="#2563EB" />
              <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Instant Activation</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Activate your plan{'\n'}immediately</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Activate your plan immediately</Text>
            </View>
            <View style={styles.bottomFeatureDivider} />
            <View style={styles.bottomFeatureItem}>
              <Ionicons name="sync" size={24} color="#10B981" />
              <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Flexible Plans</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Change or renew{'\n'}your plan anytime</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Change or renew your plan anytime</Text>
            </View>
            <View style={styles.bottomFeatureDivider} />
            <View style={styles.bottomFeatureItem}>
              <Ionicons name="headset" size={24} color="#2563EB" />
              <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>24/7 Support</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>We're here to{'\n'}help you</Text>
+             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>We're here to help you</Text>
            </View>
         </View>
-
-        {/* Switch Plan Button and Status for Active Subscriptions */}
-        {activePlan && activePlan.status?.toUpperCase() === 'ACTIVE' && !isSwitchPlanMode && (
-          <View>
-            {renderActivePlanStatus()}
-            <Pressable 
-              style={[styles.chooseBtn, { backgroundColor: '#2563EB', marginHorizontal: 16, marginBottom: 24 }]}
-              onPress={() => setIsSwitchPlanMode(true)}
-            >
-              <Text style={[styles.chooseBtnText, { color: '#FFFFFF' }]}>Switch Plan</Text>
-            </Pressable>
-          </View>
-        )}
 
         <View style={styles.footer}>
           <Ionicons name="shield-checkmark" size={16} color="#6B7280" style={{ marginRight: 6 }} />
@@ -864,7 +896,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 }}
               >
                 <Ionicons name="call" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.modalBtnPrimaryText}>Contact Admin</Text>
+                <Text style={styles.modalBtnPrimaryText}>Contact</Text>
               </Pressable>
             </View>
           </View>
@@ -997,9 +1029,9 @@ const styles = StyleSheet.create({
   chooseBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   chooseBtnText: { fontSize: 15, fontWeight: '700' },
 
-  bottomFeaturesContainer: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 12, padding: 16, justifyContent: 'space-between', marginBottom: 24 },
-  bottomFeatureItem: { flex: 1, alignItems: 'center' },
-  bottomFeatureDivider: { width: 1, backgroundColor: '#E5E7EB', marginHorizontal: 4 },
+  bottomFeaturesContainer: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 8, justifyContent: 'space-between', marginBottom: 24 },
+  bottomFeatureItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
+  bottomFeatureDivider: { width: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
   bfTitle: { fontSize: 11, fontWeight: '700', marginTop: 8, textAlign: 'center' },
   bfSubtitle: { fontSize: 9, textAlign: 'center', marginTop: 4, lineHeight: 12 },
 

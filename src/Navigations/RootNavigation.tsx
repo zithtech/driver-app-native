@@ -32,6 +32,8 @@ import {
   ScheduledRides_Nav,
   Blocked_Nav,
   ReferEarn_Nav,
+  SubscriptionHistory_Nav,
+  SubscriptionDetail_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -61,10 +63,15 @@ import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
 import RechargePlanScreen from '../Screens/Profile/SubscriptionPlanScreen';
 
 import WalletScreen from '../Screens/Profile/WalletScreen';
+import AddMoneyScreen from '../Screens/Profile/AddMoneyScreen';
+import TransactionHistoryScreen from '../Screens/Profile/TransactionHistoryScreen';
+import TransactionDetailScreen from '../Screens/Profile/TransactionDetailScreen';
 import WalletSuccessScreen from '../Screens/Profile/WalletSuccessScreen';
 import WalletPinSetupScreen from '../Screens/Profile/WalletPinSetupScreen';
 import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
 import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
+import SubscriptionHistoryScreen from '../Screens/Profile/SubscriptionHistoryScreen';
+import SubscriptionDetailScreen from '../Screens/Profile/SubscriptionDetailScreen';
 import PaymentFailedScreen from '../Screens/Profile/PaymentFailedScreen';
 
 import PickupMapScreen from '../Screens/Requests/PickupMapScreen';
@@ -438,10 +445,15 @@ const RootNavigation = () => {
 
           <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="WalletScreen" component={WalletScreen} />
+          <Stack.Screen name="AddMoneyScreen" component={AddMoneyScreen} />
+          <Stack.Screen name="TransactionHistoryScreen" component={TransactionHistoryScreen} />
+          <Stack.Screen name="TransactionDetailScreen" component={TransactionDetailScreen} />
           <Stack.Screen name="WalletPinSetupScreen" component={WalletPinSetupScreen} />
           <Stack.Screen name="WalletSuccessScreen" component={WalletSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="PaymentFailedScreen" component={PaymentFailedScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />
+          <Stack.Screen name={SubscriptionHistory_Nav} component={SubscriptionHistoryScreen} />
+          <Stack.Screen name={SubscriptionDetail_Nav} component={SubscriptionDetailScreen} />
 
           {/* -------- TRIP FLOW -------- */}
           <Stack.Screen name={PickupMapScreen_Nav} component={PickupMapScreen} />

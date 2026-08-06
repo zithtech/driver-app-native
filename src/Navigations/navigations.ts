@@ -52,4 +52,6 @@ export const NavigationScreen_Nav = 'NavigationScreen';
 export const ChatScreen_Nav = 'ChatScreen'; 
 export const Blocked_Nav = 'BlockedScreen'; 
 export const ReferEarn_Nav = 'ReferEarnScreen';
+export const SubscriptionHistory_Nav = 'SubscriptionHistoryScreen';
+export const SubscriptionDetail_Nav = 'SubscriptionDetailScreen';
 

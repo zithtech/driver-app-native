@@ -135,10 +135,12 @@ const DashboardProfileHeader: React.FC<Props> = ({
                             <Text style={[styles.tripsCount, { color: isDark ? theme.colors.textMuted : '#64748B' }]}> ({totalTrips})</Text>
                         </Text>
 
-                        <View style={[styles.badge, { marginLeft: s(10), backgroundColor: currentTier.bg }]}>
-                            <Ionicons name={currentTier.icon} size={ms(12)} color={currentTier.color} style={{ marginRight: s(4) }} />
-                            <Text style={[styles.badgeText, { color: currentTier.color }]} numberOfLines={1} adjustsFontSizeToFit>{currentTier.label}</Text>
-                        </View>
+                        {subscription?.status === 'active' && (
+                            <View style={[styles.badge, { marginLeft: s(10), backgroundColor: currentTier.bg }]}>
+                                <Ionicons name={currentTier.icon} size={ms(12)} color={currentTier.color} style={{ marginRight: s(4) }} />
+                                <Text style={[styles.badgeText, { color: currentTier.color }]} numberOfLines={1} adjustsFontSizeToFit>{currentTier.label}</Text>
+                            </View>
+                        )}
                     </View>
 
                 </View>

@@ -11,7 +11,6 @@ interface TodayOverviewProps {
     earnings: string;
     rides: number;
     displayTimeFormatted: string;
-    distance: number;
     cancellations: number;
     timerPulseAnim: Animated.Value;
     onEarningsPress?: () => void;
@@ -22,7 +21,6 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
     earnings,
     rides,
     displayTimeFormatted,
-    distance,
     cancellations,
     timerPulseAnim,
     onEarningsPress,
@@ -72,19 +70,6 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                         {displayTimeFormatted}
                     </Animated.Text>
                     <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('online')}</Text>
-                </View>
-            </View>
-
-            {/* Distance */}
-            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
-                <View style={[styles.todayIcon, { backgroundColor: isDark ? '#78350f' : '#FEF3C7' }]}>
-                    <Ionicons name="map-outline" size={ms(20)} color={isDark ? '#FBBF24' : '#D97706'} />
-                </View>
-                <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
-                        {distance} <Text style={{ fontSize: ms(12) }}>km</Text>
-                    </Text>
-                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('distance')}</Text>
                 </View>
             </View>
 

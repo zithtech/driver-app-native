@@ -17,7 +17,7 @@ import { useSetupWalletPinMutation } from '../../service/userApi';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { setUser } from '../../redux/userSlice';
-import { useAlert } from '../../context/AlertContext';
+import { useToast } from '../../context/ToastContext';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
 
@@ -25,7 +25,7 @@ const WalletPinSetupScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const { theme } = useAppTheme();
   const { triggerHaptic } = useHaptic();
-  const { showAlert } = useAlert();
+  const { showToast } = useToast();
   
   const user = useSelector((state: RootState) => state.userSlice.user);
   const dispatch = useDispatch();
@@ -60,7 +60,7 @@ const WalletPinSetupScreen = ({ navigation }: any) => {
 
   const handleSave = async () => {
     if (confirmPin !== pin) {
-      showAlert({ title: 'Error', message: 'PINs do not match.', singleButton: true, icon: 'close-circle-outline' });
+      showToast({ message: 'PINs do not match.', type: 'error' });
       setConfirmPin('');
       setStep(1);
       setPin('');
@@ -71,15 +71,13 @@ const WalletPinSetupScreen = ({ navigation }: any) => {
       await setupWalletPin({ id: user?.driverId || '', pin }).unwrap();
       dispatch(setUser({ has_wallet_pin: true }));
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-      showAlert({ 
-        title: 'Success', 
+      showToast({ 
         message: 'Wallet PIN setup successfully.', 
-        singleButton: true, 
-        icon: 'checkmark-circle-outline' 
+        type: 'success' 
       });
       navigation.goBack();
     } catch (err: any) {
-      showAlert({ title: 'Error', message: err.message || 'Failed to setup PIN', singleButton: true, icon: 'close-circle-outline' });
+      showToast({ message: err.message || 'Failed to setup PIN', type: 'error' });
     }
   };
 

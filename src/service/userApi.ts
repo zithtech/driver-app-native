@@ -93,7 +93,7 @@ export const userApi = createApi({
     }),
 
     // Auto-Subscription (Razorpay Subscriptions API)
-    createAutoSubscription: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month' }>({
+    createAutoSubscription: builder.mutation<any, { plan_id: number; billing_cycle: 'day' | 'week' | 'month'; promo_code?: string }>({
       query: (body) => ({
         url: '/subscriptions/auto-subscribe',
         method: 'POST',
@@ -130,6 +130,11 @@ export const userApi = createApi({
 
     getSubscriptionPlans: builder.query<any, void>({
       query: () => '/subscriptions',
+      providesTags: ['Subscription'],
+    }),
+
+    getSubscriptionHistory: builder.query<any, void>({
+      query: () => '/subscriptions/history',
       providesTags: ['Subscription'],
     }),
 
@@ -230,6 +235,8 @@ export const {
   useLazyGetMySubscriptionQuery,
   useGetSubscriptionPlansQuery,
   useLazyGetSubscriptionPlansQuery,
+  useGetSubscriptionHistoryQuery,
+  useLazyGetSubscriptionHistoryQuery,
 
   // Promos
   useValidatePromoMutation,
