@@ -16,13 +16,13 @@ import { Text } from './index';
 interface ImageZoomModalProps {
   visible: boolean;
   onClose: () => void;
-  imageUris: string[];
+  imageUris: (string | number)[];
   title?: string;
 }
 
 const { width, height } = Dimensions.get('window');
 
-const ImageNode = ({ uri }: { uri: string }) => {
+const ImageNode = ({ uri }: { uri: string | number }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -38,7 +38,7 @@ const ImageNode = ({ uri }: { uri: string }) => {
         </View>
       ) : (
         <Image
-          source={{ uri }}
+          source={typeof uri === 'string' ? { uri } : uri}
           style={styles.image}
           resizeMode="contain"
           onLoadStart={() => { setLoading(true); setError(false); }}

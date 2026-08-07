@@ -29,6 +29,16 @@ const getTransactionTitle = (type: TransactionType, title: string) => {
   return title || 'Transaction';
 };
 
+const getTransactionIcon = (type: TransactionType, title: string = '', amount: number = 0) => {
+  const t = title?.toLowerCase() || '';
+  if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return { name: 'wallet', color: '#16a34a', bg: '#dcfce7' };
+  if (t.includes('subscription')) return { name: 'document-text-outline', color: '#7c3aed', bg: '#f3e8ff' };
+  if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return { name: 'trophy-outline', color: '#d97706', bg: '#fef9c3' };
+  if (t.includes('refund') || type === 'REFUND') return { name: 'arrow-undo-outline', color: '#ef4444', bg: '#fee2e2' };
+  if (amount < 0) return { name: 'wallet', color: '#ef4444', bg: '#fee2e2' };
+  return { name: 'pricetag-outline', color: '#475569', bg: '#f1f5f9' };
+};
+
 const TransactionDetailScreen = ({ navigation, route }: any) => {
   const { isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -50,6 +60,10 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
       const isPositive = transaction.amount > 0;
       const formattedAmount = Math.abs(transaction.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
       
+      const txDate = new Date(transaction.createdAt || transaction.date || Date.now());
+      const displayDate = txDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+      const displayTime = txDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -67,7 +81,7 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
             .amount-row { font-size: 20px; border-bottom: 2px solid #333; margin-top: 20px; }
             .amount-row .value { color: #1D7AF2; font-size: 28px; }
             .footer { text-align: center; margin-top: 60px; color: #94A3B8; font-size: 14px; line-height: 1.6; }
-            .badge { background: ${isPositive ? '#10B981' : '#EF4444'}; color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+            .badge { background: ${transaction.status === 'Failed' ? '#EF4444' : (transaction.status === 'Pending' ? '#F59E0B' : '#10B981')}; color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
           </style>
         </head>
         <body>
@@ -84,7 +98,7 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
 
             <div class="row">
               <span class="label">Date</span>
-              <span class="value">${transaction.date}, ${transaction.time}</span>
+              <span class="value">${displayDate}, ${displayTime}</span>
             </div>
             <div class="row">
               <span class="label">Transaction ID</span>
@@ -138,12 +152,48 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
   if (!transaction) return null;
 
   const isPositive = transaction.amount > 0;
-  const amountColor = isPositive ? '#16a34a' : (isDark ? '#ffffff' : '#0f172a');
+  const amountColor = isPositive ? '#16a34a' : '#ef4444';
   const closingBalance = transaction.closingBalance || 0;
   const prevBalance = closingBalance - transaction.amount;
   const formattedAmount = Math.abs(transaction.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
   const formattedClosing = closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
   const formattedPrev = prevBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  
+  const txDateRender = new Date(transaction.createdAt || transaction.date || Date.now());
+  const displayDateRender = txDateRender.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+  const displayTimeRender = txDateRender.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+  
+  const isSuccess = transaction.status === 'Completed' || transaction.status === 'Success' || transaction.status === 'SUCCESS' || !transaction.status;
+  const statusColor = isSuccess ? '#16a34a' : (transaction.status === 'Failed' ? '#DC2626' : '#d97706');
+  const statusIcon = isSuccess ? 'checkmark-circle' : (transaction.status === 'Failed' ? 'close-circle' : 'time');
+  const statusText = transaction.status === 'Completed' ? 'Transaction Completed' : (transaction.status || 'Success');
+
+  const getRemarks = () => {
+    if (transaction.remarks) return transaction.remarks;
+    if (transaction.description) return transaction.description;
+    
+    const type = transaction.type;
+    const title = (transaction.title || '').toLowerCase();
+    
+    if (type === 'WALLET_TOPUP' || title.includes('added to wallet') || title.includes('topup')) {
+      return 'Money added to wallet';
+    }
+    if (title.includes('subscription')) {
+      return 'Payment for subscription plan';
+    }
+    if (type === 'REFERRAL_BONUS' || title.includes('referral') || title.includes('bonus')) {
+      return 'Bonus received for referral';
+    }
+    if (title.includes('refund') || type === 'REFUND') {
+      return 'Refund processed';
+    }
+    if (!isPositive) {
+      return 'Amount deducted from wallet';
+    }
+    return 'Transaction processed successfully';
+  };
+
+  const iconConfig = getTransactionIcon(transaction.type, transaction.title, transaction.amount);
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#fafafa' }]}>
@@ -151,8 +201,8 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
 
       <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: isDark ? '#111827' : '#fafafa' }]}>
         <View style={styles.headerLeft}>
-          <Pressable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDark ? '#1F2937' : '#fff' }]}>
-            <Ionicons name="arrow-back" size={20} color={isDark ? "#ffffff" : "#0f172a"} />
+          <Pressable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: 'transparent' }]}>
+            <Ionicons name="arrow-back" size={24} color={isDark ? "#ffffff" : "#0f172a"} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: isDark ? "#ffffff" : "#0f172a" }]}>Transaction Details</Text>
         </View>
@@ -161,39 +211,42 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
 
         {/* Top Greenish Card */}
-        <View style={[styles.topCard, { backgroundColor: isDark ? '#1F2937' : '#f4fbf4', borderColor: isDark ? '#374151' : '#e5f3e7' }]}>
+        <View style={[styles.topCard, { backgroundColor: isDark ? '#1F2937' : (isPositive ? '#f4fbf4' : '#fff5f5'), borderColor: isDark ? '#374151' : (isPositive ? '#e5f3e7' : '#ffe4e6') }]}>
           <View style={styles.topCardRow1}>
             <View style={styles.topCardIconWrap}>
-              <View style={[styles.iconCircle, { backgroundColor: isPositive ? '#dcfce7' : '#fee2e2' }]}>
-                <Ionicons name={isPositive ? "wallet" : "pricetag-outline"} size={28} color={isPositive ? "#16a34a" : "#475569"} />
-                {isPositive && (
-                  <View style={[styles.plusIconBadge, { borderColor: isDark ? '#1F2937' : '#f4fbf4', backgroundColor: isDark ? '#1F2937' : '#fff' }]}>
-                    <Ionicons name="add" size={14} color="#16a34a" />
+              <View style={[styles.iconCircle, { backgroundColor: isDark ? '#374151' : iconConfig.bg }]}>
+                {iconConfig.name === 'wallet' ? (
+                  <View style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="wallet-outline" size={22} color={iconConfig.color} />
+                    <View style={[styles.plusIconBadge, { borderColor: isDark ? '#1F2937' : (isPositive ? '#f4fbf4' : '#fff5f5'), backgroundColor: iconConfig.bg }]}>
+                      <Ionicons name={isPositive ? "add" : "remove"} size={10} color={iconConfig.color} />
+                    </View>
                   </View>
+                ) : (
+                  <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
                 )}
               </View>
             </View>
 
             <View style={styles.topCardMiddle}>
-              <View style={[styles.rowSpaceBetween, { alignItems: 'center' }]}>
-                <View style={{ flex: 1, paddingRight: 8 }}>
-                  <Text style={[styles.topCardTitle, { color: isDark ? '#FFF' : '#1e293b', marginBottom: 2 }]}>
-                    {getTransactionTitle(transaction.type, transaction.title)}
-                  </Text>
-                  <Text style={[styles.dateText, { color: isDark ? '#9ca3af' : '#64748b', marginBottom: 4 }]}>
-                    {transaction.date}, {transaction.time}
-                  </Text>
-                  <View style={styles.statusRow}>
-                    <Text style={[styles.statusText, { color: isPositive ? '#16a34a' : '#DC2626' }]}>
-                      {transaction.status === 'Completed' ? 'Transaction Completed' : transaction.status}
-                    </Text>
-                    <Ionicons name={isPositive ? "checkmark-circle" : "close-circle"} size={12} color={isPositive ? "#16a34a" : "#DC2626"} style={{ marginLeft: 4 }} />
-                  </View>
-                </View>
-
+              <View style={[styles.rowSpaceBetween, { alignItems: 'center', marginBottom: 4 }]}>
+                <Text style={[styles.topCardTitle, { color: isDark ? '#FFF' : '#1e293b', flex: 1, marginRight: 8 }]} numberOfLines={1}>
+                  {getTransactionTitle(transaction.type, transaction.title)}
+                </Text>
                 <Text style={[styles.topCardAmount, { color: amountColor }]}>
                   {isPositive ? '+' : '-'} ₹{formattedAmount}
                 </Text>
+              </View>
+              <View style={[styles.rowSpaceBetween, { alignItems: 'center' }]}>
+                <Text style={[styles.dateText, { color: isDark ? '#9ca3af' : '#64748b' }]}>
+                  {displayDateRender}, {displayTimeRender}
+                </Text>
+                <View style={styles.statusRow}>
+                  <Text style={[styles.statusText, { color: statusColor }]}>
+                    {statusText}
+                  </Text>
+                  <Ionicons name={statusIcon} size={10} color={statusColor} style={{ marginLeft: 4 }} />
+                </View>
               </View>
             </View>
           </View>
@@ -317,9 +370,9 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
           {/* Status */}
           <View style={styles.detailsRow}>
             <Text style={styles.detailsLabel}>Status</Text>
-            <View style={styles.statusBadge}>
-              <Ionicons name="checkmark-circle" size={12} color="#FFF" />
-              <Text style={styles.statusBadgeText}>{transaction.status || 'Success'}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+              <Ionicons name={statusIcon} size={12} color="#FFF" />
+              <Text style={styles.statusBadgeText}>{statusText}</Text>
             </View>
           </View>
           <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#f1f5f9' }]} />
@@ -327,7 +380,7 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
           {/* Remarks */}
           <View style={styles.detailsRow}>
             <Text style={styles.detailsLabel}>Remarks</Text>
-            <Text style={[styles.detailsValue, { color: isDark ? '#f8fafc' : '#0f172a' }]}>{transaction.remarks || 'Money added to wallet'}</Text>
+            <Text style={[styles.detailsValue, { color: isDark ? '#f8fafc' : '#0f172a' }]}>{getRemarks()}</Text>
           </View>
         </View>
 
@@ -380,11 +433,6 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   headerTitle: {
     fontSize: 20,
@@ -405,23 +453,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   topCardIconWrap: {
-    marginRight: 16,
+    marginRight: 12,
   },
   iconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   plusIconBadge: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    borderRadius: 12,
-    width: 22,
-    height: 22,
+    bottom: -3,
+    right: -3,
+    borderRadius: 9,
+    width: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -435,20 +483,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   topCardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
   },
   topCardAmount: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   statusText: {
-    fontSize: 13,
+    fontSize: 8,
     fontWeight: '600',
   },
   dateText: {

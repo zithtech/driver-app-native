@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Animated as RNAnimated, Platform, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, Animated as RNAnimated, Platform, ActivityIndicator, ScrollView, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import LinearGradient from 'react-native-linear-gradient';
@@ -128,6 +128,50 @@ interface DashboardMapProps {
     routeCoordinates?: { latitude: number; longitude: number }[];
 }
 
+const PulseRadar = () => {
+    const pulse1 = useRef(new RNAnimated.Value(0)).current;
+    const pulse2 = useRef(new RNAnimated.Value(0)).current;
+    const pulse3 = useRef(new RNAnimated.Value(0)).current;
+
+    useEffect(() => {
+        const animate = (anim: RNAnimated.Value, delay: number) => {
+            RNAnimated.sequence([
+                RNAnimated.delay(delay),
+                RNAnimated.loop(
+                    RNAnimated.timing(anim, {
+                        toValue: 1,
+                        duration: 3000,
+                        useNativeDriver: true,
+                    })
+                )
+            ]).start();
+        };
+        animate(pulse1, 0);
+        animate(pulse2, 1000);
+        animate(pulse3, 2000);
+    }, []);
+
+    const getPulseStyle = (anim: RNAnimated.Value) => ({
+        transform: [{
+            scale: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.2, 4]
+            })
+        }],
+        opacity: anim.interpolate({
+            inputRange: [0, 0.2, 1],
+            outputRange: [0.4, 0.1, 0]
+        })
+    });
+
+    return (
+        <View style={styles.pulseContainer}>
+            <RNAnimated.View style={[styles.pulseCircle, getPulseStyle(pulse1)]} />
+            <RNAnimated.View style={[styles.pulseCircle, getPulseStyle(pulse2)]} />
+            <RNAnimated.View style={[styles.pulseCircle, getPulseStyle(pulse3)]} />
+        </View>
+    );
+};
 
 const DashboardMap: React.FC<DashboardMapProps> = ({
     userLocation,
@@ -147,6 +191,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
     const [isMapReady, setIsMapReady] = useState(false);
     const [hasMountedMap, setHasMountedMap] = useState(false);
     const [trackChanges, setTrackChanges] = useState(true);
+    const [isTransitioningOnline, setIsTransitioningOnline] = useState(false);
 
     // ── Fix for Android Marker Disappearing ──
     // TracksViewChanges forces Android to continually re-render the view as a bitmap.
@@ -169,20 +214,20 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
     // ── Recenter button highlight animation ──
     const recenterPulse = useRef(new RNAnimated.Value(0)).current;
 
-    // ── Offline overlay fade animation ──
-    const offlineFade = useRef(new RNAnimated.Value(isOnline ? 0 : 1)).current;
-
     // Reset centering when going offline
     useEffect(() => {
         if (!isOnline) {
             setHasCentered(false);
             setIsFollowing(false);
-            RNAnimated.timing(offlineFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
         } else {
             setIsFollowing(true);
-            RNAnimated.timing(offlineFade, { toValue: 0, duration: 400, useNativeDriver: true }).start();
+            setIsTransitioningOnline(true);
+            const timer = setTimeout(() => {
+                setIsTransitioningOnline(false);
+            }, 1200); // smooth loader duration
+            return () => clearTimeout(timer);
         }
-    }, [isOnline, offlineFade]);
+    }, [isOnline]);
 
     // Re-center when navigating back to the dashboard
     useFocusEffect(
@@ -263,20 +308,57 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
     });
 
     return (
-        <View style={styles.mapContainer}>
-            {hasMountedMap && (
-            <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={{ flex: 1 }}
-                customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+        <View style={[styles.cardWrapper, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? theme.colors.border : '#F1F5F9' }]}>
+            {/* ── HEADER ── */}
+            <View style={[styles.cardHeader, { borderBottomColor: isDark ? theme.colors.border : '#F1F5F9' }]}>
+                <View style={styles.headerLeft}>
+                    <View style={styles.blueDot} />
+                    <View>
+                        <Text style={[styles.headerTitle, isDark && { color: theme.colors.text }]}>Live Ride Requests</Text>
+                        <Text style={[styles.headerSubtitle, isDark && { color: theme.colors.textMuted }]}>You will be notified for new requests</Text>
+                    </View>
+                </View>
+                <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: s(12), justifyContent: 'center' }}>
+                    <Pressable 
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}
+                        onPress={() => {
+                            if (userLocation) {
+                                const url = Platform.OS === 'ios'
+                                    ? `maps:0,0?q=${currentAddress || `${userLocation.latitude},${userLocation.longitude}`}&ll=${userLocation.latitude},${userLocation.longitude}`
+                                    : `geo:0,0?q=${userLocation.latitude},${userLocation.longitude}(${currentAddress || 'My Location'})`;
+                                Linking.openURL(url).catch(() => {
+                                    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${userLocation.latitude},${userLocation.longitude}`);
+                                });
+                            }
+                        }}
+                    >
+                        <Ionicons name="location" size={ms(12)} color={isDark ? theme.colors.primary : "#3B82F6"} style={{ marginRight: s(4) }} />
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexShrink: 1 }}>
+                            <Text 
+                                style={[{ fontSize: ms(11), color: isDark ? theme.colors.textMuted : '#64748B', textAlign: 'right' }]} 
+                            >
+                                {currentAddress || t('fetching_location') || "Locating..."}
+                            </Text>
+                        </ScrollView>
+                    </Pressable>
+                </View>
+            </View>
+
+            <View style={styles.mapContainer}>
+                {hasMountedMap && (
+                <MapView
+                    ref={mapRef}
+                    provider={PROVIDER_GOOGLE}
+                    style={{ flex: 1 }}
+                    mapPadding={{ top: vs(100), right: s(10), bottom: vs(10), left: 0 }}
+                    customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
                 onMapReady={() => {
                     setMapMargin(0);
                     setIsMapLoaded(true);
                     setTimeout(() => setIsMapReady(true), 800);
                 }}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
+                showsUserLocation={true}
+                showsMyLocationButton={true}
                 showsCompass={false}
                 showsTraffic={showTraffic}
                 onPanDrag={() => setIsFollowing(false)}
@@ -287,51 +369,26 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                     longitudeDelta: 0.05,
                 }}
             >
-                {/* ── MARKER ── */}
-                {userLocation && isMapLoaded && (
+                {/* ── RADIATION RINGS ── */}
+                {userLocation && isOnline && (
                     <Marker
-                        key={currentAddress ? 'loaded-marker' : 'loading-marker'} // Forces a clean render when address is found
+                        key="pulse-marker"
                         coordinate={{
                             latitude: userLocation.latitude,
                             longitude: userLocation.longitude,
                         }}
-                        anchor={{ x: 0.5, y: 1 }}
-                        flat={false}
-                        zIndex={99}
-                        tracksViewChanges={Platform.OS === 'android' ? trackChanges : undefined} // Only track briefly when text/state changes
+                        anchor={{ x: 0.5, y: 0.5 }}
+                        flat={true}
+                        tracksViewChanges={true}
                     >
-                        <View style={styles.customMarkerContainer}>
-                            {/* Label - Positioned Above */}
-                            <View style={styles.markerLabelContainer}>
-                                <Text style={styles.markerLabelText} numberOfLines={1}>
-                                    {currentAddress || t('fetching_location') || "Locating..."}
-                                </Text>
-                                <View style={styles.labelPointer} />
-                            </View>
-
-                            {/* Red Pin + Blue Dot Combo */}
-                            <View style={styles.markerVisuals}>
-                                {/* Red Pin with Blue Base Dot */}
-                                <View style={[styles.pinContainer, !isOnline && { opacity: 0.6 }]}>
-                                    <Ionicons 
-                                        name="location" 
-                                        size={ms(34)} 
-                                        color={isOnline ? "#EF4444" : "#64748B"} 
-                                    />
-                                    {/* The Blue Circle at the base */}
-                                    <View style={[styles.blueBaseCircle, !isOnline && { borderColor: '#94A3B8' }]}>
-                                        <View style={[styles.blueBaseInner, !isOnline && { backgroundColor: '#64748B' }]} />
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
+                        <PulseRadar />
                     </Marker>
                 )}
             </MapView>
             )}
 
             {/* ── LOADER OVERLAY ── */}
-            {(!userLocation || !isMapReady) && (
+            {(!isMapReady || (isOnline && (!userLocation || isTransitioningOnline))) && (
                 <View style={[
                     StyleSheet.absoluteFillObject, 
                     { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? theme.colors.background : '#f8fafc', zIndex: 100 }
@@ -343,113 +400,26 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                 </View>
             )}
 
-            {/* ── GRADIENT FADE OVERLAY (bottom edge blend) ── */}
-            <LinearGradient
-                colors={['transparent', isDark ? 'rgba(11, 19, 32, 0.5)' : 'rgba(245, 246, 250, 0.5)']}
-                style={styles.mapGradientFade}
-                pointerEvents="none"
-            />
 
 
-            {/* ── FLOATING STATUS CHIP ── */}
-            {isOnline && (
-                <View style={[
-                    styles.statusChip,
-                    { backgroundColor: isDark ? 'rgba(26, 36, 56, 0.92)' : 'rgba(255, 255, 255, 0.92)' },
-                ]}>
-                    <View style={styles.statusDot} />
-                    <Text style={[styles.statusChipText, { color: isDark ? theme.colors.text : '#1E293B' }]}>
-                        {t('finding_rides', 'Finding rides...')}
-                    </Text>
-                </View>
+            {/* ── NAVIGATE ICON (Placed beside native recenter button) ── */}
+            {userLocation && (
+                <Pressable
+                    style={[styles.navigateBtn, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}
+                    onPress={() => {
+                        const url = Platform.OS === 'ios'
+                            ? `maps:0,0?q=${currentAddress || `${userLocation.latitude},${userLocation.longitude}`}&ll=${userLocation.latitude},${userLocation.longitude}`
+                            : `geo:0,0?q=${userLocation.latitude},${userLocation.longitude}(${currentAddress || 'My Location'})`;
+                        Linking.openURL(url).catch(() => {
+                            Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${userLocation.latitude},${userLocation.longitude}`);
+                        });
+                    }}
+                >
+                    <Ionicons name="navigate" size={s(20)} color="#3B82F6" />
+                </Pressable>
             )}
 
-            {/* ── MAP PAUSED TOAST ── */}
-            {!isFollowing && isOnline && (
-                <View style={[styles.mapPausedChip, { backgroundColor: isDark ? 'rgba(26, 36, 56, 0.92)' : 'rgba(255, 255, 255, 0.92)' }]}>
-                    <Ionicons name="pause-circle" size={s(16)} color="#64748B" style={{ marginRight: s(6) }} />
-                    <Text style={[styles.statusChipText, { color: isDark ? theme.colors.text : '#1E293B' }]}>
-                        {t('map_paused') || 'Map Paused'}
-                    </Text>
-                </View>
-            )}
-
-            {/* ── OFFLINE DIM OVERLAY (Animated) ── */}
-            {!isOnline && (
-                <RNAnimated.View style={[styles.offlineOverlay, { opacity: offlineFade }]}>
-                    <View style={styles.offlineIconCircle}>
-                        <Ionicons name="moon-outline" size={s(28)} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.offlineMapText}>{t('go_online_start')}</Text>
-                    <Text style={styles.offlineSubtext}>
-                        {t('offline_map_hint') || 'Slide below to start accepting rides'}
-                    </Text>
-                </RNAnimated.View>
-            )}
-
-            {/* ── MAP CONTROL BUTTONS (Right Side Stack) ── */}
-            {isOnline && (
-                <View style={styles.controlStack}>
-                    {/* Traffic Toggle */}
-                    <Pressable
-                        style={[
-                            styles.controlBtn,
-                            {
-                                backgroundColor: showTraffic
-                                    ? (isDark ? theme.colors.primary : '#3B82F6')
-                                    : (isDark ? theme.colors.card : '#FFFFFF'),
-                            },
-                        ]}
-                        onPress={() => setShowTraffic(prev => !prev)}
-                        accessibilityLabel={t('toggle_traffic') || "Toggle Traffic"}
-                        accessibilityHint={t('toggle_traffic_hint') || "Shows or hides live traffic on the map"}
-                        accessibilityRole="button"
-                    >
-                        <MaterialCommunityIcons
-                            name="traffic-light"
-                            size={s(18)}
-                            color={showTraffic ? '#FFFFFF' : (isDark ? theme.colors.textMuted : '#475569')}
-                        />
-                    </Pressable>
-
-                    {/* Recenter Button */}
-                    <View>
-                        {/* Pulse ring when not following */}
-                        {!isFollowing && (
-                            <RNAnimated.View
-                                style={[
-                                    styles.recenterPulseRing,
-                                    {
-                                        opacity: recenterRingOpacity,
-                                        transform: [{ scale: recenterRingScale }],
-                                        borderColor: theme.colors.primary,
-                                    },
-                                ]}
-                            />
-                        )}
-                        <Pressable
-                            style={[
-                                styles.controlBtn,
-                                {
-                                    backgroundColor: isDark ? theme.colors.card : '#FFFFFF',
-                                    borderWidth: !isFollowing ? 1.5 : 0,
-                                    borderColor: !isFollowing ? theme.colors.primary : 'transparent',
-                                },
-                            ]}
-                            onPress={recenterMap}
-                            accessibilityLabel={t('recenter_map') || "Recenter Map"}
-                            accessibilityHint={t('recenter_map_hint') || "Centers the map back to your current location"}
-                            accessibilityRole="button"
-                        >
-                            <Ionicons
-                                name={isFollowing ? 'navigate' : 'locate'}
-                                size={s(20)}
-                                color={isFollowing ? theme.colors.primary : (isDark ? theme.colors.text : '#1E293B')}
-                            />
-                        </Pressable>
-                    </View>
-                </View>
-            )}
+            </View>
         </View>
     );
 };
@@ -457,22 +427,90 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
 export default DashboardMap;
 
 const styles = StyleSheet.create({
-    mapContainer: {
-        height: vs(280),
-        borderBottomLeftRadius: ms(24),
-        borderBottomRightRadius: ms(24),
+    cardWrapper: {
+        backgroundColor: '#FFFFFF',
+        marginHorizontal: s(12),
+        borderRadius: ms(16),
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
         overflow: 'hidden',
     },
-
-    // ── Gradient Fade ──
-    mapGradientFade: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: vs(20),
+    cardHeader: {
+        flexDirection: 'row',
+        paddingHorizontal: s(16),
+        paddingVertical: vs(12),
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
     },
-
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    blueDot: {
+        width: ms(8),
+        height: ms(8),
+        borderRadius: ms(4),
+        backgroundColor: '#2563EB',
+        marginTop: vs(4),
+        marginRight: s(8),
+    },
+    headerTitle: {
+        fontSize: ms(16),
+        fontWeight: '800',
+        color: '#0F172A',
+        marginBottom: vs(2),
+    },
+    headerSubtitle: {
+        fontSize: ms(11),
+        color: '#64748B',
+        fontWeight: '500',
+    },
+    viewAllText: {
+        fontSize: ms(13),
+        fontWeight: '700',
+        color: '#2563EB',
+    },
+    mapContainer: {
+        height: vs(160),
+        borderBottomLeftRadius: ms(16),
+        borderBottomRightRadius: ms(16),
+        overflow: 'hidden',
+    },
+    pulseContainer: {
+        width: s(150),
+        height: s(150),
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    pulseCircle: {
+        position: 'absolute',
+        width: s(40),
+        height: s(40),
+        borderRadius: s(20),
+        backgroundColor: '#3B82F6',
+    },
+    navigateBtn: {
+        position: 'absolute',
+        bottom: vs(12),
+        right: s(70), // Positions it to the left of the native recenter button
+        width: s(42),
+        height: s(42),
+        borderRadius: s(21),
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 4,
+    },
 
     // ── Floating Status Chip ──
     statusChip: {

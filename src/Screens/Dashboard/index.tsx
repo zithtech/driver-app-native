@@ -60,7 +60,7 @@ import { TripStatus } from '../../types/trip';
 import SwipeButton from './dashComponents/SwipeButton';
 import DashboardSkeleton from './dashComponents/DashboardSkeleton';
 import RecentActivity from './dashComponents/RecentActivity';
-import WalletUpcomingCards from './dashComponents/WalletUpcomingCards';
+import UpcomingAcceptedRide from './dashComponents/UpcomingAcceptedRide';
 import GoOfflineTab from './dashComponents/GoOfflineTab';
 import SubscriptionRequiredModal from './dashComponents/SubscriptionRequiredModal';
 import BatteryOptimizationModal from './dashComponents/BatteryOptimizationModal';
@@ -266,8 +266,7 @@ const DriverDashboard = () => {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const lastTripRating = useSelector((state: RootState) => state.ride.lastTripRating);
 
-  const [sosContactsCount, setSosContactsCount] = useState<number | null>(null);
-  const [isSosDismissed, setIsSosDismissed] = useState(false);
+
 
   // ── Alert Modal State ──
   const [alertModalVisible, setAlertModalVisible] = useState(false);
@@ -339,25 +338,7 @@ const DriverDashboard = () => {
     }, [showAlert, t]),
   });
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!user?.driverId) return;
 
-
-
-      const checkSosContacts = async () => {
-        try {
-          const response = await axiosInstance.get('/sos/contacts');
-          if (response.data.success) {
-            setSosContactsCount(response.data.data.length);
-          }
-        } catch (error) {
-        }
-      };
-
-      checkSosContacts();
-    }, [user?.driverId])
-  );
 
   const onlineStartTime = useRef<number | null>(null);
   const accumulatedOnlineSeconds = useRef<number>(0);
@@ -571,52 +552,30 @@ const DriverDashboard = () => {
           routeCoordinates={mapRouteCoordinates}
         />
 
-        {/* ── SOS SAFETY TOOLKIT CARD ── */}
-        {sosContactsCount !== null && sosContactsCount < 3 && !isSosDismissed && (
-          <Animated.View entering={FadeInDown.duration(600)} style={[styles.inlineSosCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-            <View style={styles.sosCardHeader}>
-              <View style={styles.sosCardLeft}>
-                <View style={styles.sosCardIconRing}>
-                  <Ionicons name="shield-checkmark" size={ms(26)} color={theme.colors.primary} />
-                </View>
-                <View style={styles.sosCardTextGroup}>
-                  <Text style={[styles.sosCardTitle, { color: theme.colors.text }]}>Safety Toolkit</Text>
-                  <Text style={[styles.sosCardSubtitle, isDark && { color: theme.colors.textMuted }]}>{sosContactsCount}/3 Recommended Contacts</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => setIsSosDismissed(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Text style={{ fontSize: ms(10), color: isDark ? theme.colors.textMuted : '#64748B', fontWeight: '500' }}>Close</Text>
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.sosCardActionRow}>
-              <Text style={[styles.sosCardActionText, isDark && { color: '#CBD5E1' }]}>Add trusted contacts for emergency alerts.</Text>
-              <TouchableOpacity
-                style={[styles.sosCardButton, { backgroundColor: theme.colors.primary }]}
-                onPress={() => navigation.navigate('SosContactsScreen')}
-              >
-                <Text style={styles.sosCardButtonText}>Setup Now</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        )}
 
 
 
         {/* ── TODAY'S OVERVIEW ── */}
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('todays_overview')}</Text>
         <TodayOverview
           earnings={String(computedEarnings.toFixed(2))}
           rides={computedCompletedRides}
           displayTimeFormatted={formatOnlineTime(onlineSecondsFromBackend || onlineSeconds, { h: t('h'), m: t('m'), s: t('s') })}
-          cancellations={computedCancellations}
+          rating={(typeof lastTripRating === 'object' ? lastTripRating?.rating : lastTripRating) || '4.85'}
           timerPulseAnim={timerPulseAnim}
           onEarningsPress={() => navigation.navigate('EarningsScreen')}
           onRidesPress={() => navigation.navigate('RideActivityScreen')}
+          onViewAllPress={() => navigation.navigate('EarningsScreen')}
         />
 
-        {/* ── WALLET & UPCOMING RIDE ── */}
-        <WalletUpcomingCards balance={walletBalanceResult?.data?.balance} upcomingRide={nextScheduledRide} />
+        {/* ── UPCOMING ACCEPTED RIDE ── */}
+        <UpcomingAcceptedRide 
+          trip={nextScheduledRide} 
+          onViewAllPress={() => navigation.navigate('SubscriptionHistoryScreen')} 
+          onNavigatePress={() => {
+            // Placeholder for navigation logic if needed
+          }}
+        />
 
         {/* ── SUBSCRIPTION CARD ── */}
         <RechargeCard subscription={subData?.data?.subscription} />
@@ -1130,76 +1089,7 @@ const styles = StyleSheet.create({
     fontSize: ms(16),
     fontWeight: '700',
   },
-  inlineSosCard: {
-    marginHorizontal: s(16),
-    marginTop: vs(16),
-    borderRadius: ms(16),
-    padding: s(16),
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.1)',
-  },
-  sosCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  sosCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  sosCardIconRing: {
-    width: ms(44),
-    height: ms(44),
-    borderRadius: ms(22),
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: s(12),
-  },
-  sosCardTextGroup: {
-    flex: 1,
-  },
-  sosCardTitle: {
-    fontSize: ms(16),
-    fontWeight: '700',
-    marginBottom: vs(2),
-  },
-  sosCardSubtitle: {
-    fontSize: ms(13),
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  sosCardActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: vs(16),
-  },
-  sosCardActionText: {
-    flex: 1,
-    fontSize: ms(13),
-    color: '#475569',
-    marginRight: s(12),
-    lineHeight: ms(18),
-  },
-  sosCardButton: {
-    paddingVertical: vs(8),
-    paddingHorizontal: s(16),
-    borderRadius: ms(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sosCardButtonText: {
-    color: '#fff',
-    fontSize: ms(13),
-    fontWeight: '700',
-  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

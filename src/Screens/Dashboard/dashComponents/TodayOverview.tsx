@@ -1,134 +1,196 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Animated, Pressable } from 'react-native';
+import { View, StyleSheet, Animated, Pressable } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { hS as s, vS as vs, ms } from '../../../lib/scale';
 import { Text } from '../../../Components';
-import { useAppTheme } from '../../../context/ThemeContext';
-import { getLanguageScaledSize } from '../../../utils/languageSizings';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface TodayOverviewProps {
     earnings: string;
     rides: number;
     displayTimeFormatted: string;
-    cancellations: number;
+    rating: string | number; 
     timerPulseAnim: Animated.Value;
     onEarningsPress?: () => void;
     onRidesPress?: () => void;
+    onViewAllPress?: () => void;
 }
 
 const TodayOverview: React.FC<TodayOverviewProps> = ({
     earnings,
     rides,
     displayTimeFormatted,
-    cancellations,
+    rating,
     timerPulseAnim,
     onEarningsPress,
     onRidesPress,
+    onViewAllPress,
 }) => {
-    const { theme, isDark } = useAppTheme();
     const { t } = useTranslation();
 
     return (
-        <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.todayScrollContent}
-            decelerationRate="fast"
+        <LinearGradient 
+            colors={['#3B82F6', '#2563EB']} 
+            style={styles.container}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
         >
-            <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]} onPress={onEarningsPress}>
-                <View style={[styles.todayIcon, { backgroundColor: isDark ? '#064e3b' : '#DCFCE7' }]}>
-                    <Ionicons name="cash-outline" size={ms(20)} color={isDark ? '#34D399' : '#16A34A'} />
+            <View style={styles.headerRow}>
+                <View style={styles.titleWrap}>
+                    <Text style={styles.titleText}>{t('todays_overview', "Today's Overview")}</Text>
+                    <Ionicons name="eye-outline" size={ms(14)} color="#FFFFFF" style={{ marginLeft: s(6) }} />
                 </View>
-                <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
-                        {t('currency_symbol')}
-                        {earnings}
-                    </Text>
-                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('earnings')}</Text>
-                </View>
-            </Pressable>
+                <Pressable onPress={onViewAllPress} style={styles.viewAllBtn}>
+                    <Text style={styles.viewAllText}>View All</Text>
+                    <Ionicons name="chevron-forward" size={ms(12)} color="#FFFFFF" />
+                </Pressable>
+            </View>
 
-            {/* Rides */}
-            <Pressable style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]} onPress={onRidesPress}>
-                <View style={[styles.todayIcon, { backgroundColor: isDark ? '#1e3a8a' : '#DBEAFE' }]}>
-                    <Ionicons name="car-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
-                </View>
-                <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{rides}</Text>
-                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('rides')}</Text>
-                </View>
-            </Pressable>
+            {/* Metrics Row */}
+            <View style={styles.metricsRow}>
+                {/* Earnings */}
+                <Pressable style={styles.metricCol} onPress={onEarningsPress}>
+                    <View style={styles.iconCircle}>
+                        <Text style={{color: '#fff', fontSize: ms(14), fontWeight: '600'}}>₹</Text>
+                    </View>
+                    <Text style={styles.metricLabel}>{t('earnings', 'Earnings')}</Text>
+                    <Text style={styles.metricValue}>₹{earnings}</Text>
+                    <View style={styles.trendWrap}>
+                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
+                        <Text style={styles.trendText}>12.5%</Text>
+                    </View>
+                </Pressable>
 
-            {/* Online */}
-            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
-                <View style={[styles.todayIcon, { backgroundColor: isDark ? '#4c1d95' : '#EDE9FE' }]}>
-                    <Ionicons name="time-outline" size={ms(20)} color={isDark ? '#A78BFA' : '#7C3AED'} />
-                </View>
-                <View style={styles.todayTextWrap}>
-                    <Animated.Text style={[styles.todayValue, { transform: [{ scale: timerPulseAnim }], color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>
+                <View style={styles.divider} />
+
+                {/* Rides */}
+                <Pressable style={styles.metricCol} onPress={onRidesPress}>
+                    <View style={styles.iconCircle}>
+                        <Ionicons name="car-outline" size={ms(14)} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.metricLabel}>{t('rides', 'Rides')}</Text>
+                    <Text style={styles.metricValue}>{rides}</Text>
+                    <View style={styles.trendWrap}>
+                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
+                        <Text style={styles.trendText}>8.3%</Text>
+                    </View>
+                </Pressable>
+
+                <View style={styles.divider} />
+
+                {/* Online Hours */}
+                <View style={styles.metricCol}>
+                    <View style={styles.iconCircle}>
+                        <Ionicons name="time-outline" size={ms(14)} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.metricLabel}>{t('online_hours', 'Online Hours')}</Text>
+                    <Animated.Text style={[styles.metricValue, { transform: [{ scale: timerPulseAnim }] }]}>
                         {displayTimeFormatted}
                     </Animated.Text>
-                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('online')}</Text>
+                    <View style={styles.trendWrap}>
+                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
+                        <Text style={styles.trendText}>10.2%</Text>
+                    </View>
                 </View>
-            </View>
 
-            {/* Cancellations */}
-            <View style={[styles.todayCard, { backgroundColor: theme.colors.card, borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
-                <View style={[styles.todayIcon, { backgroundColor: isDark ? '#7f1d1d' : '#FEE2E2' }]}>
-                    <Ionicons name="close-circle-outline" size={ms(20)} color={isDark ? '#F87171' : '#DC2626'} />
-                </View>
-                <View style={styles.todayTextWrap}>
-                    <Text style={[styles.todayValue, { color: isDark ? theme.colors.text : '#1E293B' }]} adjustsFontSizeToFit numberOfLines={1}>{cancellations}</Text>
-                    <Text style={[styles.todayLabel, isDark && { color: theme.colors.textMuted }]} numberOfLines={2} adjustsFontSizeToFit>{t('cancellations')}</Text>
+                <View style={styles.divider} />
+
+                {/* Rating */}
+                <View style={styles.metricCol}>
+                    <View style={styles.iconCircle}>
+                        <Ionicons name="star-outline" size={ms(14)} color="#FBBF24" />
+                    </View>
+                    <Text style={styles.metricLabel}>{t('rating', 'Rating')}</Text>
+                    <Text style={styles.metricValue}>{rating}</Text>
+                    <View style={styles.trendWrap}>
+                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
+                        <Text style={styles.trendText}>2.4%</Text>
+                    </View>
                 </View>
             </View>
-        </ScrollView>
+        </LinearGradient>
     );
 };
 
 export default TodayOverview;
 
 const styles = StyleSheet.create({
-    todayScrollContent: {
-        paddingHorizontal: s(16),
-        paddingBottom: vs(10),
-        marginTop: vs(10),
+    container: {
+        marginHorizontal: s(12),
+        marginTop: vs(8),
+        marginBottom: vs(12),
+        borderRadius: ms(16),
+        padding: ms(12),
     },
-    todayCard: {
-        minWidth: s(150),
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: vs(12),
+    },
+    titleWrap: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: ms(16),
-        paddingVertical: vs(14),
-        paddingHorizontal: s(12),
-        marginRight: s(12),
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
     },
-    todayIcon: {
-        width: s(36),
-        height: s(36),
-        borderRadius: ms(18),
+    titleText: {
+        color: '#FFFFFF',
+        fontSize: ms(14),
+        fontWeight: '600',
+    },
+    viewAllBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    viewAllText: {
+        color: '#FFFFFF',
+        fontSize: ms(12),
+        marginRight: s(2),
+    },
+    metricsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    metricCol: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    iconCircle: {
+        width: ms(28),
+        height: ms(28),
+        borderRadius: ms(14),
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: s(10),
+        marginBottom: vs(4),
+        backgroundColor: 'rgba(255,255,255,0.05)',
     },
-    todayTextWrap: {
-        justifyContent: 'center',
-        flex: 1,
+    metricLabel: {
+        color: '#E2E8F0',
+        fontSize: ms(10),
+        marginBottom: vs(2),
     },
-    todayValue: {
-        fontSize: getLanguageScaledSize(14),
-        fontWeight: '800',
-        color: '#1E293B',
-        lineHeight: vs(20),
+    metricValue: {
+        color: '#FFFFFF',
+        fontSize: ms(14),
+        fontWeight: '700',
+        marginBottom: vs(2),
     },
-    todayLabel: {
-        fontSize: getLanguageScaledSize(12),
-        color: '#64748B',
-        marginTop: vs(1),
+    trendWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    trendText: {
+        color: '#4ADE80',
+        fontSize: ms(9),
+        marginLeft: s(2),
         fontWeight: '500',
     },
+    divider: {
+        width: 1,
+        height: '70%',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+    }
 });

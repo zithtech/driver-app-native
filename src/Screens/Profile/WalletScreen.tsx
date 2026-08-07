@@ -104,12 +104,13 @@ Status: ${selectedTransaction.status}`;
 
   const renderBackdrop = useCallback((props: any) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />, []);
 
-  const getTransactionIcon = (type: TransactionType, title: string = '') => {
+  const getTransactionIcon = (type: TransactionType, title: string = '', amount: number = 0) => {
     const t = title.toLowerCase();
     if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return { name: 'wallet', color: '#16a34a', bg: '#dcfce7' };
     if (t.includes('subscription')) return { name: 'document-text-outline', color: '#7c3aed', bg: '#f3e8ff' };
     if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return { name: 'trophy-outline', color: '#d97706', bg: '#fef9c3' };
     if (t.includes('refund') || type === 'REFUND') return { name: 'arrow-undo-outline', color: '#ef4444', bg: '#fee2e2' };
+    if (amount < 0) return { name: 'wallet', color: '#ef4444', bg: '#fee2e2' };
     return { name: 'pricetag-outline', color: '#475569', bg: '#f1f5f9' };
   };
 
@@ -258,22 +259,6 @@ Status: ${selectedTransaction.status}`;
                 </View>
               </View>
 
-              {/* Offer Banner */}
-              <View style={[styles.offerBanner, { backgroundColor: isDark ? '#1F2937' : '#f0fdf4' }]}>
-                <Image source={require('../../assets/images/price.png')} style={styles.offerImage} resizeMode="contain" />
-                <View style={styles.offerContent}>
-                  <View style={styles.offerHeaderRow}>
-                    <Text style={[styles.offerBannerTitle, { color: isDark ? '#ffffff' : '#0f172a' }]}>Earn more on every ride!</Text>
-                    <Pressable>
-                      <Ionicons name="close" size={18} color="#64748b" />
-                    </Pressable>
-                  </View>
-                  <Text style={[styles.offerBannerDesc, { color: isDark ? '#9ca3af' : '#64748b' }]}>Add money to your wallet and get exciting cashback offers.</Text>
-                  <Pressable style={styles.viewOffersBtn}>
-                    <Text style={styles.viewOffersText}>View Offers</Text>
-                  </Pressable>
-                </View>
-              </View>
 
               {/* Recent Transactions Header */}
               <View style={styles.recentTxnHeader}>
@@ -286,43 +271,38 @@ Status: ${selectedTransaction.status}`;
           </View>
         }
         renderItem={({ item }) => {
-          const iconConfig = getTransactionIcon(item.type, item.title);
+          const iconConfig = getTransactionIcon(item.type, item.title, item.amount);
           const isPositive = item.amount > 0;
           const subtitle = getTransactionSubtitle(item.type, item.title, item);
           return (
             <Pressable onPress={() => openTransactionDetails(item)} style={[styles.txnItem, { backgroundColor: isDark ? '#1F2937' : '#ffffff', borderColor: isDark ? '#374151' : '#f1f5f9' }]}>
               <View style={[styles.txnIconWrap, { backgroundColor: isDark ? '#374151' : iconConfig.bg }]}>
                 {iconConfig.name === 'wallet' ? (
-                  <View style={{ width: 22, height: 22, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="wallet-outline" size={22} color={iconConfig.color} />
-                    <View style={{ position: 'absolute', top: -3, right: -3, backgroundColor: iconConfig.bg, borderRadius: 10, width: 12, height: 12, alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name="add" size={12} color={iconConfig.color} />
+                  <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="wallet-outline" size={18} color={iconConfig.color} />
+                    <View style={{ position: 'absolute', top: -3, right: -3, backgroundColor: iconConfig.bg, borderRadius: 10, width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={isPositive ? "add" : "remove"} size={10} color={iconConfig.color} />
                     </View>
                   </View>
                 ) : (
-                  <Ionicons name={iconConfig.name} size={22} color={iconConfig.color} />
+                  <Ionicons name={iconConfig.name} size={18} color={iconConfig.color} />
                 )}
               </View>
               
-              <View style={styles.txnContent}>
-                <View style={styles.txnRow}>
+              <View style={[styles.txnContent, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View style={styles.txnInfo}>
                   <Text style={[styles.txnItemTitle, { color: isDark ? '#ffffff' : '#0f172a' }]} numberOfLines={1}>{getTransactionTitle(item.type, item.title)}</Text>
-                  <Text style={[styles.txnItemAmount, { color: isPositive ? '#16a34a' : (isDark ? '#ffffff' : '#0f172a') }]}>
-                    {isPositive ? '+' : '-'} ₹{Math.abs(item.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                  </Text>
+                  {subtitle && <Text style={[styles.txnItemSubtitle, { color: isDark ? '#9ca3af' : '#64748b' }]} numberOfLines={1}>{subtitle}</Text>}
+                  <Text style={[styles.txnItemDate, { color: isDark ? '#9ca3af' : '#64748b' }]}>{item.date}, {item.time}</Text>
                 </View>
                 
-                <View style={styles.txnRow}>
-                  <View style={styles.txnInfo}>
-                    {subtitle && <Text style={[styles.txnItemSubtitle, { color: isDark ? '#9ca3af' : '#64748b' }]} numberOfLines={1}>{subtitle}</Text>}
-                    <Text style={[styles.txnItemDate, { color: isDark ? '#9ca3af' : '#64748b' }]}>{item.date}, {item.time}</Text>
-                  </View>
-                  
-                  <View style={styles.txnRightContent}>
-                    <Text style={[styles.txnItemBalance, { color: isDark ? '#64748b' : '#64748b' }]}>
-                      Balance: ₹{item.closingBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                    </Text>
-                  </View>
+                <View style={[styles.txnRightContent, { alignItems: 'flex-end', justifyContent: 'center' }]}>
+                  <Text style={[styles.txnItemAmount, { color: isPositive ? '#16a34a' : '#ef4444' }]}>
+                    {isPositive ? '+' : '-'} {`\u20B9`}{Math.abs(item.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                  </Text>
+                  <Text style={[styles.txnItemBalance, { color: isDark ? '#64748b' : '#64748b' }]}>
+                    Balance: {`\u20B9`}{item.closingBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                  </Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#94a3b8" style={{ marginLeft: 8 }} />
@@ -517,8 +497,8 @@ const styles = StyleSheet.create({
   quickActionsCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 12,
-    marginBottom: 16,
+    padding: 10,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -526,10 +506,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   quickActionsTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   quickActionsRow: {
     flexDirection: 'row',
@@ -540,70 +520,26 @@ const styles = StyleSheet.create({
     width: '22%',
   },
   actionIconBg: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#f0fdf4',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
   actionItemText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#475569',
     textAlign: 'center',
     fontWeight: '500',
   },
-  offerBanner: {
-    backgroundColor: '#f0fdf4',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  offerImage: {
-    width: 80,
-    height: 80,
-    marginRight: 12,
-  },
-  offerContent: {
-    flex: 1,
-  },
-  offerHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  offerBannerTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  offerBannerDesc: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 8,
-    lineHeight: 16,
-  },
-  viewOffersBtn: {
-    backgroundColor: '#16a34a',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  viewOffersText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-  },
+
   recentTxnHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   recentTxnTitle: {
     fontSize: 16,
@@ -618,21 +554,16 @@ const styles = StyleSheet.create({
   txnItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 0,
+    marginBottom: 6,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    padding: 10,
     borderWidth: 1,
   },
   txnIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -655,31 +586,29 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   txnItemTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0f172a',
     marginBottom: 2,
-    flex: 1,
   },
   txnItemSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
     marginBottom: 2,
   },
   txnItemDate: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#94a3b8',
   },
   txnItemAmount: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0f172a',
-    marginLeft: 8,
+    marginBottom: 4,
   },
   txnItemBalance: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748b',
-    marginTop: 4,
   },
   secureFooter: {
     flexDirection: 'row',

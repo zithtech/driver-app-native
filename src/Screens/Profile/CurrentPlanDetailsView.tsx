@@ -214,8 +214,8 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
               </Pressable>
               <View style={styles.headerTextWrap}>
                 <Text style={styles.headerTitle}>Current Plan Details</Text>
-                <Text style={styles.headerSubtitle}>
-                  View all information about your{'\n'}active subscription
+                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                  Details of your active subscription
                 </Text>
               </View>
               <Pressable onPress={() => navigation?.navigate('SubscriptionHistoryScreen')} style={styles.historyBtn}>
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   },
   headerBg: {
     width: '100%',
-    minHeight: 120,
+    minHeight: 90,
     backgroundColor: 'transparent',
   },
   headerImageStyle: {
@@ -396,10 +396,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   backBtn: {
-    marginRight: 12,
+    marginRight: 8,
     padding: 4,
   },
   historyBtn: {
@@ -410,22 +410,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
-    lineHeight: 18,
+    lineHeight: 16,
   },
 
   /* Split Plan Card */
   planCard: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    marginTop: -20,
+    marginTop: -10,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -435,29 +435,29 @@ const styles = StyleSheet.create({
   planCardLeft: {
     flex: 0.4,
     backgroundColor: '#166534',
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   planNameTextWhite: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: 14,
-    marginTop: 8,
+    fontSize: 12,
+    marginTop: 4,
     textAlign: 'center',
   },
   activeBadgeWhite: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 12,
     marginTop: 8,
   },
   activeBadgeTextWhite: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -465,22 +465,22 @@ const styles = StyleSheet.create({
     flex: 0.6,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 8,
   },
   planCardRightCol1: {
     flex: 1.3,
     alignItems: 'center',
   },
   planPriceBig: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#111827',
   },
   planPriceSub: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
   planCardRightCol2: {
     flex: 0.7,
@@ -488,9 +488,9 @@ const styles = StyleSheet.create({
   },
   shieldIconWrap: {
     backgroundColor: '#E8F5E9',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
@@ -511,9 +511,9 @@ const styles = StyleSheet.create({
   /* Sections */
   sectionCard: {
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 8,
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
@@ -522,16 +522,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: '#111827',
   },
   viewAllBtnText: {
     color: '#2E7D32',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
 
@@ -547,29 +547,29 @@ const styles = StyleSheet.create({
   },
   dateIconWrap: {
     backgroundColor: '#F3F4F6',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   dateLabelText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
-    marginBottom: 4,
+    marginBottom: 2,
     textAlign: 'center',
   },
   dateValueText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
   },
   timeValueText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
     textAlign: 'center',
   },
   verticalDividerLight: {
@@ -591,11 +591,11 @@ const styles = StyleSheet.create({
   benefitRowNew: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 8,
   },
   benefitTextNew: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     color: '#374151',
   },
   shieldWatermark: {
@@ -630,34 +630,34 @@ const styles = StyleSheet.create({
   timeRemainingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 8,
     backgroundColor: '#FFFBEB',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#FEF3C7',
   },
   timeIconWrap: {
     backgroundColor: '#FEF3C7',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   timeRemainingContent: {
-    marginLeft: 16,
+    marginLeft: 12,
     flex: 1,
   },
   timeRemainingText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#92400E',
   },
   timeRemainingSub: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#B45309',
-    marginTop: 4,
+    marginTop: 2,
   },
 
   /* Bottom Bar */
