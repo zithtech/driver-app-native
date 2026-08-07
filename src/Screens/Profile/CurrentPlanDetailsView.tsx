@@ -81,7 +81,7 @@ const getFeaturesList = (features: any): string[] => {
 
 /* ================= SCREEN ================= */
 
-export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan }: any) {
+export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan, navigation }: any) {
   const insets = useSafeAreaInsets();
   const item = activePlan || {};
 
@@ -99,15 +99,16 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
   const planDisplayName = planName.charAt(0).toUpperCase() + planName.slice(1) + ' Plan';
 
   const lowerName = planName.toLowerCase();
-  let topCardColor = '#2E7D32'; // Default Premium (Green)
+  let topCardColor = '#E4A61A'; // Default Premium (Golden Yellow)
   if (lowerName.includes('basic')) {
-    topCardColor = '#2563EB'; // Blue
+    topCardColor = '#57A7A1'; // Teal
   } else if (lowerName.includes('elite')) {
-    topCardColor = '#2E7D32'; // Green
+    topCardColor = '#8A4DE8'; // Royal Purple
   }
 
-  const paymentMethod = item.payment_method || 'Online Payment';
-  const paymentId = item.razorpay_payment_id || item.payment_id || item.razorpay_subscription_id || 'N/A';
+  const isWallet = item.payment_method?.toLowerCase() === 'wallet' || item.payment_type?.toLowerCase() === 'wallet' || item.razorpay_payment_id === 'Wallet Payment' || item.payment_id === 'Wallet Payment';
+  const paymentMethod = isWallet ? 'Wallet' : (item.payment_method || 'Online Payment');
+  const paymentId = isWallet ? 'Wallet Transaction' : (item.razorpay_payment_id || item.payment_id || item.razorpay_subscription_id || 'N/A');
   const orderId = item.razorpay_order_id || item.order_id || 'N/A';
 
   const handleCopy = (text: string) => {
@@ -208,12 +209,18 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
           {/* ─── HEADER ─── */}
           <View style={[styles.headerBg, { paddingTop: 10 }]}>
             <View style={styles.headerRow}>
+              <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn}>
+                <Ionicons name="arrow-back" size={24} color="#111827" />
+              </Pressable>
               <View style={styles.headerTextWrap}>
                 <Text style={styles.headerTitle}>Current Plan Details</Text>
                 <Text style={styles.headerSubtitle}>
                   View all information about your{'\n'}active subscription
                 </Text>
               </View>
+              <Pressable onPress={() => navigation?.navigate('SubscriptionHistoryScreen')} style={styles.historyBtn}>
+                <MaterialCommunityIcons name="history" size={26} color="#111827" />
+              </Pressable>
             </View>
           </View>
 
@@ -229,7 +236,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
             </View>
             <View style={styles.planCardRight}>
               <View style={styles.planCardRightCol1}>
-                <Text style={styles.planPriceBig}>₹{formattedPlanAmount}</Text>
+                <Text style={styles.planPriceBig} numberOfLines={1} adjustsFontSizeToFit>₹{formattedPlanAmount}</Text>
                 <Text style={styles.planPriceSub}>{getBillingCycleLabel(item.billing_cycle)}</Text>
               </View>
               <View style={styles.verticalDivider} />
@@ -237,8 +244,8 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
                 <View style={[styles.shieldIconWrap, { backgroundColor: item.auto_renew ? '#E8F5E9' : '#FEE2E2' }]}>
                   <Ionicons name={item.auto_renew ? "shield-checkmark-outline" : "shield-half-outline"} size={24} color={item.auto_renew ? "#2E7D32" : "#EF4444"} />
                 </View>
-                <Text style={[styles.autoRenewTextGreen, { color: item.auto_renew ? '#2E7D32' : '#EF4444' }]}>
-                  Auto-renewal {item.auto_renew ? 'ON' : 'OFF'}
+                <Text style={[styles.autoRenewTextGreen, { color: item.auto_renew ? '#2E7D32' : '#EF4444' }]} numberOfLines={1} adjustsFontSizeToFit>
+                  Auto-renew {item.auto_renew ? 'ON' : 'OFF'}
                 </Text>
               </View>
             </View>
@@ -275,9 +282,12 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
                 </View>
                 <Text style={styles.dateLabelText}>Billing Cycle</Text>
                 <Text style={styles.dateValueText}>
-                  {item.billing_cycle ? item.billing_cycle.charAt(0).toUpperCase() + item.billing_cycle.slice(1) + 'ly' : 'Monthly'}
+                  {item.billing_cycle === 'day' || item.billing_cycle === 'daily'
+                    ? 'Daily'
+                    : item.billing_cycle === 'week' || item.billing_cycle === 'weekly'
+                    ? 'Weekly'
+                    : 'Monthly'}
                 </Text>
-                <Text style={styles.timeValueText}>Renews automatically</Text>
               </View>
             </View>
           </View>
@@ -294,7 +304,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
               <View style={styles.benefitsList}>
                 {(() => {
                   const allFeatures = getFeaturesList(item.plan?.features || item.features);
-                  const visibleFeatures = showAllBenefits ? allFeatures : allFeatures.slice(0, 5);
+                  const visibleFeatures = showAllBenefits ? allFeatures : allFeatures.slice(0, 2);
 
                   return visibleFeatures.map((benefit: string, index: number) => (
                     <View key={index} style={styles.benefitRowNew}>
@@ -305,37 +315,30 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan 
                   ));
                 })()}
               </View>
-              <View style={styles.shieldWatermark}>
-                <MaterialCommunityIcons name="shield-crown-outline" size={120} color="#E8F5E9" style={{ opacity: 0.6 }} />
-              </View>
             </View>
           </View>
 
 
-          {/* ─── SUBSCRIPTION JOURNEY ─── */}
+          {/* ─── TIME REMAINING ─── */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Your Subscription Journey</Text>
-            <View style={styles.journeyContainer}>
-              <View style={styles.journeyNode}>
-                <Ionicons name="checkmark-circle" size={24} color="#2E7D32" />
-                <Text style={styles.journeyDate}>{formatDate(item.start_date)}</Text>
-                <Text style={styles.journeyLabel}>Subscribed</Text>
+            <Text style={styles.sectionTitle}>Time Remaining</Text>
+            <View style={styles.timeRemainingCard}>
+              <View style={styles.timeIconWrap}>
+                <Ionicons name="time-outline" size={28} color="#F59E0B" />
               </View>
-
-              <View style={styles.journeyLineSolid} />
-
-              <View style={styles.journeyNode}>
-                <Ionicons name="disc" size={24} color="#2E7D32" />
-                <Text style={styles.journeyDate}>{formatDate(item.expiry_date)}</Text>
-                <Text style={styles.journeyLabel}>Next Billing</Text>
-              </View>
-
-              <View style={styles.journeyLineDashed} />
-
-              <View style={styles.journeyNode}>
-                <Ionicons name="ellipse-outline" size={24} color="#9CA3AF" />
-                <Text style={[styles.journeyDate, { color: '#9CA3AF' }]}>{formatDate(item.expiry_date)}</Text>
-                <Text style={[styles.journeyLabel, { color: '#9CA3AF' }]}>Next Renewal</Text>
+              <View style={styles.timeRemainingContent}>
+                <Text style={styles.timeRemainingText}>
+                  {(() => {
+                    if (!item.expiry_date) return 'Unknown';
+                    const diff = new Date(item.expiry_date).getTime() - new Date().getTime();
+                    if (diff <= 0) return 'Expired';
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`;
+                    return `${hours} hour${hours !== 1 ? 's' : ''}`;
+                  })()}
+                </Text>
+                <Text style={styles.timeRemainingSub}>Until next billing cycle</Text>
               </View>
             </View>
           </View>
@@ -395,11 +398,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
   },
+  backBtn: {
+    marginRight: 12,
+    padding: 4,
+  },
+  historyBtn: {
+    padding: 4,
+    marginLeft: 12,
+  },
   headerTextWrap: {
-    marginLeft: 32, // to align since there is no back button
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#111827',
     marginBottom: 4,
@@ -457,7 +468,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   planCardRightCol1: {
-    flex: 1,
+    flex: 1.3,
     alignItems: 'center',
   },
   planPriceBig: {
@@ -472,7 +483,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   planCardRightCol2: {
-    flex: 1,
+    flex: 0.7,
     alignItems: 'center',
   },
   shieldIconWrap: {
@@ -486,7 +497,7 @@ const styles = StyleSheet.create({
   },
   autoRenewTextGreen: {
     color: '#2E7D32',
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: 'bold',
     textAlign: 'center',
   },
@@ -615,44 +626,38 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  /* Subscription Journey */
-  journeyContainer: {
+  /* Time Remaining */
+  timeRemainingCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    paddingHorizontal: 10,
-  },
-  journeyNode: {
-    alignItems: 'center',
-    width: 80,
-  },
-  journeyDate: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 8,
-  },
-  journeyLabel: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  journeyLineSolid: {
-    flex: 1,
-    height: 2,
-    backgroundColor: '#2E7D32',
-    marginHorizontal: -15,
-    marginBottom: 20, // push up to align with icons
-  },
-  journeyLineDashed: {
-    flex: 1,
-    height: 2,
+    marginTop: 12,
+    backgroundColor: '#FFFBEB',
+    padding: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#9CA3AF',
-    borderStyle: 'dashed',
-    marginHorizontal: -15,
-    marginBottom: 20,
+    borderColor: '#FEF3C7',
+  },
+  timeIconWrap: {
+    backgroundColor: '#FEF3C7',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timeRemainingContent: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  timeRemainingText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  timeRemainingSub: {
+    fontSize: 12,
+    color: '#B45309',
+    marginTop: 4,
   },
 
   /* Bottom Bar */

@@ -104,8 +104,9 @@ const SubscriptionDetailScreen = ({ navigation, route }: any) => {
   const formattedAmount = amount.toLocaleString('en-IN', { minimumFractionDigits: 2 });
   const planDisplayName = (item.plan_name || '').charAt(0).toUpperCase() + (item.plan_name || '').slice(1) + ' Plan';
   
-  const paymentMethod = item.payment_method || 'Online Payment';
-  const paymentId = item.razorpay_payment_id || item.payment_id || 'N/A';
+  const isWallet = item.payment_method?.toLowerCase() === 'wallet' || item.payment_type?.toLowerCase() === 'wallet' || item.razorpay_payment_id === 'Wallet Payment' || item.payment_id === 'Wallet Payment';
+  const paymentMethod = isWallet ? 'Wallet' : (item.payment_method || 'Online Payment');
+  const paymentId = isWallet ? 'Wallet Transaction' : (item.razorpay_payment_id || item.payment_id || 'N/A');
   const orderId = item.razorpay_order_id || item.order_id || 'N/A';
 
   const handleCopy = (text: string) => {

@@ -10,7 +10,6 @@ export { default as PremiumUserIcon } from './PremiumUserIcon';
 export { default as PremiumAddressIcon } from './PremiumAddressIcon';
 export { default as CancellationModal } from './CancellationModal';
 export { default as PremiumInfoBanner } from './PremiumInfoBanner';
-export { default as PremiumSosContactCard } from './PremiumSosContactCard';
 export { default as RelationshipPicker } from './RelationshipPicker';
 export { default as ConfirmationModal } from './ConfirmationModal';
 export { default as Toast } from './Toast';

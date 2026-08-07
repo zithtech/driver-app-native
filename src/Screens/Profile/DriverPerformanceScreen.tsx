@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,269 +7,129 @@ import {
   Dimensions,
   ScrollView,
   RefreshControl,
-  InteractionManager,
+  Image,
+  Animated,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import AppStatusBar from '../../Components/AppStatusBar';
-import Animated, {
-  useSharedValue,
-  useAnimatedProps,
-  withTiming,
-  withSpring,
-  useAnimatedStyle,
-  interpolate,
-  Extrapolate,
-} from 'react-native-reanimated';
 import { useSelector } from 'react-redux';
 import { useAppTheme } from '../../context/ThemeContext';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
 import { 
-  useGetDriverPerformanceQuery, 
-  useGetRideActivityQuery, 
-  useGetTodayOverviewQuery,
-  useUpdateDriverMutation 
+  useGetRideActivityQuery,
+  useUpdateDriverScoreMutation,
+  useGetDriverPerformanceQuery,
 } from '../../service/driverApi';
 import { RootState } from '../../redux/store';
 import { 
   calculatePerformanceMetrics, 
-  getDynamicPerformanceInsights, 
-  getTierRoadmapData,
-  PerformanceMetrics 
+  calculateOverallScore,
+  getDynamicTips,
 } from '../../utils/performanceUtils';
+import { resolveImageUrl } from '../../utils/imageUtils';
 
 const { width } = Dimensions.get('window');
 
-/* =====================================================
-   TYPES
-===================================================== */
+// Shimmer skeleton placeholder
+const SkeletonBox = ({ style, opacity }: { style?: any; opacity: any }) => (
+  <Animated.View style={[{ backgroundColor: '#E5E7EB', borderRadius: 8 }, { opacity }, style]} />
+);
 
-type Period = 'Today' | 'Week' | 'Month';
+const PerformanceSkeleton = ({ isDark, insets }: { isDark: boolean; insets: any }) => {
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [shimmerAnim]);
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+  const opacity = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] });
+  const bgColor = isDark ? '#1F2937' : '#E5E7EB';
 
-/* =====================================================
-   COMPONENTS
-===================================================== */
+  return (
+    <View style={{ flex: 1, backgroundColor: isDark ? '#111827' : '#F4F6F9' }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: insets.top + 10, paddingHorizontal: 16, paddingBottom: 12 }}>
+        <SkeletonBox style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: bgColor }} opacity={opacity} />
+        <SkeletonBox style={{ width: 160, height: 18, marginLeft: 16, backgroundColor: bgColor }} opacity={opacity} />
+      </View>
+      <View style={{ paddingHorizontal: 16 }}>
+        {/* Hero card */}
+        <SkeletonBox style={{ width: '100%', height: 140, borderRadius: 16, backgroundColor: isDark ? '#1E3A5F' : '#93B5F5', marginBottom: 12 }} opacity={opacity} />
+        {/* Overall Performance card */}
+        <SkeletonBox style={{ width: '100%', height: 130, borderRadius: 16, backgroundColor: bgColor, marginBottom: 12 }} opacity={opacity} />
+        {/* Breakdown card */}
+        <SkeletonBox style={{ width: '100%', height: 100, borderRadius: 16, backgroundColor: bgColor, marginBottom: 12 }} opacity={opacity} />
+        {/* Tips card */}
+        <SkeletonBox style={{ width: '100%', height: 80, borderRadius: 16, backgroundColor: isDark ? '#1E3A5F30' : '#E0E7FF', marginBottom: 12 }} opacity={opacity} />
+      </View>
+    </View>
+  );
+};
 
-/**
- * Enhanced Performance Gauge with Gradients
- */
-const PerformanceGauge = ({ value, loading }: { value: number; loading?: boolean }) => {
-  const { t } = useTranslation();
-  const { isDark } = useAppTheme();
-  const size = width * 0.45;
-  const strokeWidth = 14;
+// Top gauge for Overall Performance — displays a 0–100 composite score
+const SemiCircleGauge = ({ value, label }: { value: number; label: string }) => {
+  const size = 120;
+  const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
+  const circumference = Math.PI * radius;
+  
+  // Value is 0 to 100 (overall score percentage)
+  const percentage = Math.min(Math.max(value, 0), 100);
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-  const progress = useSharedValue(0);
-
-  React.useEffect(() => {
-    if (!loading) {
-      progress.value = withSpring(value / 100, { damping: 15 });
-    } else {
-      progress.value = withTiming(0);
-    }
-  }, [value, loading, progress]);
-
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: circumference * (1 - progress.value),
-  }));
+  // Color based on score
+  const getGaugeColors = () => {
+    if (percentage >= 90) return { start: '#10B981', end: '#34D399' }; // green
+    if (percentage >= 80) return { start: '#2563EB', end: '#3B82F6' }; // blue
+    if (percentage >= 70) return { start: '#F59E0B', end: '#FBBF24' }; // amber
+    return { start: '#EF4444', end: '#F87171' }; // red
+  };
+  const colors = getGaugeColors();
 
   return (
     <View style={styles.gaugeContainer}>
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <Svg width={size} height={size / 2 + strokeWidth} viewBox={`0 0 ${size} ${size / 2 + strokeWidth}`}>
         <Defs>
-          <SvgGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <Stop offset="0%" stopColor="#2563EB" />
-            <Stop offset="100%" stopColor="#3B82F6" />
+          <SvgGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <Stop offset="0%" stopColor={colors.start} />
+            <Stop offset="100%" stopColor={colors.end} />
           </SvgGradient>
         </Defs>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={isDark ? '#374151' : '#E5E7EB'}
+        <Path
+          d={`M ${strokeWidth/2} ${size/2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth/2} ${size/2}`}
+          stroke="#E5E7EB"
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
         />
-        <AnimatedCircle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="url(#grad)"
+        <Path
+          d={`M ${strokeWidth/2} ${size/2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth/2} ${size/2}`}
+          stroke="url(#gaugeGrad)"
           strokeWidth={strokeWidth}
           fill="none"
-          strokeDasharray={`${circumference} ${circumference}`}
-          animatedProps={animatedProps}
           strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
         />
       </Svg>
       <View style={styles.gaugeInnerText}>
-        <Text style={[styles.gaugeValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>{loading ? '--' : `${value}%`}</Text>
-        <Text style={[styles.gaugeLabel, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>{t('score', 'Score')}</Text>
+        <Text style={styles.gaugeValue}>{value}</Text>
+        <Text style={styles.gaugeLabel}>{label}</Text>
       </View>
     </View>
   );
 };
-
-const StatCard = ({ label, value, icon, color, loading }: { label: string; value: string | number; icon: string; color: string; loading?: boolean }) => {
-  const { t: _t } = useTranslation();
-  const { isDark, theme } = useAppTheme();
-  return (
-    <View style={[styles.statCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', shadowOpacity: isDark ? 0 : 0.02 }]}>
-      <View style={[styles.statIconContainer, { backgroundColor: isDark ? color + '30' : color + '15' }]}>
-        <Ionicons name={icon} size={20} color={isDark ? '#FFFFFF' : color} />
-      </View>
-      <View style={styles.statContent}>
-        <Text style={[styles.statLabel, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>{label}</Text>
-        <Text style={[styles.statValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>{loading ? '...' : value}</Text>
-      </View>
-    </View>
-  );
-};
-
-/**
- * Premium Tier Roadmap with Glassmorphism
- */
-const TierRoadmap = ({ period, metrics }: { period: 'Today' | 'Week' | 'Month'; metrics: PerformanceMetrics | null }) => {
-  const { t } = useTranslation();
-  const { isDark } = useAppTheme();
-  
-  const roadmap = useMemo(() => 
-    getTierRoadmapData(period, metrics, t), 
-  [period, metrics, t]);
-
-  const { currentTier, nextTier, progress, tasks, ratingPlan, ridesNeeded } = roadmap;
-
-  const tierUIConfig = useMemo(() => {
-    const name = currentTier.name.toUpperCase();
-    if (name.includes('SILVER')) {
-      return {
-        colors: isDark ? ['#334155', '#1E293B'] : ['#94A3B8', '#475569'],
-        glowColor: 'rgba(203, 213, 225, 0.4)',
-        icon: 'medal-outline',
-        accentColor: '#CBD5E1',
-        textColor: '#FFFFFF',
-      };
-    } else if (name.includes('GOLD')) {
-      return {
-        colors: isDark ? ['#78350F', '#451A03'] : ['#D97706', '#92400E'],
-        glowColor: 'rgba(251, 191, 36, 0.5)',
-        icon: 'trophy-outline',
-        accentColor: '#FBBF24',
-        textColor: '#FFFFFF',
-      };
-    } else if (name.includes('PLATINUM')) {
-      return {
-        colors: isDark ? ['#1E3A8A', '#0F172A'] : ['#2563EB', '#1D4ED8'],
-        glowColor: 'rgba(96, 165, 250, 0.6)',
-        icon: 'shield-checkmark-outline',
-        accentColor: '#60A5FA',
-        textColor: '#FFFFFF',
-      };
-    } else {
-      return {
-        colors: isDark ? ['#1E293B', '#0F172A'] : ['#64748B', '#334155'],
-        glowColor: 'rgba(148, 163, 184, 0.3)',
-        icon: 'ribbon-outline',
-        accentColor: '#94A3B8',
-        textColor: '#FFFFFF',
-      };
-    }
-  }, [currentTier, isDark]);
-
-  return (
-    <View style={styles.tierContainer}>
-      <LinearGradient
-        colors={tierUIConfig.colors}
-        style={[
-          styles.tierCard,
-          {
-            shadowColor: tierUIConfig.glowColor,
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.3,
-            shadowRadius: 15,
-            elevation: 8,
-          },
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.tierHeader}>
-          <View>
-            <View style={styles.tierNameRow}>
-              <Ionicons name={tierUIConfig.icon} size={26} color={tierUIConfig.accentColor} style={{ marginRight: 8 }} />
-              <Text style={[styles.tierTitle, { color: tierUIConfig.textColor }]}>{currentTier.name}</Text>
-            </View>
-            <Text style={styles.tierLevel}>{t('driver_level', { level: currentTier.name })}</Text>
-          </View>
-          {nextTier && (
-            <View style={[styles.pointsBadge, { backgroundColor: 'rgba(0, 0, 0, 0.3)', borderColor: 'rgba(255, 255, 255, 0.1)', borderWidth: 1 }]}>
-              <Text style={styles.pointsNeeded}>{ridesNeeded}</Text>
-              <Text style={styles.pointsLabel}>{t('rides_to_next', 'RIDES TO NEXT')}</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.roadmapContent}>
-          {nextTier ? (
-            <>
-              <View style={styles.roadmapProgress}>
-                <View style={[styles.progressBarBg, { backgroundColor: 'rgba(0, 0, 0, 0.25)' }]}>
-                  <View style={[styles.progressBarFill, { width: `${progress}%`, backgroundColor: tierUIConfig.accentColor }]} />
-                </View>
-                <View style={styles.roadmapLabels}>
-                  <Text style={styles.roadmapLabel}>{currentTier.name}</Text>
-                  <Text style={styles.roadmapLabel}>{nextTier.name}</Text>
-                </View>
-              </View>
-
-              <View style={[styles.missionCard, { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
-                <Text style={styles.missionTitle}>
-                  {t('remaining_rides_to_tier', '🔥 {{count}} rides to {{tier}}!', { count: ridesNeeded, tier: nextTier.name })}
-                </Text>
-                {tasks.map((task, idx) => (
-                  <View key={idx} style={styles.missionItem}>
-                    <Ionicons name="checkmark-circle" size={16} color={tierUIConfig.accentColor} />
-                    <Text style={styles.missionText}>{task}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Dynamic Growth Plan based on Rating */}
-              <View style={[styles.missionCard, { marginTop: 10, backgroundColor: 'rgba(0, 0, 0, 0.15)', borderColor: 'rgba(255, 255, 255, 0.05)' }]}>
-                <Text style={styles.missionTitle}>{t('performance_plan', 'Growth Plan')}</Text>
-                <View style={styles.missionItem}>
-                  <Ionicons name="bulb" size={16} color="#FBBF24" />
-                  <Text style={[styles.missionText, { fontWeight: '700', color: '#FFF' }]}>{ratingPlan}</Text>
-                </View>
-              </View>
-            </>
-          ) : (
-            <View style={[styles.maxTierBox, { backgroundColor: 'rgba(255, 255, 255, 0.12)', borderColor: 'rgba(255, 255, 255, 0.2)', borderWidth: 1 }]}>
-              <Ionicons name="trophy" size={32} color="#FBBF24" />
-              <Text style={styles.maxTierText}>{t('highest_tier_reached', 'Highest Tier Reached!')}</Text>
-            </View>
-          )}
-        </View>
-      </LinearGradient>
-    </View>
-  );
-};
-
-/* =====================================================
-   MAIN SCREEN
-===================================================== */
 
 const DriverPerformanceScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
@@ -277,250 +137,404 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
   const { isDark, theme } = useAppTheme();
   const { triggerHaptic } = useHaptic();
   
-  const [updateDriver] = useUpdateDriverMutation();
-  const lastSyncedRating = React.useRef<number | null>(null);
-
-  const [period, setPeriod] = useState<Period>('Week');
-  const scrollY = useSharedValue(0);
-
-  // Get current user from Redux
   const user = useSelector((state: RootState) => state.userSlice.user);
   const driverId = user?.driverId || '';
   const isFocused = useIsFocused();
+  const [imgError, setImgError] = useState(false);
+  const [showAllBreakdown, setShowAllBreakdown] = useState(false);
+  const [backendPercentile, setBackendPercentile] = useState<number | null>(null);
 
-  // RTK Query for performance data (keeping this for backend-only stats like Tier/Points)
-  const { data, isLoading: isPerfLoading, refetch: refetchPerf, error } = useGetDriverPerformanceQuery(
-    { driverId, period: period.toLowerCase() },
-    { skip: !driverId }
-  );
-  
-  // Real-time Overview for "Today" (most accurate for total online time)
-  const { data: todayOverviewResult, refetch: refetchTodayOverview } = useGetTodayOverviewQuery(driverId, { skip: !driverId || period !== 'Today' });
-  const todayOverview = todayOverviewResult;
+  const [updateDriverScore, { isLoading: isUpdatingScore }] = useUpdateDriverScoreMutation();
 
+  const [timeframe, setTimeframe] = useState<'week' | 'month'>('month');
 
-
-  // Helper for date calculation
-  const getDatesForPeriod = useCallback((p: Period) => {
+  const getDatesForTimeframe = (selectedTimeframe: 'week' | 'month') => {
     const to = new Date();
     const from = new Date();
-    if (p === 'Today') {
-      // Current day
-    } else if (p === 'Week') {
-      from.setDate(to.getDate() - 7);
-    } else if (p === 'Month') {
-      from.setDate(to.getDate() - 30);
-    }
+    from.setDate(to.getDate() - (selectedTimeframe === 'week' ? 7 : 30));
     return { 
       from: `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-${String(from.getDate()).padStart(2, '0')}`, 
       to: `${to.getFullYear()}-${String(to.getMonth() + 1).padStart(2, '0')}-${String(to.getDate()).padStart(2, '0')}` 
     };
-  }, []);
+  };
 
-  const dateRange = getDatesForPeriod(period);
+  const dateRange = useMemo(() => getDatesForTimeframe(timeframe), [timeframe]);
 
-  // Fetch real ride activity for dynamic metrics
   const { data: activityResult, isLoading: isActivityLoading, refetch: refetchActivity } = useGetRideActivityQuery(
-    { 
-      driverId, 
-      from: dateRange.from, 
-      to: dateRange.to 
-    },
+    { driverId, from: dateRange.from, to: dateRange.to },
     { skip: !driverId }
   );
 
-  // Sync data on focus removed to prevent layout glitches on back navigation
+  const { data: performanceResult, refetch: refetchPerformance } = useGetDriverPerformanceQuery(
+    { driverId, period: timeframe },
+    { skip: !driverId }
+  );
 
-  const isLoading = isPerfLoading || isActivityLoading;
-
-  // Calculate dynamic metrics from real ride data
   const dynamicMetrics = useMemo(() => {
-    const rides = activityResult?.data ? (Array.isArray(activityResult.data) ? activityResult.data : (activityResult.data.rides || activityResult.data.trips || [])) : [];
-    // If it's a paginated or object response, handle it
-    const normalizedRides = Array.isArray(activityResult?.data) ? activityResult.data : (activityResult?.data?.data || []);
+    const raw = activityResult?.data;
+    const normalizedRides = Array.isArray(raw)
+      ? raw
+      : (raw?.data || raw?.rides || raw?.trips || []);
     return calculatePerformanceMetrics(normalizedRides);
   }, [activityResult]);
 
-  const apiMetrics = data?.data || {};
-  
-  // MERGE: Prefer dynamic metrics for specific KPIs, keep API for Tier/Points
-  const metrics = {
-    completionRate: dynamicMetrics.completionRate,
-    acceptanceRate: dynamicMetrics.acceptanceRate,
-    rating: dynamicMetrics.rating || user?.rating || 0,
-    earnings: `₹${dynamicMetrics.totalEarnings.toLocaleString('en-IN')}`,
-    onlineHours: period === 'Today' && todayOverview?.onlineMinutes !== undefined 
-        ? parseFloat((todayOverview.onlineMinutes / 60).toFixed(1)) 
-        : (apiMetrics.onlineHours || 0),
-    tier: apiMetrics.tier || 'Partner',
-    points: apiMetrics.points || 0,
-    nextTierPoints: apiMetrics.nextTierPoints || 100,
+  const truePerformance = performanceResult?.data;
+
+  const rating = truePerformance?.rating || dynamicMetrics.rating || 0;
+  const firstName = user?.first_name || user?.full_name?.split(' ')[0] || 'Driver';
+  const acceptanceRate = truePerformance?.acceptanceRate ?? dynamicMetrics.acceptanceRate ?? 0;
+  const completionRate = dynamicMetrics.completionRate || 0;
+  const totalRides = truePerformance?.totalTrips ?? dynamicMetrics.totalTrips ?? 0;
+  const cancellationRate = truePerformance?.cancellationRate ?? dynamicMetrics.cancellationRate ?? 0;
+  const onTimeRate = dynamicMetrics.onTimeRate; // -1 means no data available
+
+  // Overall composite score
+  const overallScore = useMemo(() => calculateOverallScore(dynamicMetrics), [dynamicMetrics]);
+
+  // Sync score to backend and get actual percentile
+  React.useEffect(() => {
+    if (driverId && overallScore.score > 0) {
+      updateDriverScore({ id: driverId, score: overallScore.score, timeframe })
+        .unwrap()
+        .then((res) => {
+          if (res?.data?.percentile !== undefined) {
+            setBackendPercentile(res.data.percentile);
+          }
+        })
+        .catch((err) => console.error('Failed to sync score:', err));
+    }
+  }, [driverId, overallScore.score, timeframe, updateDriverScore]);
+
+  // Dynamic tips based on weakest metrics
+  const tips = useMemo(() => getDynamicTips(dynamicMetrics), [dynamicMetrics]);
+
+  // Dynamic greeting based on score
+  const getGreeting = () => {
+    if (overallScore.score >= 90) return `Excellent Work, ${firstName}! 🌟`;
+    if (overallScore.score >= 80) return `Great Job, ${firstName}! 👍`;
+    if (overallScore.score >= 70) return `Keep Going, ${firstName}! 💪`;
+    if (overallScore.score > 0) return `You Can Do Better, ${firstName}! 🚀`;
+    return `Welcome, ${firstName}! 👋`;
   };
 
-  // Sync Calculate Rating to Backend (Drivers Table)
-  useEffect(() => {
-    if (
-      period === 'Month' && // Only sync when looking at a large enough dataset
-      dynamicMetrics.rating > 0 && 
-      driverId && 
-      lastSyncedRating.current !== dynamicMetrics.rating &&
-      Math.abs(dynamicMetrics.rating - (user?.rating || 0)) > 0.01 // Only sync if there's a real change
-    ) {
-      lastSyncedRating.current = dynamicMetrics.rating;
-      updateDriver({ 
-        id: driverId, 
-        data: { rating: dynamicMetrics.rating } 
-      });
-    }
-  }, [dynamicMetrics.rating, driverId, user?.rating, updateDriver, period]);
-
-  const dynamicInsights = useMemo(() => 
-    getDynamicPerformanceInsights(dynamicMetrics, t),
-  [dynamicMetrics, t]);
-
-  const [isManualRefresh, setIsManualRefresh] = useState(false);
-
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
-    setIsManualRefresh(true);
-    await Promise.all([refetchPerf(), refetchActivity()]);
-    setIsManualRefresh(false);
-  }, [refetchPerf, refetchActivity, triggerHaptic]);
-
-  const handlePeriodChange = (p: Period) => {
-    if (p !== period) {
-      triggerHaptic(HapticFeedbackTypes.selection);
-      setPeriod(p);
-    }
+    await Promise.all([
+      refetchActivity(),
+      refetchPerformance(),
+    ]);
   };
 
-  const headerStyle = useAnimatedStyle(() => {
-    const opacity = interpolate(scrollY.value, [0, 60], [1, 0], Extrapolate.CLAMP);
-    return { opacity };
-  });
+  // Show skeleton on first load (not on pull-to-refresh)
+  if (isActivityLoading && dynamicMetrics.totalTrips === 0 && !activityResult) {
+    return <PerformanceSkeleton isDark={isDark} insets={insets} />;
+  }
+
+  const getStatusText = (value: number, type: 'rating' | 'rate' | 'cancellation') => {
+    if (type === 'rating') {
+      if (value >= 4.8) return 'Excellent';
+      if (value >= 4.5) return 'Great';
+      return 'Good';
+    } else if (type === 'rate') {
+      if (value >= 95) return 'Excellent';
+      if (value >= 90) return 'Great';
+      return 'Good';
+    } else {
+      if (value <= 3) return 'Good';
+      if (value <= 5) return 'Fair';
+      return 'Poor';
+    }
+  };
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: isDark ? theme.colors.background : '#F9FAFB' }]}>
+    <View style={[styles.safeArea, { backgroundColor: isDark ? theme.colors.background : '#F4F6F9' }]}>
       {isFocused && <AppStatusBar />}
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: isDark ? theme.colors.background : '#F4F6F9' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
+          <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('driver_performance', 'Driver Performance')}</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Driver Performance</Text>
         <Pressable style={styles.infoBtn}>
-          <Ionicons name="information-circle-outline" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
+          <Ionicons name="help-circle-outline" size={24} color={isDark ? '#FFFFFF' : '#6B7280'} />
         </Pressable>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        onScroll={(e) => { scrollY.value = e.nativeEvent.contentOffset.y; }}
-        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={isManualRefresh} onRefresh={onRefresh} tintColor="#2563EB" />
+          <RefreshControl refreshing={isActivityLoading} onRefresh={onRefresh} tintColor="#2563EB" />
         }
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
       >
-        {/* Period Selector */}
-        <View style={[styles.toggleContainer, { backgroundColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
-          {(['Today', 'Week', 'Month'] as Period[]).map((p) => (
-            <Pressable
-              key={p}
-              onPress={() => handlePeriodChange(p)}
-              style={[
-                styles.toggleBtn,
-                period === p && [styles.toggleActive, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]
-              ]}
-            >
-              <Text style={[
-                styles.toggleText,
-                { color: isDark ? '#9CA3AF' : '#6B7280' },
-                period === p && [styles.toggleTextActive, { color: isDark ? '#FFFFFF' : '#111827' }]
-              ]}>{t(p.toLowerCase(), p)}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Hero Section: Gauge */}
-        <Animated.View style={[styles.heroSection, headerStyle, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
-          <PerformanceGauge value={metrics.completionRate} loading={isLoading} />
-          <View style={styles.heroSummary}>
-            <Text style={[styles.summaryTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('overall_performance', 'Overall Performance')}</Text>
-            <Text style={[styles.summarySub, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>
-              {error ? t('performance_load_error', 'Could not load your performance data.') : t('performance_period_desc', { period: t(period.toLowerCase()) })}
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Level & Gamification */}
-        {!isLoading && (
-          <TierRoadmap period={period} metrics={dynamicMetrics} />
-        )}
-
-        {/* Main Metrics Grid */}
-        <View style={styles.metricsGrid}>
-          <StatCard
-            label={t('earnings', 'Earnings')}
-            value={metrics.earnings}
-            icon="wallet-outline"
-            color="#059669"
-            loading={isLoading}
-          />
-          <StatCard
-            label={t('online_time', 'Online Time')}
-            value={`${metrics.onlineHours}h`}
-            icon="time-outline"
-            color="#2563EB"
-            loading={isLoading}
-          />
-          <StatCard
-            label={t('rating', 'Rating')}
-            value={typeof metrics.rating === 'number' ? metrics.rating.toFixed(1) : metrics.rating}
-            icon="star-outline"
-            color="#D97706"
-            loading={isLoading}
-          />
-          <StatCard
-            label={t('acceptance', 'Acceptance')}
-            value={`${metrics.acceptanceRate}%`}
-            icon="checkmark-circle-outline"
-            color="#7C3AED"
-            loading={isLoading}
-          />
-        </View>
-
-        {/* Insight Section */}
-        <View style={styles.insightSection}>
-          <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.text : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('performance_insights', 'Performance Insights')}</Text>
-          <View style={[styles.insightCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
-            {dynamicInsights.map((insight, index) => (
-              <View key={index} style={styles.insightRow}>
-                <Ionicons name={insight.icon} size={20} color={isDark ? insight.color : insight.color} />
-                <Text style={[styles.insightText, { color: isDark ? '#FFFFFF' : '#374151' }]}>
-                  {insight.text}
-                </Text>
+        {/* Top Blue Gradient Card */}
+        <LinearGradient
+          colors={['#2563EB', '#1D4ED8']}
+          style={styles.heroCard}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.heroTop}>
+            <View style={styles.profileSection}>
+              <View style={styles.avatarContainer}>
+                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }]}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#0F172A' }}>
+                    {firstName ? firstName.charAt(0).toUpperCase() : 'D'}
+                  </Text>
+                  {user?.profile_picture && user.profile_picture.trim() !== '' && !imgError && (
+                    <Image 
+                      source={{ uri: resolveImageUrl(user.profile_picture) }} 
+                      style={{ width: '100%', height: '100%', position: 'absolute' }} 
+                      onError={() => setImgError(true)}
+                    />
+                  )}
+                </View>
+                <View style={styles.badgeCheck}>
+                  <Ionicons name="checkmark" size={12} color="#FFF" />
+                </View>
               </View>
-            ))}
+              <View style={styles.greetingSection}>
+                <Text style={styles.greetingTitle}>{getGreeting()}</Text>
+                <Text style={styles.greetingSub}>{overallScore.score > 0 ? `Score: ${overallScore.score}/100 · ${overallScore.label}` : 'Complete rides to build your score'}</Text>
+              </View>
+            </View>
+            <View style={styles.rightHeroIcons}>
+              <View style={styles.shieldIconWrapper}>
+                <Ionicons name="shield" size={48} color="rgba(255,255,255,0.2)" />
+                <View style={{ position: 'absolute', top: 12 }}>
+                  <Ionicons name="star" size={24} color="#60A5FA" />
+                </View>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.heroStatsRow}>
+            <View style={styles.heroStatItem}>
+              <View style={styles.heroStatValueRow}>
+                <Ionicons name="star" size={16} color="#FBBF24" />
+                <Text style={styles.heroStatValue}>{rating.toFixed(1)}</Text>
+              </View>
+              <Text style={styles.heroStatLabel}>Rating</Text>
+              <View style={styles.starsRowSmall}>
+                {[1,2,3,4,5].map(i => (
+                  <Ionicons key={i} name={i <= Math.round(rating) ? "star" : "star-outline"} size={10} color="#FBBF24" />
+                ))}
+              </View>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatItem}>
+              <View style={styles.heroStatValueRow}>
+                <Ionicons name="cellular" size={16} color="#4ADE80" />
+                <Text style={styles.heroStatValue}>{acceptanceRate}%</Text>
+              </View>
+              <Text style={styles.heroStatLabel}>Acceptance{'\n'}Rate</Text>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatItem}>
+              <View style={styles.heroStatValueRow}>
+                <Ionicons name="time" size={16} color="#C084FC" />
+                <Text style={styles.heroStatValue}>{completionRate}%</Text>
+              </View>
+              <Text style={styles.heroStatLabel}>Completion{'\n'}Rate</Text>
+            </View>
+            <View style={styles.heroStatDivider} />
+            <View style={styles.heroStatItem}>
+              <View style={styles.heroStatValueRow}>
+                <Ionicons name="ribbon" size={16} color="#FCA5A5" />
+                <Text style={styles.heroStatValue}>{totalRides}</Text>
+              </View>
+              <Text style={styles.heroStatLabel}>Total Rides{'\n'}This {timeframe === 'month' ? 'Month' : 'Week'}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* Overall Performance Card */}
+        <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Overall Performance</Text>
+            <Pressable 
+              style={[styles.sectionAction, { backgroundColor: isDark ? '#374151' : '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]} 
+              onPress={() => setTimeframe(t => t === 'month' ? 'week' : 'month')}
+            >
+              <Text style={[styles.sectionActionText, { color: isDark ? '#D1D5DB' : '#4B5563', marginRight: 4 }]}>
+                This {timeframe === 'month' ? 'Month' : 'Week'}
+              </Text>
+              <Ionicons name="swap-vertical" size={14} color={isDark ? '#D1D5DB' : '#6B7280'} />
+            </Pressable>
+          </View>
+          
+          <View style={styles.overallContent}>
+            <SemiCircleGauge value={overallScore.score} label={overallScore.label} />
+            
+            <View style={styles.rankingSection}>
+              {isUpdatingScore || backendPercentile === null ? (
+                <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <SkeletonBox style={{ width: '80%', height: 16, marginBottom: 12, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} opacity={new Animated.Value(0.7)} />
+                  <SkeletonBox style={{ width: '100%', height: 24, backgroundColor: isDark ? '#374151' : '#E5E7EB' }} opacity={new Animated.Value(0.7)} />
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.rankingText, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                    {backendPercentile > 0 ? (
+                      <>You are among the <Text style={styles.rankingHighlight}>top {100 - backendPercentile}%</Text> drivers in your city</>
+                    ) : (
+                      'Complete more rides to see your ranking'
+                    )}
+                  </Text>
+                  <View style={styles.percentileContainer}>
+                    <View style={[styles.percentileBadgeWrapper, { right: `${100 - backendPercentile}%` }]}>
+                      <View style={styles.percentileBadge}>
+                        <Text style={styles.percentileBadgeText}>{backendPercentile}%</Text>
+                      </View>
+                      <View style={styles.percentileBadgeTriangle} />
+                    </View>
+                    <View style={[styles.percentileBarBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+                      <View style={[styles.percentileBarFill, { width: `${backendPercentile}%` }]} />
+                    </View>
+                    <View style={styles.percentileLabels}>
+                      <Text style={styles.percentileLabel}>0%</Text>
+                      <Text style={styles.percentileLabel}>50%</Text>
+                      <Text style={styles.percentileLabel}>100%</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
         </View>
 
-        {/* Footer Info */}
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('updated_just_now', 'Updated: Just Now')}</Text>
+        {/* Performance Breakdown */}
+        <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Performance Breakdown</Text>
+            <Pressable style={styles.sectionAction} onPress={() => setShowAllBreakdown(!showAllBreakdown)}>
+              <Text style={styles.sectionActionText}>{showAllBreakdown ? 'View Less' : 'View All'}</Text>
+              <Ionicons name={showAllBreakdown ? 'chevron-up' : 'chevron-down'} size={16} color="#6B7280" />
+            </Pressable>
+          </View>
+
+          <View style={styles.breakdownList}>
+            <BreakdownItem
+              icon="thumbs-up"
+              iconColor="#10B981"
+              title="Rider Rating"
+              subtitle="Based on rider feedback"
+              value={`${rating.toFixed(1)} / 5.0`}
+              status={getStatusText(rating, 'rating')}
+              statusColor="#10B981"
+              progress={rating / 5 * 100}
+              isDark={isDark}
+            />
+            <BreakdownItem
+              icon="checkmark"
+              iconColor="#3B82F6"
+              title="Acceptance Rate"
+              subtitle="Rides you accepted"
+              value={`${acceptanceRate}%`}
+              status={getStatusText(acceptanceRate, 'rate')}
+              statusColor="#3B82F6"
+              progress={acceptanceRate}
+              isDark={isDark}
+              isLast={!showAllBreakdown}
+            />
+            {showAllBreakdown && (
+              <>
+                <BreakdownItem
+                  icon="flag"
+                  iconColor="#8B5CF6"
+                  title="Completion Rate"
+                  subtitle="Rides you completed"
+                  value={`${completionRate}%`}
+                  status={getStatusText(completionRate, 'rate')}
+                  statusColor="#10B981"
+                  progress={completionRate}
+                  isDark={isDark}
+                />
+                <BreakdownItem
+                  icon="time"
+                  iconColor="#F97316"
+                  title="On-time Rate"
+                  subtitle={onTimeRate >= 0 ? 'Punctuality maintained' : 'Data not available yet'}
+                  value={onTimeRate >= 0 ? `${onTimeRate}%` : 'N/A'}
+                  status={onTimeRate >= 0 ? getStatusText(onTimeRate, 'rate') : 'Pending'}
+                  statusColor={onTimeRate >= 0 ? '#3B82F6' : '#9CA3AF'}
+                  progress={onTimeRate >= 0 ? onTimeRate : 0}
+                  isDark={isDark}
+                />
+                <BreakdownItem
+                  icon="shield-checkmark"
+                  iconColor="#EF4444"
+                  title="Cancellation Rate"
+                  subtitle="Rides you cancelled"
+                  value={`${cancellationRate}%`}
+                  status={getStatusText(cancellationRate, 'cancellation')}
+                  statusColor="#10B981"
+                  progress={100 - cancellationRate}
+                  isLast
+                  isDark={isDark}
+                />
+              </>
+            )}
+          </View>
         </View>
+
+        {/* Tips to Improve */}
+        <View style={[styles.tipsCard, { backgroundColor: isDark ? '#1E3A8A20' : '#EEF2FF' }]}>
+          <View style={styles.tipsHeaderRow}>
+            <Ionicons name="megaphone" size={18} color={isDark ? '#9CA3AF' : '#6B7280'} style={{ marginRight: 6 }} />
+            <Text style={[styles.tipsTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Tips to Improve</Text>
+          </View>
+          <View style={styles.tipsContentRow}>
+            <View style={styles.tipsList}>
+              {tips.map((tip, index) => (
+                <View key={index} style={styles.tipItem}>
+                  <Ionicons name={tip.icon} size={14} color={tip.color} style={styles.tipIcon} />
+                  <Text style={[styles.tipText, { color: isDark ? '#D1D5DB' : '#374151' }]}>{tip.text}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.tipsGraphic}>
+              <Ionicons name="trending-up" size={32} color="#3B82F6" />
+              <Ionicons name="trophy" size={24} color="#FBBF24" style={{ marginTop: -8, marginLeft: 16 }} />
+            </View>
+          </View>
+        </View>
+        
       </ScrollView>
     </View>
   );
 };
 
-/* =====================================================
-   STYLES
-===================================================== */
+const BreakdownItem = ({ icon, iconColor, title, subtitle, value, status, statusColor, progress, isLast, isDark }: any) => {
+  return (
+    <View style={[styles.breakdownItemContainer, !isLast && [styles.breakdownItemBorder, { borderBottomColor: isDark ? '#374151' : '#F3F4F6' }]]}>
+      <View style={styles.breakdownItemRow}>
+        <View style={[styles.breakdownIconWrapper, { backgroundColor: iconColor }]}>
+          <Ionicons name={icon} size={18} color="#FFF" />
+        </View>
+        <View style={styles.breakdownTextContent}>
+          <Text style={[styles.breakdownTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{title}</Text>
+          <Text style={[styles.breakdownSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{subtitle}</Text>
+        </View>
+        <View style={styles.breakdownValueContent}>
+          <Text style={[styles.breakdownValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>{value}</Text>
+          <View style={[styles.breakdownStatusBadge, { backgroundColor: statusColor + '15' }]}>
+            <Text style={[styles.breakdownStatusText, { color: statusColor }]}>{status}</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={isDark ? '#6B7280' : '#D1D5DB'} />
+      </View>
+      <View style={styles.breakdownProgressContainer}>
+        <View style={[styles.breakdownProgressBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+          <View style={[styles.breakdownProgressFill, { width: `${progress}%`, backgroundColor: iconColor }]} />
+        </View>
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -528,290 +542,367 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFF',
   },
   backBtn: {
-    padding: 4,
+    padding: 6,
+    backgroundColor: '#FFF',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
   },
   infoBtn: {
     padding: 4,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    margin: 16,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 14,
-    padding: 4,
+  heroCard: {
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginHorizontal: -8,
+    marginBottom: 12,
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  toggleActive: {
-    backgroundColor: '#FFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  toggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  toggleTextActive: {
-    color: '#111827',
-  },
-  heroSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#FFF',
-    marginHorizontal: 16,
-    borderRadius: 20,
-    marginBottom: 16,
-  },
-  gaugeContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  gaugeInnerText: {
-    position: 'absolute',
-    alignItems: 'center',
-  },
-  gaugeValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  gaugeLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  heroSummary: {
-    alignItems: 'center',
-    paddingHorizontal: 30,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  summarySub: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  tierContainer: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
-  tierCard: {
-    borderRadius: 20,
-    padding: 20,
-  },
-  tierHeader: {
+  heroTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  tierNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tierTitle: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#FFF',
-    letterSpacing: 0.5,
-  },
-  tierLevel: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  glassCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  roadmapContent: {
-    width: '100%',
-  },
-  roadmapProgress: {
-    marginBottom: 16,
-  },
-  roadmapLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
-  roadmapLabel: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  missionCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  missionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFF',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
-  missionItem: {
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    marginRight: 12,
+    position: 'relative',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: '#FFF',
+    backgroundColor: '#E5E7EB',
+  },
+  badgeCheck: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#10B981',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
+  greetingSection: {
+    flex: 1,
+  },
+  greetingTitle: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  greetingSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  rightHeroIcons: {
+    alignItems: 'flex-end',
+  },
+
+  shieldIconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  heroStatValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
-  missionText: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.95)',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  maxTierBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    padding: 10,
-    borderRadius: 12,
-    justifyContent: 'center',
-  },
-  maxTierText: {
+  heroStatValue: {
     color: '#FFF',
+    fontSize: 14,
     fontWeight: '700',
-    marginLeft: 8,
-    fontSize: 13,
+    marginLeft: 4,
   },
-  pointsBadge: {
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    alignItems: 'center',
+  heroStatLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 12,
   },
-  pointsNeeded: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  pointsLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-
-  progressBarBg: {
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#FFF',
-    borderRadius: 5,
-    shadowColor: '#FFF',
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  metricsGrid: {
+  starsRowSmall: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 8,
-    marginBottom: 16,
+    marginTop: 4,
   },
-  statCard: {
-    width: (width - 48) / 2,
+  heroStatDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  sectionCard: {
     backgroundColor: '#FFF',
-    margin: 8,
-    padding: 16,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 5,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  statContent: {
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  statValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    marginTop: 2,
-  },
-  insightSection: {
-    marginHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#111827',
+    borderRadius: 16,
+    padding: 12,
     marginBottom: 12,
   },
-  insightCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  insightRow: {
+  sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginVertical: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  insightText: {
+  sectionTitle: {
     fontSize: 14,
-    color: '#374151',
-    flex: 1,
-    marginLeft: 12,
-    lineHeight: 20,
+    fontWeight: '700',
+    color: '#111827',
   },
-  footer: {
-    marginTop: 20,
+  sectionAction: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  footerText: {
+  sectionActionText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginRight: 2,
+  },
+  overallContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gaugeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    marginRight: 16,
+  },
+  gaugeInnerText: {
+    position: 'absolute',
+    alignItems: 'center',
+    top: 25,
+  },
+  gaugeValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    marginVertical: 2,
+  },
+  gaugeLabel: {
     fontSize: 12,
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  rankingSection: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  rankingText: {
+    fontSize: 12,
+    color: '#374151',
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  rankingHighlight: {
+    color: '#2563EB',
+    fontWeight: '700',
+  },
+  percentileContainer: {
+    width: '100%',
+  },
+  percentileBadgeWrapper: {
+    position: 'absolute',
+    top: -25,
+    transform: [{ translateX: 15 }],
+    alignItems: 'center',
+  },
+  percentileBadge: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  percentileBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  percentileBadgeTriangle: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 4,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#2563EB',
+    transform: [{ rotate: '180deg' }],
+  },
+  percentileBarBg: {
+    height: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  percentileBarFill: {
+    height: '100%',
+    backgroundColor: '#2563EB',
+    borderRadius: 4,
+  },
+  percentileLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  percentileLabel: {
+    fontSize: 11,
     color: '#9CA3AF',
+  },
+  breakdownList: {
+    marginTop: 4,
+  },
+  breakdownItemContainer: {
+    marginBottom: 10,
+  },
+  breakdownItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 10,
+  },
+  breakdownItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  breakdownIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  breakdownTextContent: {
+    flex: 1,
+  },
+  breakdownTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  breakdownSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  breakdownValueContent: {
+    alignItems: 'flex-end',
+    marginRight: 8,
+  },
+  breakdownValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  breakdownStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  breakdownStatusText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  breakdownProgressContainer: {
+    paddingLeft: 48,
+  },
+  breakdownProgressBg: {
+    height: 4,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  breakdownProgressFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  tipsCard: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 16,
+  },
+  tipsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  tipsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  tipsContentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tipsList: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  tipItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  tipIcon: {
+    marginTop: 2,
+    marginRight: 6,
+  },
+  tipText: {
+    fontSize: 12,
+    color: '#374151',
+    lineHeight: 16,
+    flex: 1,
+  },
+  tipsGraphic: {
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

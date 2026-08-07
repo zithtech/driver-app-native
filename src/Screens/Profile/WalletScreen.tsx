@@ -249,11 +249,11 @@ Status: ${selectedTransaction.status}`;
                     <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>Transaction{'\n'}History</Text>
                   </Pressable>
                   
-                  <Pressable style={styles.actionItem}>
+                  <Pressable style={styles.actionItem} onPress={() => navigation.navigate('WalletPinSetupScreen')}>
                     <View style={[styles.actionIconBg, { backgroundColor: isDark ? '#374151' : '#f0fdf4' }]}>
-                      <Ionicons name="pricetag" size={20} color="#16a34a" />
+                      <Ionicons name="keypad" size={20} color="#16a34a" />
                     </View>
-                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>Offers &{'\n'}Rewards</Text>
+                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>{user?.has_wallet_pin ? 'Update' : 'Set'}{'\n'}PIN</Text>
                   </Pressable>
                 </View>
               </View>

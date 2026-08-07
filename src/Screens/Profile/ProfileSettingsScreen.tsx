@@ -8,6 +8,8 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    Platform,
+    ToastAndroid,
 } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +17,6 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import {
-    BottomSheetModal,
-    BottomSheetView,
-    BottomSheetBackdrop,
-} from '@gorhom/bottom-sheet';
 import Animated, {
     FadeInDown,
 } from 'react-native-reanimated';
@@ -67,46 +64,44 @@ const ProfileSettingsScreen = () => {
     const { triggerHaptic } = useHaptic();
     const [updateDriver] = useUpdateDriverMutation();
     const [signOut] = useSignOutMutation();
-    const { showSuccessPopup } = React.useContext(RootContext);
 
     const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
 
-    /* ================= REF ================= */
-    const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-
-    /* ================= SNAP POINTS ================= */
-    const snapPoints = useMemo(() => ['40%'], []);
-
     /* ================= HANDLERS ================= */
 
-    const handlePresentModalPress = useCallback(() => {
-        triggerHaptic(HapticFeedbackTypes.selection);
-        bottomSheetModalRef.current?.present();
-    }, [triggerHaptic]);
-
-    const handleLanguageSelect = useCallback(async (lang: string) => {
+    const toggleLanguage = useCallback(async () => {
         triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-        dispatch(setUser({ language: lang }));
-        i18n.changeLanguage(lang);
-        bottomSheetModalRef.current?.dismiss();
-        showSuccessPopup(t('language_changed'));
+        
+        const currentIndex = languagesList.findIndex(l => l.value === currentLanguage);
+        const nextIndex = (currentIndex + 1) % languagesList.length;
+        const nextLang = languagesList[nextIndex].value;
+
+        dispatch(setUser({ language: nextLang }));
+        i18n.changeLanguage(nextLang);
+        
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(t('language_changed'), ToastAndroid.SHORT);
+        }
 
         if (user?.driverId) {
             try {
                 await updateDriver({
                     id: user.driverId,
-                    data: { language: lang }
+                    data: { language: nextLang }
                 }).unwrap();
             } catch (err) {
                 console.error('[Settings] Failed to persist language:', err);
             }
         }
-    }, [dispatch, triggerHaptic, showSuccessPopup, t, user?.driverId, updateDriver]);
+    }, [currentLanguage, dispatch, triggerHaptic, t, user?.driverId, updateDriver]);
 
     const toggleVibration = useCallback(async (value: boolean) => {
         triggerHaptic(HapticFeedbackTypes.impactMedium);
         dispatch(setUser({ isVibrationEnabled: value }));
-        showSuccessPopup(value ? t('vibration_enabled') : t('vibration_disabled'));
+        
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(value ? 'Vibration ON' : 'Vibration OFF', ToastAndroid.SHORT);
+        }
 
         if (user?.driverId) {
             try {
@@ -117,7 +112,7 @@ const ProfileSettingsScreen = () => {
             } catch (err) {
             }
         }
-    }, [dispatch, triggerHaptic, user?.driverId, updateDriver, showSuccessPopup, t]);
+    }, [dispatch, triggerHaptic, user?.driverId, updateDriver, t]);
 
     const handleLogout = () => {
         setIsLogoutModalVisible(true);
@@ -145,21 +140,14 @@ const ProfileSettingsScreen = () => {
         triggerHaptic(HapticFeedbackTypes.selection);
         const nextMode = themeMode === 'light' ? 'dark' : 'light';
         setThemeMode(nextMode);
+        
+        if (Platform.OS === 'android') {
+            ToastAndroid.show(nextMode === 'dark' ? 'Dark Mode ON' : 'Dark Mode OFF', ToastAndroid.SHORT);
+        }
     };
-
-    const renderBackdrop = useCallback(
-        (props: any) => (
-            <BottomSheetBackdrop
-                {...props}
-                disappearsOnIndex={-1}
-                appearsOnIndex={0}
-            />
-        ),
-        []
-    );
     
-    // Grouped list background color
-    const bgColor = isDark ? theme.colors.background : '#F2F2F7';
+    // Screen background color
+    const bgColor = theme.colors.background;
 
     return (
         <View style={[styles.mainContainer, { backgroundColor: bgColor }]}>
@@ -211,7 +199,7 @@ const ProfileSettingsScreen = () => {
                     <Item
                         icon="language-outline"
                         label={t('language')}
-                        onPress={handlePresentModalPress}
+                        onPress={toggleLanguage}
                         theme={theme}
                         value={languagesList.find(l => l.value === currentLanguage)?.nativeName}
                         isDark={isDark}
@@ -282,50 +270,6 @@ const ProfileSettingsScreen = () => {
                 isDestructive
                 icon="log-out-outline"
             />
-
-            {/* LANGUAGE BOTTOM SHEET */}
-            <BottomSheetModal
-                ref={bottomSheetModalRef}
-                index={0}
-                snapPoints={snapPoints}
-                backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: theme.colors.card }}
-                handleIndicatorStyle={{ backgroundColor: theme.colors.border }}
-            >
-                <BottomSheetView style={[styles.bottomSheetContent, { backgroundColor: theme.colors.card }]}>
-                    <Text style={[styles.bottomSheetTitle, { color: theme.colors.text }]}>
-                        {t('select_language')}
-                    </Text>
-                    <View style={styles.languageList}>
-                        {languagesList.map((lang) => (
-                            <TouchableOpacity
-                                key={lang.value}
-                                style={[
-                                    styles.languageItem,
-                                    isDark && { backgroundColor: theme.colors.background },
-                                    currentLanguage === lang.value && {
-                                        backgroundColor: isDark ? theme.colors.primary + '20' : theme.colors.primary + '10',
-                                        borderColor: theme.colors.primary,
-                                    },
-                                ]}
-                                onPress={() => handleLanguageSelect(lang.value)}
-                            >
-                                <View>
-                                    <Text style={[styles.langNative, { color: theme.colors.text }]}>
-                                        {lang.nativeName}
-                                    </Text>
-                                    <Text style={[styles.langLabel, { color: theme.colors.textMuted }]}>
-                                        {lang.label}
-                                    </Text>
-                                </View>
-                                {currentLanguage === lang.value && (
-                                    <Ionicons name="checkmark-circle-outline" size={ms(24)} color={theme.colors.primary} />
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </BottomSheetView>
-            </BottomSheetModal>
         </View>
     );
 };
@@ -340,7 +284,7 @@ const AnimatedSection = ({ title, children, index }: any) => {
             style={styles.section}
         >
             <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>{title.toUpperCase()}</Text>
-            <View style={[styles.sectionContent, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#2C2C2E' : '#E5E7EB' }]}>
+            <View style={styles.sectionContent}>
                 {children}
             </View>
         </Animated.View>
@@ -360,7 +304,7 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark, isLast }: an
             ]}>
                 <Ionicons
                     name={icon}
-                    size={ms(18)}
+                    size={ms(16)}
                     color={danger ? '#EF4444' : (isDark ? '#FFFFFF' : '#4B5563')}
                 />
             </View>
@@ -379,12 +323,17 @@ const Item = ({ icon, label, onPress, danger, theme, value, isDark, isLast }: an
         </View>
         <View style={styles.right}>
             {value && (
-                <Text numberOfLines={1} style={[styles.itemSubText, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>
+                <Animated.Text 
+                    key={value} 
+                    entering={FadeInDown.duration(300)}
+                    numberOfLines={1} 
+                    style={[styles.itemSubText, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}
+                >
                     {value}
-                </Text>
+                </Animated.Text>
             )}
             {!danger && (
-                <Ionicons name="chevron-forward" size={ms(18)} color={isDark ? '#4B5563' : '#9CA3AF'} />
+                <Ionicons name="chevron-forward" size={ms(16)} color={isDark ? '#4B5563' : '#9CA3AF'} />
             )}
         </View>
     </TouchableOpacity>
@@ -397,7 +346,7 @@ const SwitchItem = ({ icon, label, value, onChange, theme, isDark, isLast }: any
                 styles.iconContainer,
                 { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6' }
             ]}>
-                <Ionicons name={icon} size={ms(18)} color={isDark ? '#FFFFFF' : '#4B5563'} />
+                <Ionicons name={icon} size={ms(16)} color={isDark ? '#FFFFFF' : '#4B5563'} />
             </View>
             <View style={styles.textContainer}>
                 <Text numberOfLines={1} style={[styles.itemText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
@@ -447,26 +396,24 @@ const styles = StyleSheet.create({
         paddingBottom: vs(24),
     },
     section: {
-        marginBottom: vs(24),
+        marginBottom: vs(16),
     },
     sectionTitle: {
-        fontSize: ms(13),
+        fontSize: ms(12),
         fontWeight: '600',
-        marginBottom: vs(8),
-        marginLeft: ms(16),
+        marginBottom: vs(4),
+        marginLeft: ms(12),
         textTransform: 'uppercase',
     },
     sectionContent: {
-        borderRadius: ms(12),
-        borderWidth: 1,
         overflow: 'hidden',
     },
     item: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: vs(12),
-        paddingHorizontal: ms(16),
+        paddingVertical: vs(8),
+        paddingHorizontal: ms(12),
     },
     left: {
         flexDirection: 'row',
@@ -474,27 +421,27 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     iconContainer: {
-        width: ms(32),
-        height: ms(32),
-        borderRadius: ms(8),
+        width: ms(28),
+        height: ms(28),
+        borderRadius: ms(6),
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: ms(12),
+        marginRight: ms(10),
     },
     textContainer: {
         flex: 1,
     },
     itemText: {
-        fontSize: ms(15),
+        fontSize: ms(14),
         fontWeight: '500',
     },
     right: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: ms(8),
+        gap: ms(6),
     },
     itemSubText: {
-        fontSize: ms(15),
+        fontSize: ms(14),
         fontWeight: '400',
     },
     footer: {
@@ -505,41 +452,6 @@ const styles = StyleSheet.create({
     versionText: {
         fontSize: ms(12),
         fontWeight: '500',
-    },
-    
-    // Bottom Sheet
-    bottomSheetContent: {
-        flex: 1,
-        padding: ms(24),
-    },
-    bottomSheetTitle: {
-        fontSize: ms(20),
-        fontWeight: '800',
-        marginBottom: vs(24),
-        textAlign: 'center',
-        letterSpacing: -0.5,
-    },
-    languageList: {
-        gap: vs(12),
-    },
-    languageItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: ms(16),
-        borderRadius: ms(18),
-        borderWidth: 1.5,
-        borderColor: 'transparent',
-        backgroundColor: 'rgba(0,0,0,0.02)',
-    },
-    langNative: {
-        fontSize: ms(16),
-        fontWeight: '700',
-    },
-    langLabel: {
-        fontSize: ms(13),
-        marginTop: vs(2),
-        opacity: 0.7,
     },
 });
 

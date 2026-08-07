@@ -11,7 +11,9 @@ import {
   Alert,
   Image,
   Modal,
-  Linking
+  Linking,
+  ToastAndroid,
+  Switch
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, useIsFocused } from '@react-navigation/native';
@@ -109,10 +111,12 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isSwitchPlanMode, setIsSwitchPlanMode] = useState(false);
+  const [isAutoRenewEnabled, setIsAutoRenewEnabled] = useState(true);
 
   // Eligibility Modal State
   const [eligibilityModalVisible, setEligibilityModalVisible] = useState(false);
   const [ineligiblePlanName, setIneligiblePlanName] = useState('');
+  const [ineligiblePlanColor, setIneligiblePlanColor] = useState('#2563EB');
   const [upgradeConfirmData, setUpgradeConfirmData] = useState<{
     visible: boolean;
     unusedCredit: number;
@@ -120,6 +124,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     amountToPay: number;
     tier: PlanTier | null;
   }>({ visible: false, unusedCredit: 0, newPlanCost: 0, amountToPay: 0, tier: null });
+  const [expandedPlans, setExpandedPlans] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (subscriptionData?.data?.subscription?.billing_cycle) {
@@ -189,14 +194,14 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     const name = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const lowerName = name.toLowerCase();
 
-    let colorScheme: Pick<PlanTier, 'color' | 'lightColor' | 'icon' | 'iconType' | 'subtitle' | 'highlight'> = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'car', iconType: 'ionicons', subtitle: 'For getting started', highlight: 'Perfect for new drivers and local one-way trips.' };
+    let colorScheme: Pick<PlanTier, 'color' | 'lightColor' | 'icon' | 'iconType' | 'subtitle' | 'highlight'> = { color: '#57A7A1', lightColor: '#EAF7F7', icon: 'car', iconType: 'ionicons', subtitle: 'For getting started', highlight: 'Perfect for new drivers and local one-way trips.' };
     
     if (lowerName.includes('basic')) {
-      colorScheme = { color: '#2563EB', lightColor: '#EFF6FF', icon: 'crown', iconType: 'material', subtitle: 'For getting started', highlight: 'Perfect for new drivers and\nlocal one-way trips.' };
+      colorScheme = { color: '#57A7A1', lightColor: '#EAF7F7', icon: 'crown', iconType: 'material', subtitle: 'For getting started', highlight: 'Perfect for new drivers and local one-way trips.' };
     } else if (lowerName.includes('elite')) {
-      colorScheme = { color: '#10B981', lightColor: '#ECFDF5', icon: 'crown', iconType: 'material', subtitle: 'More trips, more earnings', highlight: 'For drivers who want more rides\nand better opportunities.' };
+      colorScheme = { color: '#8A4DE8', lightColor: '#F0EBFA', icon: 'crown', iconType: 'material', subtitle: 'More trips, more earnings', highlight: 'For drivers who want more rides and better opportunities.' };
     } else if (lowerName.includes('premium')) {
-      colorScheme = { color: '#D97706', lightColor: '#FEF3C7', icon: 'crown', iconType: 'material', subtitle: 'All trips. All access.', highlight: 'For professional drivers who want\nmaximum earnings.' };
+      colorScheme = { color: '#E4A61A', lightColor: '#FAF3E0', icon: 'crown', iconType: 'material', subtitle: 'All trips. All access.', highlight: 'For professional drivers who want maximum earnings.' };
     }
 
     return {
@@ -257,6 +262,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
     if (!isEligible) {
       setIneligiblePlanName(tier.name);
+      setIneligiblePlanColor(tier.color);
       setEligibilityModalVisible(true);
       return;
     }
@@ -374,18 +380,18 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
     setPaymentModalVisible(false);
     setIsProcessing(true);
     try {
-      if (selectedDuration === 'daily') {
-        // ONE-TIME PAYMENT FOR DAILY PLANS
+      if (selectedDuration === 'daily' || !isAutoRenewEnabled) {
+        // ONE-TIME PAYMENT FOR DAILY PLANS OR IF AUTO-RENEW IS DISABLED
         const orderResponse = await createSubscriptionOrder({
           plan_id: tier.id,
-          billing_cycle: 'day',
+          billing_cycle: getBillingCycle(selectedDuration),
           promo_code: promoCode,
         }).unwrap();
 
         const orderData = orderResponse.data;
 
         const options = {
-          description: `${tier.name} - DAILY (One-Time)`,
+          description: `${tier.name} - ${selectedDuration.toUpperCase()} (One-Time)`,
           image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
           currency: 'INR',
           key: Config.RAZORPAY_KEY_ID || 'rzp_test_SCjewpaZ96XBWa',
@@ -413,7 +419,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
               planName: tier.name,
               planColor: tier.color,
               amountPaid: orderData.amount,
-              duration: 'daily',
+              duration: selectedDuration,
               transactionId: data.razorpay_payment_id || 'One-Time',
               isUpgrade: false,
               isDowngrade: false,
@@ -671,11 +677,17 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
               return (
                 <Pressable
                   key={dur.key}
-                  onPress={() => setSelectedDuration(dur.key)}
+                  onPress={() => {
+                    setSelectedDuration(dur.key);
+                    const planName = dur.key === 'daily' ? 'Daily' : dur.key === 'weekly' ? 'Weekly' : 'Monthly';
+                    if (Platform.OS === 'android') {
+                      ToastAndroid.show(`${planName} circle plan selected`, ToastAndroid.SHORT);
+                    }
+                  }}
                   style={[
                     styles.tab,
                     isSelected && styles.activeTab,
-                    isSelected && { backgroundColor: '#2563EB', borderColor: '#2563EB' },
+                    isSelected && { backgroundColor: '#57A7A1', borderColor: '#57A7A1' },
                     !isSelected && { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }
                   ]}
                 >
@@ -693,6 +705,26 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 </Pressable>
               );
             })}
+          </View>
+        )}
+
+        {(!activePlan || activePlan.status?.toUpperCase() !== 'ACTIVE' || isSwitchPlanMode) && selectedDuration !== 'daily' && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 }}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }}>Auto-Renew Subscription</Text>
+              <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>Automatically renew your plan to avoid interruption.</Text>
+            </View>
+            <Switch
+              value={isAutoRenewEnabled}
+              onValueChange={(val) => {
+                setIsAutoRenewEnabled(val);
+                if (Platform.OS === 'android') {
+                  ToastAndroid.show(val ? 'Auto-Renew ON' : 'Auto-Renew OFF (One-Time Payment)', ToastAndroid.SHORT);
+                }
+              }}
+              trackColor={{ false: '#D1D5DB', true: '#57A7A1' }}
+              thumbColor="#FFFFFF"
+            />
           </View>
         )}
 
@@ -756,30 +788,42 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 <Text style={[styles.featuresLabel, { color: tier.color }]}>Features</Text>
                 
                 <View style={styles.featuresList}>
-                  {tier.features.reduce<React.ReactNode[]>((acc, feature, idx) => {
-                    // Two-column layout if needed, but design shows one column
-                    acc.push(
-                      <View key={idx} style={styles.featureRow}>
-                        {feature.isBlocked ? (
-                          <View style={styles.blockedIconContainer}>
-                            <View style={styles.blockedMinus} />
+                  {(() => {
+                    const isExpanded = expandedPlans[tier.id];
+                    const visibleFeatures = isExpanded ? tier.features : tier.features.slice(0, 2);
+                    
+                    return (
+                      <>
+                        {visibleFeatures.map((feature, idx) => (
+                          <View key={idx} style={styles.featureRow}>
+                            {feature.isBlocked ? (
+                              <View style={styles.blockedIconContainer}>
+                                <View style={styles.blockedMinus} />
+                              </View>
+                            ) : (
+                              <View style={[styles.checkIconContainer, { backgroundColor: tier.color }]}>
+                                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                              </View>
+                            )}
+                            <Text style={[
+                              styles.featureText, 
+                              { color: isDark ? '#D1D5DB' : '#374151' },
+                              feature.isBlocked && { color: isDark ? '#6B7280' : '#9CA3AF' }
+                            ]}>
+                              {feature.label}
+                            </Text>
                           </View>
-                        ) : (
-                          <View style={[styles.checkIconContainer, { backgroundColor: tier.color }]}>
-                            <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-                          </View>
+                        ))}
+                        {tier.features.length > 2 && (
+                          <Pressable onPress={() => setExpandedPlans(prev => ({...prev, [tier.id]: !prev[tier.id]}))}>
+                            <Text style={{ color: tier.color, fontSize: 13, fontWeight: '600', marginTop: 4 }}>
+                              {isExpanded ? 'View Less' : 'View All Features'}
+                            </Text>
+                          </Pressable>
                         )}
-                        <Text style={[
-                          styles.featureText, 
-                          { color: isDark ? '#D1D5DB' : '#374151' },
-                          feature.isBlocked && { color: isDark ? '#6B7280' : '#9CA3AF' }
-                        ]}>
-                          {feature.label}
-                        </Text>
-                      </View>
+                      </>
                     );
-                    return acc;
-                  }, [])}
+                  })()}
                 </View>
 
                 <Pressable
@@ -853,28 +897,99 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         onRequestClose={() => setEligibilityModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
-            <View style={styles.modalIconContainer}>
-              <Ionicons name="lock-closed" size={32} color="#EF4444" />
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', padding: 16 }]}>
+            
+            {/* Custom Lock Icon with Crown Badge (Compact) */}
+            <View style={{ alignItems: 'center', marginBottom: 12, marginTop: 4 }}>
+              <View style={{
+                width: 80, 
+                height: 80, 
+                borderRadius: 40, 
+                backgroundColor: `${ineligiblePlanColor}15`, 
+                justifyContent: 'center', 
+                alignItems: 'center'
+              }}>
+                {/* Lock Shackle */}
+                <View style={{
+                  width: 26, height: 32,
+                  borderWidth: 4,
+                  borderColor: ineligiblePlanColor,
+                  borderTopLeftRadius: 13,
+                  borderTopRightRadius: 13,
+                  borderBottomWidth: 0,
+                  marginBottom: -8,
+                  zIndex: 1,
+                }} />
+
+                {/* Lock Body */}
+                <View style={{
+                  width: 46, height: 36,
+                  backgroundColor: ineligiblePlanColor,
+                  borderRadius: 8,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  zIndex: 2,
+                  shadowColor: ineligiblePlanColor,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 4,
+                }}>
+                  {/* Keyhole Circle */}
+                  <View style={{
+                    width: 8, height: 8, borderRadius: 4, backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                    marginBottom: 1
+                  }} />
+                  {/* Keyhole Stem */}
+                  <View style={{
+                    width: 4, height: 8, backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                    borderBottomLeftRadius: 3, borderBottomRightRadius: 3, marginTop: -3
+                  }} />
+                </View>
+
+                {/* Crown Badge */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: 2,
+                  right: 2,
+                  backgroundColor: ineligiblePlanColor,
+                  borderRadius: 16,
+                  width: 32,
+                  height: 32,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderWidth: 2,
+                  borderColor: isDark ? '#1F2937' : '#FFFFFF',
+                  zIndex: 3,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 3,
+                  elevation: 3,
+                }}>
+                  <MaterialCommunityIcons name="crown" size={16} color="#FFFFFF" />
+                </View>
+              </View>
             </View>
-            <Text style={[styles.modalTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+
+            <Text style={[styles.modalTitle, { color: isDark ? '#F9FAFB' : '#111827', marginBottom: 4, fontSize: 18 }]}>
               Plan Locked
             </Text>
-            <Text style={[styles.modalDesc, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>
+            <Text style={[styles.modalDesc, { color: isDark ? '#D1D5DB' : '#4B5563', marginBottom: 12 }]}>
               You are currently not eligible to subscribe to the <Text style={{ fontWeight: 'bold' }}>{ineligiblePlanName}</Text> plan.
             </Text>
             
-            <View style={[styles.keyPointsContainer, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
-              <Text style={[styles.keyPointsTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>How to unlock?</Text>
-              <View style={styles.keyPointRow}>
+            <View style={[styles.keyPointsContainer, { backgroundColor: isDark ? '#374151' : '#F3F4F6', padding: 12, marginBottom: 16 }]}>
+              <Text style={[styles.keyPointsTitle, { color: isDark ? '#F9FAFB' : '#111827', marginBottom: 8 }]}>How to unlock?</Text>
+              <View style={[styles.keyPointRow, { marginBottom: 6 }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#10B981" />
                 <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Maintain high trip completion rate</Text>
               </View>
-              <View style={styles.keyPointRow}>
+              <View style={[styles.keyPointRow, { marginBottom: 6 }]}>
                 <Ionicons name="star" size={16} color="#F59E0B" />
                 <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Keep good customer ratings</Text>
               </View>
-              <View style={styles.keyPointRow}>
+              <View style={[styles.keyPointRow, { marginBottom: 6 }]}>
                 <Ionicons name="time" size={16} color="#3B82F6" />
                 <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Complete minimum tenure as a Basic driver</Text>
               </View>
@@ -882,21 +997,23 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
 
             <View style={styles.modalActions}>
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnOutline, { borderColor: isDark ? '#4B5563' : '#D1D5DB' }]}
-                onPress={() => setEligibilityModalVisible(false)}
+                style={[styles.modalBtn, styles.modalBtnOutline, { borderColor: '#2563EB', backgroundColor: 'transparent', flex: 1.3 }]}
+                onPress={() => {
+                  setEligibilityModalVisible(false);
+                  Linking.openURL('tel:+918000000000');
+                }}
               >
-                <Text style={[styles.modalBtnOutlineText, { color: isDark ? '#F9FAFB' : '#374151' }]}>Okay</Text>
+                <Ionicons name="headset-outline" size={18} color="#2563EB" style={{ marginRight: 6 }} />
+                <Text style={[styles.modalBtnOutlineText, { color: '#2563EB', fontWeight: '600' }]} numberOfLines={1} adjustsFontSizeToFit>
+                  Contact Support
+                </Text>
               </Pressable>
               
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnPrimary]}
-                onPress={() => {
-                  setEligibilityModalVisible(false);
-                  Linking.openURL('tel:+918000000000'); // TODO: Replace with actual admin number
-                }}
+                style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: '#2563EB', flex: 0.7 }]}
+                onPress={() => setEligibilityModalVisible(false)}
               >
-                <Ionicons name="call" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.modalBtnPrimaryText}>Contact</Text>
+                <Text style={[styles.modalBtnPrimaryText, { fontWeight: '600' }]}>OK</Text>
               </Pressable>
             </View>
           </View>
@@ -913,45 +1030,100 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         }}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.customModalContainer, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}>
-            <View style={[styles.modalIconCircle, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#EFF6FF' }]}>
-              <Ionicons name="arrow-up-circle" size={32} color="#2563EB" />
+          <View style={[styles.customModalContainer, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', padding: 16 }]}>
+            
+            {/* Top Icon with Sparkles */}
+            <View style={{ alignItems: 'center', marginBottom: 12, marginTop: 4 }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="arrow-up" size={28} color="#2563EB" />
+                
+                {/* Simulated Sparkles */}
+                <Ionicons name="sparkle" size={10} color="#BFDBFE" style={{ position: 'absolute', top: -5, left: -8 }} />
+                <Ionicons name="sparkle" size={14} color="#BFDBFE" style={{ position: 'absolute', top: 8, right: -12 }} />
+                <Ionicons name="sparkle" size={8} color="#BFDBFE" style={{ position: 'absolute', bottom: 8, left: -4 }} />
+                <Ionicons name="sparkle" size={12} color="#BFDBFE" style={{ position: 'absolute', bottom: -5, right: 4 }} />
+                <Ionicons name="sparkle" size={10} color="#BFDBFE" style={{ position: 'absolute', top: -12, right: 8 }} />
+              </View>
             </View>
-            <Text style={[styles.modalTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+
+            <Text style={[styles.modalTitle, { color: isDark ? '#F9FAFB' : '#111827', fontSize: 18, marginBottom: 4 }]}>
               Confirm Upgrade
             </Text>
-            <Text style={[styles.modalSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
-              Review your upgrade details below before proceeding.
+            <Text style={[styles.modalSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', marginBottom: 16, fontSize: 13 }]}>
+              Review your upgrade details below{'\n'}before proceeding.
             </Text>
             
-            <View style={[styles.modalDetailsBox, { backgroundColor: isDark ? '#374151' : '#F9FAFB' }]}>
-              <View style={styles.modalDetailRow}>
-                <Text style={[styles.modalDetailLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Unused credit</Text>
-                <Text style={[styles.modalDetailValue, { color: '#10B981' }]}>- ₹{upgradeConfirmData.unusedCredit}</Text>
+            {/* Details Card */}
+            <View style={{ 
+              width: '100%', 
+              borderWidth: 1, 
+              borderColor: isDark ? '#4B5563' : '#E5E7EB', 
+              borderRadius: 12, 
+              marginBottom: 16,
+              overflow: 'hidden' 
+            }}>
+              {/* Row 1: Unused Credit */}
+              <View style={{ flexDirection: 'row', padding: 12, alignItems: 'center', backgroundColor: isDark ? '#374151' : '#FFFFFF' }}>
+                <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: isDark ? 'rgba(37, 99, 235, 0.2)' : '#EFF6FF', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                  <Ionicons name="wallet-outline" size={18} color="#2563EB" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>Unused Credit</Text>
+                  <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>From your current plan</Text>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#10B981' }}>- ₹{upgradeConfirmData.unusedCredit}</Text>
               </View>
-              <View style={styles.modalDetailRow}>
-                <Text style={[styles.modalDetailLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>New plan cost</Text>
-                <Text style={[styles.modalDetailValue, { color: isDark ? '#F9FAFB' : '#111827' }]}>₹{upgradeConfirmData.newPlanCost}</Text>
+
+              <View style={{ height: 1, backgroundColor: isDark ? '#4B5563' : '#F3F4F6' }} />
+
+              {/* Row 2: New Plan */}
+              <View style={{ flexDirection: 'row', padding: 12, alignItems: 'center', backgroundColor: isDark ? '#374151' : '#FFFFFF' }}>
+                <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: isDark ? 'rgba(37, 99, 235, 0.2)' : '#EFF6FF', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                  <Ionicons name="calendar-outline" size={18} color="#2563EB" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>New Plan</Text>
+                  <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>{upgradeConfirmData.tier?.name} Plan ({selectedDuration.charAt(0).toUpperCase() + selectedDuration.slice(1)})</Text>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }}>₹{upgradeConfirmData.newPlanCost}</Text>
               </View>
-              <View style={[styles.modalDivider, { backgroundColor: isDark ? '#4B5563' : '#E5E7EB' }]} />
-              <View style={styles.modalDetailRow}>
-                <Text style={[styles.modalTotalLabel, { color: isDark ? '#F9FAFB' : '#111827' }]}>You pay today</Text>
-                <Text style={[styles.modalTotalValue, { color: '#2563EB' }]}>₹{upgradeConfirmData.amountToPay}</Text>
+
+              {/* Row 3: You Pay Today (Light Blue bg) */}
+              <View style={{ flexDirection: 'row', padding: 12, alignItems: 'center', backgroundColor: isDark ? '#1F2937' : '#F8FAFC', borderTopWidth: 1, borderTopColor: isDark ? '#4B5563' : '#F3F4F6' }}>
+                <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: isDark ? 'rgba(37, 99, 235, 0.2)' : '#EFF6FF', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                  <Ionicons name="card-outline" size={18} color="#2563EB" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>You Pay Today</Text>
+                  <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280' }} numberOfLines={1} adjustsFontSizeToFit>
+                    (₹{upgradeConfirmData.newPlanCost} - ₹{upgradeConfirmData.unusedCredit} unused credit)
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#2563EB' }}>₹{upgradeConfirmData.amountToPay}</Text>
               </View>
             </View>
+
+            {/* Info Banner */}
+            <View style={{ flexDirection: 'row', backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F4F6FB', borderRadius: 8, padding: 10, marginBottom: 16, alignItems: 'center' }}>
+              <Ionicons name="information-circle" size={18} color="#2563EB" style={{ marginRight: 8 }} />
+              <Text style={{ flex: 1, fontSize: 11, color: isDark ? '#D1D5DB' : '#4B5563', lineHeight: 16 }}>
+                Your new plan will be activated immediately after successful payment.
+              </Text>
+            </View>
             
+            {/* Action Buttons */}
             <View style={styles.modalActions}>
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnCancel, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}
+                style={[styles.modalBtn, { borderWidth: 1, borderColor: '#2563EB', backgroundColor: 'transparent', borderRadius: 8, paddingVertical: 10 }]}
                 onPress={() => {
                   setUpgradeConfirmData({ ...upgradeConfirmData, visible: false });
                   setIsProcessing(false);
                 }}
               >
-                <Text style={[styles.modalBtnCancelText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Cancel</Text>
+                <Text style={{ color: '#2563EB', fontSize: 15, fontWeight: '600' }}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnProceed]}
+                style={[styles.modalBtn, { backgroundColor: '#2563EB', borderRadius: 8, paddingVertical: 10 }]}
                 onPress={() => {
                   setUpgradeConfirmData({ ...upgradeConfirmData, visible: false });
                   if (upgradeConfirmData.tier) {
@@ -961,7 +1133,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   }
                 }}
               >
-                <Text style={styles.modalBtnProceedText}>Proceed</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Proceed</Text>
               </Pressable>
             </View>
           </View>
@@ -998,36 +1170,36 @@ const styles = StyleSheet.create({
   
   tabsContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 24, justifyContent: 'center', gap: 8 },
   tab: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8, borderWidth: 1 },
-  activeTab: { shadowColor: '#2563EB', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2 },
+  activeTab: { shadowColor: '#57A7A1', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2 },
   tabText: { fontSize: 14, fontWeight: '600', marginLeft: 6 },
 
-  planStack: { paddingHorizontal: 16, gap: 12, marginBottom: 24 },
-  planCard: { borderRadius: 16, padding: 16, position: 'relative' },
-  popularBadge: { position: 'absolute', top: -12, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  popularBadgeText: { color: 'white', fontSize: 11, fontWeight: '700' },
+  planStack: { paddingHorizontal: 16, gap: 8, marginBottom: 16 },
+  planCard: { borderRadius: 16, padding: 12, position: 'relative' },
+  popularBadge: { position: 'absolute', top: -10, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
+  popularBadgeText: { color: 'white', fontSize: 10, fontWeight: '700' },
   
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  iconCircle: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  iconCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   titleArea: { flex: 1 },
-  planNameText: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
-  planSubtitleText: { fontSize: 12 },
+  planNameText: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  planSubtitleText: { fontSize: 11 },
   priceArea: { alignItems: 'flex-end' },
-  planPriceText: { fontSize: 24, fontWeight: '800', lineHeight: 28 },
-  planDurationText: { fontSize: 12, marginTop: -2 },
+  planPriceText: { fontSize: 20, fontWeight: '800', lineHeight: 24 },
+  planDurationText: { fontSize: 11, marginTop: -2 },
   
-  highlightBox: { padding: 10, borderRadius: 8, marginBottom: 16 },
-  highlightText: { fontSize: 12, fontWeight: '500', lineHeight: 16 },
+  highlightBox: { padding: 8, borderRadius: 8, marginBottom: 12 },
+  highlightText: { fontSize: 11, fontWeight: '500', lineHeight: 14 },
   
-  featuresLabel: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
-  featuresList: { marginBottom: 16 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  checkIconContainer: { width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  blockedIconContainer: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  featuresLabel: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  featuresList: { marginBottom: 12 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  checkIconContainer: { width: 14, height: 14, borderRadius: 7, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  blockedIconContainer: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
   blockedMinus: { width: 6, height: 2, backgroundColor: '#9CA3AF', borderRadius: 1 },
-  featureText: { fontSize: 13, flex: 1 },
+  featureText: { fontSize: 12, flex: 1 },
   
-  chooseBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  chooseBtnText: { fontSize: 15, fontWeight: '700' },
+  chooseBtn: { paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  chooseBtnText: { fontSize: 14, fontWeight: '700' },
 
   bottomFeaturesContainer: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 8, justifyContent: 'space-between', marginBottom: 24 },
   bottomFeatureItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },

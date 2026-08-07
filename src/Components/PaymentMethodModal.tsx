@@ -68,18 +68,7 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
 
     const [selectedMethod, setSelectedMethod] = useState<'wallet' | 'online'>('wallet');
 
-    const availablePromos = promosRes?.data?.length > 0 ? promosRes.data : [
-        {
-            code: 'SAVE100',
-            title: 'Flat ₹100 off',
-            description: 'On orders above ₹999. Auto-applied at checkout.',
-        },
-        {
-            code: 'WALLET50',
-            title: '5% wallet cashback',
-            description: 'Up to ₹50 back when you pay via wallet.',
-        }
-    ];
+    const availablePromos = promosRes?.data || [];
 
     useEffect(() => {
         if (!isVisible) {
