@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Text, TouchableOpacity, DeviceEventEmitter, Alert, ToastAndroid, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DashBoardScreen from '../Screens/Dashboard';
 import ScheduledRidesScreen from '../Screens/Requests/ScheduledRidesScreen';
 import ProfileScreen from '../Screens/Profile';
+import EarningsScreen from '../Screens/Profile/EarningsScreen';
 import { useAppTheme } from '../context/ThemeContext';
 import { vS as vs, mS as ms } from '../lib/scale';
 
@@ -16,6 +17,53 @@ import { RootState } from '../redux/store';
 
 const Tab = createBottomTabNavigator();
 
+const CustomTabBarButton = ({ isOnline, theme, label }: any) => (
+  <TouchableOpacity
+    activeOpacity={0.8}
+    style={{
+      top: -vs(20),
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}
+    onPress={() => {
+      const msg = 'Please long press the button to ' + (isOnline ? 'go offline.' : 'go online.');
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(msg, ToastAndroid.SHORT);
+      } else {
+        Alert.alert(isOnline ? 'Go Offline' : 'Go Online', msg);
+      }
+    }}
+    onLongPress={() => {
+      DeviceEventEmitter.emit('executeOfflineToggle');
+    }}
+  >
+    <View style={{
+      width: ms(56),
+      height: ms(56),
+      borderRadius: ms(28),
+      backgroundColor: theme.colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: theme.colors.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+    }}>
+      <Ionicons name="power" size={ms(28)} color="#FFFFFF" />
+    </View>
+    <Text style={{
+       fontSize: ms(11),
+       fontWeight: '600',
+       marginTop: vs(6),
+       color: theme.colors.text || '#000',
+       textAlign: 'center'
+    }}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
 const TabBarIcon = ({ focused, color, routeName, theme }: any) => {
   let iconName: string = 'home-outline';
 
@@ -24,6 +72,9 @@ const TabBarIcon = ({ focused, color, routeName, theme }: any) => {
   }
   if (routeName === 'Requests') {
     iconName = focused ? 'car-sport' : 'car-sport-outline';
+  }
+  if (routeName === 'Earnings') {
+    iconName = focused ? 'wallet' : 'wallet-outline';
   }
   if (routeName === 'Profile') {
     iconName = focused ? 'person' : 'person-outline';
@@ -128,6 +179,33 @@ const DriverTabs = () => {
             marginTop: vs(2),
           }
         }}
+      />
+
+      {/* ⚡ POWER ACTION */}
+      <Tab.Screen
+        name="PowerAction"
+        component={View} // Dummy component
+        options={{
+          tabBarLabel: '',
+          tabBarButton: () => (
+            <CustomTabBarButton 
+              isOnline={user?.isOnline} 
+              theme={theme} 
+              label={user?.isOnline ? 'Go Offline' : 'Go Online'} 
+            />
+          )
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+          }
+        }}
+      />
+
+      {/* 💰 EARNINGS */}
+      <Tab.Screen
+        name="Earnings"
+        component={EarningsScreen}
       />
 
       {/* 👤 PROFILE */}

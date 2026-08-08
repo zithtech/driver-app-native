@@ -92,7 +92,7 @@ const DashboardProfileHeader: React.FC<Props> = ({
         if (isOnline) {
             Animated.loop(
                 Animated.sequence([
-                    Animated.timing(pulseAnim, { toValue: 1.6, duration: 900, useNativeDriver: true }),
+                    Animated.timing(pulseAnim, { toValue: 1.25, duration: 900, useNativeDriver: true }),
                     Animated.timing(pulseAnim, { toValue: 1, duration: 900, useNativeDriver: true }),
                 ])
             ).start();
@@ -121,7 +121,6 @@ const DashboardProfileHeader: React.FC<Props> = ({
                             />
                         )}
                     </View>
-                    <View style={[styles.statusDot, { backgroundColor: isOnline ? '#22C55E' : '#9CA3AF' }]} />
                 </View>
 
                 <View style={{ marginLeft: s(14), flex: 1 }}>
@@ -129,11 +128,12 @@ const DashboardProfileHeader: React.FC<Props> = ({
                         {getGreeting()}, <Text style={[styles.userName, isDark && { color: theme.colors.textMuted }]}>{driverName}</Text>
                     </Text>
                     <View style={styles.metaRow}>
-                        <Ionicons name="star" size={ms(12)} color="#F59E0B" style={{ marginRight: s(4) }} />
-                        <Text style={[styles.rating, { color: isDark ? theme.colors.text : '#1E293B' }]}>
-                            {rating ? rating.toFixed(1) : t('new')}
-                            <Text style={[styles.tripsCount, { color: isDark ? theme.colors.textMuted : '#64748B' }]}> ({totalTrips})</Text>
-                        </Text>
+                        <View style={[styles.onlineStatusBadge, { backgroundColor: isOnline ? 'rgba(34,197,94,0.15)' : 'rgba(156,163,175,0.15)' }]}>
+                            <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#22C55E' : '#9CA3AF' }]} />
+                            <Text style={[styles.onlineStatusText, { color: isOnline ? '#16A34A' : '#6B7280' }]}>
+                                {isOnline ? t('you_are_online') : t('you_are_offline')}
+                            </Text>
+                        </View>
 
                         {subscription?.status === 'active' && (
                             <View style={[styles.badge, { marginLeft: s(10), backgroundColor: currentTier.bg }]}>
@@ -239,16 +239,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: vs(2),
     },
-    rating: {
-        marginLeft: s(6),
-        fontSize: getLanguageScaledSize(15),
-        fontWeight: '700',
-        color: '#1E293B',
+    onlineStatusBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: s(8),
+        paddingVertical: vs(4),
+        borderRadius: ms(12),
     },
-    tripsCount: {
+    onlineDot: {
+        width: s(6),
+        height: s(6),
+        borderRadius: ms(3),
+        marginRight: s(6),
+    },
+    onlineStatusText: {
         fontSize: getLanguageScaledSize(13),
-        fontWeight: '400',
-        color: '#64748B',
+        fontWeight: '600',
     },
     dot: {
         marginHorizontal: s(6),

@@ -13,6 +13,7 @@ import {
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { useAppTheme } from '../../context/ThemeContext';
+import { calculateCompletion } from '../../utils/profileUtils';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -117,41 +118,7 @@ export default function ProfileDetailsScreen() {
     setRefreshing(false);
   }, [refetchOverview, refetchPerformance]);
 
-  const calculateCompletion = () => {
-    if (!user) return 0;
-    
-    let totalScore = 0;
-
-    // Helper to check if a document is uploaded/verified
-    const isDocValid = (docKey: string, altKey: string) => {
-      const doc = user.documents?.[docKey] || user.documents?.[altKey];
-      return doc && (doc.status === 'verified' || doc.status === 'UPLOADED' || doc.status === 'PENDING' || doc.status === 'pending');
-    };
-
-    // 1. Personal Information (30%)
-    if (user.first_name || user.full_name) totalScore += 10;
-    if (user.phone_number) totalScore += 10;
-    if (user.profile_picture || user.profile_pic_url || isDocValid('Profile_Selfie', 'profile_selfie')) totalScore += 10;
-
-    // 2. Essential Documents (40%)
-    if (isDocValid('Driving_License', 'driving_license')) totalScore += 10;
-    if (isDocValid('Aadhar_Card', 'aadhaar_card') || isDocValid('Aadhaar_Card', 'aadhaar_card')) totalScore += 10;
-    if (isDocValid('Pan_Card', 'pan_card')) totalScore += 10;
-    if (isDocValid('Police_Verification', 'police_verification')) totalScore += 10;
-
-    // 3. Address Details (15%)
-    if (user.address && (user.address.street || user.address.city || user.address.pincode)) {
-      totalScore += 15;
-    }
-
-    // 4. Additional & Emergency Information (15%)
-    if (user.email) totalScore += 5;
-    if (user.trusted_contact) totalScore += 5;
-    if (user.alternate_contact) totalScore += 5;
-
-    return Math.min(100, Math.round(totalScore));
-  };
-  const completionPercentage = calculateCompletion();
+  const completionPercentage = calculateCompletion(user);
 
   const handleCompleteNowPress = () => {
     if (!user) return;

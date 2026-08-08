@@ -405,7 +405,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
             {/* ── NAVIGATE ICON (Placed beside native recenter button) ── */}
             {userLocation && (
                 <Pressable
-                    style={[styles.navigateBtn, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}
+                    style={[styles.navigateBtn, { backgroundColor: 'rgba(255, 255, 255, 0.9)' }]}
                     onPress={() => {
                         const url = Platform.OS === 'ios'
                             ? `maps:0,0?q=${currentAddress || `${userLocation.latitude},${userLocation.longitude}`}&ll=${userLocation.latitude},${userLocation.longitude}`
@@ -499,17 +499,17 @@ const styles = StyleSheet.create({
     navigateBtn: {
         position: 'absolute',
         bottom: vs(12),
-        right: s(70), // Positions it to the left of the native recenter button
-        width: s(42),
-        height: s(42),
-        borderRadius: s(21),
+        right: s(65), // Adjusted to fit nicely next to native recenter button
+        width: 38, // Matched native recenter button size
+        height: 38, // Matched native recenter button size
+        borderRadius: 2, // Matched native recenter button shape (almost square)
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
+        elevation: 2,
     },
 
     // ── Floating Status Chip ──

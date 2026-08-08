@@ -13,7 +13,7 @@ import RootNavigation from './src/Navigations/RootNavigation';
 import { theme } from './src/constant/theme';
 import { Styles } from './src/lib/styles';
 import { RootProvider } from './src/context/RootCoontext';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { ThemeProvider, useAppTheme } from './src/context/ThemeContext';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import AnimationWithImperativeApi from './src/Screens/Splash/SplashScreen';
 
@@ -114,6 +114,49 @@ const SocketInitializer = () => {
   return null;
 };
 
+const AppContent = () => {
+  const { theme } = useAppTheme();
+
+  return (
+    <>
+      {/* Redux → i18n Sync */}
+      <ReduxLanguageSync />
+
+      {/* Firebase Cloud Messaging */}
+      <FCMInitializer />
+
+      {/* Socket.IO Integration */}
+      <SocketInitializer />
+
+      <GestureHandlerRootView style={[Styles.flex, { backgroundColor: theme.colors.background }]}>
+        <SafeAreaProvider
+          style={[
+            Styles.flex,
+            { backgroundColor: theme.colors.background },
+          ]}
+        >
+          <ConnectionStatus />
+          <NavigationContainer ref={navigationRef} theme={theme}>
+            <BottomSheetModalProvider>
+              <ToastProvider>
+                <AlertProvider>
+                  <SocketProvider>
+                    <RootProvider>
+                       <RootNavigation />
+                      <Toast />
+                      <AlertModal />
+                    </RootProvider>
+                  </SocketProvider>
+                </AlertProvider>
+              </ToastProvider>
+            </BottomSheetModalProvider>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </>
+  );
+};
+
 /* ================= APP ================= */
 
 const App = () => {
@@ -132,44 +175,7 @@ const App = () => {
           loading={<AnimationWithImperativeApi />}
         >
           {/* Prevent UI from rendering before restore */}
-          {rehydrated && (
-            <>
-              {/* Redux → i18n Sync */}
-              <ReduxLanguageSync />
-
-              {/* Firebase Cloud Messaging */}
-              <FCMInitializer />
-
-              {/* Socket.IO Integration */}
-              <SocketInitializer />
-
-              <GestureHandlerRootView style={[Styles.flex, { backgroundColor: theme.colors.background }]}>
-                <SafeAreaProvider
-                  style={[
-                    Styles.flex,
-                    { backgroundColor: theme.colors.background },
-                  ]}
-                >
-                  <ConnectionStatus />
-                  <NavigationContainer ref={navigationRef} theme={theme}>
-                    <BottomSheetModalProvider>
-                      <ToastProvider>
-                        <AlertProvider>
-                          <SocketProvider>
-                            <RootProvider>
-                               <RootNavigation />
-                              <Toast />
-                              <AlertModal />
-                            </RootProvider>
-                          </SocketProvider>
-                        </AlertProvider>
-                      </ToastProvider>
-                    </BottomSheetModalProvider>
-                  </NavigationContainer>
-                </SafeAreaProvider>
-              </GestureHandlerRootView>
-            </>
-          )}
+          {rehydrated && <AppContent />}
         </PersistGate>
       </ThemeProvider>
     </Provider>

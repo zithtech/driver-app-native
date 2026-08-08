@@ -14,6 +14,8 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  DeviceEventEmitter,
+  ToastAndroid,
 } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { calculateAverageRating } from '../../utils/ratingUtils';
@@ -22,6 +24,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, NavigationProp, useFocusEffect, useIsFocused, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
+import SoundPlayer from 'react-native-sound-player';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import { useSelector, useDispatch } from 'react-redux';
 import { hS as s, vS as vs, mS as ms } from '../../lib/scale';
 import { Text } from '../../Components';
@@ -32,11 +36,12 @@ import { useAppTheme } from '../../context/ThemeContext';
 import { useRideFeed, RideItem } from '../../hooks/useRideFeed';
 import { useDashboardMap } from '../../hooks/useDashboardMap';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
-import { useGetMySubscriptionQuery } from '../../service/userApi';
+import { useGetMySubscriptionQuery, useGetSubscriptionHistoryQuery } from '../../service/userApi';
 import {
   useGetEarningsSummaryQuery as useGetDriverEarningsSummaryQuery,
   useGetWalletBalanceQuery,
   useGetEarningsTransactionsQuery,
+  useGetWalletTransactionsQuery,
   useGetRideActivityQuery,
   useGetDriverPerformanceQuery,
   useGoOnlineMutation,
@@ -52,16 +57,16 @@ import {
 import DashboardMap from './dashComponents/DashboardMap';
 import DashboardProfileHeader from './dashComponents/DashboardProfileHeader';
 import TodayOverview from './dashComponents/TodayOverview';
+import QuickActions from './dashComponents/QuickActions';
 import RechargeCard from './dashComponents/SubscriptionCard';
 import SettingsModal from './dashComponents/SettingsModal';
 import RideAlertCard from './dashComponents/RideAlertCard';
 import AssignedRideCard from './dashComponents/AssignedRideCard';
 import { TripStatus } from '../../types/trip';
-import SwipeButton from './dashComponents/SwipeButton';
 import DashboardSkeleton from './dashComponents/DashboardSkeleton';
+import DashboardActionCards from './dashComponents/DashboardActionCards';
 import RecentActivity from './dashComponents/RecentActivity';
 import UpcomingAcceptedRide from './dashComponents/UpcomingAcceptedRide';
-import GoOfflineTab from './dashComponents/GoOfflineTab';
 import SubscriptionRequiredModal from './dashComponents/SubscriptionRequiredModal';
 import BatteryOptimizationModal from './dashComponents/BatteryOptimizationModal';
 import VerificationSuccessModal from './dashComponents/VerificationSuccessModal';
@@ -137,6 +142,14 @@ const DriverDashboard = () => {
   const earningsSummary = earningsResult;
 
   const { data: walletBalanceResult, refetch: refetchWallet } = useGetWalletBalanceQuery(user?.driverId || '', { skip: !user?.driverId });
+  
+  const { data: walletTransactionsData, refetch: refetchWalletTrans } = useGetWalletTransactionsQuery(
+    { driverId: user?.driverId || '', limit: 5 },
+    { skip: !user?.driverId }
+  );
+
+  const { data: subHistoryData, refetch: refetchSubHistory } = useGetSubscriptionHistoryQuery(undefined, { skip: !user?.driverId });
+
   const { data: recentActivityData, isFetching: isActivityFetching, refetch: refetchRecentActivity } = useGetRideActivityQuery(
     { driverId: user?.driverId || '', limit: 5, from: todayStr, to: todayStr },
     { skip: !user?.driverId }
@@ -160,12 +173,14 @@ const DriverDashboard = () => {
       if (user?.driverId) {
         refetchEarnings();
         refetchWallet();
+        refetchWalletTrans();
+        refetchSubHistory();
         refetchRecentActivity();
         refetchTodayRides();
         refetchPerformance();
         refetchTodayOverview();
       }
-    }, [user?.driverId, refetchEarnings, refetchWallet, refetchRecentActivity, refetchTodayRides, refetchPerformance, refetchTodayOverview])
+    }, [user?.driverId, refetchEarnings, refetchWallet, refetchWalletTrans, refetchSubHistory, refetchRecentActivity, refetchTodayRides, refetchPerformance, refetchTodayOverview])
   );
 
   // 📈 All-time Ride Activity for Rating Calculation
@@ -260,12 +275,10 @@ const DriverDashboard = () => {
   const { userLocation, currentAddress, locationError } = useDashboardMap({ isOnline });
 
 
-  const [showOfflineSwipe, setShowOfflineSwipe] = useState(false);
   const [onlineSeconds, setOnlineSeconds] = useState(0);
   const [isBaseTimeLoaded, setIsBaseTimeLoaded] = useState(false);
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const lastTripRating = useSelector((state: RootState) => state.ride.lastTripRating);
-
 
 
   // ── Alert Modal State ──
@@ -304,6 +317,116 @@ const DriverDashboard = () => {
     });
     setAlertModalVisible(true);
   }, []);
+
+  const handleToggleOnlineStatus = useCallback(async () => {
+    let currentDriverId = user?.driverId;
+
+    if (!currentDriverId) {
+      try {
+        const { storage: storageUtil } = require('../../service/utils/storage');
+        const storedId = await storageUtil.getDriverId();
+        if (storedId) {
+          dispatch(setUser({ driverId: storedId }));
+          currentDriverId = storedId;
+        }
+      } catch (e) {
+        console.error('[Dashboard] Storage recovery failed:', e);
+      }
+
+      if (!currentDriverId) {
+        showAlert(
+          'Profile Not Ready',
+          'Your driver profile is still loading. Please wait a moment and try again.',
+          { icon: 'time-outline' }
+        );
+        return;
+      }
+    }
+
+    if (!isOnline) {
+      if (!subData?.data?.subscription) {
+        setShowSubscriptionModal(true);
+        return;
+      }
+
+      const proceedToOnline = async () => {
+        try {
+          const res = await goOnline(currentDriverId).unwrap();
+          dispatch(setOnlineStatus(true));
+          try {
+            ReactNativeHapticFeedback.trigger('impactLight');
+            SoundPlayer.playSoundFile('goonline', 'mp3');
+          } catch (e) {
+            console.log('Error playing sound/haptics:', e);
+          }
+          if (Platform.OS === 'android') {
+            ToastAndroid.show('You are online', ToastAndroid.SHORT);
+          }
+          if (res?.upcomingRide) {
+            showAlert('Upcoming Ride', `You have a scheduled ride starting soon at ${res.upcomingRide.pickup_address}`, { icon: 'calendar-outline' });
+          }
+        } catch (e: any) {
+          showAlert('Error', e?.data?.message || 'Failed to go online', { icon: 'alert-circle-outline', isDestructive: true });
+        }
+      };
+
+      if (Platform.OS === 'android') {
+        try {
+          const notifee = (await import('@notifee/react-native')).default;
+          const isOptimized = await notifee.isBatteryOptimizationEnabled();
+          if (isOptimized) {
+            setShowBatteryModal(true);
+          } else {
+            proceedToOnline();
+          }
+        } catch (error) {
+          console.log('Error checking battery optimization:', error);
+          proceedToOnline();
+        }
+      } else {
+        proceedToOnline();
+      }
+    } else {
+      const isActiveTrip = currentRide && (
+        currentRide.booking_type === 'LIVE' ||
+        ['ARRIVING', 'ARRIVED', 'LIVE', 'ON_TRIP', 'DESTINATION_REACHED'].includes(currentRide.trip_status)
+      );
+
+      if (isActiveTrip) {
+        showAlert(
+          t('cannot_go_offline') || 'Cannot Go Offline',
+          t('complete_current_trip') || 'Please complete your current trip before going offline.',
+          { icon: 'hand-left-outline', isDestructive: true }
+        );
+        return;
+      }
+
+      try {
+        await goOffline(currentDriverId).unwrap();
+        dispatch(setOnlineStatus(false));
+        try {
+          ReactNativeHapticFeedback.trigger('impactHeavy');
+          SoundPlayer.playSoundFile('gooffline', 'mp3');
+        } catch (e) {
+          console.log('Error playing sound/haptics:', e);
+        }
+        if (Platform.OS === 'android') {
+          ToastAndroid.show('You are offline', ToastAndroid.SHORT);
+        }
+      } catch (e: any) {
+        console.error('[Dashboard] Go Offline Error:', e);
+        const errorMessage = e?.data?.message || e?.message || (typeof e?.data === 'string' ? e.data : null) || t('failed_to_go_offline') || 'Failed to go offline';
+        showAlert(t('error') || 'Error', errorMessage, { icon: 'alert-circle-outline', isDestructive: true });
+      }
+    }
+  }, [user?.driverId, isOnline, subData, currentRide, dispatch, goOnline, goOffline, showAlert, t]);
+
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener('executeOfflineToggle', () => {
+      handleToggleOnlineStatus();
+    });
+    return () => subscription.remove();
+  }, [handleToggleOnlineStatus]);
 
   // 📍 Battery-optimized location tracking
   const { locationDisabled, openLocationSettings } = useLocationTracker({
@@ -425,10 +548,10 @@ const DriverDashboard = () => {
   }, [isOnline, timerPulseAnim]);
 
   useEffect(() => {
-    if (subData || earningsSummary || walletBalanceResult || recentActivityData) {
+    if (subData || earningsSummary || walletBalanceResult || recentActivityData || walletTransactionsData || subHistoryData) {
       setLoading(false);
     }
-  }, [subData, earningsSummary, walletBalanceResult, recentActivityData]);
+  }, [subData, earningsSummary, walletBalanceResult, recentActivityData, walletTransactionsData, subHistoryData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -452,6 +575,8 @@ const DriverDashboard = () => {
       refetchSub(),
       refetchEarnings(),
       refetchWallet(),
+      refetchWalletTrans(),
+      refetchSubHistory(),
       refetchRecentActivity(),
       refetchTodayRides(),
       refetchPerformance(),
@@ -459,7 +584,7 @@ const DriverDashboard = () => {
       refetchScheduled(),
     ]);
     setRefreshing(false);
-  }, [refetchSub, refetchEarnings, refetchWallet, refetchRecentActivity, refetchTodayRides, refetchPerformance, refetchTodayOverview, refetchScheduled]);
+  }, [refetchSub, refetchEarnings, refetchWallet, refetchWalletTrans, refetchSubHistory, refetchRecentActivity, refetchTodayRides, refetchPerformance, refetchTodayOverview, refetchScheduled]);
 
   const displayRating = useMemo(() => {
     if (allHistoryResult?.data) {
@@ -482,6 +607,50 @@ const DriverDashboard = () => {
     return user?.total_trips || 0;
   }, [allHistoryResult?.data, user?.total_trips, extractArray]);
 
+  const combinedActivity = useMemo(() => {
+    let combined: any[] = [];
+    
+    if (recentActivityData?.data && Array.isArray(recentActivityData.data)) {
+      combined = [...combined, ...recentActivityData.data.map((t: any) => ({
+        id: `ride-${t.trip_id || t.id}`,
+        type: 'ride',
+        trip_code: t.trip_code || t.booking_code,
+        route: t.pickup_address && t.drop_address ? `${t.pickup_address} → ${t.drop_address}` : (t.pickup && t.drop ? `${t.pickup} → ${t.drop}` : t.title || 'Unknown Route'),
+        timestamp: t.created_at || t.date || new Date().toISOString(),
+        timeAgo: t.time || (t.date ? new Date(t.date).toLocaleDateString() : 'Recent'),
+        amount: `₹${Math.abs(t.amount || t.total_fare || 0)}`,
+        status: (t.trip_status || t.status || '').toLowerCase(),
+      }))];
+    }
+
+    if (walletTransactionsData?.data && Array.isArray(walletTransactionsData.data)) {
+      combined = [...combined, ...walletTransactionsData.data.filter((t: any) => t.type === 'credit' || t.type === 'recharge').map((t: any) => ({
+        id: `wallet-${t.id}`,
+        type: 'wallet',
+        title: t.description || 'Wallet Recharge',
+        timestamp: t.created_at || new Date().toISOString(),
+        timeAgo: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Recent',
+        amount: `+₹${Math.abs(t.amount || 0)}`,
+        status: t.status?.toLowerCase() || 'completed',
+      }))];
+    }
+
+    if (subHistoryData?.data && Array.isArray(subHistoryData.data)) {
+      combined = [...combined, ...subHistoryData.data.map((t: any) => ({
+        id: `sub-${t.id}`,
+        type: 'subscription',
+        title: t.plan_name ? `${t.plan_name} Plan` : 'Subscription Plan',
+        timestamp: t.created_at || new Date().toISOString(),
+        timeAgo: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Recent',
+        amount: `-₹${Math.abs(t.amount || 0)}`,
+        status: t.status?.toLowerCase() || 'completed',
+      }))];
+    }
+
+    combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return combined.slice(0, 5);
+  }, [recentActivityData, walletTransactionsData, subHistoryData]);
+
   const mapRouteCoordinates = [] as { latitude: number; longitude: number }[];
 
   const driverName = user?.full_name || t('driver');
@@ -503,15 +672,6 @@ const DriverDashboard = () => {
           onProfilePress={() => navigation.navigate('Profile')}
           subscription={subData?.data?.subscription}
         />
-
-        {/* ── GO OFFLINE HANGING TAB ── */}
-        {
-          isOnline && !showOfflineSwipe && rideQueue.length === 0 && (
-            <View style={styles.offlineTabContainer}>
-              <GoOfflineTab onPress={() => setShowOfflineSwipe(true)} />
-            </View>
-          )
-        }
       </View>
 
       {/* ── FLOATING BANNERS CONTAINER ── */}
@@ -568,6 +728,9 @@ const DriverDashboard = () => {
           onViewAllPress={() => navigation.navigate('EarningsScreen')}
         />
 
+        {/* ── QUICK ACTIONS ── */}
+        <QuickActions />
+
         {/* ── UPCOMING ACCEPTED RIDE ── */}
         <UpcomingAcceptedRide 
           trip={nextScheduledRide} 
@@ -580,21 +743,11 @@ const DriverDashboard = () => {
         {/* ── SUBSCRIPTION CARD ── */}
         <RechargeCard subscription={subData?.data?.subscription} />
 
+        {/* ── ACTION CARDS ── */}
+        <DashboardActionCards />
+
         {/* ── RECENT ACTIVITY ── */}
-        <RecentActivity
-          items={
-            Array.isArray(recentActivityData?.data)
-              ? recentActivityData.data.map((t: any) => ({
-                id: t.trip_id || t.id,
-                trip_code: t.trip_code || t.booking_code,
-                route: t.pickup_address && t.drop_address ? `${t.pickup_address} → ${t.drop_address}` : (t.pickup && t.drop ? `${t.pickup} → ${t.drop}` : t.title || 'Unknown Route'),
-                timeAgo: t.time || (t.date ? new Date(t.date).toLocaleDateString() : 'Recent'),
-                amount: `₹${Math.abs(t.amount || t.total_fare || 0)}`,
-                status: (t.trip_status || t.status || '').toLowerCase(),
-              }))
-              : []
-          }
-        />
+        <RecentActivity items={combinedActivity} />
       </ScrollView>
 
       {/* ── ALERTS / RECENT ── */}
@@ -650,133 +803,6 @@ const DriverDashboard = () => {
           </View>
         )
       }
-
-      {/* ── SWIPE TO GO ONLINE/OFFLINE ── */}
-      {
-        (!isOnline || showOfflineSwipe) && (
-          <View style={[styles.swipeBox, { paddingBottom: vs(10), zIndex: 1000, backgroundColor: theme.colors.card }]}>
-            {showOfflineSwipe && (
-              <TouchableOpacity
-                onPress={() => setShowOfflineSwipe(false)}
-                style={{ position: 'absolute', right: s(16), top: vs(12), zIndex: 1100 }}
-              >
-                <Text style={{ fontSize: ms(14), color: isDark ? theme.colors.textMuted : '#64748B', fontWeight: '500' }}>Close</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={[styles.swipeTitle, { color: theme.colors.text }]}>
-              {isOnline ? t('you_are_online') : t('you_are_offline')}
-            </Text>
-            <Text style={[styles.swipeSub, isDark && { color: theme.colors.textMuted }]}>
-              {isOnline ? t('waiting_requests') : t('go_online_start')}
-            </Text>
-            <SwipeButton
-              title={isOnline ? t('slide_offline') : t('slide_online')}
-              activeColor={isOnline ? '#DC2626' : theme.colors.primary}
-              onSwipeSuccess={async () => {
-                let currentDriverId = user?.driverId;
-
-                // 🛡️ Recovery: If driverId is missing, try to recover from secure storage
-                if (!currentDriverId) {
-                  try {
-                    const { storage: storageUtil } = require('../../service/utils/storage');
-                    const storedId = await storageUtil.getDriverId();
-                    if (storedId) {
-                      dispatch(setUser({ driverId: storedId }));
-                      currentDriverId = storedId;
-                    }
-                  } catch (e) {
-                    console.error('[Dashboard] Storage recovery failed:', e);
-                  }
-
-                  if (!currentDriverId) {
-                    showAlert(
-                      'Profile Not Ready',
-                      'Your driver profile is still loading. Please wait a moment and try again. If this continues, try logging out and back in.',
-                      { icon: 'time-outline' }
-                    );
-                    setShowOfflineSwipe(false);
-                    return;
-                  }
-                }
-
-                if (!isOnline) {
-                  // Check if driver has an active subscription
-                  if (!subData?.data?.subscription) {
-                    setShowSubscriptionModal(true);
-                    setShowOfflineSwipe(false);
-                    return;
-                  }
-
-                  const proceedToOnline = async () => {
-                    try {
-                      const res = await goOnline(currentDriverId).unwrap();
-                      dispatch(setOnlineStatus(true));
-                      if (res?.upcomingRide) {
-                        showAlert('Upcoming Ride', `You have a scheduled ride starting soon at ${res.upcomingRide.pickup_address}`, { icon: 'calendar-outline' });
-                      }
-                    } catch (e: any) {
-                      showAlert('Error', e?.data?.message || 'Failed to go online', { icon: 'alert-circle-outline', isDestructive: true });
-                    }
-                    setShowOfflineSwipe(false);
-                  };
-
-                  if (Platform.OS === 'android') {
-                    try {
-                      const notifee = (await import('@notifee/react-native')).default;
-                      const isOptimized = await notifee.isBatteryOptimizationEnabled();
-                      if (isOptimized) {
-                        setShowBatteryModal(true);
-                      } else {
-                        proceedToOnline();
-                      }
-                    } catch (error) {
-                      console.log('Error checking battery optimization:', error);
-                      proceedToOnline();
-                    }
-                  } else {
-                    proceedToOnline();
-                  }
-                } else {
-                  // 🛡️ Safety: Prevent going offline if on an active ride
-                  const isActiveTrip = currentRide && (
-                    currentRide.booking_type === 'LIVE' ||
-                    ['ARRIVING', 'ARRIVED', 'LIVE', 'ON_TRIP', 'DESTINATION_REACHED'].includes(currentRide.trip_status)
-                  );
-
-                  if (isActiveTrip) {
-                    showAlert(
-                      t('cannot_go_offline') || 'Cannot Go Offline',
-                      t('complete_current_trip') || 'Please complete your current trip before going offline.',
-                      { icon: 'hand-left-outline', isDestructive: true }
-                    );
-                    setShowOfflineSwipe(false);
-                    return;
-                  }
-
-                  try {
-                    await goOffline(currentDriverId).unwrap();
-                    dispatch(setOnlineStatus(false));
-                  } catch (e: any) {
-                    console.error('[Dashboard] Go Offline Error:', e);
-
-                    // Extract specific error message if available from RTK Query / Backend
-                    const errorMessage =
-                      e?.data?.message ||
-                      e?.message ||
-                      (typeof e?.data === 'string' ? e.data : null) ||
-                      t('failed_to_go_offline') || 'Failed to go offline';
-
-                    showAlert(t('error') || 'Error', errorMessage, { icon: 'alert-circle-outline', isDestructive: true });
-                  }
-                  setShowOfflineSwipe(false);
-                }
-              }}
-              resetTrigger={isOnline}
-            />
-          </View>
-        )
-      }
-
       {/* ── SETTINGS MODAL ── */}
       <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
 
@@ -935,7 +961,6 @@ const DriverDashboard = () => {
         onClose={() => setShowBatteryModal(false)} 
         onFix={() => {
           setShowBatteryModal(false);
-          setShowOfflineSwipe(false);
         }} 
       />
     </SafeAreaView>

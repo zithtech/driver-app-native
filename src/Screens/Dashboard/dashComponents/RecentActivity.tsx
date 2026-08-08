@@ -8,10 +8,12 @@ import { useAppTheme } from '../../../context/ThemeContext';
 interface RecentActivityItem {
     id: string | number;
     trip_code?: string;
-    route: string;
+    route?: string; // route is optional now
+    title?: string; // used for wallet/sub
     timeAgo: string;
     amount: string;
     status: string;
+    type?: 'ride' | 'wallet' | 'subscription'; // Add type property
 }
 
 interface RecentActivityProps {
@@ -32,18 +34,38 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ items }) => {
                 </Pressable>
             </View>
 
-            {items.length > 0 ? items.map((item, index) => (
+            {items.length > 0 ? items.map((item, index) => {
+                let iconName = 'time';
+                let iconColor = isDark ? '#FBBF24' : '#F59E0B'; // default yellow
+                let iconBg = isDark ? '#064e3b' : '#F0FDF4';
+
+                if (item.type === 'wallet') {
+                    iconName = 'wallet';
+                    iconColor = isDark ? '#34D399' : '#10B981'; // Green
+                    iconBg = isDark ? '#064e3b' : '#ECFDF5';
+                } else if (item.type === 'subscription') {
+                    iconName = 'card';
+                    iconColor = isDark ? '#8B5CF6' : '#6366F1'; // Purple/Indigo
+                    iconBg = isDark ? '#312e81' : '#EEF2FF';
+                } else {
+                    // Ride logic
+                    iconName = item.status === 'completed' ? 'checkmark-circle' : item.status === 'cancelled' ? 'close-circle' : 'time';
+                    iconColor = item.status === 'completed' ? (isDark ? '#34D399' : '#22C55E') : item.status === 'cancelled' ? (isDark ? '#F87171' : '#EF4444') : (isDark ? '#FBBF24' : '#F59E0B');
+                    iconBg = item.status === 'cancelled' ? (isDark ? '#450a0a' : '#FEF2F2') : (isDark ? '#064e3b' : '#F0FDF4');
+                }
+
+                return (
                 <View key={item.id || `activity-${index}`} style={[styles.activityItem, isDark && { borderBottomColor: theme.colors.border }]}>
-                    <View style={[styles.activityIcon, isDark && { backgroundColor: '#064e3b' }]}>
+                    <View style={[styles.activityIcon, { backgroundColor: iconBg }]}>
                         <Ionicons
-                            name={item.status === 'completed' ? 'checkmark-circle' : item.status === 'cancelled' ? 'close-circle' : 'time'}
+                            name={iconName}
                             size={20}
-                            color={item.status === 'completed' ? (isDark ? '#34D399' : '#22C55E') : item.status === 'cancelled' ? (isDark ? '#F87171' : '#EF4444') : (isDark ? '#FBBF24' : '#F59E0B')}
+                            color={iconColor}
                         />
                     </View>
                     <View style={styles.activityInfo}>
                         <Text style={[styles.activityLoc, { color: theme.colors.text }]} numberOfLines={1}>
-                            {item.trip_code ? `#${item.trip_code} • ` : ''}{item.route}
+                            {item.trip_code ? `#${item.trip_code} • ` : ''}{item.title || item.route}
                         </Text>
                         <Text style={[styles.activityTime, isDark && { color: theme.colors.textMuted }]}>
                             {item.timeAgo} • {item.amount}
@@ -51,7 +73,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ items }) => {
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={isDark ? theme.colors.textMuted : '#9CA3AF'} />
                 </View>
-            )) : (
+            )}) : (
                 <Text style={{ color: isDark ? theme.colors.textMuted : '#9CA3AF', fontSize: ms(12), textAlign: 'center', paddingVertical: vs(16) }}>
                     {t('no_recent_activity')}
                 </Text>
