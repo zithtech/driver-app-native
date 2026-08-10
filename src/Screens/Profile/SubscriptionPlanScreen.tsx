@@ -43,6 +43,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import CurrentPlanDetailsView from './CurrentPlanDetailsView';
 import AppStatusBar from '../../Components/AppStatusBar';
 import PaymentMethodModal from '../../Components/PaymentMethodModal';
+import { ms, vs } from '../../lib/scale';
 
 /* ================= TYPES ================= */
 
@@ -855,36 +856,38 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
           })}
         </View>
 
-        {/* Bottom Features */}
-        <View style={[styles.bottomFeaturesContainer, { backgroundColor: isDark ? '#1F2937' : '#F8FAFC' }]}>
-           <View style={styles.bottomFeatureItem}>
-             <Ionicons name="shield-checkmark" size={24} color="#2563EB" />
-             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Secure Payments</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>100% secure transactions</Text>
-           </View>
-           <View style={styles.bottomFeatureDivider} />
-           <View style={styles.bottomFeatureItem}>
-             <Ionicons name="flash" size={24} color="#2563EB" />
-             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Instant Activation</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Activate your plan immediately</Text>
-           </View>
-           <View style={styles.bottomFeatureDivider} />
-           <View style={styles.bottomFeatureItem}>
-             <Ionicons name="sync" size={24} color="#10B981" />
-             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Flexible Plans</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Change or renew your plan anytime</Text>
-           </View>
-           <View style={styles.bottomFeatureDivider} />
-           <View style={styles.bottomFeatureItem}>
-             <Ionicons name="headset" size={24} color="#2563EB" />
-             <Text style={[styles.bfTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>24/7 Support</Text>
-             <Text style={[styles.bfSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>We're here to help you</Text>
-           </View>
+        {/* Secure Payments Card */}
+        <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.infoIconWrapper, { backgroundColor: '#3B82F6' }]}>
+            <Ionicons name="lock-closed" size={ms(18)} color="#FFFFFF" />
+          </View>
+          <View style={styles.infoTextContainer}>
+            <Text style={[styles.infoTitle, { color: colors.text }]}>Secure Payments</Text>
+            <Text style={[styles.infoDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Your payment information is safe with us.</Text>
+          </View>
+          <Image 
+            source={require('../../assets/images/bank.png')}
+            style={styles.paymentLogos}
+            resizeMode="contain"
+          />
         </View>
 
-        <View style={styles.footer}>
-          <Ionicons name="shield-checkmark" size={16} color="#6B7280" style={{ marginRight: 6 }} />
-          <Text style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Your subscription is valid across all devices</Text>
+        {/* Need Help Card */}
+        <View style={[styles.infoCard, { backgroundColor: colors.card, marginBottom: vs(40) }]}>
+          <View style={[styles.infoIconWrapper, { backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF' }]}>
+            <Ionicons name="headset-outline" size={ms(20)} color="#2563EB" />
+          </View>
+          <View style={[styles.infoTextContainer, { paddingRight: 0 }]}>
+            <Text style={[styles.infoTitle, { color: colors.text }]}>Need Help?</Text>
+            <Text style={[styles.infoDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Our support team is here for you 24/7.</Text>
+          </View>
+          <Pressable 
+            style={styles.contactButton}
+            onPress={() => navigation.navigate('HelpCenterScreen')}
+          >
+            <Text style={styles.contactButtonText}>Contact Support</Text>
+            <Ionicons name="chevron-forward" size={ms(14)} color="#2563EB" />
+          </Pressable>
         </View>
 
       </ScrollView>
@@ -1201,14 +1204,63 @@ const styles = StyleSheet.create({
   chooseBtn: { paddingVertical: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   chooseBtnText: { fontSize: 14, fontWeight: '700' },
 
-  bottomFeaturesContainer: { flexDirection: 'row', marginHorizontal: 16, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 8, justifyContent: 'space-between', marginBottom: 24 },
-  bottomFeatureItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
-  bottomFeatureDivider: { width: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
-  bfTitle: { fontSize: 11, fontWeight: '700', marginTop: 8, textAlign: 'center' },
-  bfSubtitle: { fontSize: 9, textAlign: 'center', marginTop: 4, lineHeight: 12 },
-
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  footerText: { fontSize: 12, fontWeight: '500' },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    padding: ms(12),
+    borderRadius: ms(12),
+    marginBottom: vs(10),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  infoIconWrapper: {
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: ms(10),
+  },
+  infoTextContainer: {
+    flex: 1,
+    paddingRight: ms(80),
+  },
+  infoTitle: {
+    fontSize: ms(13),
+    fontWeight: '700',
+    marginBottom: vs(2),
+  },
+  infoDesc: {
+    fontSize: ms(10),
+  },
+  paymentLogos: {
+    position: 'absolute',
+    right: -ms(-6),
+    top: -vs(24),
+    width: ms(120),
+    height: vs(90),
+    opacity: 0.9,
+  },
+  contactButton: {
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: vs(6),
+    paddingHorizontal: ms(12),
+    borderRadius: ms(16),
+  },
+  contactButtonText: {
+    color: '#2563EB',
+    fontSize: ms(11),
+    fontWeight: '700',
+    marginRight: ms(2),
+  },
 
   activeStatusCard: { marginHorizontal: 16, marginBottom: 20, padding: 16, borderRadius: 12, borderWidth: 1 },
   activeStatusTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16 },

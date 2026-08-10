@@ -319,7 +319,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                     </View>
                 </View>
                 <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: s(12), justifyContent: 'center' }}>
-                    <Pressable 
+                    <Pressable
                         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}
                         onPress={() => {
                             if (userLocation) {
@@ -334,8 +334,8 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                     >
                         <Ionicons name="location" size={ms(12)} color={isDark ? theme.colors.primary : "#3B82F6"} style={{ marginRight: s(4) }} />
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexShrink: 1 }}>
-                            <Text 
-                                style={[{ fontSize: ms(11), color: isDark ? theme.colors.textMuted : '#64748B', textAlign: 'right' }]} 
+                            <Text
+                                style={[{ fontSize: ms(11), color: isDark ? theme.colors.textMuted : '#64748B', textAlign: 'right' }]}
                             >
                                 {currentAddress || t('fetching_location') || "Locating..."}
                             </Text>
@@ -346,78 +346,79 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
 
             <View style={styles.mapContainer}>
                 {hasMountedMap && (
-                <MapView
-                    ref={mapRef}
-                    provider={PROVIDER_GOOGLE}
-                    style={{ flex: 1 }}
-                    mapPadding={{ top: vs(100), right: s(10), bottom: vs(10), left: 0 }}
-                    customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-                onMapReady={() => {
-                    setMapMargin(0);
-                    setIsMapLoaded(true);
-                    setTimeout(() => setIsMapReady(true), 800);
-                }}
-                showsUserLocation={true}
-                showsMyLocationButton={true}
-                showsCompass={false}
-                showsTraffic={showTraffic}
-                onPanDrag={() => setIsFollowing(false)}
-                initialRegion={{
-                    latitude: userLocation?.latitude || 0,
-                    longitude: userLocation?.longitude || 0,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
-                }}
-            >
-                {/* ── RADIATION RINGS ── */}
-                {userLocation && isOnline && (
-                    <Marker
-                        key="pulse-marker"
-                        coordinate={{
-                            latitude: userLocation.latitude,
-                            longitude: userLocation.longitude,
+                    <MapView
+                        ref={mapRef}
+                        provider={PROVIDER_GOOGLE}
+                        style={{ flex: 1 }}
+                        mapPadding={{ top: vs(100), right: s(10), bottom: vs(10), left: 0 }}
+                        customMapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+                        onMapReady={() => {
+                            setMapMargin(0);
+                            setIsMapLoaded(true);
+                            setTimeout(() => setIsMapReady(true), 800);
                         }}
-                        anchor={{ x: 0.5, y: 0.5 }}
-                        flat={true}
-                        tracksViewChanges={true}
+                        showsUserLocation={true}
+                        showsMyLocationButton={false}
+                        showsCompass={false}
+                        showsTraffic={showTraffic}
+                        onPanDrag={() => setIsFollowing(false)}
+                        initialRegion={{
+                            latitude: userLocation?.latitude || 0,
+                            longitude: userLocation?.longitude || 0,
+                            latitudeDelta: 0.05,
+                            longitudeDelta: 0.05,
+                        }}
                     >
-                        <PulseRadar />
-                    </Marker>
+                        {/* ── RADIATION RINGS ── */}
+                        {userLocation && isOnline && (
+                            <Marker
+                                key="pulse-marker"
+                                coordinate={{
+                                    latitude: userLocation.latitude,
+                                    longitude: userLocation.longitude,
+                                }}
+                                anchor={{ x: 0.5, y: 0.5 }}
+                                flat={true}
+                                tracksViewChanges={true}
+                            >
+                                <PulseRadar />
+                            </Marker>
+                        )}
+                    </MapView>
                 )}
-            </MapView>
-            )}
 
-            {/* ── LOADER OVERLAY ── */}
-            {(!isMapReady || (isOnline && (!userLocation || isTransitioningOnline))) && (
-                <View style={[
-                    StyleSheet.absoluteFillObject, 
-                    { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? theme.colors.background : '#f8fafc', zIndex: 100 }
-                ]}>
-                    <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={{ marginTop: vs(12), color: isDark ? theme.colors.textMuted : '#64748b', fontSize: ms(13), fontWeight: '600' }}>
-                        {t('fetching_location') || 'Fetching location...'}
-                    </Text>
-                </View>
-            )}
+                {/* ── LOADER OVERLAY ── */}
+                {(!isMapReady || (isOnline && (!userLocation || isTransitioningOnline))) && (
+                    <View style={[
+                        StyleSheet.absoluteFillObject,
+                        { justifyContent: 'center', alignItems: 'center', backgroundColor: isDark ? theme.colors.background : '#f8fafc', zIndex: 100 }
+                    ]}>
+                        <ActivityIndicator size="large" color={theme.colors.primary} />
+                        <Text style={{ marginTop: vs(12), color: isDark ? theme.colors.textMuted : '#64748b', fontSize: ms(13), fontWeight: '600' }}>
+                            {t('fetching_location') || 'Fetching location...'}
+                        </Text>
+                    </View>
+                )}
 
 
 
-            {/* ── NAVIGATE ICON (Placed beside native recenter button) ── */}
-            {userLocation && (
-                <Pressable
-                    style={[styles.navigateBtn, { backgroundColor: 'rgba(255, 255, 255, 0.9)' }]}
-                    onPress={() => {
-                        const url = Platform.OS === 'ios'
-                            ? `maps:0,0?q=${currentAddress || `${userLocation.latitude},${userLocation.longitude}`}&ll=${userLocation.latitude},${userLocation.longitude}`
-                            : `geo:0,0?q=${userLocation.latitude},${userLocation.longitude}(${currentAddress || 'My Location'})`;
-                        Linking.openURL(url).catch(() => {
-                            Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${userLocation.latitude},${userLocation.longitude}`);
-                        });
-                    }}
-                >
-                    <Ionicons name="navigate" size={s(20)} color="#3B82F6" />
-                </Pressable>
-            )}
+                {/* ── GO TO MAP BUTTON ── */}
+                {userLocation && (
+                    <Pressable
+                        style={[styles.goToMapBtn, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border, borderWidth: 1 }]}
+                        onPress={() => {
+                            const url = Platform.OS === 'ios'
+                                ? `maps:0,0?q=${currentAddress || `${userLocation.latitude},${userLocation.longitude}`}&ll=${userLocation.latitude},${userLocation.longitude}`
+                                : `geo:0,0?q=${userLocation.latitude},${userLocation.longitude}(${currentAddress || 'My Location'})`;
+                            Linking.openURL(url).catch(() => {
+                                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${userLocation.latitude},${userLocation.longitude}`);
+                            });
+                        }}
+                    >
+                        <Ionicons name="locate" size={ms(18)} color="#2563EB" />
+                        <Text style={[styles.goToMapText, isDark && { color: theme.colors.text }]}>Go to Map</Text>
+                    </Pressable>
+                )}
 
             </View>
         </View>
@@ -434,10 +435,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#F1F5F9',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
+        elevation: 1,
         overflow: 'hidden',
     },
     cardHeader: {
@@ -496,20 +497,27 @@ const styles = StyleSheet.create({
         borderRadius: s(20),
         backgroundColor: '#3B82F6',
     },
-    navigateBtn: {
+    goToMapBtn: {
         position: 'absolute',
-        bottom: vs(12),
-        right: s(65), // Adjusted to fit nicely next to native recenter button
-        width: 38, // Matched native recenter button size
-        height: 38, // Matched native recenter button size
-        borderRadius: 2, // Matched native recenter button shape (almost square)
-        justifyContent: 'center',
+        bottom: vs(16),
+        right: s(16),
+        flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: s(11),
+        paddingVertical: vs(4),
+        borderRadius: ms(10),
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.3,
-        shadowRadius: 2,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
+    },
+    goToMapText: {
+        marginLeft: s(6),
+        fontSize: ms(13),
+        fontWeight: '700',
+        color: '#0F172A',
     },
 
     // ── Floating Status Chip ──

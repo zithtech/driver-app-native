@@ -57,6 +57,7 @@ import DriverPerformanceScreen from '../Screens/Profile/DriverPerformanceScreen'
 import EarningsScreen from '../Screens/Profile/EarningsScreen';
 import RideActivityScreen from '../Screens/Profile/RideActivityScreen';
 import RideDetailScreen from '../Screens/Profile/RideDetailScreen';
+import EarningsTransactionsScreen from '../Screens/Profile/EarningsTransactionsScreen';
 import ProfileDocumentsScreen from '../Screens/Profile/ProfileDocumentsScreen';
 import SosContactsScreen from '../Screens/Profile/SosContactsScreen';
 import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
@@ -72,6 +73,7 @@ import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
 import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
 import SubscriptionHistoryScreen from '../Screens/Profile/SubscriptionHistoryScreen';
 import SubscriptionDetailScreen from '../Screens/Profile/SubscriptionDetailScreen';
+import SubscriptionRequiredScreen from '../Screens/Profile/SubscriptionRequiredScreen';
 import PaymentFailedScreen from '../Screens/Profile/PaymentFailedScreen';
 
 import PickupMapScreen from '../Screens/Requests/PickupMapScreen';
@@ -431,6 +433,7 @@ const RootNavigation = () => {
           <Stack.Screen name={DriverPerformance_Nav} component={DriverPerformanceScreen} />
 
           <Stack.Screen name="EarningsScreen" component={EarningsScreen} />
+          <Stack.Screen name="EarningsTransactionsScreen" component={EarningsTransactionsScreen} />
           <Stack.Screen name="RideActivityScreen" component={RideActivityScreen} />
           <Stack.Screen name="RideDetailScreen" component={RideDetailScreen} />
           <Stack.Screen name={ProfileDocuments_Nav} component={ProfileDocumentsScreen} />
@@ -454,6 +457,7 @@ const RootNavigation = () => {
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />
           <Stack.Screen name={SubscriptionHistory_Nav} component={SubscriptionHistoryScreen} />
           <Stack.Screen name={SubscriptionDetail_Nav} component={SubscriptionDetailScreen} />
+          <Stack.Screen name="SubscriptionRequiredScreen" component={SubscriptionRequiredScreen} />
 
           {/* -------- TRIP FLOW -------- */}
           <Stack.Screen name={PickupMapScreen_Nav} component={PickupMapScreen} />

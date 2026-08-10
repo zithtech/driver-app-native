@@ -98,7 +98,7 @@ export default function DashboardActionCards() {
       {/* Card 2: Complete Profile */}
       <Pressable
         style={[styles.card, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderWidth: isDark ? 0 : 1, borderColor: '#F3F4F6' }]}
-        onPress={() => navigation.navigate('Profile')}
+        onPress={() => navigation.navigate('ProfileDetailsScreen')}
       >
         <Text style={[styles.title, { color: isDark ? theme.colors.text : '#1E1B4B' }]}>
           Complete Your Profile
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: ms(16),
     gap: ms(12),
     marginTop: vs(16),
-    marginBottom: vs(16),
+    marginBottom: vs(12),
   },
   card: {
     flex: 1,

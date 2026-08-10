@@ -79,7 +79,7 @@ export default function QuickActions() {
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: ms(16),
-    marginBottom: vs(16),
+    marginBottom: vs(8),
     borderRadius: ms(16),
     paddingVertical: vs(12),
     paddingHorizontal: ms(12),

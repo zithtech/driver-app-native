@@ -15,6 +15,10 @@ interface TodayOverviewProps {
     onEarningsPress?: () => void;
     onRidesPress?: () => void;
     onViewAllPress?: () => void;
+    earningsTrend?: number;
+    ridesTrend?: number;
+    onlineTrend?: number;
+    ratingTrend?: number;
 }
 
 const TodayOverview: React.FC<TodayOverviewProps> = ({
@@ -26,8 +30,26 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
     onEarningsPress,
     onRidesPress,
     onViewAllPress,
+    earningsTrend,
+    ridesTrend,
+    onlineTrend,
+    ratingTrend,
 }) => {
     const { t } = useTranslation();
+
+    const renderTrend = (trendValue?: number) => {
+        if (trendValue === undefined || trendValue === null) return null;
+        const isPositive = trendValue > 0;
+        const isNegative = trendValue < 0;
+        const iconName = isNegative ? "caret-down" : (isPositive ? "caret-up" : "remove");
+        const color = isNegative ? "#EF4444" : (isPositive ? "#4ADE80" : "#94A3B8");
+        return (
+            <View style={styles.trendWrap}>
+                <Ionicons name={iconName} size={ms(10)} color={color} />
+                <Text style={[styles.trendText, { color }]}>{Math.abs(trendValue)}%</Text>
+            </View>
+        );
+    };
 
     return (
         <LinearGradient 
@@ -41,10 +63,12 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Text style={styles.titleText}>{t('todays_overview', "Today's Overview")}</Text>
                     <Ionicons name="eye-outline" size={ms(14)} color="#FFFFFF" style={{ marginLeft: s(6) }} />
                 </View>
-                <Pressable onPress={onViewAllPress} style={styles.viewAllBtn}>
-                    <Text style={styles.viewAllText}>View All</Text>
-                    <Ionicons name="chevron-forward" size={ms(12)} color="#FFFFFF" />
-                </Pressable>
+                <View style={styles.dateWrap}>
+                    <Ionicons name="calendar-outline" size={ms(14)} color="#FFFFFF" />
+                    <Text style={styles.dateText}>
+                        {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Text>
+                </View>
             </View>
 
             {/* Metrics Row */}
@@ -56,10 +80,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     </View>
                     <Text style={styles.metricLabel}>{t('earnings', 'Earnings')}</Text>
                     <Text style={styles.metricValue}>₹{earnings}</Text>
-                    <View style={styles.trendWrap}>
-                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
-                        <Text style={styles.trendText}>12.5%</Text>
-                    </View>
+                    {renderTrend(earningsTrend)}
                 </Pressable>
 
                 <View style={styles.divider} />
@@ -71,10 +92,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     </View>
                     <Text style={styles.metricLabel}>{t('rides', 'Rides')}</Text>
                     <Text style={styles.metricValue}>{rides}</Text>
-                    <View style={styles.trendWrap}>
-                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
-                        <Text style={styles.trendText}>8.3%</Text>
-                    </View>
+                    {renderTrend(ridesTrend)}
                 </Pressable>
 
                 <View style={styles.divider} />
@@ -88,10 +106,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <Animated.Text style={[styles.metricValue, { transform: [{ scale: timerPulseAnim }] }]}>
                         {displayTimeFormatted}
                     </Animated.Text>
-                    <View style={styles.trendWrap}>
-                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
-                        <Text style={styles.trendText}>10.2%</Text>
-                    </View>
+                    {renderTrend(onlineTrend)}
                 </View>
 
                 <View style={styles.divider} />
@@ -103,10 +118,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     </View>
                     <Text style={styles.metricLabel}>{t('rating', 'Rating')}</Text>
                     <Text style={styles.metricValue}>{rating}</Text>
-                    <View style={styles.trendWrap}>
-                        <Ionicons name="caret-up" size={ms(10)} color="#4ADE80" />
-                        <Text style={styles.trendText}>2.4%</Text>
-                    </View>
+                    {renderTrend(ratingTrend)}
                 </View>
             </View>
         </LinearGradient>
@@ -119,7 +131,7 @@ const styles = StyleSheet.create({
     container: {
         marginHorizontal: s(12),
         marginTop: vs(8),
-        marginBottom: vs(12),
+        marginBottom: vs(4),
         borderRadius: ms(16),
         padding: ms(12),
     },
@@ -138,14 +150,15 @@ const styles = StyleSheet.create({
         fontSize: ms(14),
         fontWeight: '600',
     },
-    viewAllBtn: {
+    dateWrap: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    viewAllText: {
+    dateText: {
         color: '#FFFFFF',
         fontSize: ms(12),
-        marginRight: s(2),
+        marginLeft: s(4),
+        fontWeight: '500',
     },
     metricsRow: {
         flexDirection: 'row',

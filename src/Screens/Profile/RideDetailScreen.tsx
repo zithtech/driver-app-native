@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
-  Alert,
   Animated,
   Dimensions,
   Image,
@@ -14,14 +13,16 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import RNPrint from 'react-native-print';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
-import { useTheme } from '@react-navigation/native';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAlert } from '../../context/AlertContext';
 import { useHaptic } from '../../hooks/useHaptic';
 import { formatCurrency } from '../../lib/currency';
@@ -39,6 +40,16 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   const { t } = useTranslation();
   const { ride: initialRide } = route.params;
   const { triggerHaptic } = useHaptic();
+
+  // Helper: returns fallback if t() returns the raw key (contains underscores)
+  const tt = (key: string, fallback: string, options?: any): string => {
+    const result = t(key, options);
+    // If the result is the same as the key, translation is missing
+    if (result === key || (typeof result === 'string' && result.includes('_') && result === key)) {
+      return fallback;
+    }
+    return String(result);
+  };
   
   const [createTicket, { isLoading: isSubmittingTicket }] = useCreateSupportTicketMutation();
   const [isReportModalVisible, setReportModalVisible] = useState(false);
@@ -79,13 +90,19 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
     const timeline: any = {};
     if (tripData.trip_changes && Array.isArray(tripData.trip_changes)) {
       tripData.trip_changes.forEach((change: any) => {
+        if (typeof change.new_value === 'string') {
+          try { change.new_value = JSON.parse(change.new_value); } catch (e) {}
+        }
+        const newVal = change.new_value;
         const time = new Date(change.changed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (change.new_value?.trip_status === 'REQUESTED') timeline.requestedAt = time;
-        if (change.new_value?.trip_status === 'ACCEPTED') timeline.acceptedAt = time;
-        if (change.new_value?.trip_status === 'ARRIVED') timeline.arrivedAt = time;
-        if (change.new_value?.trip_status === 'LIVE' || change.new_value?.trip_status === 'STARTED') timeline.startedAt = time;
-        if (change.new_value?.trip_status === 'COMPLETED') timeline.completedAt = time;
-        if (change.new_value?.trip_status === 'CANCELLED') timeline.cancelledAt = time;
+        if (newVal?.trip_status === 'REQUESTED') timeline.requestedAt = time;
+        if (newVal?.trip_status === 'ACCEPTED') timeline.acceptedAt = time;
+        if (newVal?.trip_status === 'ARRIVED') timeline.arrivedAt = time;
+        if (newVal?.trip_status === 'LIVE' || newVal?.trip_status === 'STARTED') timeline.startedAt = time;
+        if (newVal?.trip_status === 'DESTINATION_REACHED') timeline.destinationReachedAt = time;
+        if (newVal?.trip_status === 'RETURN_REACHED') timeline.returnReachedAt = time;
+        if (newVal?.trip_status === 'COMPLETED') timeline.completedAt = time;
+        if (newVal?.trip_status === 'CANCELLED') timeline.cancelledAt = time;
       });
     }
 
@@ -104,20 +121,70 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
       finalStatus = tripData.status === 'COMPLETED' ? 'Completed' : tripData.status === 'CANCELLED' ? 'Cancelled' : tripData.status;
     }
 
+    // Calculate duration dynamically from ACCEPTED to COMPLETED
+    let durationMin = 0;
+    if (tripData.trip_changes && Array.isArray(tripData.trip_changes)) {
+      const startChange = tripData.trip_changes.find((c: any) => c.new_value?.trip_status === 'ACCEPTED' || c.new_value?.trip_status === 'ASSIGNED');
+      const endChange = tripData.trip_changes.find((c: any) => c.new_value?.trip_status === 'COMPLETED');
+      if (startChange && endChange) {
+        const startTime = new Date(startChange.changed_at).getTime();
+        const endTime = new Date(endChange.changed_at).getTime();
+        durationMin = Math.max(0, Math.round((endTime - startTime) / 60000));
+      }
+    }
+    // Fallback if dynamic calculation failed
+    if (durationMin <= 0) {
+      durationMin = tripData.duration_min || tripData.duration || tripData.trip_duration_minutes || 0;
+    }
+
+    // Calculate avg speed and dynamic distance
+    const pLat = parseFloat(tripData.pickup_lat || initialRide.pickupLat || '0');
+    const pLng = parseFloat(tripData.pickup_lng || initialRide.pickupLng || '0');
+    const dLat = parseFloat(tripData.drop_lat || initialRide.dropLat || '0');
+    const dLng = parseFloat(tripData.drop_lng || initialRide.dropLng || '0');
+    const tripTypeStr = tripData.trip_type || tripData.ride_type || initialRide.tripType || 'One-way';
+
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
+      const R = 6371; // km
+      const dLat = (lat2 - lat1) * (Math.PI / 180);
+      const dLon = (lon2 - lon1) * (Math.PI / 180);
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    };
+
+    let distKm = parseFloat(tripData.distance_km || '0');
+    const calculatedDist = calculateDistance(pLat, pLng, dLat, dLng);
+    
+    if (calculatedDist > 0) {
+      const isRoundTrip = tripTypeStr === 'ROUND_TRIP' || tripTypeStr === 'OUTSTATION_ROUND_TRIP';
+      distKm = isRoundTrip ? calculatedDist * 2 : calculatedDist;
+      distKm = Math.round(distKm * 10) / 10;
+    }
+
+    const avgSpeed = durationMin > 0 && distKm > 0 ? Math.round((distKm / (durationMin / 60))) : 0;
+
     return {
       ...initialRide,
       id: tripData.trip_id?.toString() || tripData.id?.toString() || initialRide.id?.toString() || '',
-      date: tripData.date || dateObj.toLocaleDateString(),
+      date: tripData.date || dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
       time: tripData.time || dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       pickup: tripData.pickup_address || tripData.pickup || initialRide.pickup || 'Unknown Pickup',
       drop: tripData.drop_address || tripData.drop || initialRide.drop || 'Unknown Drop',
       amount: amount || initialRide.amount || 0,
-      distance: tripData.distance_km ? `${tripData.distance_km} km` : (tripData.distance || initialRide.distance || '0 km'),
+      distance: distKm > 0 ? `${distKm} km` : (tripData.distance || initialRide.distance || '0 km'),
+      distanceKm: distKm || parseFloat((tripData.distance || initialRide.distance || '0').toString().replace(/[^\d.]/g, '')) || 0,
+      durationMin: durationMin,
+      avgSpeed: avgSpeed,
       status: finalStatus || initialRide.status || '',
       trip_code: tripData.trip_code || tripData.booking_code || initialRide.trip_code || '',
       customer: {
         ...initialRide.customer,
         name: tripData.passenger_name || tripData.customer?.name || initialRide.customer?.name || 'Customer',
+        phone: tripData.passenger_phone || tripData.user_details?.phone_number || initialRide.customer?.phone || '',
+        totalRides: tripData.user_details?.total_rides || initialRide.customer?.totalRides || 0,
         ratingGiven: (() => {
           const rawRating = tripData.user_rating ?? initialRide.customer?.ratingGiven;
           const parsed = rawRating != null ? Number(rawRating) : NaN;
@@ -139,10 +206,36 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
       },
       timeline: Object.keys(timeline).length > 0 ? timeline : (tripData.timeline || initialRide.timeline || {}),
       paymentMethod: tripData.payment_method || tripData.paymentMethod || initialRide.paymentMethod || 'Cash',
+      // Coordinates for map
+      pickupLat: parseFloat(tripData.pickup_lat || initialRide.pickupLat || '0'),
+      pickupLng: parseFloat(tripData.pickup_lng || initialRide.pickupLng || '0'),
+      dropLat: parseFloat(tripData.drop_lat || initialRide.dropLat || '0'),
+      dropLng: parseFloat(tripData.drop_lng || initialRide.dropLng || '0'),
+      tripType: tripData.trip_type || tripData.ride_type || initialRide.tripType || 'One-way',
+      packageHours: tripData.package_hours || initialRide.packageHours || null,
     };
   };
 
   const ride = getRide();
+
+  // Map region calculation
+  const mapRegion = useMemo(() => {
+    if (ride.pickupLat && ride.pickupLng && ride.dropLat && ride.dropLng) {
+      const midLat = (ride.pickupLat + ride.dropLat) / 2;
+      const midLng = (ride.pickupLng + ride.dropLng) / 2;
+      const deltaLat = Math.abs(ride.pickupLat - ride.dropLat) * 1.5;
+      const deltaLng = Math.abs(ride.pickupLng - ride.dropLng) * 1.5;
+      return {
+        latitude: midLat,
+        longitude: midLng,
+        latitudeDelta: Math.max(deltaLat, 0.02),
+        longitudeDelta: Math.max(deltaLng, 0.02),
+      };
+    }
+    return null;
+  }, [ride.pickupLat, ride.pickupLng, ride.dropLat, ride.dropLng]);
+
+  const hasMapCoords = ride.pickupLat && ride.pickupLng && ride.dropLat && ride.dropLng;
 
   const downloadInvoice = async (ride: any) => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
@@ -152,7 +245,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
           <body style="font-family: Arial; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <h1 style="color: #2563EB;">${t('invoice')}</h1>
-              <p style="color: #666;">#${ride.id || 'DR-' + ride.id}</p>
+              <p style="color: #666;">#${ride.trip_code || ride.id}</p>
             </div>
             
             <hr style="border: 0; border-top: 1px solid #eee;" />
@@ -206,7 +299,7 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   const handleShare = async () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
     try {
-      const shareMessage = `Ride Details (#${ride.id || 'DR-' + ride.id})\n\nDate: ${ride.date} • ${ride.time}\nFrom: ${ride.pickup}\nTo: ${ride.drop}\nEarnings: ${formatCurrency(Math.abs(ride.amount))}`;
+      const shareMessage = `Ride Details (#${ride.trip_code || ride.id})\n\nDate: ${ride.date} • ${ride.time}\nFrom: ${ride.pickup}\nTo: ${ride.drop}\nEarnings: ${formatCurrency(Math.abs(ride.amount))}`;
       await Share.share({
         message: shareMessage,
       });
@@ -259,167 +352,386 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
     }
   };
 
+  const handleCallCustomer = () => {
+    const phone = ride.customer?.phone;
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    }
+  };
+
+  const handleMessageCustomer = () => {
+    const phone = ride.customer?.phone;
+    if (phone) {
+      Linking.openURL(`sms:${phone}`);
+    }
+  };
+
+  // Get short location name from full address
+  const getShortLocation = (address: string) => {
+    if (!address) return '';
+    const parts = address.split(',');
+    return parts[0]?.trim() || address;
+  };
+
+  // Get city from address  
+  const getCityFromAddress = (address: string) => {
+    if (!address) return '';
+    const parts = address.split(',');
+    if (parts.length >= 2) {
+      return parts.slice(0, Math.min(parts.length, 3)).join(',').trim();
+    }
+    return address;
+  };
+
+  const isCancelled = ride.status?.toUpperCase() === 'CANCELLED';
+  const isCompleted = ride.status === 'Completed';
+
+  // Format string to human-readable string (e.g. OUTSTATION_ONE_WAY -> Outstation One Way)
+  const formatString = (text: string, defaultVal: string) => {
+    if (!text) return defaultVal;
+    return text
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  // Format date nicely like "Today, 08:45 PM" and "08 May 2025"
+  const getFormattedDateTime = () => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    let dateLabel = ride.date;
+    let fullDate = ride.date;
+    try {
+      const rideDate = new Date(ride.date);
+      if (!isNaN(rideDate.getTime())) {
+        fullDate = rideDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        if (rideDate.toDateString() === today.toDateString()) {
+          dateLabel = 'Today';
+        } else if (rideDate.toDateString() === yesterday.toDateString()) {
+          dateLabel = 'Yesterday';
+        } else {
+          dateLabel = fullDate;
+        }
+      }
+    } catch (e) {}
+    return { dateTimeStr: `${dateLabel}, ${ride.time}`, fullDate };
+  };
+
+  const formattedDate = getFormattedDateTime();
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}>
       {isFocused && <AppStatusBar />}
-      <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: isDark ? theme.colors.border : '#F3F4F6' }]}>
+      
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderBottomColor: isDark ? '#374151' : '#F0F0F0' }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#1F2937'} />
+          <Ionicons name="arrow-back" size={22} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#1F2937' }]} numberOfLines={1} adjustsFontSizeToFit>{t('ride_details')}</Text>
-        <View style={{ width: 40 }} />
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+            {tt('ride_details', 'Ride Details')}
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+            Trip ID: #{ride.trip_code || ride.id || 'TRP0000'}
+          </Text>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+      >
         {isLoading ? (
-          <RideDetailSkeleton />
+          <RideDetailSkeleton isDark={isDark} theme={theme} />
         ) : (
           <>
-            {/* Ride Status Card */}
-            <View style={[styles.card, { backgroundColor: theme.colors.card }]}>
-              <View style={styles.rowBetween}>
+            {/* ═══════════════════ Status & Earnings Card ═══════════════════ */}
+            <View style={[styles.statusCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+              <View style={styles.statusCardRow}>
                 <View>
-                  <Text style={[styles.rideId, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
-                    #{ride.trip_code || ride.id || 'TRIP-ID'}
+                  <Text style={[styles.statusDateTime, { color: isDark ? '#E5E7EB' : '#111827' }]}>
+                    {formattedDate.dateTimeStr}
                   </Text>
-                  <Text style={[styles.dateTime, isDark && { color: '#9CA3AF' }]}>{ride.date} • {ride.time}</Text>
+                  <Text style={[styles.statusDate, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {formattedDate.fullDate}
+                  </Text>
+                  <View style={styles.statusBadge}>
+                    <Ionicons 
+                      name={isCompleted ? 'checkmark-circle' : 'close-circle'} 
+                      size={14} 
+                      color={isCompleted ? '#16A34A' : '#DC2626'} 
+                    />
+                    <Text style={[
+                      styles.statusBadgeText, 
+                      { color: isCompleted ? '#16A34A' : '#DC2626' }
+                    ]}>
+                      {ride.status ? tt(ride.status.toLowerCase(), ride.status) : ''}
+                    </Text>
+                  </View>
                 </View>
-                <StatusBadge status={ride.status} label={ride.status ? t(ride.status.toLowerCase()) : ''} isDark={isDark} />
-              </View>
-
-              <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
-
-              <View style={styles.routeContainer}>
-                <View style={styles.routeItem}>
-                  <View style={styles.iconColumn}>
-                    <Ionicons name="radio-button-on" size={18} color={isDark ? '#34D399' : '#16A34A'} />
-                    <View style={[styles.verticalLine, isDark && { backgroundColor: '#4B5563' }]} />
-                  </View>
-                  <View style={styles.routeTextBody}>
-                    <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.pickup}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.routeItem}>
-                  <View style={styles.iconColumn}>
-                    <Ionicons name="location" size={18} color="#DC2626" />
-                  </View>
-                  <View style={styles.routeTextBody}>
-                    <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.drop}</Text>
-                  </View>
+                <View style={styles.earningsCol}>
+                  <Text style={[styles.earningsAmount, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {formatCurrency(Math.abs(ride.amount))}
+                  </Text>
+                  <Text style={[styles.earningsLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {isCancelled ? tt('cancellation_charge', 'Cancellation') : tt('total_earnings', 'Total Earnings')}
+                  </Text>
+                  {!isCancelled && (
+                    <View style={[styles.paidToWallet, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#EFF6FF' }]}>
+                      <Ionicons name="wallet-outline" size={14} color="#2563EB" />
+                      <Text style={styles.paidToWalletText}>
+                        {(!ride.paymentMethod || ride.paymentMethod.toLowerCase() === 'cash') 
+                          ? tt('received_as_cash', 'Received as Cash') 
+                          : tt('received_as_online', 'Received as Online')}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
             </View>
 
-            {/* Customer Information Section */}
-            {ride.customer && (
-              <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-                <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('customer_details')}</Text>
-                <View style={styles.customerRow}>
-                  <Image source={{ uri: ride.customer.image || 'https://ui-avatars.com/api/?name=Customer' }} style={styles.customerAvatar} />
-                  <View style={styles.customerInfo}>
-                    <Text style={[styles.customerName, { color: isDark ? '#F3F4F6' : '#1F2937' }]} numberOfLines={1} adjustsFontSizeToFit>{ride.customer.name}</Text>
-                    {ride.status === 'Completed' ? (
-                      <View style={{ gap: 8, marginTop: 4 }}>
-                        <View style={[styles.ratingBox, isDark && { backgroundColor: 'rgba(251, 191, 36, 0.1)', borderColor: 'rgba(251, 191, 36, 0.2)' }]}>
-                          <Ionicons name="star" size={14} color="#FBBF24" />
-                          <Text style={[styles.ratingText, isDark && { color: '#FCD34D' }]}>
-                            {t('you_rated')}: {ride.customer.ratingGiven !== undefined ? ride.customer.ratingGiven.toFixed(1) : t('no_rating')}
-                          </Text>
-                        </View>
-                        <View style={[styles.ratingBox, isDark && { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                          <Ionicons name="star" size={14} color="#10B981" />
-                          <Text style={[styles.ratingText, { color: '#059669' }, isDark && { color: '#34D399' }]}>
-                            {t('customer_rated')}: {ride.customer.ratingReceived !== undefined ? ride.customer.ratingReceived.toFixed(1) : t('no_rating')}
-                          </Text>
-                        </View>
-                      </View>
-                    ) : (
-                      <Text style={[styles.noRatingText, isDark && { color: '#9CA3AF' }]}>
-                        {t('trip')} {ride.status ? t(ride.status.toLowerCase()) : ''}
+            {/* ═══════════════════ Map Section ═══════════════════ */}
+            {hasMapCoords && (
+              <View style={[styles.mapContainer, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+                <MapView
+                  style={styles.map}
+                  provider={PROVIDER_GOOGLE}
+                  region={mapRegion!}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  rotateEnabled={false}
+                  pitchEnabled={false}
+                >
+                  {/* Pickup Marker */}
+                  <Marker
+                    coordinate={{ latitude: ride.pickupLat, longitude: ride.pickupLng }}
+                  >
+                    <View style={styles.markerPickup}>
+                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                    </View>
+                  </Marker>
+                  
+                  {/* Drop Marker */}
+                  <Marker
+                    coordinate={{ latitude: ride.dropLat, longitude: ride.dropLng }}
+                  >
+                    <View style={styles.markerDrop}>
+                      <View style={styles.markerDropInner} />
+                    </View>
+                  </Marker>
+
+                  {/* Route Line */}
+                  <Polyline
+                    coordinates={[
+                      { latitude: ride.pickupLat, longitude: ride.pickupLng },
+                      { latitude: ride.dropLat, longitude: ride.dropLng },
+                    ]}
+                    strokeColor="#2563EB"
+                    strokeWidth={3}
+                    lineDashPattern={[6, 4]}
+                  />
+                </MapView>
+
+                {/* Overlaid Pickup/Drop Info */}
+                <View style={styles.mapOverlayRow}>
+                  <View style={[styles.mapInfoCard, { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255,255,255,0.95)' }]}>
+                    <View style={styles.mapInfoCardHeader}>
+                      <View style={styles.mapInfoDotGreen} />
+                      <Text style={[styles.mapInfoLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {tt('pickup', 'Pickup')}
                       </Text>
-                    )}
+                      <Text style={[styles.mapInfoTime, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        {ride.timeline?.startedAt || ride.timeline?.arrivedAt || ride.time}
+                      </Text>
+                    </View>
+                    <Text style={[styles.mapInfoAddress, { color: isDark ? '#E5E7EB' : '#374151' }]} numberOfLines={1}>
+                      {getShortLocation(ride.pickup)}
+                    </Text>
+                    <Text style={[styles.mapInfoSubAddress, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+                      {getCityFromAddress(ride.pickup)}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.mapInfoCard, { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255,255,255,0.95)' }]}>
+                    <View style={styles.mapInfoCardHeader}>
+                      <View style={styles.mapInfoDotRed} />
+                      <Text style={[styles.mapInfoLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {tt('drop', 'Drop')}
+                      </Text>
+                      <Text style={[styles.mapInfoTime, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        {(ride.tripType === 'ROUND_TRIP' || ride.tripType === 'OUTSTATION_ROUND_TRIP') 
+                          ? (ride.timeline?.destinationReachedAt || '')
+                          : (ride.timeline?.completedAt || ride.timeline?.cancelledAt || '')}
+                      </Text>
+                    </View>
+                    <Text style={[styles.mapInfoAddress, { color: isDark ? '#E5E7EB' : '#374151' }]} numberOfLines={1}>
+                      {getShortLocation(ride.drop)}
+                    </Text>
+                    <Text style={[styles.mapInfoSubAddress, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+                      {getCityFromAddress(ride.drop)}
+                    </Text>
                   </View>
                 </View>
-                {ride.customer.comment && (
-                  <View style={[styles.commentBox, isDark && { backgroundColor: theme.colors.border, borderLeftColor: '#4B5563' }]}>
-                    <Text style={[styles.commentText, isDark && { color: '#D1D5DB' }]}>{t('your_feedback')}: "{ride.customer.comment}"</Text>
-                  </View>
-                )}
-                {ride.customer.receivedComment && (
-                  <View style={[styles.commentBox, { borderLeftColor: '#10B981', marginTop: 8 }, isDark && { backgroundColor: theme.colors.border, borderLeftColor: '#059669' }]}>
-                    <Text style={[styles.commentText, isDark && { color: '#D1D5DB' }]}>{t('customer_feedback')}: "{ride.customer.receivedComment}"</Text>
-                  </View>
-                )}
               </View>
             )}
 
-            {/* Trip Timeline */}
-            <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('trip_timeline')}</Text>
+            {/* ═══════════════════ Trip Details ═══════════════════ */}
+            <View style={[styles.tripDetailsCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+              <Text style={[styles.tripDetailsTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                {tt('trip_details', 'Trip Details')}
+              </Text>
 
-              {ride.timeline ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Ionicons name="time-outline" size={22} color={isDark ? '#60A5FA' : '#2563EB'} style={{ marginBottom: 4 }} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: isDark ? '#E5E7EB' : '#1F2937' }} numberOfLines={1} adjustsFontSizeToFit>{t('accepted') || 'Accepted'}</Text>
-                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
-                      {ride.timeline.acceptedAt || ride.timeline.requestedAt || ride.time || '-'}
+              {/* Pickup & Drop Timeline */}
+              <View style={styles.tripTimeline}>
+                {/* Pickup */}
+                <View style={styles.tripTimelineRow}>
+                  <View style={styles.tripTimelineDotCol}>
+                    <View style={styles.tripDotGreen} />
+                    <View style={[styles.tripConnectorLine, { borderColor: isDark ? '#4B5563' : '#2563EB' }]} />
+                  </View>
+                  <View style={styles.tripTimelineContent}>
+                    <Text style={[styles.tripLocationLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {tt('pickup_location', 'Pickup Location')}
+                    </Text>
+                    <Text style={[styles.tripLocationAddress, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+                      {ride.pickup || 'Unknown'}
                     </Text>
                   </View>
-
-                  <View style={{ height: 2, flex: 0.6, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 2, marginTop: -20 }} />
-
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Ionicons name="navigate-outline" size={22} color={ride.timeline.arrivedAt ? (isDark ? '#FBBF24' : '#F59E0B') : (isDark ? '#4B5563' : '#E5E7EB')} style={{ marginBottom: 4 }} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: ride.timeline.arrivedAt ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }} numberOfLines={1} adjustsFontSizeToFit>{t('arrived') || 'Arrived'}</Text>
-                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
-                      {ride.timeline.arrivedAt || '-'}
-                    </Text>
-                  </View>
-
-                  <View style={{ height: 2, flex: 0.6, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 2, marginTop: -20 }} />
-
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Ionicons name="play-circle-outline" size={22} color={ride.timeline.startedAt ? (isDark ? '#34D399' : '#10B981') : (isDark ? '#4B5563' : '#E5E7EB')} style={{ marginBottom: 4 }} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: ride.timeline.startedAt ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }} numberOfLines={1} adjustsFontSizeToFit>{t('started') || 'Started'}</Text>
-                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
-                      {ride.timeline.startedAt || '-'}
-                    </Text>
-                  </View>
-
-                  <View style={{ height: 2, flex: 0.6, backgroundColor: isDark ? '#4B5563' : '#DBEAFE', marginHorizontal: 2, marginTop: -20 }} />
-
-                  <View style={{ alignItems: 'center', flex: 1 }}>
-                    <Ionicons 
-                      name={ride.status === 'Cancelled' ? 'close-circle-outline' : 'checkmark-done-circle-outline'} 
-                      size={22} 
-                      color={(ride.timeline.completedAt || ride.timeline.cancelledAt) ? (ride.status === 'Cancelled' ? (isDark ? '#F87171' : '#DC2626') : (isDark ? '#34D399' : '#10B981')) : (isDark ? '#4B5563' : '#E5E7EB')} 
-                      style={{ marginBottom: 4 }} 
-                    />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: (ride.timeline.completedAt || ride.timeline.cancelledAt) ? (isDark ? '#E5E7EB' : '#1F2937') : (isDark ? '#6B7280' : '#9CA3AF') }} numberOfLines={1} adjustsFontSizeToFit>
-                      {ride.status === 'Cancelled' ? (t('cancelled') || 'Cancelled') : (t('completed') || 'Completed')}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>
-                      {ride.timeline.completedAt || ride.timeline.cancelledAt || '-'}
-                    </Text>
-                  </View>
+                  <Text style={[styles.tripLocationTime, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {ride.timeline?.startedAt || ride.timeline?.arrivedAt || ride.time || '--'}
+                  </Text>
                 </View>
-              ) : (
-                <Text style={{ color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 13, fontStyle: 'italic' }}>
-                  {t('timeline_unavailable')}
-                </Text>
-              )}
+
+                {/* Drop */}
+                <View style={styles.tripTimelineRow}>
+                  <View style={styles.tripTimelineDotCol}>
+                    <View style={styles.tripDotRed} />
+                    {(ride.tripType === 'ROUND_TRIP' || ride.tripType === 'OUTSTATION_ROUND_TRIP') && (
+                      <View style={[styles.tripConnectorLine, { borderColor: isDark ? '#4B5563' : '#2563EB' }]} />
+                    )}
+                  </View>
+                  <View style={styles.tripTimelineContent}>
+                    <Text style={[styles.tripLocationLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {isCancelled ? tt('cancelled', 'Cancelled') : tt('drop_location', 'Drop Location')}
+                    </Text>
+                    <Text style={[styles.tripLocationAddress, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+                      {isCancelled ? '--' : (ride.drop || 'Unknown')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.tripLocationTime, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {(ride.tripType === 'ROUND_TRIP' || ride.tripType === 'OUTSTATION_ROUND_TRIP')
+                      ? (ride.timeline?.destinationReachedAt || '--')
+                      : (ride.timeline?.completedAt || ride.timeline?.cancelledAt || '--')}
+                  </Text>
+                </View>
+
+                {/* Return */}
+                {(ride.tripType === 'ROUND_TRIP' || ride.tripType === 'OUTSTATION_ROUND_TRIP') && (
+                  <View style={styles.tripTimelineRow}>
+                    <View style={styles.tripTimelineDotCol}>
+                      <View style={styles.tripDotGreen} />
+                    </View>
+                    <View style={styles.tripTimelineContent}>
+                      <Text style={[styles.tripLocationLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {tt('return_to_pickup', 'Return to Pickup')}
+                      </Text>
+                      <Text style={[styles.tripLocationAddress, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+                        {ride.pickup || 'Unknown'}
+                      </Text>
+                    </View>
+                    <Text style={[styles.tripLocationTime, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                      {ride.timeline?.returnReachedAt || ride.timeline?.completedAt || '--'}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Divider */}
+              <View style={[styles.tripStatsDivider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
+
+              {/* Stats Row */}
+              <View style={styles.tripStatsRow}>
+                <View style={styles.tripStatItem}>
+                  <View style={[styles.tripStatIcon, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F0F5FF' }]}>
+                    <Ionicons name="car-outline" size={16} color="#2563EB" />
+                  </View>
+                  <Text style={[styles.tripStatLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {tt('distance', 'Distance')}
+                  </Text>
+                  <Text style={[styles.tripStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {ride.distanceKm ? `${ride.distanceKm} km` : ride.distance || '--'}
+                  </Text>
+                </View>
+
+                <View style={styles.tripStatItem}>
+                  <View style={[styles.tripStatIcon, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F0F5FF' }]}>
+                    <Ionicons name="time-outline" size={16} color="#2563EB" />
+                  </View>
+                  <Text style={[styles.tripStatLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {tt('duration', 'Duration')}
+                  </Text>
+                  <Text style={[styles.tripStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {ride.durationMin ? `${ride.durationMin}m` : '--'}
+                  </Text>
+                </View>
+
+                {ride.packageHours && (
+                  <View style={styles.tripStatItem}>
+                    <View style={[styles.tripStatIcon, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F0F5FF' }]}>
+                      <Ionicons name="time" size={16} color="#2563EB" />
+                    </View>
+                    <Text style={[styles.tripStatLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                      {tt('package', 'Package')}
+                    </Text>
+                    <Text style={[styles.tripStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {ride.packageHours} hr
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.tripStatItem}>
+                  <View style={[styles.tripStatIcon, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F0F5FF' }]}>
+                    <MaterialCommunityIcons name="swap-horizontal" size={16} color="#2563EB" />
+                  </View>
+                  <Text style={[styles.tripStatLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {tt('ride_type', 'Ride Type')}
+                  </Text>
+                  <Text style={[styles.tripStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {formatString(ride.tripType, 'One Way')}
+                  </Text>
+                </View>
+
+                <View style={styles.tripStatItem}>
+                  <View style={[styles.tripStatIcon, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F0F5FF' }]}>
+                    <Ionicons name="wallet-outline" size={16} color="#2563EB" />
+                  </View>
+                  <Text style={[styles.tripStatLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                    {tt('payment', 'Payment')}
+                  </Text>
+                  <Text style={[styles.tripStatValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    {formatString(ride.paymentMethod, 'Cash')}
+                  </Text>
+                </View>
+              </View>
             </View>
 
-            {/* Fare Breakdown (Receipt Style) */}
-            <View style={[styles.section, styles.receiptCard, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <View style={[styles.receiptTopEdge, isDark && { borderBottomColor: theme.colors.background }]} />
+            {/* ═══════════════════ Fare Breakdown ═══════════════════ */}
+            <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+              <View style={styles.fareTitleRow}>
+                <Text style={[styles.fareTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                  {tt('fare_breakdown', 'Fare Breakdown')}
+                </Text>
+                <Pressable onPress={() => downloadInvoice(ride)} style={styles.viewInvoiceBtn}>
+                  <Text style={styles.viewInvoiceText}>{tt('view_invoice', 'View Invoice')}</Text>
+                  <Ionicons name="document-text-outline" size={16} color="#2563EB" />
+                </Pressable>
+              </View>
 
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('fare_breakdown')}</Text>
-              
               {(() => {
-                const isCancelled = ride.status?.toUpperCase() === 'CANCELLED';
                 const baseFare = isCancelled ? 0 : (ride.fareDetails?.base || 0);
                 const distanceFare = isCancelled ? 0 : (ride.fareDetails?.distance || 0);
                 const timeFare = isCancelled ? 0 : (ride.fareDetails?.time || 0);
@@ -428,70 +740,87 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
 
                 return (
                   <>
-                    <FareRow label={t('base_fare')} value={formatCurrency(baseFare)} isDark={isDark} />
-                    <FareRow label={t('distance_fare', { distance: isCancelled ? '0 km' : (ride.distance || '0 km') })} value={formatCurrency(distanceFare)} isDark={isDark} />
-                    <FareRow label={t('time_fare')} value={formatCurrency(timeFare)} isDark={isDark} />
-                    <FareRow label={t('platform_fee')} value={`- ${formatCurrency(platformFee)}`} color={isDark ? '#F87171' : '#DC2626'} isDark={isDark} />
-
-                    <View style={[styles.receiptDashedLine, isDark && { borderColor: '#4B5563' }]} />
-
-                    <View style={styles.totalRow}>
-                      <Text style={[styles.totalLabel, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>
-                        {isCancelled ? t('cancellation_charge') : t('your_earnings')}
+                    <View style={styles.fareItemRow}>
+                      <Text style={[styles.fareItemLabel, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                        {tt('base_fare', 'Base Fare')}
                       </Text>
-                      <Text style={[styles.totalValue, isDark && { color: isCancelled ? '#9CA3AF' : '#34D399' }]}>
+                      <Text style={[styles.fareItemValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {formatCurrency(baseFare)}
+                      </Text>
+                    </View>
+                    <View style={styles.fareItemRow}>
+                      <Text style={[styles.fareItemLabel, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                        {tt('distance_fare', `Distance Fare (${ride.distance || '0 km'})`, { distance: isCancelled ? '0 km' : (ride.distance || '0 km') })}
+                      </Text>
+                      <Text style={[styles.fareItemValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {formatCurrency(distanceFare)}
+                      </Text>
+                    </View>
+                    <View style={styles.fareItemRow}>
+                      <Text style={[styles.fareItemLabel, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                        {tt('time_fare', 'Time Fare')} {ride.durationMin ? `(${ride.durationMin} min)` : ''}
+                      </Text>
+                      <Text style={[styles.fareItemValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {formatCurrency(timeFare)}
+                      </Text>
+                    </View>
+                    <View style={styles.fareItemRow}>
+                      <Text style={[styles.fareItemLabel, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                        {tt('platform_fee', 'Platform Fee')}
+                      </Text>
+                      <Text style={[styles.fareItemValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {formatCurrency(platformFee)}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.fareDivider, { borderColor: isDark ? '#374151' : '#E5E7EB' }]} />
+
+                    <View style={styles.fareTotalRow}>
+                      <Text style={[styles.fareTotalLabel, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                        {isCancelled ? tt('cancellation_charge', 'Cancellation Charge') : tt('total_earnings', 'Total Earnings')}
+                      </Text>
+                      <Text style={[styles.fareTotalValue, { color: isCompleted ? '#16A34A' : (isDark ? '#F87171' : '#DC2626') }]}>
                         {formatCurrency(totalAmount)}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.secureNote, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.08)' : '#F0F9FF' }]}>
+                      <Ionicons name="shield-checkmark" size={16} color="#2563EB" />
+                      <Text style={[styles.secureNoteText, { color: isDark ? '#93C5FD' : '#1D4ED8' }]}>
+                        {tt('earnings_secure', 'Your earnings are safe and secure with us.')}
                       </Text>
                     </View>
                   </>
                 );
               })()}
-
-              <View style={[styles.receiptBottomEdge, isDark && { borderTopColor: theme.colors.background }]} />
             </View>
 
-            {/* Payment and Support */}
-            <View style={[styles.section, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('payment_method')}</Text>
-              <View style={styles.paymentBox}>
-                <Ionicons
-                  name={ride.paymentMethod === 'Cash' ? 'cash-outline' : ride.paymentMethod === 'UPI' ? 'qr-code-outline' : 'wallet-outline'}
-                  size={20}
-                  color={isDark ? '#9CA3AF' : '#4B5563'}
-                />
-                <View>
-                  <Text style={[styles.paymentText, { color: isDark ? '#E5E7EB' : '#374151' }]}>
-                    {ride.paymentMethod ? (t(ride.paymentMethod.toLowerCase()) || ride.paymentMethod) : t('wallet')}
-                  </Text>
-                  {ride.settlementInfo && (
-                    <Text style={[styles.settlementText, isDark && { color: '#9CA3AF' }]}>{ride.settlementInfo}</Text>
-                  )}
+            {/* ═══════════════════ Need Help ═══════════════════ */}
+            <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+              <View style={styles.helpRow}>
+                <View style={styles.helpLeft}>
+                  <View style={[styles.helpIconCircle, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF' }]}>
+                    <Ionicons name="information-circle" size={22} color="#2563EB" />
+                  </View>
+                  <View>
+                    <Text style={[styles.helpTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      {tt('need_help', 'Need Help?')}
+                    </Text>
+                    <Text style={[styles.helpSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                      {tt('report_trip_issue', 'Report an issue with this trip')}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </View>
-
-            <View style={styles.actionsGrid}>
-              <View style={styles.actionRow}>
-                <Pressable
-                  style={[styles.actionBtnPrimary, ride.status === 'Cancelled' && styles.disabledBtn]}
-                  onPress={() => ride.status !== 'Cancelled' && downloadInvoice(ride)}
-                >
-                  <Ionicons name="download-outline" size={20} color="#fff" />
-                  <Text style={styles.actionBtnPrimaryText} numberOfLines={1} adjustsFontSizeToFit>{t('invoice')}</Text>
-                </Pressable>
-                <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]} onPress={handleShare}>
-                  <Ionicons name="share-social-outline" size={20} color={isDark ? '#E5E7EB' : '#4B5563'} />
-                  <Text style={[styles.actionBtnText, isDark && { color: '#E5E7EB' }]} numberOfLines={1} adjustsFontSizeToFit>{t('share_details')}</Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.actionRow}>
-                <Pressable style={[styles.actionBtn, isDark && { backgroundColor: theme.colors.card, borderColor: '#4B5563' }]} onPress={handleReportIssue}>
-                  <Ionicons name="warning-outline" size={20} color={isDark ? '#F87171' : '#DC2626'} />
-                  <Text style={[styles.actionBtnText, { color: isDark ? '#F87171' : '#DC2626' }]} numberOfLines={1} adjustsFontSizeToFit>{t('report_issue')}</Text>
+                <Pressable onPress={handleReportIssue} style={styles.reportIssueBtn}>
+                  <Ionicons name="warning" size={16} color="#FFFFFF" />
+                  <Text style={styles.reportIssueBtnText}>
+                    {tt('report_issue', 'Report Issue')}
+                  </Text>
                 </Pressable>
               </View>
             </View>
+
+            <View style={{ height: 20 }} />
           </>
         )}
       </ScrollView>
@@ -574,48 +903,58 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   );
 };
 
-/* Sub-components */
-const StatusBadge = ({ status, label, isDark }: any) => (
-  <View style={[
-    styles.badge,
-    status === 'Completed' ? [styles.success, isDark && { backgroundColor: 'rgba(22, 163, 74, 0.2)' }] : [styles.cancelled, isDark && { backgroundColor: 'rgba(220, 38, 38, 0.2)' }]
-  ]}>
-    <Text style={[styles.badgeText, isDark && { color: status === 'Completed' ? '#34D399' : '#F87171' }]} numberOfLines={1} adjustsFontSizeToFit>{label || status}</Text>
-  </View>
-);
+/* ═══════════════════ Sub-components ═══════════════════ */
 
-const TimelineItem = ({ status, time, completed, isLast, color, isDark }: any) => (
-  <View style={styles.timelineItem}>
-    <View style={styles.timelineLeft}>
+const TimelineStep = ({ icon, iconColor, label, time, address, isLast, isDark, completed }: any) => (
+  <View style={styles.timelineStep}>
+    <View style={styles.timelineIconCol}>
       <View style={[
-        styles.timelineDot,
-        completed && (color ? { backgroundColor: color } : [styles.completedDot, isDark && { backgroundColor: '#60A5FA' }]),
-        isDark && !completed && { backgroundColor: '#4B5563' }
-      ]} />
-      {!isLast && <View style={[
-        styles.timelineLine,
-        completed && [styles.completedLine, isDark && { backgroundColor: 'rgba(59, 130, 246, 0.3)' }],
-        isDark && !completed && { backgroundColor: '#4B5563' }
-      ]} />}
+        styles.timelineIconWrap,
+        completed ? { backgroundColor: iconColor + '20' } : { backgroundColor: isDark ? '#374151' : '#F3F4F6' }
+      ]}>
+        <Ionicons name={icon} size={16} color={completed ? iconColor : (isDark ? '#6B7280' : '#9CA3AF')} />
+      </View>
+      {!isLast && (
+        <View style={[
+          styles.timelineConnector,
+          { backgroundColor: isDark ? '#374151' : '#E5E7EB' }
+        ]} />
+      )}
     </View>
-    <View style={styles.timelineContent}>
-      <Text style={[
-        styles.timelineStatus,
-        completed && (color ? { color } : [styles.completedStatus, isDark && { color: '#E5E7EB' }]),
-        isDark && !completed && { color: '#9CA3AF' }
-      ]}>{status}</Text>
-      <Text style={[styles.timelineTime, isDark && { color: '#6B7280' }]}>{time}</Text>
+    <View style={[styles.timelineStepContent, !isLast && { paddingBottom: 20 }]}>
+      <View style={styles.timelineStepHeader}>
+        <Text style={[
+          styles.timelineStepLabel,
+          { color: completed ? (isDark ? '#FFFFFF' : '#111827') : (isDark ? '#6B7280' : '#9CA3AF') },
+          { fontWeight: completed ? '600' : '400' }
+        ]}>
+          {label}
+        </Text>
+        <Text style={[styles.timelineStepTime, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          {time}
+        </Text>
+      </View>
+      {address && (
+        <View style={[styles.timelineAddressBox, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.06)' : '#F8FAFC' }]}>
+          <Text style={[styles.timelineAddressMain, { color: isDark ? '#E5E7EB' : '#374151' }]} numberOfLines={1}>
+            {getShortLocationStatic(address)}
+          </Text>
+          <Text style={[styles.timelineAddressSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+            {address}
+          </Text>
+        </View>
+      )}
     </View>
   </View>
 );
 
-const FareRow = ({ label, value, color, isDark }: any) => (
-  <View style={styles.fareRow}>
-    <Text style={[styles.fareLabel, isDark && { color: '#9CA3AF' }]}>{label}</Text>
-    <Text style={[styles.fareValue, { color: color || (isDark ? '#E5E7EB' : '#1F2937') }]}>{value}</Text>
-  </View>
-);
+const getShortLocationStatic = (address: string) => {
+  if (!address) return '';
+  const parts = address.split(',');
+  return parts[0]?.trim() || address;
+};
 
+/* ═══════════════════ Skeleton ═══════════════════ */
 const Shimmer = ({ translateX }: { translateX: any }) => (
   <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX }], zIndex: 10 }]}>
     <LinearGradient
@@ -627,7 +966,7 @@ const Shimmer = ({ translateX }: { translateX: any }) => (
   </Animated.View>
 );
 
-const RideDetailSkeleton = () => {
+const RideDetailSkeleton = ({ isDark, theme }: { isDark: boolean; theme: any }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -645,267 +984,648 @@ const RideDetailSkeleton = () => {
     outputRange: [-width, width],
   });
 
+  const skBg = isDark ? '#374151' : '#E5E7EB';
+
   return (
     <View>
-      {/* Ride Status Card Skeleton */}
-      <View style={[styles.card, { overflow: 'hidden' }]}>
-        <View style={styles.rowBetween}>
+      {/* Status Card Skeleton */}
+      <View style={[styles.sectionCard, { overflow: 'hidden', backgroundColor: isDark ? theme.colors.card : '#fff' }]}>
+        <View style={styles.statusCardRow}>
           <View>
-            <View style={[styles.skeletonLine, { width: 120, height: 20 }]} />
-            <View style={[styles.skeletonLine, { width: 160, marginTop: 8 }]} />
+            <View style={[styles.skeletonLine, { width: 100, height: 28, borderRadius: 14, backgroundColor: skBg }]} />
+            <View style={[styles.skeletonLine, { width: 150, height: 16, marginTop: 10, backgroundColor: skBg }]} />
+            <View style={[styles.skeletonLine, { width: 100, height: 14, marginTop: 6, backgroundColor: skBg }]} />
           </View>
-          <View style={[styles.skeletonLine, { width: 80, height: 28, borderRadius: 20 }]} />
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.routeContainer}>
-          <View style={styles.routeItem}>
-            <View style={styles.iconColumn}>
-              <View style={[styles.skeletonLine, { width: 16, height: 16, borderRadius: 8 }]} />
-              <View style={styles.verticalLine} />
-            </View>
-            <View style={[styles.skeletonLine, { flex: 1, height: 16, marginTop: 4 }]} />
-          </View>
-          <View style={styles.routeItem}>
-            <View style={styles.iconColumn}>
-              <View style={[styles.skeletonLine, { width: 16, height: 16, borderRadius: 8 }]} />
-            </View>
-            <View style={[styles.skeletonLine, { flex: 1, height: 16, marginTop: 4 }]} />
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={[styles.skeletonLine, { width: 100, height: 28, backgroundColor: skBg }]} />
+            <View style={[styles.skeletonLine, { width: 80, height: 14, marginTop: 6, backgroundColor: skBg }]} />
           </View>
         </View>
         <Shimmer translateX={translateX} />
       </View>
 
-      {/* Customer Information Skeleton */}
-      <View style={[styles.section, { overflow: 'hidden' }]}>
-        <View style={[styles.skeletonLine, { width: 140, height: 20, marginBottom: 16 }]} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={[styles.skeletonLine, { width: 50, height: 50, borderRadius: 25 }]} />
-          <View style={{ gap: 8 }}>
-            <View style={[styles.skeletonLine, { width: 120, height: 18 }]} />
-            <View style={[styles.skeletonLine, { width: 60, height: 16 }]} />
+      {/* Map Skeleton */}
+      <View style={[styles.sectionCard, { overflow: 'hidden', backgroundColor: isDark ? theme.colors.card : '#fff', height: 180 }]}>
+        <View style={[styles.skeletonLine, { width: '100%', height: '100%', borderRadius: 12, backgroundColor: skBg }]} />
+        <Shimmer translateX={translateX} />
+      </View>
+
+      {/* Customer Skeleton */}
+      <View style={[styles.sectionCard, { overflow: 'hidden', backgroundColor: isDark ? theme.colors.card : '#fff' }]}>
+        <View style={styles.customerRow}>
+          <View style={[styles.skeletonLine, { width: 50, height: 50, borderRadius: 25, backgroundColor: skBg }]} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <View style={[styles.skeletonLine, { width: 120, height: 18, backgroundColor: skBg }]} />
+            <View style={[styles.skeletonLine, { width: 80, height: 14, marginTop: 6, backgroundColor: skBg }]} />
           </View>
         </View>
         <Shimmer translateX={translateX} />
       </View>
 
-      {/* Trip Timeline Skeleton */}
-      <View style={[styles.section, { overflow: 'hidden' }]}>
-        <View style={[styles.skeletonLine, { width: 140, height: 20, marginBottom: 16 }]} />
-        {[1, 2, 3, 4].map((i) => (
-          <View key={i} style={styles.timelineItem}>
-            <View style={styles.timelineLeft}>
-              <View style={[styles.timelineDot, { backgroundColor: '#E5E7EB' }]} />
-              {i !== 4 && <View style={styles.timelineLine} />}
+      {/* Stats Skeleton */}
+      <View style={[styles.sectionCard, { overflow: 'hidden', backgroundColor: isDark ? theme.colors.card : '#fff' }]}>
+        <View style={styles.statsRow}>
+          {[1, 2, 3, 4].map(i => (
+            <View key={i} style={styles.statItem}>
+              <View style={[styles.skeletonLine, { width: 42, height: 42, borderRadius: 21, backgroundColor: skBg }]} />
+              <View style={[styles.skeletonLine, { width: 50, height: 12, marginTop: 8, backgroundColor: skBg }]} />
+              <View style={[styles.skeletonLine, { width: 40, height: 16, marginTop: 4, backgroundColor: skBg }]} />
             </View>
-            <View style={[styles.timelineContent, { flex: 1 }]}>
-              <View style={[styles.skeletonLine, { width: 100, height: 16 }]} />
-              <View style={[styles.skeletonLine, { width: 60, height: 12, marginTop: 6 }]} />
-            </View>
+          ))}
+        </View>
+        <Shimmer translateX={translateX} />
+      </View>
+
+      {/* Fare Skeleton */}
+      <View style={[styles.sectionCard, { overflow: 'hidden', backgroundColor: isDark ? theme.colors.card : '#fff' }]}>
+        {[1, 2, 3, 4].map(i => (
+          <View key={i} style={styles.fareItemRow}>
+            <View style={[styles.skeletonLine, { width: 120, height: 16, backgroundColor: skBg }]} />
+            <View style={[styles.skeletonLine, { width: 60, height: 16, backgroundColor: skBg }]} />
           </View>
         ))}
         <Shimmer translateX={translateX} />
-      </View>
-
-      {/* Fare Breakdown (Receipt Style) Skeleton */}
-      <View style={[styles.section, styles.receiptCard, { overflow: 'hidden' }]}>
-        <View style={styles.receiptTopEdge} />
-        <View style={[styles.skeletonLine, { width: 140, height: 20, marginBottom: 16 }]} />
-        {[1, 2, 3, 4].map((i) => (
-          <View key={i} style={styles.fareRow}>
-            <View style={[styles.skeletonLine, { width: 120, height: 16 }]} />
-            <View style={[styles.skeletonLine, { width: 60, height: 16 }]} />
-          </View>
-        ))}
-
-        <View style={styles.receiptDashedLine} />
-
-        <View style={styles.totalRow}>
-          <View style={[styles.skeletonLine, { width: 100, height: 20 }]} />
-          <View style={[styles.skeletonLine, { width: 80, height: 24 }]} />
-        </View>
-        <View style={styles.receiptBottomEdge} />
-        <Shimmer translateX={translateX} />
-      </View>
-
-      {/* Actions Skeleton */}
-      <View style={styles.actionsGrid}>
-        <View style={styles.actionRow}>
-          <View style={[styles.actionBtn, { backgroundColor: '#E5E7EB', overflow: 'hidden', borderColor: 'transparent' }]}>
-            <Shimmer translateX={translateX} />
-          </View>
-          <View style={[styles.actionBtnPrimary, { backgroundColor: '#E5E7EB', overflow: 'hidden' }]}>
-            <Shimmer translateX={translateX} />
-          </View>
-        </View>
-        <View style={styles.actionRow}>
-          <View style={[styles.actionBtn, { backgroundColor: '#E5E7EB', overflow: 'hidden', borderColor: 'transparent' }]}>
-            <Shimmer translateX={translateX} />
-          </View>
-          <View style={[styles.actionBtn, { backgroundColor: '#E5E7EB', overflow: 'hidden', borderColor: 'transparent' }]}>
-            <Shimmer translateX={translateX} />
-          </View>
-        </View>
       </View>
     </View>
   );
 };
 
+/* ═══════════════════ Styles ═══════════════════ */
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F9FAFB' },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
+  
+  /* Header */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F0F0F0',
   },
-  backBtn: { padding: 8, marginLeft: -8 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
+  backBtn: { 
+    padding: 6,
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
+  headerCenter: { 
+    flex: 1, 
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: { 
+    fontSize: 18, 
+    fontWeight: '700', 
+    color: '#111827',
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  helpBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    position: 'absolute',
+    right: 16,
+    zIndex: 1,
+  },
+  helpBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+
   scrollContent: { padding: 16, paddingBottom: 40 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+
+  /* Status & Earnings Card */
+  statusCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  rideId: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  dateTime: { fontSize: 13, color: '#6B7280', marginTop: 4 },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 16 },
-  routeContainer: { gap: 12 },
-  routeItem: {
+  statusCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  statusDateTime: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  statusDate: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  earningsCol: {
+    alignItems: 'flex-end',
+  },
+  earningsAmount: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  earningsLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  paidToWallet: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 5,
+  },
+  paidToWalletText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+
+  /* Map */
+  mapContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  map: {
+    width: '100%',
+    height: 180,
+  },
+  markerPickup: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  markerDrop: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  markerDropInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  mapOverlayRow: {
+    flexDirection: 'row',
+    gap: 8,
+    padding: 10,
+    marginTop: -50,
+  },
+  mapInfoCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 10,
+    padding: 10,
+  },
+  mapInfoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  mapInfoDotGreen: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#16A34A',
+  },
+  mapInfoDotRed: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#DC2626',
+  },
+  mapInfoLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    flex: 1,
+  },
+  mapInfoTime: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+  mapInfoAddress: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  mapInfoSubAddress: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+
+  /* Section Card */
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+
+  /* Trip Details Card */
+  tripDetailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  tripDetailsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 10,
+  },
+  tripTimeline: {
+    gap: 0,
+  },
+  tripTimelineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  iconColumn: {
+  tripTimelineDotCol: {
     alignItems: 'center',
-    width: 24,
-    marginRight: 12,
+    width: 18,
+    marginRight: 10,
+    paddingTop: 2,
   },
-  routeTextBody: {
+  tripDotGreen: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#16A34A',
+    borderWidth: 2.5,
+    borderColor: '#DCFCE7',
+  },
+  tripDotRed: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#DC2626',
+    borderWidth: 2.5,
+    borderColor: '#FEE2E2',
+  },
+  tripConnectorLine: {
+    width: 0,
+    height: 22,
+    borderLeftWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#2563EB',
+    marginVertical: 1,
+  },
+  tripTimelineContent: {
     flex: 1,
+    paddingBottom: 8,
   },
-  routeText: { fontSize: 17, color: '#374151', fontWeight: '500', flex: 1 },
-  verticalLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4 },
-  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  success: { backgroundColor: '#DCFCE7' },
-  cancelled: { backgroundColor: '#FEE2E2' },
-  badgeText: { fontSize: 12, fontWeight: '700', color: '#111827' },
-
-  /* Customer Details */
-  customerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  customerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#E5E7EB' },
-  customerInfo: { flex: 1, justifyContent: 'center' },
-  customerName: { fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 4 },
-  ratingBox: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFBEB', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#FEF3C7' },
-  ratingText: { fontSize: 12, fontWeight: '700', color: '#B45309' },
-  noRatingText: { fontSize: 13, color: '#6B7280' },
-  commentBox: { marginTop: 12, padding: 12, backgroundColor: '#F3F4F6', borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#E5E7EB' },
-  commentText: { fontSize: 13, fontStyle: 'italic', color: '#4B5563' },
-
-  section: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+  tripLocationLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
   },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
-  timelineItem: { flexDirection: 'row', gap: 16 },
-  timelineLeft: { alignItems: 'center', width: 14 },
-  timelineDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#E5E7EB' },
-  completedDot: { backgroundColor: '#2563EB' },
-  timelineLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4 },
-  completedLine: { backgroundColor: '#DBEAFE' },
-  timelineContent: { paddingBottom: 20 },
-  timelineStatus: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
-  completedStatus: { color: '#1F2937' },
-  timelineTime: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-
-  /* Fare/Receipt Styles */
-  receiptCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    overflow: 'hidden',
-    paddingTop: 24,
-    paddingBottom: 24,
+  tripLocationAddress: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
   },
-  receiptTopEdge: {
-    position: 'absolute',
-    top: -5,
-    left: 0,
-    right: 0,
-    height: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: '#F8FAFC',
-    borderStyle: 'dashed',
+  tripLocationTime: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6B7280',
+    paddingTop: 2,
   },
-  receiptBottomEdge: {
-    position: 'absolute',
-    bottom: -5,
-    left: 0,
-    right: 0,
-    height: 10,
-    borderTopWidth: 2,
-    borderTopColor: '#F8FAFC',
-    borderStyle: 'dashed',
-  },
-  receiptDashedLine: {
+  tripStatsDivider: {
     height: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderStyle: 'dashed',
-    marginVertical: 12,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 10,
   },
-  fareRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  fareLabel: { fontSize: 14, color: '#6B7280' },
-  fareValue: { fontSize: 14, fontWeight: '600' },
-  totalRow: {
+  tripStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: 8,
   },
-  totalLabel: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  totalValue: { fontSize: 18, fontWeight: '800', color: '#16A34A' },
-
-  paymentBox: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  paymentText: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  settlementText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-
-  /* Quick Actions */
-  actionsGrid: { gap: 12, marginTop: 8 },
-  actionRow: { flexDirection: 'row', gap: 12 },
-  actionBtn: {
+  tripStatItem: {
+    alignItems: 'center',
     flex: 1,
-    flexDirection: 'row',
+  },
+  tripStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F0F5FF',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#fff',
-    borderWidth: 1,
+    marginBottom: 4,
+  },
+  tripStatLabel: {
+    fontSize: 9,
+    color: '#6B7280',
+    marginBottom: 1,
+  },
+  tripStatValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  /* Customer */
+  customerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  customerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#E5E7EB',
+  },
+  customerInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  customerName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  ratingText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  customerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  customerActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
     borderColor: '#E5E7EB',
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  actionBtnText: { color: '#374151', fontWeight: '600', fontSize: 14 },
-  actionBtnPrimary: {
-    flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    borderRadius: 12,
   },
-  actionBtnPrimaryText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  disabledBtn: { backgroundColor: '#9CA3AF', opacity: 0.6 },
+
+  /* Stats */
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  /* Timeline */
+  timelineContainer: {},
+  timelineStep: {
+    flexDirection: 'row',
+  },
+  timelineIconCol: {
+    alignItems: 'center',
+    width: 36,
+    marginRight: 12,
+  },
+  timelineIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timelineConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 4,
+  },
+  timelineStepContent: {
+    flex: 1,
+    paddingTop: 4,
+  },
+  timelineStepHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  timelineStepLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  timelineStepTime: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  timelineAddressBox: {
+    marginTop: 6,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  timelineAddressMain: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  timelineAddressSub: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+
+  /* Fare Breakdown */
+  fareTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  fareTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  viewInvoiceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewInvoiceText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  fareItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+  },
+  fareItemLabel: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  fareItemValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  fareDivider: {
+    height: 1,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#E5E7EB',
+    marginVertical: 6,
+  },
+  fareTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 2,
+    marginBottom: 8,
+  },
+  fareTotalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  fareTotalValue: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#16A34A',
+  },
+  secureNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F0F9FF',
+  },
+  secureNoteText: {
+    fontSize: 11,
+    color: '#1D4ED8',
+    flex: 1,
+  },
+
+  /* Need Help */
+  helpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  helpLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  helpIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  helpSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  reportIssueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  reportIssueBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  /* Skeleton */
   skeletonLine: {
     height: 14,
     backgroundColor: '#E5E7EB',
@@ -993,6 +1713,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  disabledBtn: { backgroundColor: '#9CA3AF', opacity: 0.6 },
 });
 
 export default RideDetailScreen;

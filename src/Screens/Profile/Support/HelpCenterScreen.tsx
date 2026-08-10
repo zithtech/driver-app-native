@@ -9,6 +9,7 @@ import {
     LayoutAnimation,
     Platform,
     UIManager,
+    Image,
 } from 'react-native';
 
 if (Platform.OS === 'android') {
@@ -163,18 +164,39 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* Search Bar Container */}
-                <View style={styles.searchSection}>
-                    <Text style={[styles.heroTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('how_can_we_help', 'How can we help?')}</Text>
-                    <Input
-                        placeholder={t('search_help_placeholder', 'Search questions...')}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        LeadingAccessory={
-                            <Ionicons name="search" size={s(20)} color="#94A3B8" style={{ marginRight: s(10) }} />
-                        }
-                        inputContainerStyle={[styles.searchInput, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}
-                    />
+                {/* Hero Section */}
+                <View style={[styles.heroCard, { backgroundColor: isDark ? '#1E293B' : '#F3F7FF' }]}>
+                    <View style={styles.heroLeft}>
+                        <Text style={[styles.heroTitleMain, { color: isDark ? '#F8FAFC' : '#0B193C' }]}>
+                            {t('were_here', "We're here")}{' '}
+                            <Text style={styles.heroTitleHighlight}>
+                                {t('to_help', 'to help')}
+                            </Text>
+                        </Text>
+                        <Text style={[styles.heroSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                            {t('help_subtitle', 'Get quick support and find answers to your questions.')}
+                        </Text>
+                        <View style={styles.heroSearchContainer}>
+                            <Input
+                                placeholder={t('search_help_placeholder', 'Search for help...')}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                LeadingAccessory={
+                                    <Ionicons name="search" size={s(18)} color="#94A3B8" style={{ marginRight: s(8) }} />
+                                }
+                                inputContainerStyle={[styles.heroSearchInput, { backgroundColor: isDark ? '#334155' : '#FFFFFF', borderColor: isDark ? '#475569' : '#FFFFFF' }]}
+                                placeholderTextColor="#94A3B8"
+                                style={{ fontSize: ms(13), color: isDark ? '#F8FAFC' : '#1E293B', height: '100%' }}
+                            />
+                        </View>
+                    </View>
+                    <View style={styles.heroRight}>
+                        <Image
+                            source={require('../../../assets/images/supporti.png')}
+                            style={styles.heroImage}
+                            resizeMode="contain"
+                        />
+                    </View>
                 </View>
 
                 {/* Category Pills */}
@@ -280,22 +302,42 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingBottom: vs(40),
     },
-    searchSection: {
-        padding: s(20),
-        paddingBottom: vs(10),
+    heroCard: {
+        flexDirection: 'row',
+        marginHorizontal: s(16),
+        marginTop: vs(12),
+        marginBottom: vs(8),
+        borderRadius: ms(16),
+        padding: s(12),
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
-    heroTitle: {
-        fontSize: ms(24),
-        fontWeight: '700',
-        marginBottom: vs(16),
-        color: '#1E293B',
+    heroLeft: {
+        flex: 1,
+        paddingRight: s(8),
     },
-    searchInput: {
-        height: vs(50),
+    heroTitleMain: {
+        fontSize: ms(20),
+        fontWeight: '800',
+        lineHeight: ms(24),
+        marginBottom: vs(4),
+    },
+    heroTitleHighlight: {
+        color: '#3B82F6',
+    },
+    heroSubtitle: {
+        fontSize: ms(11),
+        lineHeight: ms(15),
+        marginBottom: vs(10),
+    },
+    heroSearchContainer: {
+        width: '100%',
+    },
+    heroSearchInput: {
+        height: vs(38),
+        borderRadius: ms(10),
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 4 },
+        paddingHorizontal: s(10),
     },
     categoryWrapper: {
         paddingVertical: vs(12),
@@ -399,6 +441,16 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: ms(14),
         fontWeight: '600',
+    },
+    heroRight: {
+        width: s(90),
+        height: s(90),
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    heroImage: {
+        width: '100%',
+        height: '100%',
     },
 });
 

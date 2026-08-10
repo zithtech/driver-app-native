@@ -370,20 +370,17 @@ const SosContactsScreen = ({ navigation }: any) => {
 
         {/* SECURE BANNER */}
         <Animated.View entering={FadeInUp.delay(300).duration(600)}>
-          <View style={[styles.secureBannerContainer, { backgroundColor: isDark ? '#064E3B' : '#F0FDF4', borderColor: isDark ? '#065F46' : '#DCFCE7' }]}>
-            <View style={[styles.secureBannerIconLeft, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
-              <Ionicons name="shield-checkmark" size={24} color={isDark ? '#34D399' : '#16A34A'} />
+          <View style={[styles.secureBannerContainer, { backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF', borderColor: isDark ? '#1E40AF' : '#DBEAFE' }]}>
+            <View style={[styles.secureBannerIconLeft, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#DBEAFE' }]}>
+              <Ionicons name="shield-checkmark" size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
             </View>
             <View style={styles.secureBannerTextContainer}>
-              <Text style={[styles.secureBannerTitle, { color: isDark ? '#34D399' : '#16A34A' }]}>
+              <Text style={[styles.secureBannerTitle, { color: isDark ? '#60A5FA' : '#2563EB' }]} numberOfLines={1}>
                 {t('your_info_secure', 'Your information is secure')}
               </Text>
-              <Text style={[styles.secureBannerDesc, { color: isDark ? '#D1FAE5' : '#064E3B' }]}>
-                {t('info_secure_desc', 'This information will only be used in case of emergency and is kept strictly confidential.')}
+              <Text style={[styles.secureBannerDesc, { color: isDark ? '#DBEAFE' : '#1E3A8A' }]} numberOfLines={1}>
+                {t('info_secure_desc_short', 'Used only for emergencies and kept confidential.')}
               </Text>
-            </View>
-            <View style={[styles.secureBannerIconRight, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
-              <Ionicons name="lock-closed" size={20} color={isDark ? '#34D399' : '#16A34A'} />
             </View>
           </View>
         </Animated.View>
@@ -576,39 +573,30 @@ const styles = StyleSheet.create({
   // ── Secure Banner ──
   secureBannerContainer: {
     flexDirection: 'row',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
     marginTop: 8,
   },
   secureBannerIconLeft: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   secureBannerTextContainer: {
     flex: 1,
   },
   secureBannerTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   secureBannerDesc: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  secureBannerIconRight: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
+    fontSize: 11,
   },
 });
 

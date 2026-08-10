@@ -67,7 +67,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
     try {
       await Share.share({
         message: shareMessage,
-        title: t('refer_share_title') || 'Join V-Drive!',
+        title: t('refer_share_title') || 'Join T2drive!',
       });
     } catch (error) {
       console.error('Share error:', error);
@@ -180,32 +180,30 @@ const ReferEarnScreen = ({ navigation }: any) => {
             ) : (
               <View style={styles.statsScrollContent}>
                 <StatItem
-                  label={t('refer_total') || 'Total'}
+                  label={t('refer_total_referrals') || 'Total Referrals'}
                   value={stats.total_referrals}
-                  icon="people-outline"
-                  color="#3B82F6"
+                  icon="people"
+                  color="#2563EB"
                   isDark={isDark}
                 />
+                <View style={[styles.verticalDivider, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
                 <StatItem
-                  label={t('refer_successful') || 'Successful'}
+                  label={t('refer_successful_referrals') || 'Successful Referrals'}
                   value={stats.successful_referrals}
-                  icon="checkmark-circle-outline"
+                  icon="checkmark-circle"
                   color="#10B981"
                   isDark={isDark}
                 />
+                <View style={[styles.verticalDivider, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
                 <StatItem
-                  label={t('refer_pending') || 'Pending'}
-                  value={stats.pending_referrals}
-                  icon="time-outline"
-                  color="#F59E0B"
+                  label={t('refer_total_earnings') || 'Total Earnings'}
+                  value={`₹ ${stats.total_earned_coupons}.00`}
                   isDark={isDark}
-                />
-                <StatItem
-                  label={t('refer_coupons') || 'Coupons'}
-                  value={`₹${stats.total_earned_coupons}`}
-                  icon="pricetag-outline"
-                  color="#8B5CF6"
-                  isDark={isDark}
+                  customIcon={
+                    <View style={styles.rupeeIconBadge}>
+                      <Text style={styles.rupeeIconText}>₹</Text>
+                    </View>
+                  }
                 />
               </View>
             )}
@@ -328,7 +326,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
         {/* ─── HOW IT WORKS ─── */}
         <Reanimated.View entering={FadeInUp.delay(400).duration(500)}>
           <View style={[styles.card, { backgroundColor: cardColor, borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: textMuted, marginBottom: 16 }]} numberOfLines={1} adjustsFontSizeToFit>
+            <Text style={[styles.sectionTitle, { color: textMuted, marginBottom: 10 }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('refer_how_it_works') || 'HOW IT WORKS'}
             </Text>
 
@@ -336,7 +334,7 @@ const ReferEarnScreen = ({ navigation }: any) => {
               <View key={index} style={styles.stepRow}>
                 <View style={styles.stepCircleWrapper}>
                   <View style={[styles.stepCircle, { backgroundColor: isDark ? 'rgba(99, 102, 241, 0.1)' : '#EEF2FF' }]}>
-                    <Ionicons name={step.icon as any} size={16} color="#6366F1" />
+                    <Ionicons name={step.icon as any} size={14} color="#6366F1" />
                   </View>
                   {index < STEPS.length - 1 && (
                     <View style={[styles.stepLine, { backgroundColor: isDark ? '#2C2C2E' : '#E5E7EB' }]} />
@@ -360,13 +358,13 @@ const ReferEarnScreen = ({ navigation }: any) => {
 };
 
 /* ─────────── STAT ITEM COMPONENT ─────────── */
-const StatItem = ({ label, value, icon, color, isDark }: any) => (
+const StatItem = ({ label, value, icon, color, isDark, customIcon }: any) => (
   <View style={styles.statItem}>
     <View style={styles.statIcon}>
-      <Ionicons name={icon} size={20} color={color} />
+      {customIcon ? customIcon : <Ionicons name={icon} size={24} color={color} />}
     </View>
-    <Text style={[styles.statValue, { color: isDark ? '#FFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
     <Text style={[styles.statLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+    <Text style={[styles.statValue, { color: isDark ? '#FFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
   </View>
 );
 
@@ -395,9 +393,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '600', flex: 1, textAlign: 'center' },
 
   card: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
     borderWidth: StyleSheet.hairlineWidth,
   },
   
@@ -406,39 +404,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroIconBox: {
-      width: 64,
-      height: 64,
-      borderRadius: 20,
+      width: 48,
+      height: 48,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 16,
+      marginBottom: 10,
   },
   heroTitle: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
 
-  sectionTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 16 },
+  sectionTitle: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5, marginBottom: 10 },
 
   /* Code Card */
-  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   codeBadge: {
     flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  codeText: { fontSize: 20, fontWeight: '700', letterSpacing: 2 },
-  copyBtn: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  codeText: { fontSize: 16, fontWeight: '700', letterSpacing: 1.5 },
+  copyBtn: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
   /* Share */
   shareRow: { flexDirection: 'row', gap: 12 },
@@ -447,9 +445,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    gap: 8,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
   },
   shareBtnText: { fontWeight: '600', fontSize: 14 },
 
@@ -457,24 +455,43 @@ const styles = StyleSheet.create({
   statsScrollContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    paddingVertical: 4,
   },
   statItem: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
-  statIcon: { marginBottom: 6 },
-  statValue: { fontSize: 16, fontWeight: '700' },
-  statLabel: { fontSize: 11, fontWeight: '500', marginTop: 4, textAlign: 'center' },
+  statIcon: { marginBottom: 8, alignItems: 'center', justifyContent: 'center', height: 24 },
+  statValue: { fontSize: 16, fontWeight: '700', marginTop: 4 },
+  statLabel: { fontSize: 11, fontWeight: '500', textAlign: 'center' },
+  verticalDivider: {
+    width: 1,
+    height: 35,
+    marginTop: 20,
+  },
+  rupeeIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rupeeIconText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 
   /* Coupons */
   couponHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    paddingBottom: 8,
+    padding: 10,
+    paddingBottom: 4,
   },
   couponCountBadge: {
     minWidth: 24,
@@ -501,39 +518,39 @@ const styles = StyleSheet.create({
   emptyDesc: { fontSize: 13, textAlign: 'center' },
   
   couponListWrapper: {
-      paddingHorizontal: 16,
-      paddingBottom: 8,
+      paddingHorizontal: 12,
+      paddingBottom: 6,
   },
   couponItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 6,
   },
   couponLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   couponIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   couponInfo: { flex: 1 },
-  couponCode: { fontSize: 15, fontWeight: '600', letterSpacing: 0.5 },
-  couponDesc: { fontSize: 12, marginTop: 2 },
+  couponCode: { fontSize: 14, fontWeight: '600', letterSpacing: 0.5 },
+  couponDesc: { fontSize: 11, marginTop: 0 },
   couponRight: { alignItems: 'flex-end', marginLeft: 8 },
-  couponValue: { fontSize: 16, fontWeight: '700' },
+  couponValue: { fontSize: 14, fontWeight: '700' },
   couponCopyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 6,
-    marginTop: 4,
+    marginTop: 2,
   },
-  couponCopyText: { fontSize: 12, fontWeight: '500' },
+  couponCopyText: { fontSize: 11, fontWeight: '500' },
   couponUsedBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -542,25 +559,25 @@ const styles = StyleSheet.create({
   couponUsedText: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
 
   /* How it works */
-  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
-  stepCircleWrapper: { alignItems: 'center', width: 32, marginRight: 12 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
+  stepCircleWrapper: { alignItems: 'center', width: 24, marginRight: 10 },
   stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
   },
   stepLine: {
     position: 'absolute',
-    top: 32,
+    top: 24,
     width: 2,
-    height: 32,
+    height: 24,
   },
-  stepContent: { flex: 1, paddingTop: 2, paddingBottom: 4 },
-  stepNumber: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  stepText: { fontSize: 14, fontWeight: '500', marginTop: 4, lineHeight: 20 },
+  stepContent: { flex: 1, paddingTop: 0, paddingBottom: 2 },
+  stepNumber: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  stepText: { fontSize: 13, fontWeight: '500', marginTop: 2, lineHeight: 18 },
 });
 
 export default ReferEarnScreen;

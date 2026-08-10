@@ -180,12 +180,12 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
   const truePerformance = performanceResult?.data;
 
-  const rating = truePerformance?.rating || dynamicMetrics.rating || 0;
+  const rating = dynamicMetrics.rating > 0 ? dynamicMetrics.rating : (truePerformance?.rating || 0);
   const firstName = user?.first_name || user?.full_name?.split(' ')[0] || 'Driver';
-  const acceptanceRate = truePerformance?.acceptanceRate ?? dynamicMetrics.acceptanceRate ?? 0;
+  const acceptanceRate = dynamicMetrics.totalTrips > 0 ? dynamicMetrics.acceptanceRate : (truePerformance?.acceptanceRate ?? 0);
   const completionRate = dynamicMetrics.completionRate || 0;
-  const totalRides = truePerformance?.totalTrips ?? dynamicMetrics.totalTrips ?? 0;
-  const cancellationRate = truePerformance?.cancellationRate ?? dynamicMetrics.cancellationRate ?? 0;
+  const totalRides = dynamicMetrics.totalTrips; // Strictly dynamic for the selected period
+  const cancellationRate = dynamicMetrics.totalTrips > 0 ? dynamicMetrics.cancellationRate : (truePerformance?.cancellationRate ?? 0);
   const onTimeRate = dynamicMetrics.onTimeRate; // -1 means no data available
 
   // Overall composite score
@@ -545,12 +545,6 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     padding: 6,
-    backgroundColor: '#FFF',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   headerTitle: {
     fontSize: 18,
@@ -719,9 +713,11 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   gaugeLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#2563EB',
     fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 2,
   },
   rankingSection: {
     flex: 1,

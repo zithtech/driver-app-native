@@ -67,7 +67,6 @@ import DashboardSkeleton from './dashComponents/DashboardSkeleton';
 import DashboardActionCards from './dashComponents/DashboardActionCards';
 import RecentActivity from './dashComponents/RecentActivity';
 import UpcomingAcceptedRide from './dashComponents/UpcomingAcceptedRide';
-import SubscriptionRequiredModal from './dashComponents/SubscriptionRequiredModal';
 import BatteryOptimizationModal from './dashComponents/BatteryOptimizationModal';
 import VerificationSuccessModal from './dashComponents/VerificationSuccessModal';
 import ConfirmationModal from '../../Components/ConfirmationModal';
@@ -253,7 +252,6 @@ const DriverDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showBatteryModal, setShowBatteryModal] = useState(false);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [acceptedRide, setAcceptedRide] = useState<RideItem | null>(null);
@@ -345,7 +343,7 @@ const DriverDashboard = () => {
 
     if (!isOnline) {
       if (!subData?.data?.subscription) {
-        setShowSubscriptionModal(true);
+        navigation.navigate('SubscriptionRequiredScreen');
         return;
       }
 
@@ -704,24 +702,16 @@ const DriverDashboard = () => {
         }
       >
 
-        {/* ── MAP ── */}
-        <DashboardMap
-          userLocation={userLocation}
-          currentAddress={currentAddress}
-          isOnline={isOnline}
-          routeCoordinates={mapRouteCoordinates}
-        />
-
-
-
-
-
         {/* ── TODAY'S OVERVIEW ── */}
         <TodayOverview
           earnings={String(computedEarnings.toFixed(2))}
           rides={computedCompletedRides}
           displayTimeFormatted={formatOnlineTime(onlineSecondsFromBackend || onlineSeconds, { h: t('h'), m: t('m'), s: t('s') })}
-          rating={(typeof lastTripRating === 'object' ? lastTripRating?.rating : lastTripRating) || '4.85'}
+          rating={displayRating > 0 ? (typeof displayRating === 'number' ? displayRating.toFixed(1) : displayRating) : '0.0'}
+          earningsTrend={todayOverview?.earningsTrend}
+          ridesTrend={todayOverview?.ridesTrend}
+          onlineTrend={todayOverview?.onlineTrend}
+          ratingTrend={todayOverview?.ratingTrend}
           timerPulseAnim={timerPulseAnim}
           onEarningsPress={() => navigation.navigate('EarningsScreen')}
           onRidesPress={() => navigation.navigate('RideActivityScreen')}
@@ -730,6 +720,14 @@ const DriverDashboard = () => {
 
         {/* ── QUICK ACTIONS ── */}
         <QuickActions />
+
+        {/* ── MAP ── */}
+        <DashboardMap
+          userLocation={userLocation}
+          currentAddress={currentAddress}
+          isOnline={isOnline}
+          routeCoordinates={mapRouteCoordinates}
+        />
 
         {/* ── UPCOMING ACCEPTED RIDE ── */}
         <UpcomingAcceptedRide 
@@ -740,11 +738,11 @@ const DriverDashboard = () => {
           }}
         />
 
-        {/* ── SUBSCRIPTION CARD ── */}
-        <RechargeCard subscription={subData?.data?.subscription} />
-
         {/* ── ACTION CARDS ── */}
         <DashboardActionCards />
+
+        {/* ── SUBSCRIPTION CARD ── */}
+        <RechargeCard subscription={subData?.data?.subscription} />
 
         {/* ── RECENT ACTIVITY ── */}
         <RecentActivity items={combinedActivity} />
@@ -812,15 +810,7 @@ const DriverDashboard = () => {
         onClose={() => setShowVerificationModal(false)}
       />
 
-      {/* ── SUBSCRIPTION REQUIRED MODAL ── */}
-      <SubscriptionRequiredModal
-        visible={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-        onSubscribe={() => {
-          setShowSubscriptionModal(false);
-          navigation.navigate('RechargePlanScreen');
-        }}
-      />
+
 
       {/* ── ACCEPT RIDE CONFIRM MODAL (SCHEDULED RIDES) ── */}
       <Modal
