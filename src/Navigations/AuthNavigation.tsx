@@ -9,6 +9,7 @@ import {
   DocumentScreen_Nav,
   DocumentUploadScreen_Nav,
   SmartSelfieScreen_Nav,
+  HelpCenter_Nav,
 } from './navigations';
 
 import WelcomeScreen from '../Screens/Auth/WelcomeScreen';
@@ -18,6 +19,7 @@ import AddressDetails from '../Screens/Auth/AddressDetails';
 import DocumentScreen from '../Screens/Auth/DocumentScreen';
 import DocumentUploadScreen from '../Screens/Auth/DocumentUploadScreen';
 import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
+import HelpCenterScreen from '../Screens/Profile/Support/HelpCenterScreen';
 import { LeftArrow } from '../assets/svg';
 
 const Stack = createStackNavigator();
@@ -98,8 +100,12 @@ const AuthNavigation = () => {
         options={{ headerShown: false, presentation: 'modal' }}
       />
 
-
-
+      {/* HELP CENTER SCREEN */}
+      <Stack.Screen
+        name={HelpCenter_Nav}
+        component={HelpCenterScreen}
+        options={headerNoBack}
+      />
 
     </Stack.Navigator>
   );

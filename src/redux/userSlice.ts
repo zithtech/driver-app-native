@@ -11,6 +11,8 @@ export interface DocumentState {
 /* ================= USER TYPE ================= */
 
 export interface UserState {
+  _id?: string;
+  id?: string;
   has_wallet_pin?: boolean;
   userId?: string;
   driverId?: string;

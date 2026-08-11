@@ -58,7 +58,7 @@ const ChatScreen = ({ route, navigation }: any) => {
     const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
 
-    const { userName, rideId, userId, userPhone, userImage } = route.params;
+    const { userName, rideId, userId, userPhone, userImage } = route.params || {};
     const insets = useSafeAreaInsets();
     const { getCurrentLocation } = useLocation();
 
@@ -324,7 +324,7 @@ const ChatScreen = ({ route, navigation }: any) => {
                     { backgroundColor: isUser ? theme.colors.primary : theme.colors.card }
                 ]}>
                     {/* 1. Map Content */}
-                    {lat && lng ? (
+                    {lat !== null && lng !== null ? (
                         <View style={styles.mapWrapper}>
                             <MapView
                                 provider={PROVIDER_GOOGLE}
@@ -356,7 +356,7 @@ const ChatScreen = ({ route, navigation }: any) => {
                     ) : null}
 
                     {/* 2. Image Content */}
-                    {item.image && (
+                    {!!item.image && (
                         <Image source={{ uri: item.image }} style={styles.messageImage} />
                     )}
 

@@ -139,14 +139,10 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
 
                 {/* INACTIVE FOOTER */}
                 <View style={styles.inactiveFooter}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 8 }}>
                         <Ionicons name="pricetag-outline" size={ms(18)} color="#EF4444" style={{ marginRight: s(8) }} />
                         <Text style={styles.inactiveFooterText}>Unlock all features and start earning more.</Text>
                     </View>
-                    <Pressable style={styles.viewPlansSolidBtn} onPress={() => navigation.navigate('RechargePlanScreen')}>
-                        <Text style={styles.viewPlansSolidText}>View Plans</Text>
-                        <Ionicons name="chevron-forward" size={ms(14)} color="#FFF" />
-                    </Pressable>
                 </View>
             </View>
         );

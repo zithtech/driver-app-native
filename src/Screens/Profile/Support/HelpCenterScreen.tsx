@@ -1,15 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
     View,
-    StyleSheet,
     ScrollView,
     Pressable,
     TouchableOpacity,
     Linking,
-    LayoutAnimation,
     Platform,
     UIManager,
     Image,
+    StyleSheet,
 } from 'react-native';
 
 if (Platform.OS === 'android') {
@@ -21,131 +20,113 @@ if (Platform.OS === 'android') {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
-import Animated, {
-    useAnimatedStyle,
-    withTiming,
-    FadeInDown,
-} from 'react-native-reanimated';
 import { useAppTheme } from '../../../context/ThemeContext';
 import { Text, Input } from '../../../Components';
 import AppStatusBar from '../../../Components/AppStatusBar';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
-import FaqChatbotModal from '../../Onboarding/FaqChatbotModal';
+import { FAQScreen_Nav, ChatbotScreen_Nav } from '../../../Navigations/navigations';
 
-/* ================= TYPES ================= */
-interface FAQ {
-    id: number;
-    question: string;
-    answer: string;
-    category: string;
-}
-
-/* ================= DATA ================= */
-const CATEGORIES = ['all', 'getting_started', 'payments', 'safety', 'account'];
-
-const FAQ_DATA: FAQ[] = [
+const POPULAR_TOPICS = [
     {
         id: 1,
-        category: 'getting_started',
-        question: 'How do I start a ride?',
-        answer: "Go to the home screen and slide 'Go Online'. You will start receiving ride requests. When a request appears, tap 'Accept' to see pickup details.",
+        title: 'Payments &\nEarnings',
+        subtitle: 'Payouts, balance\nand invoices',
+        icon: 'wallet-outline',
+        color: '#3B82F6',
+        bgColor: '#EFF6FF',
     },
     {
         id: 2,
-        category: 'payments',
-        question: 'How are earnings calculated?',
-        answer: 'Earnings are based on distance, time, and base fare. You can view detailed breakdown in the Earnings section. Peak hour surges may also apply.',
+        title: 'Account &\nDocuments',
+        subtitle: 'KYC, documents\nand verification',
+        icon: 'document-text-outline',
+        color: '#10B981',
+        bgColor: '#ECFDF5',
     },
     {
         id: 3,
-        category: 'safety',
-        question: 'What if a passenger cancels?',
-        answer: 'If a passenger cancels after you have arrived or after 5 minutes of booking, you may receive a cancellation fee credited to your wallet.',
+        title: 'Trips &\nBookings',
+        subtitle: 'Trip issues and\ncancellations',
+        icon: 'car-outline',
+        color: '#F59E0B',
+        bgColor: '#FFFBEB',
     },
     {
         id: 4,
-        category: 'account',
-        question: 'How do I contact support?',
-        answer: 'You can contact support via the Contact Support screen in settings or use the SOS button during an active ride for emergencies.',
+        title: 'Subscription &\nPlans',
+        subtitle: 'Plans, renewals and\nbenefits',
+        icon: 'star-outline',
+        color: '#8B5CF6',
+        bgColor: '#F5F3FF',
     },
     {
         id: 5,
-        category: 'payments',
-        question: 'When do I get paid?',
-        answer: 'Payouts are processed weekly on Mondays. You can also use the Instant Cashout feature in your Wallet if you meet the minimum balance requirements.',
+        title: 'Safety &\nGuidelines',
+        subtitle: 'Safety tips and\ncommunity rules',
+        icon: 'shield-checkmark-outline',
+        color: '#EF4444',
+        bgColor: '#FEF2F2',
     },
     {
         id: 6,
-        category: 'getting_started',
-        question: 'How to use navigation?',
-        answer: 'Once you accept a ride, tap the Navigate button. This will open your preferred map app (Google Maps or Waze) to guide you to the destination.',
+        title: 'Other\nHelp',
+        subtitle: 'Other issues and\ngeneral queries',
+        icon: 'chatbubble-ellipses-outline',
+        color: '#3B82F6',
+        bgColor: '#EFF6FF',
     },
 ];
 
-/* ================= COMPONENTS ================= */
-
-const AccordionItem = ({ item, isExpanded, onPress }: { item: FAQ, isExpanded: boolean, onPress: () => void }) => {
-    const { theme, isDark } = useAppTheme();
-
-    const rotateStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ rotate: withTiming(isExpanded ? '180deg' : '0deg') }],
-        };
-    });
-
-    return (
-        <View style={[styles.faqCard, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-            <Pressable onPress={onPress} style={styles.faqHeader}>
-                <Text style={[styles.questionText, { color: theme.colors.text }]}>{item.question}</Text>
-                <Animated.View style={rotateStyle}>
-                    <Ionicons name="chevron-down" size={s(20)} color={theme.colors.primary} />
-                </Animated.View>
-            </Pressable>
-            {isExpanded && (
-                <View style={[styles.answerContainer, { marginTop: vs(12) }]}>
-                    <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
-                    <Text style={[styles.answerText, { color: isDark ? '#94A3B8' : '#64748B' }]}>{item.answer}</Text>
-                </View>
-            )}
-        </View>
-    );
-};
+const OTHER_WAYS_HELP = [
+    {
+        id: 'whatsapp',
+        title: 'Chat on WhatsApp',
+        subtitle: 'Chat with our support team',
+        icon: 'logo-whatsapp',
+        color: '#22C55E',
+        bgColor: '#DCFCE7',
+        badge: 'Recommended'
+    },
+    {
+        id: 'email',
+        title: 'Email Us',
+        subtitle: 'support@t2drive.com',
+        icon: 'mail-outline',
+        color: '#8B5CF6',
+        bgColor: '#F5F3FF',
+    },
+    {
+        id: 'faqs',
+        title: 'FAQs',
+        subtitle: 'Find quick answers here',
+        icon: 'help-circle-outline',
+        color: '#F59E0B',
+        bgColor: '#FFFBEB',
+    }
+];
 
 const HelpCenterScreen = ({ navigation, route }: any) => {
     const { t } = useTranslation();
     const { theme, isDark } = useAppTheme();
 
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('all');
-    const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [chatVisible, setChatVisible] = useState(false);
+
+    const [showAllTopics, setShowAllTopics] = useState(false);
 
     // Handle deep link parameter to automatically open the chat
     React.useEffect(() => {
         if (route.params?.openChat) {
-            setChatVisible(true);
+            navigation.navigate(ChatbotScreen_Nav);
             // Clear the param so it doesn't reopen if the user navigates back and forth
             navigation.setParams({ openChat: undefined });
         }
     }, [route.params?.openChat, navigation]);
 
-    const filteredFAQs = useMemo(() => {
-        return FAQ_DATA.filter(faq => {
-            const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory = selectedCategory === 'all' || faq.category === selectedCategory;
-            return matchesSearch && matchesCategory;
-        });
-    }, [searchQuery, selectedCategory]);
-
     const handleCallSupport = () => {
         Linking.openURL('tel:18001234567');
     };
 
-    const handleToggle = (id: number) => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setExpandedId(expandedId === id ? null : id);
-    };
+    const displayedTopics = showAllTopics ? POPULAR_TOPICS : POPULAR_TOPICS.slice(0, 2);
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -181,6 +162,13 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                                 placeholder={t('search_help_placeholder', 'Search for help...')}
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
+                                returnKeyType="search"
+                                onSubmitEditing={() => {
+                                    if (searchQuery.trim()) {
+                                        navigation.navigate(ChatbotScreen_Nav, { initialMessage: searchQuery.trim() });
+                                        setSearchQuery(''); // clear it after sending
+                                    }
+                                }}
                                 LeadingAccessory={
                                     <Ionicons name="search" size={s(18)} color="#94A3B8" style={{ marginRight: s(8) }} />
                                 }
@@ -199,60 +187,88 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                     </View>
                 </View>
 
-                {/* Category Pills */}
-                <View style={[styles.categoryWrapper, { backgroundColor: theme.colors.background }]}>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoryContent}
-                    >
-                        {CATEGORIES.map(cat => (
-                            <TouchableOpacity
-                                key={cat}
-                                onPress={() => setSelectedCategory(cat)}
+                {/* Popular Topics */}
+                <View style={styles.popularTopicsContainer}>
+                    <View style={styles.popularHeader}>
+                        <Text style={[styles.popularTitle, { color: isDark ? '#F8FAFC' : '#0B193C' }]}>{t('popular_topics', 'Popular Topics')}</Text>
+                        <TouchableOpacity onPress={() => setShowAllTopics(!showAllTopics)}>
+                            <Text style={styles.viewAllText}>{showAllTopics ? t('show_less', 'Show Less') : t('view_all', 'View All')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.topicsList}>
+                        {displayedTopics.map((topic, index) => (
+                            <TouchableOpacity 
+                                key={topic.id} 
                                 style={[
-                                    styles.categoryPill,
-                                    {
-                                        backgroundColor: selectedCategory === cat ? theme.colors.primary : (isDark ? '#1E293B' : '#FFFFFF'),
-                                        borderColor: selectedCategory === cat ? theme.colors.primary : theme.colors.border,
+                                    styles.topicListItem, 
+                                    index !== displayedTopics.length - 1 && { 
+                                        borderBottomWidth: StyleSheet.hairlineWidth, 
+                                        borderBottomColor: isDark ? '#334155' : '#E2E8F0' 
                                     }
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.categoryText,
-                                        { color: selectedCategory === cat ? '#FFFFFF' : theme.colors.text }
-                                    ]}
-                                >
-                                    {t(`faq_cat_${cat}`, cat.replace('_', ' ').toUpperCase())}
-                                </Text>
+                                <View style={[styles.topicIconContainer, { backgroundColor: isDark ? `${topic.color}20` : topic.bgColor }]}>
+                                    <Ionicons name={topic.icon} size={s(18)} color={topic.color} />
+                                </View>
+                                <View style={styles.topicContent}>
+                                    <Text style={[styles.topicCardTitle, { color: theme.colors.text }]} numberOfLines={1}>
+                                        {topic.title.replace('\n', ' ')}
+                                    </Text>
+                                    <Text style={[styles.topicCardSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={2}>
+                                        {topic.subtitle.replace('\n', ' ')}
+                                    </Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={s(16)} color="#94A3B8" />
                             </TouchableOpacity>
                         ))}
-                    </ScrollView>
+                    </View>
                 </View>
-
-                {/* FAQ List */}
-                <View style={styles.faqList}>
-                    {filteredFAQs.length > 0 ? (
-                        filteredFAQs.map((faq, index) => (
-                            <Animated.View key={faq.id} entering={FadeInDown.delay(index * 100)}>
-                                <AccordionItem
-                                    item={faq}
-                                    isExpanded={expandedId === faq.id}
-                                    onPress={() => handleToggle(faq.id)}
-                                />
-                            </Animated.View>
-                        ))
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <Ionicons name="help-circle-outline" size={s(60)} color={isDark ? '#334155' : '#CBD5E1'} />
-                            <Text style={[styles.emptyText, { color: isDark ? '#64748B' : '#94A3B8' }]}>{t('no_faqs_found', 'No matching questions found.')}</Text>
-                        </View>
-                    )}
+                {/* Other Ways to Get Help */}
+                <View style={styles.otherWaysContainer}>
+                    <Text style={[styles.popularTitle, { color: isDark ? '#F8FAFC' : '#0B193C', marginBottom: vs(12) }]}>
+                        {t('other_ways_help', 'Other Ways to Get Help')}
+                    </Text>
+                    <View style={[styles.otherWaysCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                        {OTHER_WAYS_HELP.map((item, index) => (
+                            <TouchableOpacity 
+                                key={item.id} 
+                                style={[
+                                    styles.otherWaysItem, 
+                                    index !== OTHER_WAYS_HELP.length - 1 && { 
+                                        borderBottomWidth: StyleSheet.hairlineWidth, 
+                                        borderBottomColor: isDark ? '#334155' : '#E2E8F0' 
+                                    }
+                                ]}
+                                onPress={() => {
+                                    if(item.id === 'call') handleCallSupport();
+                                    else if(item.id === 'whatsapp') navigation.navigate(ChatbotScreen_Nav);
+                                    else if(item.id === 'faqs') navigation.navigate(FAQScreen_Nav);
+                                }}
+                            >
+                                <View style={[styles.topicIconContainer, { backgroundColor: isDark ? `${item.color}20` : item.bgColor, marginRight: s(12) }]}>
+                                    <Ionicons name={item.icon} size={s(18)} color={item.color} />
+                                </View>
+                                <View style={styles.topicContent}>
+                                    <Text style={[styles.topicCardTitle, { color: theme.colors.text }]} numberOfLines={1}>
+                                        {item.title}
+                                    </Text>
+                                    <Text style={[styles.topicCardSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={1}>
+                                        {item.subtitle}
+                                    </Text>
+                                </View>
+                                {item.badge ? (
+                                    <View style={[styles.badgeContainer, { backgroundColor: isDark ? '#064E3B' : '#D1FAE5' }]}>
+                                        <Text style={[styles.badgeText, { color: isDark ? '#34D399' : '#059669' }]}>{item.badge}</Text>
+                                    </View>
+                                ) : null}
+                                <Ionicons name="chevron-forward" size={s(16)} color="#94A3B8" />
+                            </TouchableOpacity>
+                        ))}
+                    </View>
                 </View>
 
                 {/* Contact Footer */}
-                <View style={[styles.footerCard, { backgroundColor: isDark ? '#1E293B' : '#EFF6FF' }]}>
+                <View style={[styles.footerCard, { backgroundColor: isDark ? '#1E293B' : '#F0F9FF' }]}>
                     <View style={styles.footerInfo}>
                         <Text style={[styles.footerTitle, { color: isDark ? '#60A5FA' : '#1E40AF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('still_need_help', 'Still need help?')}</Text>
                         <Text style={[styles.footerDesc, { color: isDark ? '#94A3B8' : '#3B82F6' }]}>
@@ -260,13 +276,13 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                         </Text>
                     </View>
                     <View style={styles.footerActions}>
-                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: theme.colors.primary }]} onPress={handleCallSupport}>
+                        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: isDark ? '#334155' : '#0B193C' }]} onPress={handleCallSupport}>
                             <Ionicons name="call" size={s(18)} color="#FFFFFF" />
                             <Text style={styles.actionBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('call_us', 'Call Us')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.actionBtn, { backgroundColor: isDark ? '#334155' : '#FFFFFF', borderWidth: 1, borderColor: '#3B82F6' }]}
-                            onPress={() => setChatVisible(true)}
+                            style={[styles.actionBtn, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderWidth: 1, borderColor: '#3B82F6' }]}
+                            onPress={() => navigation.navigate(ChatbotScreen_Nav)}
                         >
                             <Ionicons name="chatbubbles" size={s(18)} color="#3B82F6" />
                             <Text style={[styles.actionBtnText, { color: '#3B82F6' }]} numberOfLines={1} adjustsFontSizeToFit>{t('chat_now', 'Chat Now')}</Text>
@@ -275,7 +291,7 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                 </View>
             </ScrollView>
 
-            <FaqChatbotModal visible={chatVisible} onClose={() => setChatVisible(false)} />
+
         </SafeAreaView>
     );
 };
@@ -339,107 +355,120 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         paddingHorizontal: s(10),
     },
-    categoryWrapper: {
-        paddingVertical: vs(12),
-        zIndex: 10,
-    },
-    categoryContent: {
-        paddingHorizontal: s(20),
-        gap: s(10),
-    },
-    categoryPill: {
+    popularTopicsContainer: {
         paddingHorizontal: s(16),
-        paddingVertical: vs(8),
-        borderRadius: ms(20),
-        borderWidth: 1,
+        marginTop: vs(16),
+        marginBottom: vs(10),
     },
-    categoryText: {
-        fontSize: ms(13),
-        fontWeight: '600',
-    },
-    faqList: {
-        paddingHorizontal: s(20),
-        marginTop: vs(10),
-    },
-    faqCard: {
-        borderRadius: ms(14),
-        paddingVertical: vs(12),
-        paddingHorizontal: s(16),
-        marginBottom: vs(8),
-        borderWidth: StyleSheet.hairlineWidth,
-    },
-    faqHeader: {
+    popularHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: vs(16),
     },
-    questionText: {
-        fontSize: ms(15),
-        fontWeight: '600',
-        color: '#1E293B',
-        flex: 1,
-        marginRight: s(10),
+    popularTitle: {
+        fontSize: ms(18),
+        fontWeight: '800',
     },
-    answerContainer: {
-        overflow: 'hidden',
-    },
-    divider: {
-        height: StyleSheet.hairlineWidth,
-        backgroundColor: '#E5E7EB',
-        marginVertical: vs(8),
-    },
-    answerText: {
+    viewAllText: {
         fontSize: ms(14),
-        color: '#64748B',
-        lineHeight: ms(22),
+        fontWeight: '700',
+        color: '#3B82F6',
     },
-    emptyState: {
+    topicsList: {
+        flexDirection: 'column',
+    },
+    topicListItem: {
+        width: '100%',
+        flexDirection: 'row',
         alignItems: 'center',
-        marginTop: vs(40),
+        paddingVertical: vs(8),
     },
-    emptyText: {
-        marginTop: vs(12),
-        color: '#94A3B8',
-        fontSize: ms(14),
+    topicIconContainer: {
+        width: s(36),
+        height: s(36),
+        borderRadius: s(18),
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: s(12),
+    },
+    topicContent: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    topicCardTitle: {
+        fontSize: ms(13),
+        fontWeight: '500',
+        marginBottom: vs(2),
+        lineHeight: ms(18),
+    },
+    topicCardSubtitle: {
+        fontSize: ms(11),
+        lineHeight: ms(14),
+    },
+
+    otherWaysContainer: {
+        paddingHorizontal: s(16),
+        marginBottom: vs(20),
+    },
+    otherWaysCard: {
+        borderRadius: ms(16),
+        borderWidth: 1,
+    },
+    otherWaysItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: vs(8),
+        paddingHorizontal: s(12),
+    },
+    badgeContainer: {
+        paddingHorizontal: s(8),
+        paddingVertical: vs(4),
+        borderRadius: ms(12),
+        marginRight: s(8),
+    },
+    badgeText: {
+        fontSize: ms(10),
+        fontWeight: '600',
     },
     footerCard: {
-        margin: s(20),
-        marginTop: vs(30),
-        padding: s(20),
-        borderRadius: ms(24),
+        marginHorizontal: s(16),
+        marginBottom: vs(40),
+        padding: s(16),
+        borderRadius: ms(16),
     },
     footerInfo: {
-        marginBottom: vs(20),
+        marginBottom: vs(12),
         alignItems: 'center',
     },
     footerTitle: {
-        fontSize: ms(18),
+        fontSize: ms(16),
         fontWeight: '700',
         color: '#1E40AF',
-        marginBottom: vs(4),
+        marginBottom: vs(2),
     },
     footerDesc: {
-        fontSize: ms(13),
+        fontSize: ms(11),
         color: '#3B82F6',
         textAlign: 'center',
-        lineHeight: ms(18),
+        lineHeight: ms(16),
     },
     footerActions: {
         flexDirection: 'row',
-        gap: s(12),
+        gap: s(8),
     },
     actionBtn: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        height: vs(48),
-        borderRadius: ms(14),
-        gap: s(8),
+        height: vs(40),
+        borderRadius: ms(10),
+        gap: s(6),
     },
     actionBtnText: {
         color: '#FFFFFF',
-        fontSize: ms(14),
+        fontSize: ms(13),
         fontWeight: '600',
     },
     heroRight: {

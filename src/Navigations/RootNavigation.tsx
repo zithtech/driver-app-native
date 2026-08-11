@@ -12,6 +12,7 @@ import {
   PickupMapScreen_Nav,
   DriverPerformance_Nav,
   HelpCenter_Nav,
+  FAQScreen_Nav,
   ContactSupport_Nav,
   AboutApp_Nav,
   EmergencySupport_Nav,
@@ -29,6 +30,9 @@ import {
   WaitingScreen_Nav,
   ReturnTripMapScreen_Nav,
   ChatScreen_Nav,
+  ChatbotScreen_Nav,
+  ChatHistoryScreen_Nav,
+  TicketChatScreen_Nav,
   ScheduledRides_Nav,
   Blocked_Nav,
   ReferEarn_Nav,
@@ -84,6 +88,10 @@ import ReturnTripMapScreen from '../Screens/Requests/ReturnTripMapScreen';
 import PaymentCollectionScreen from '../Screens/Requests/PaymentCollectionScreen';
 
 import HelpCenterScreen from '../Screens/Profile/Support/HelpCenterScreen';
+import FAQScreen from "../Screens/Profile/Support/FAQScreen";
+import ChatbotScreen from '../Screens/Profile/Support/ChatbotScreen';
+import ChatHistoryScreen from '../Screens/Profile/Support/ChatHistoryScreen';
+import TicketChatScreen from '../Screens/Profile/Support/TicketChatScreen';
 import ContactSupportScreen from '../Screens/Profile/Support/ContactSupportScreen';
 import AboutAppScreen from '../Screens/Profile/Support/AboutAppScreen';
 import EmergencySupportScreen from '../Screens/Profile/Support/EmergencySupportScreen';
@@ -440,6 +448,7 @@ const RootNavigation = () => {
           <Stack.Screen name={SosContacts_Nav} component={SosContactsScreen} />
           <Stack.Screen name="ProfileSettingsScreen" component={ProfileSettingsScreen} />
           <Stack.Screen name={HelpCenter_Nav} component={HelpCenterScreen} />
+          <Stack.Screen name={FAQScreen_Nav} component={FAQScreen} />
           <Stack.Screen name={ContactSupport_Nav} component={ContactSupportScreen} />
           <Stack.Screen name={AboutApp_Nav} component={AboutAppScreen} />
           <Stack.Screen name={EmergencySupport_Nav} component={EmergencySupportScreen} />
@@ -468,6 +477,9 @@ const RootNavigation = () => {
           <Stack.Screen name="PaymentCollectionScreen" component={PaymentCollectionScreen} />
           <Stack.Screen name="NavigationScreen" component={NavigationScreen} />
           <Stack.Screen name={ChatScreen_Nav} component={ChatScreen} />
+          <Stack.Screen name={ChatbotScreen_Nav} component={ChatbotScreen} />
+          <Stack.Screen name={ChatHistoryScreen_Nav} component={ChatHistoryScreen} />
+          <Stack.Screen name={TicketChatScreen_Nav} component={TicketChatScreen} />
 
           {/* -------- ACCOUNT STATUS -------- */}
           <Stack.Screen name={Blocked_Nav} component={BlockedScreen} options={{ gestureEnabled: false }} />

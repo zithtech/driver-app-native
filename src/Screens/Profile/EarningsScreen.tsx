@@ -132,12 +132,12 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   };
 
   // Line Chart Data
-  const lineData = summaryResult?.data?.chartData && summaryResult.data.chartData.length > 0 
-    ? summaryResult.data.chartData 
-    : [ { value: 0, label: '' }, { value: 0, label: '' } ]; // Safe fallback for empty chart
+  const lineData = summaryResult?.data?.chartData && summaryResult.data.chartData.length > 0
+    ? summaryResult.data.chartData
+    : [{ value: 0, label: '' }, { value: 0, label: '' }]; // Safe fallback for empty chart
 
   const breakdown = summaryResult?.data?.earningsBreakdown || { baseFare: 0, extraTiming: 0, incentives: 0, tips: 0 };
-  
+
   const calcPercent = (val: number, total: number) => {
     if (total === 0) return '0.0';
     return ((val / total) * 100).toFixed(1);
@@ -151,7 +151,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
     { value: breakdown.extraTiming || 0.1, color: '#10B981' }, // Green (Extra Timing)
     { value: breakdown.incentives || 0.1, color: '#F59E0B' }, // Orange (Incentives)
     { value: breakdown.tips || 0.1, color: '#8B5CF6' }, // Purple (Tips)
-  ] : [ { value: 1, color: '#E5E7EB' } ]; // Empty state
+  ] : [{ value: 1, color: '#E5E7EB' }]; // Empty state
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -173,9 +173,9 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   );
 
   const renderHeroCard = () => (
-    <LinearGradient colors={['#184BE1', '#061D6E']} start={{x: 0, y: 0}} end={{x: 1, y: 0}} style={styles.heroCard}>
-      <Image 
-        source={require('../../assets/images/earningsbanner.png')} 
+    <LinearGradient colors={['#184BE1', '#061D6E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.heroCard}>
+      <Image
+        source={require('../../assets/images/earningsbanner.png')}
         style={styles.bannerImage}
         resizeMode="contain"
       />
@@ -184,9 +184,9 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           <View style={styles.heroTitleRow}>
             <Text style={styles.heroTitle}>Total Earnings</Text>
           </View>
-          
+
           <Text style={styles.heroAmount}>₹ {summary.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
-          
+
           {summary.growthPercentage !== undefined && filterType !== 'lifetime' ? (
             <View style={styles.heroVsRow}>
               <Text style={styles.heroSubText}>vs Last {filterType === 'today' ? 'Day' : filterType === 'week' ? 'Week' : 'Month'}</Text>
@@ -202,7 +202,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           )}
         </View>
       </View>
-      
+
       <View style={styles.heroBottomRow}>
         <Pressable style={styles.actionBox}>
           <Ionicons name="wallet-outline" size={20} color="#FFF" />
@@ -215,14 +215,14 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
 
         <View style={styles.filterPillsRow}>
           {(['lifetime', 'month', 'week', 'today'] as const).map(opt => (
-            <Pressable 
-              key={opt} 
-              onPress={() => setFilterType(opt)} 
+            <Pressable
+              key={opt}
+              onPress={() => setFilterType(opt)}
               style={[styles.filterPill, filterType === opt && styles.filterPillActive]}
             >
-               <Text style={[styles.filterPillText, filterType === opt && styles.filterPillTextActive]}>
-                 {opt === 'lifetime' ? 'All' : opt === 'month' ? '1M' : opt === 'week' ? '1W' : '1D'}
-               </Text>
+              <Text style={[styles.filterPillText, filterType === opt && styles.filterPillTextActive]}>
+                {opt === 'lifetime' ? 'All' : opt === 'month' ? '1M' : opt === 'week' ? '1W' : '1D'}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -234,49 +234,49 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
     <View>
       <View style={styles.overviewCard}>
         <View style={styles.overviewRow}>
-        
-        <View style={styles.overviewItem}>
-          <View style={[styles.overviewIconBox, { backgroundColor: '#DCFCE7' }]}>
-            <Text style={{fontSize: 14, fontWeight: 'bold', color: '#16A34A'}}>₹</Text>
+
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: '#DCFCE7' }]}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#16A34A' }}>₹</Text>
+            </View>
+            <Text style={styles.overviewLabel} numberOfLines={2}>Total Earnings</Text>
+            <Text style={styles.overviewValue}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+            {renderGrowthBadge(summary.growth.earnings)}
           </View>
-          <Text style={styles.overviewLabel} numberOfLines={2}>Total Earnings</Text>
-          <Text style={styles.overviewValue}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-          {renderGrowthBadge(summary.growth.earnings)}
-        </View>
 
-        <View style={styles.overviewDivider} />
+          <View style={styles.overviewDivider} />
 
-        <View style={styles.overviewItem}>
-          <View style={[styles.overviewIconBox, { backgroundColor: '#DBEAFE' }]}>
-            <Ionicons name="car-outline" size={14} color="#2563EB" />
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: '#DBEAFE' }]}>
+              <Ionicons name="car-outline" size={14} color="#2563EB" />
+            </View>
+            <Text style={styles.overviewLabel} numberOfLines={2}>Total Rides</Text>
+            <Text style={styles.overviewValue}>{summary.trips}</Text>
+            {renderGrowthBadge(summary.growth.trips)}
           </View>
-          <Text style={styles.overviewLabel} numberOfLines={2}>Total Rides</Text>
-          <Text style={styles.overviewValue}>{summary.trips}</Text>
-          {renderGrowthBadge(summary.growth.trips)}
-        </View>
 
-        <View style={styles.overviewDivider} />
+          <View style={styles.overviewDivider} />
 
-        <View style={styles.overviewItem}>
-          <View style={[styles.overviewIconBox, { backgroundColor: '#F3E8FF' }]}>
-            <Ionicons name="time-outline" size={14} color="#9333EA" />
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: '#F3E8FF' }]}>
+              <Ionicons name="time-outline" size={14} color="#9333EA" />
+            </View>
+            <Text style={styles.overviewLabel} numberOfLines={2}>Total Hours</Text>
+            <Text style={styles.overviewValue}>{summary.hours}</Text>
+            {renderGrowthBadge(summary.growth.hours)}
           </View>
-          <Text style={styles.overviewLabel} numberOfLines={2}>Total Hours</Text>
-          <Text style={styles.overviewValue}>{summary.hours}</Text>
-          {renderGrowthBadge(summary.growth.hours)}
-        </View>
 
-        <View style={styles.overviewDivider} />
+          <View style={styles.overviewDivider} />
 
-        <View style={styles.overviewItem}>
-          <View style={[styles.overviewIconBox, { backgroundColor: '#FFEDD5' }]}>
-            <Ionicons name="star-outline" size={14} color="#EA580C" />
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: '#FFEDD5' }]}>
+              <Ionicons name="star-outline" size={14} color="#EA580C" />
+            </View>
+            <Text style={styles.overviewLabel} numberOfLines={2}>Avg Earnings</Text>
+            <Text style={styles.overviewValue}>₹{summary.avgPerTrip.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+            {renderGrowthBadge(summary.growth.avgPerTrip)}
           </View>
-          <Text style={styles.overviewLabel} numberOfLines={2}>Avg Earnings</Text>
-          <Text style={styles.overviewValue}>₹{summary.avgPerTrip.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-          {renderGrowthBadge(summary.growth.avgPerTrip)}
-        </View>
-        
+
         </View>
       </View>
     </View>
@@ -310,7 +310,8 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           thickness={3}
           hideRules
           hideYAxisText={false}
-          yAxisTextStyle={{ color: '#9CA3AF', fontSize: 10 }}
+          yAxisTextStyle={{ color: '#9CA3AF', fontSize: 8 }}
+          yAxisLabelWidth={26}
           xAxisLabelTextStyle={{ color: '#9CA3AF', fontSize: 10, textAlign: 'center' }}
           yAxisColor="#E5E7EB"
           xAxisColor="#E5E7EB"
@@ -350,7 +351,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           <Text style={styles.viewDetailsText}>View Details <Ionicons name="chevron-forward" size={12} /></Text>
         </Pressable>
       </View>
-      
+
       <View style={styles.donutRow}>
         <View style={styles.donutContainer}>
           <PieChart
@@ -368,7 +369,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
             }}
           />
         </View>
-        
+
         <View style={styles.legendContainer}>
           <LegendItem color="#3B82F6" icon="car" title="Base Fare" amount={`₹ ${breakdown.baseFare.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.baseFare, summary.total)}%`} />
           <LegendItem color="#10B981" icon="time" title="Extra Timing" amount={`₹ ${breakdown.extraTiming.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.extraTiming, summary.total)}%`} />
@@ -413,7 +414,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           <Text style={styles.viewAllText}>View All</Text>
         </Pressable>
       </View>
-      
+
       {transactions.length === 0 && (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
           <Ionicons name="receipt-outline" size={32} color="#CBD5E1" />
@@ -432,11 +433,11 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
               <Text style={styles.txDate}>{tx.date}, {tx.time}</Text>
             </View>
           </View>
-          
+
           <View style={styles.txRightContainer}>
             <View style={styles.txRightCol}>
               <Text style={[styles.txAmount, { color: tx.type === 'Credit' ? '#16A34A' : '#EF4444' }]}>
-                {tx.type === 'Credit' ? '+' : '-'} ₹{Math.abs(tx.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                {tx.type === 'Credit' ? '+' : '-'} ₹{Math.abs(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </Text>
               <View style={[styles.txBadge, { backgroundColor: getBgColor(tx) }]}>
                 <Text style={[styles.txBadgeText, { color: getIconColor(tx) }]}>
@@ -455,7 +456,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
     <View style={[styles.safeArea, { paddingTop: insets.top }]}>
       {isFocused && <AppStatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />}
       {renderHeader()}
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -491,7 +492,7 @@ export default EarningsScreen;
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContent: { paddingBottom: 100 },
-  
+
   // Header
   header: {
     flexDirection: 'row',
@@ -546,15 +547,15 @@ const styles = StyleSheet.create({
   heroSubText: { color: '#E0E7FF', fontSize: 11, marginRight: 8 },
   percentBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.25)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   percentText: { color: '#4ADE80', fontSize: 10, fontWeight: '700', marginLeft: 2 },
-  
+
   heroTopRight: { width: 100, height: 80, justifyContent: 'center', alignItems: 'center' },
-  
+
   heroBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, zIndex: 2 },
   actionBox: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8, paddingRight: 10 },
   actionBoxTexts: { marginLeft: 8 },
   actionBoxLabel: { color: '#E0E7FF', fontSize: 10 },
   actionBoxAmount: { color: '#FFF', fontSize: 12, fontWeight: '700', marginTop: 0 },
-  
+
   filterPillsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 2 },
   filterPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16 },
   filterPillActive: { backgroundColor: '#FFF' },
@@ -571,7 +572,7 @@ const styles = StyleSheet.create({
   overviewLabel: { fontSize: 9, color: '#64748B', marginBottom: 2, textAlign: 'center', lineHeight: 12 },
   overviewValue: { fontSize: 13, fontWeight: '700', color: '#1E1E2D', marginBottom: 2 },
   overviewDivider: { width: 1, height: 50, backgroundColor: '#F1F5F9', marginHorizontal: 2, marginTop: 8 },
-  
+
   statGrowth: { flexDirection: 'row', alignItems: 'center' },
   statGrowthTextPos: { fontSize: 9, fontWeight: '600', color: '#16A34A', marginLeft: 2 },
 
@@ -579,7 +580,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFF', marginHorizontal: 16, marginBottom: 16, borderRadius: 16, padding: 12 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  
+
   // Line Chart Header
   dropdownButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, gap: 4 },
   dropdownText: { fontSize: 11, color: '#1E293B', fontWeight: '600' },

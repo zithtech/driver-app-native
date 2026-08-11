@@ -41,7 +41,7 @@ import Button from '../../Components/Button';
 import vdriveImg from '../../assets/images/wee.png';
 import t2dLogo from '../../assets/images/t2dLogo.png';
 
-import { OTPScreen_Nav } from '../../Navigations/navigations';
+import { OTPScreen_Nav, HelpCenter_Nav } from '../../Navigations/navigations';
 import { setUser, clearUser } from '../../redux/userSlice';
 import { RootState } from '../../redux/store';
 import { useSendOtpMutation } from '../../service/userApi';
@@ -230,15 +230,34 @@ const WelcomeScreen = ({ navigation }: any) => {
       <AppStatusBar />
       <DecorativeBackground colors={colors} />
 
-      {/* HEADER: LOGO & LANGUAGE SELECTOR */}
+      {/* HEADER: LANGUAGE SELECTOR & SUPPORT */}
       <Reanimated.View 
         entering={FadeInDown.delay(100).duration(600)}
         style={styles.headerContainer}
       >
-        <View style={styles.logoWrapper}>
-          <Image source={t2dLogo} style={{ width: 54, height: 54 }} resizeMode="contain" />
-        </View>
         <LanguageSelector variant={dark ? 'dark' : 'light'} />
+        <TouchableOpacity
+          onPress={() => {
+            navigation.navigate(HelpCenter_Nav);
+            triggerHaptic(HapticFeedbackTypes.impactLight);
+          }}
+          activeOpacity={0.7}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 20,
+            borderWidth: 1.5,
+            borderColor: dark ? 'rgba(255,255,255,0.15)' : '#E5E7EB',
+            backgroundColor: dark ? 'rgba(255,255,255,0.05)' : '#F9FAFB',
+          }}
+        >
+          <Ionicons name="headset-outline" size={18} color={colors.primary} style={{ marginRight: 6 }} />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>
+            {t('support') || 'Support'}
+          </Text>
+        </TouchableOpacity>
       </Reanimated.View>
 
       <KeyboardAvoidingView
@@ -526,7 +545,6 @@ const WelcomeScreen = ({ navigation }: any) => {
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-
 
     </SafeAreaView>
   );

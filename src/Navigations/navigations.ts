@@ -44,12 +44,16 @@ export const WaitingScreen_Nav = 'WaitingScreen';
 export const ReturnTripMapScreen_Nav = 'ReturnTripMapScreen';
 
 export const HelpCenter_Nav = 'HelpCenterScreen';
+export const FAQScreen_Nav = 'FAQScreen';
 export const ContactSupport_Nav = 'ContactSupportScreen';
 export const AboutApp_Nav = 'AboutAppScreen';
 export const EmergencySupport_Nav = 'EmergencySupportScreen';
 export const LegalAgreements_Nav = 'LegalAgreementsScreen';
 export const NavigationScreen_Nav = 'NavigationScreen'; 
 export const ChatScreen_Nav = 'ChatScreen'; 
+export const ChatbotScreen_Nav = 'ChatbotScreen';
+export const ChatHistoryScreen_Nav = 'ChatHistoryScreen';
+export const TicketChatScreen_Nav = 'TicketChatScreen';
 export const Blocked_Nav = 'BlockedScreen'; 
 export const ReferEarn_Nav = 'ReferEarnScreen';
 export const SubscriptionHistory_Nav = 'SubscriptionHistoryScreen';
