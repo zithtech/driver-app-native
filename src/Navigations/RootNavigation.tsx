@@ -33,7 +33,11 @@ import {
   ChatbotScreen_Nav,
   ChatHistoryScreen_Nav,
   TicketChatScreen_Nav,
+  MapTrackingScreen,
+  MapSearchScreen,
   ScheduledRides_Nav,
+  ScheduledRideDetails_Nav,
+  Requests_Nav,
   Blocked_Nav,
   ReferEarn_Nav,
   SubscriptionHistory_Nav,
@@ -54,7 +58,9 @@ import Onboarding from '../Screens/Onboarding/Onboarding';
 import OnboardingSosScreen from '../Screens/Onboarding/OnboardingSosScreen';
 
 
+
 import ScheduledRidesScreen from '../Screens/Requests/ScheduledRidesScreen';
+import ScheduledRideDetailsScreen from '../Screens/Requests/ScheduledRideDetailsScreen';
 
 import ProfileDetailsScreen from '../Screens/Profile/ProfileDetailsScreen';
 import DriverPerformanceScreen from '../Screens/Profile/DriverPerformanceScreen';
@@ -438,6 +444,7 @@ const RootNavigation = () => {
 
           {/* -------- REQUEST -------- */}
           <Stack.Screen name={ScheduledRides_Nav} component={ScheduledRidesScreen} />
+          <Stack.Screen name={ScheduledRideDetails_Nav} component={ScheduledRideDetailsScreen} />
 
           {/* -------- PROFILE -------- */}
           <Stack.Screen name={ProfileDetails_Nav} component={ProfileDetailsScreen} />

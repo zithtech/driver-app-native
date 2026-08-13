@@ -24,6 +24,7 @@ export const MapTrackingScreen = 'MapTrackingScreen';
 export const MapSearchScreen = 'MapSearchScreen';
 
 export const ScheduledRides_Nav = 'ScheduledRides';
+export const ScheduledRideDetails_Nav = 'ScheduledRideDetailsScreen';
 export const Requests_Nav = 'Requests';
 
 export const DriverPerformance_Nav = 'DriverPerformanceScreen';
