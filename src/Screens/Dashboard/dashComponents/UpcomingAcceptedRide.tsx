@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Pressable, Image } from 'react-native';
 import { Text } from '../../../Components';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hS as s, vS as vs, ms } from '../../../lib/scale';
+import { useLocation } from '../../../hooks/useLocation';
+import { calculateDistance } from '../../../utils/locationUtils';
 
 interface UpcomingAcceptedRideProps {
     trip: any;
@@ -19,8 +21,36 @@ const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onVie
     const month = tripDate.toLocaleString('default', { month: 'short' });
     const timeString = tripDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Mock distance for now if not provided
-    const distanceAway = trip.distance ? `${trip.distance} away` : '2.4 km away';
+    const { getCurrentLocation } = useLocation();
+    const [distanceAway, setDistanceAway] = useState<string>(trip.distance ? `${trip.distance} away` : 'Calculating...');
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchAndCalculate = async () => {
+            try {
+                const pLat = parseFloat(trip.pickup_lat || trip.pickupLat || trip.pickup_location?.coordinates?.[1] || '0');
+                const pLng = parseFloat(trip.pickup_lng || trip.pickupLng || trip.pickup_location?.coordinates?.[0] || '0');
+
+                if (pLat && pLng) {
+                    const loc = await getCurrentLocation();
+                    if (loc && isMounted) {
+                        const dist = calculateDistance(loc.coords.latitude, loc.coords.longitude, pLat, pLng);
+                        setDistanceAway(`${dist.toFixed(1)} km away`);
+                    }
+                } else if (!trip.distance && isMounted) {
+                    setDistanceAway('Distance unknown');
+                }
+            } catch (error) {
+                console.log('Error calculating distance:', error);
+                if (isMounted && !trip.distance) {
+                    setDistanceAway('Distance unknown');
+                }
+            }
+        };
+
+        fetchAndCalculate();
+        return () => { isMounted = false; };
+    }, [trip, getCurrentLocation]);
     const tripType = trip.booking_type === 'ROUND_TRIP' ? 'Round Trip' : 'One Way';
     const estimatedFare = trip.estimated_fare || trip.total_fare || trip.amount || '0.00';
 
@@ -84,9 +114,9 @@ const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onVie
                 {/* Right Column: Map & Navigate */}
                 <View style={styles.actionCol}>
                     <Image 
-                        source={require('../../../assets/images/map6.png')} 
+                        source={require('../../../assets/images/dashupcomingrideMap.png')} 
                         style={styles.mapThumbnail}
-                        resizeMode="cover"
+                        resizeMode="stretch"
                     />
                     <Pressable style={styles.navigateBtn} onPress={onNavigatePress}>
                         <Ionicons name="navigate" size={ms(16)} color="#FFFFFF" />
@@ -102,32 +132,27 @@ export default UpcomingAcceptedRide;
 
 const styles = StyleSheet.create({
     cardContainer: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: ms(16),
+        borderRadius: ms(12),
         marginHorizontal: s(12),
-        marginBottom: vs(16),
-        padding: ms(16),
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 3,
+        marginTop: vs(16),
+        marginBottom: vs(12),
+        padding: ms(12),
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
     },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: vs(16),
+        marginBottom: vs(8),
     },
     headerTitle: {
-        fontSize: ms(15),
+        fontSize: ms(14),
         fontWeight: '700',
         color: '#1E293B',
     },
     viewAllText: {
-        fontSize: ms(13),
+        fontSize: ms(12),
         fontWeight: '600',
         color: '#3B82F6',
     },
@@ -138,38 +163,38 @@ const styles = StyleSheet.create({
     /* Left Column */
     dateCol: {
         backgroundColor: '#F8FAFC',
-        borderRadius: ms(12),
-        paddingVertical: vs(12),
-        paddingHorizontal: s(8),
+        borderRadius: ms(10),
+        paddingVertical: vs(8),
+        paddingHorizontal: s(6),
         alignItems: 'center',
-        width: s(65),
+        width: s(55),
     },
     dayText: {
-        fontSize: ms(24),
+        fontSize: ms(20),
         fontWeight: '800',
         color: '#0F172A',
     },
     monthText: {
-        fontSize: ms(13),
+        fontSize: ms(12),
         fontWeight: '600',
         color: '#2563EB',
-        marginBottom: vs(8),
+        marginBottom: vs(4),
     },
     timeBadge: {
         backgroundColor: '#DBEAFE',
-        paddingHorizontal: s(6),
-        paddingVertical: vs(4),
-        borderRadius: ms(6),
+        paddingHorizontal: s(4),
+        paddingVertical: vs(2),
+        borderRadius: ms(4),
     },
     timeText: {
-        fontSize: ms(10),
+        fontSize: ms(9),
         fontWeight: '700',
         color: '#1D4ED8',
     },
     /* Middle Column */
     routeCol: {
         flex: 1,
-        paddingHorizontal: s(12),
+        paddingHorizontal: s(8),
     },
     locationRow: {
         flexDirection: 'row',
@@ -177,18 +202,18 @@ const styles = StyleSheet.create({
     },
     dotContainer: {
         alignItems: 'center',
-        width: s(16),
+        width: s(14),
         marginRight: s(6),
     },
     dot: {
-        width: ms(10),
-        height: ms(10),
-        borderRadius: ms(5),
+        width: ms(8),
+        height: ms(8),
+        borderRadius: ms(4),
         marginTop: vs(4),
     },
     verticalLine: {
         width: 1,
-        height: vs(24),
+        height: vs(16),
         backgroundColor: '#CBD5E1',
         marginVertical: vs(2),
     },
@@ -199,14 +224,14 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     addressText: {
-        fontSize: ms(13),
+        fontSize: ms(12),
         color: '#1E293B',
         fontWeight: '500',
         marginRight: s(6),
         flexShrink: 1,
     },
     distanceText: {
-        fontSize: ms(11),
+        fontSize: ms(10),
         color: '#3B82F6',
         fontWeight: '500',
     },
@@ -218,34 +243,34 @@ const styles = StyleSheet.create({
         marginTop: vs(2),
     },
     tripTypeText: {
-        fontSize: ms(10),
+        fontSize: ms(9),
         color: '#64748B',
         fontWeight: '600',
     },
     fareContainer: {
-        marginTop: vs(12),
-        marginLeft: s(22), // Align under the text, avoiding the dots
+        marginTop: vs(6),
+        marginLeft: s(20), // Align under the text, avoiding the dots
     },
     fareLabel: {
-        fontSize: ms(11),
+        fontSize: ms(10),
         color: '#64748B',
         marginBottom: vs(2),
     },
     fareValue: {
-        fontSize: ms(14),
+        fontSize: ms(13),
         fontWeight: '700',
         color: '#0F172A',
     },
     /* Right Column */
     actionCol: {
-        width: s(90),
+        width: s(80),
         justifyContent: 'space-between',
     },
     mapThumbnail: {
         width: '100%',
-        height: vs(60),
-        borderRadius: ms(12),
-        marginBottom: vs(8),
+        height: vs(46),
+        borderRadius: ms(10),
+        marginBottom: vs(6),
         backgroundColor: '#E2E8F0',
     },
     navigateBtn: {
@@ -253,12 +278,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: vs(8),
+        paddingVertical: vs(6),
         borderRadius: ms(8),
     },
     navigateBtnText: {
         color: '#FFFFFF',
-        fontSize: ms(12),
+        fontSize: ms(11),
         fontWeight: '600',
         marginLeft: s(4),
     }

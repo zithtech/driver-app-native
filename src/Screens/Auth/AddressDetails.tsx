@@ -10,8 +10,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Pressable,
-  Modal,
-  FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
@@ -21,37 +20,27 @@ import { useTranslation } from 'react-i18next';
 import { useUpdateDriverMutation } from '../../service/driverApi';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
-import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeOut,
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withSequence,
   withTiming,
+  withSpring,
   withRepeat,
 } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAppTheme } from '../../context/ThemeContext';
 
-import { Input, PremiumAddressIcon } from '../../Components';
+import { Input } from '../../Components';
 import { RootState } from '../../redux/store';
 import { setUser } from '../../redux/userSlice';
-import { Onboarding_Nav } from '../../Navigations/navigations';
+import { Onboarding_Nav, HelpCenter_Nav } from '../../Navigations/navigations';
 import { useLocation } from '../../hooks/useLocation';
 import { ALL_CITIES, ALL_STATES, ALL_DISTRICTS } from '../../constant/cities';
 import AppStatusBar from '../../Components/AppStatusBar';
 
-
 /* ================= COMPONENT EXTRACTIONS ================= */
-const SuccessIcon = () => (
-  <View style={{ marginRight: 4 }}>
-    <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-  </View>
-);
-
-const Dot = ({ index: _index }: { index: number }) => {
+const Dot: React.FC<{ index: number }> = ({ index: _index }) => {
   const dotScale = useSharedValue(1);
   useEffect(() => {
     dotScale.value = withRepeat(
@@ -87,21 +76,38 @@ const DotLoader = () => {
 };
 
 /* ================= SCREEN ================= */
-
 const AddressDetails: React.FC<any> = ({ navigation }) => {
   const dispatch = useDispatch();
   const { colors, fonts } = useTheme() as any;
+  const { isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const { t, i18n } = useTranslation();
   const { triggerHaptic } = useHaptic();
   const user = useSelector((state: RootState) => state.userSlice.user);
 
+  /* ---------------- STATE ---------------- */
+  const [street, setStreet] = useState('');
+  const [addressLine2, setAddressLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
+  const [district, setDistrict] = useState('');
+  const [districtSuggestions, setDistrictSuggestions] = useState<string[]>([]);
+  const [stateName, setStateName] = useState('Tamil Nadu');
+  const [stateSuggestions, setStateSuggestions] = useState<string[]>([]);
+  const [pincode, setPincode] = useState('');
+  const [country] = useState('India');
+  
+  const [locationString, setLocationString] = useState('');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /* ---------------- AUTOCOMPLETE ---------------- */
   const handleCityChange = (text: string) => {
     setCity(text);
     if (text.length > 1) {
       const filtered = ALL_CITIES.filter(c =>
         c.toLowerCase().includes(text.toLowerCase())
-      ).slice(0, 5); // Show top 5 suggestions
+      ).slice(0, 5);
       setCitySuggestions(filtered);
     } else {
       setCitySuggestions([]);
@@ -138,28 +144,17 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
   };
 
-  const selectDistrictSuggestion = (suggestion: string) => {
-    setDistrict(suggestion);
-    setDistrictSuggestions([]);
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-  };
-
   const selectStateSuggestion = (suggestion: string) => {
     setStateName(suggestion);
     setStateSuggestions([]);
     triggerHaptic(HapticFeedbackTypes.impactLight);
   };
-  /* ---------------- STATE ---------------- */
-  const [street, setStreet] = useState('');
-  const [city, setCity] = useState('');
-  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
-  const [district, setDistrict] = useState('');
-  const [districtSuggestions, setDistrictSuggestions] = useState<string[]>([]);
-  const [stateName, setStateName] = useState('Tamil Nadu');
-  const [stateSuggestions, setStateSuggestions] = useState<string[]>([]);
-  const [pincode, setPincode] = useState('');
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectDistrictSuggestion = (suggestion: string) => {
+    setDistrict(suggestion);
+    setDistrictSuggestions([]);
+    triggerHaptic(HapticFeedbackTypes.impactLight);
+  };
 
   /* ---------------- REFS ---------------- */
   const pinRef = useRef<any>(null);
@@ -168,6 +163,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   useEffect(() => {
     if (user?.address) {
       if (user.address.street) setStreet(user.address.street);
+      if (user.address.landmark) setAddressLine2(user.address.landmark);
       if (user.address.city) setCity(user.address.city);
       if (user.address.district) setDistrict(user.address.district);
       if (user.address.state) setStateName(user.address.state);
@@ -214,6 +210,10 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
       const pos = await getCurrentLocation();
       const address = await getAddressFromCoords(pos.coords.latitude, pos.coords.longitude);
 
+      if (pos?.coords) {
+         setLocationString(`${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E`);
+      }
+
       if (address) {
         triggerHaptic(HapticFeedbackTypes.selection);
         setStreet(address.street || '');
@@ -233,18 +233,10 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     }
   };
 
-
-
-
   /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async () => {
     if (!user?.phone_number) {
       showAlert({ title: 'Session Expired', message: 'Please login again', singleButton: true, icon: 'alert-circle-outline' });
-      return;
-    }
-
-    if (!user?.date_of_birth) {
-      showAlert({ title: 'Error', message: 'Date of birth missing', singleButton: true, icon: 'alert-circle-outline' });
       return;
     }
 
@@ -254,12 +246,6 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     }
 
     if (!street || !city || !district || !stateName || pincode.length !== 6) {
-      showAlert({
-        title: 'Validation',
-        message: 'Please fill all address fields correctly',
-        singleButton: true,
-        icon: 'information-circle-outline',
-      });
       triggerShake();
       return;
     }
@@ -270,13 +256,14 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     const payload = {
       address: {
         street,
+        landmark: addressLine2,
         city,
-        district,
+        district: district || city, // Fallback if district isn't separated
         state: stateName,
         country: 'India',
         pincode,
       },
-      language: user?.language || i18n.language || 'en', // Maintain language persistence on backend
+      language: user?.language || i18n.language || 'en',
     };
 
     try {
@@ -285,7 +272,6 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
         data: payload,
       }).unwrap();
 
-      // ✅ Sync address + status to Redux (backend auto-upgrades to ADDRESS_COMPLETED)
       const nextStatus = res?.data?.onboarding_status || 'ADDRESS_COMPLETED';
       dispatch(
         setUser({
@@ -314,61 +300,83 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     }
   };
 
-
-  /* ---------------- CLEANUP ---------------- */
   useEffect(() => {
     return () => {
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); }
     };
   }, []);
 
-  /* ---------------- UI ---------------- */
+  const Label = ({ text, required }: { text: string; required?: boolean }) => (
+    <Text style={styles.labelText}>
+      {text} {required && <Text style={{ color: '#EF4444' }}>*</Text>}
+    </Text>
+  );
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
       <AppStatusBar />
 
-
       <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
-        >
-          {/* PROGRESS */}
-          <Animated.View
-            style={styles.progressHeader}
-          >
-            <View style={styles.progressContainer}>
-              {[1, 2, 3, 4].map((i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.progressBar,
-                    { backgroundColor: i <= 3 ? colors.primary : '#E5E7EB' }
-                  ]}
-                />
-              ))}
+        {/* PROGRESS BAR */}
+        <View style={styles.progressWrapper}>
+          <View style={styles.progressLineContainer}>
+             <View style={[styles.progressLine, { width: '66%', backgroundColor: '#0062FF' }]} />
+             <View style={[styles.progressLine, { width: '34%', backgroundColor: '#E5E7EB' }]} />
+          </View>
+          <View style={styles.progressStepsRow}>
+            {/* Step 1 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+                <Ionicons name="checkmark" size={16} color="#FFF" />
+              </View>
+              <Text style={styles.stepText}>Mobile{'\n'}Verification</Text>
             </View>
-            <View style={styles.progressLabelRow}>
-              <Text style={styles.progressText}>
-                {t('step_address_label', 'Address Details')} <Text style={[styles.activeProgressText, { color: colors.primary }]}>• {t('step_3_of_4')}</Text>
-              </Text>
+            {/* Step 2 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+                <Ionicons name="checkmark" size={16} color="#FFF" />
+              </View>
+              <Text style={styles.stepText}>Personal{'\n'}Details</Text>
             </View>
-          </Animated.View>
+            {/* Step 3 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+                <Text style={[styles.stepNumber, { color: '#FFF' }]}>3</Text>
+              </View>
+              <Text style={[styles.stepText, { color: '#0062FF' }]}>Address{'\n'}Details</Text>
+            </View>
+            {/* Step 4 */}
+            <View style={styles.stepContainer}>
+              <View style={styles.stepCircle}>
+                <Text style={styles.stepNumber}>4</Text>
+              </View>
+              <Text style={styles.stepText}>Documents{'\n'}Upload</Text>
+            </View>
+          </View>
+        </View>
 
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        >
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+            contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
             keyboardShouldPersistTaps="handled"
           >
-
-            {/* HEADER */}
+            {/* HEADER SECTION */}
             <View style={styles.headerSection}>
-              <Text style={styles.title}>
-                {t('address_title_line1', 'What is your')} {t('address_title_line2', 'Home address?')}
-              </Text>
-              <Text style={styles.subtitle}>
-                {t('address_subtitle', "This helps us verify your profile and connect with us for security purposes.")}
-              </Text>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Address Details</Text>
+                <Text style={styles.headerSubtitle}>
+                  Please enter your current address as per your proof of address.
+                </Text>
+              </View>
+              <Image 
+                source={isDark ? require('../../assets/images/addressDarkmode.png') : require('../../assets/images/addressLightmode.png')} 
+                style={styles.headerImage} 
+              />
             </View>
 
             {/* LOCATION CARD */}
@@ -381,136 +389,148 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               }}
               onPressOut={() => { locationScale.value = withSpring(1); }}
             >
-              <Animated.View style={[styles.locationCard, locationAnimatedStyle]}>
-                <View style={styles.locationIconCircle}>
-                  {locationLoading ? (
-                    <ActivityIndicator size="small" color="#2563EB" />
-                  ) : (
-                    <Ionicons name="locate" size={22} color="#2563EB" />
-                  )}
+              <Animated.View style={[styles.locationCard, locationAnimatedStyle, isDark && { backgroundColor: '#1F2937', borderColor: '#374151' }]}>
+                <View style={styles.locationCardInner}>
+                  <View style={styles.locationIconCircle}>
+                    {locationLoading ? (
+                      <ActivityIndicator size="small" color="#0062FF" />
+                    ) : (
+                      <Ionicons name="locate" size={20} color="#0062FF" />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={[styles.locationTitle, isDark && { color: '#F9FAFB' }]} numberOfLines={1} adjustsFontSizeToFit>Use Current Location</Text>
+                    <Text style={styles.locationSubtitle} numberOfLines={1} adjustsFontSizeToFit>Detect your current location and fill address automatically</Text>
+                  </View>
+                  <View style={styles.locationActionBtn}>
+                    <Text style={styles.locationActionText} numberOfLines={1} adjustsFontSizeToFit>Use Current Location</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.locationTitle} numberOfLines={1} adjustsFontSizeToFit>{t('use_current_location')}</Text>
-                  <Text style={styles.locationSubtitle} numberOfLines={1} adjustsFontSizeToFit>{t('auto_fills_gps', 'Auto-fills the form via GPS')}</Text>
-                </View>
-                <Text style={styles.locationAllow}>{locationLoading ? '' : t('allow', 'Allow')}</Text>
+
+                {/* Location Success Banner */}
+                {locationString !== '' && !locationLoading && (
+                  <View style={styles.locationSuccessBanner}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color="#059669" />
+                    <Text style={styles.locationSuccessText}>Location detected: {locationString}</Text>
+                  </View>
+                )}
               </Animated.View>
             </Pressable>
 
-            {/* DIVIDER */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText} numberOfLines={1} adjustsFontSizeToFit>{t('or_enter_manually', 'OR ENTER MANUALLY')}</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
             {/* FORM FIELDS */}
             <Animated.View style={animatedShakeStyle}>
-              {/* STREET */}
+              
+              {/* ADDRESS LINE 1 */}
               <View style={styles.fieldBox}>
-                <View style={styles.fieldLabelRow}>
-                  <Ionicons name="home-outline" size={17} color="#111827" />
-                  <Text style={styles.fieldLabel}>{t('street').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
-                </View>
+                <Label text="Address Line 1" required />
                 <Input
                   value={street}
-                  scrollable={true}
                   autoCapitalize="words"
-                  placeholder={t('placeholder_street', 'House no, building, street')}
+                  placeholder="House / Flat / Building, Street"
                   onChangeText={setStreet}
-                  onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                  containerStyle={styles.flatInputContainer}
                   inputContainerStyle={styles.flatInputInner}
                   style={styles.flatInput}
                   placeholderTextColor="#9CA3AF"
+                  LeadingAccessory={
+                    <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
                 />
               </View>
 
-              {/* CITY / TOWN */}
-              <View style={[styles.fieldBox, { zIndex: 100 }]}>
-                <View style={styles.fieldLabelRow}>
-                  <Ionicons name="business-outline" size={17} color="#111827" />
-                  <Text style={styles.fieldLabel}>{t('city').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
-                </View>
+              {/* ADDRESS LINE 2 */}
+              <View style={[styles.fieldBox, styles.mt]}>
+                <Label text="Address Line 2 (Optional)" />
                 <Input
-                  value={city}
-                  scrollable={true}
-                  placeholder={t('placeholder_city', 'e.g. Bengaluru')}
-                  onChangeText={handleCityChange}
-                  onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                  containerStyle={styles.flatInputContainer}
+                  value={addressLine2}
+                  autoCapitalize="words"
+                  placeholder="Area, Landmark, Nearby place"
+                  onChangeText={setAddressLine2}
                   inputContainerStyle={styles.flatInputInner}
                   style={styles.flatInput}
                   placeholderTextColor="#9CA3AF"
+                  LeadingAccessory={
+                    <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
                 />
-
-                {citySuggestions.length > 0 && (
-                  <View style={styles.suggestionBox}>
-                    {citySuggestions.map((item, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.suggestionItem}
-                        onPress={() => selectCitySuggestion(item)}
-                      >
-                        <Text style={styles.suggestionText}>{item}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
               </View>
 
-              {/* DISTRICT */}
-              <View style={[styles.fieldBox, { zIndex: 95 }]}>
-                <View style={styles.fieldLabelRow}>
-                  <Ionicons name="location-outline" size={17} color="#111827" />
-                  <Text style={styles.fieldLabel}>{t('district', 'DISTRICT').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
-                </View>
-                <Input
-                  value={district}
-                  scrollable={true}
-                  placeholder={t('placeholder_district', 'e.g. Coimbatore')}
-                  onChangeText={handleDistrictChange}
-                  onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                  containerStyle={styles.flatInputContainer}
-                  inputContainerStyle={styles.flatInputInner}
-                  style={styles.flatInput}
-                  placeholderTextColor="#9CA3AF"
-                />
-
-                {districtSuggestions.length > 0 && (
-                  <View style={styles.suggestionBox}>
-                    {districtSuggestions.map((item, index) => (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.suggestionItem}
-                        onPress={() => selectDistrictSuggestion(item)}
-                      >
-                        <Text style={styles.suggestionText}>{item}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-
-              {/* STATE + PINCODE ROW */}
-              <View style={styles.row}>
-                <View style={[styles.fieldBox, { flex: 1, zIndex: 90 }]}>
-                  <View style={styles.fieldLabelRow}>
-                    <Ionicons name="map-outline" size={17} color="#111827" />
-                    <Text style={styles.fieldLabel}>{t('state').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
-                  </View>
+              {/* CITY & DISTRICT */}
+              <View style={[styles.row, styles.mt]}>
+                <View style={[styles.fieldBox, { flex: 1, zIndex: 10 }]}>
+                  <Label text="City / Town" required />
                   <Input
-                    value={stateName}
-                    scrollable={true}
-                    placeholder={t('placeholder_state', 'State')}
-                    onChangeText={handleStateChange}
-                    onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                    containerStyle={styles.flatInputContainer}
+                    value={city}
+                    placeholder="Enter city / town"
+                    onChangeText={handleCityChange}
                     inputContainerStyle={styles.flatInputInner}
                     style={styles.flatInput}
                     placeholderTextColor="#9CA3AF"
+                    LeadingAccessory={
+                      <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                    }
                   />
+                  {citySuggestions.length > 0 && (
+                    <View style={styles.suggestionBox}>
+                      {citySuggestions.map((item, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.suggestionItem}
+                          onPress={() => selectCitySuggestion(item)}
+                        >
+                          <Text style={styles.suggestionText}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
 
+                <View style={[styles.fieldBox, { flex: 1, zIndex: 9 }]}>
+                  <Label text="District" required />
+                  <Input
+                    value={district}
+                    placeholder="Enter district"
+                    onChangeText={handleDistrictChange}
+                    inputContainerStyle={styles.flatInputInner}
+                    style={styles.flatInput}
+                    placeholderTextColor="#9CA3AF"
+                    LeadingAccessory={
+                      <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                    }
+                  />
+                  {districtSuggestions.length > 0 && (
+                    <View style={styles.suggestionBox}>
+                      {districtSuggestions.map((item, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.suggestionItem}
+                          onPress={() => selectDistrictSuggestion(item)}
+                        >
+                          <Text style={styles.suggestionText}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* STATE & PINCODE */}
+              <View style={[styles.row, styles.mt]}>
+                <View style={[styles.fieldBox, { flex: 1, zIndex: 8 }]}>
+                  <Label text="State" required />
+                  <Input
+                    value={stateName}
+                    placeholder="Select state"
+                    onChangeText={handleStateChange}
+                    inputContainerStyle={styles.flatInputInner}
+                    style={styles.flatInput}
+                    placeholderTextColor="#9CA3AF"
+                    LeadingAccessory={
+                      <Ionicons name="map-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                    }
+                    TailingAccessory={
+                      <Ionicons name="chevron-down-outline" size={18} color="#111827" />
+                    }
+                  />
                   {stateSuggestions.length > 0 && (
                     <View style={styles.suggestionBox}>
                       {stateSuggestions.map((item, index) => (
@@ -527,53 +547,89 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 </View>
 
                 <View style={[styles.fieldBox, { flex: 1 }]}>
-                  <View style={styles.fieldLabelRow}>
-                    <Text style={[styles.hashIcon, { fontSize: 17, color: '#111827' }]}>#</Text>
-                    <Text style={styles.fieldLabel}>{t('pincode').toUpperCase()} <Text style={styles.requiredStar}>*</Text></Text>
-                  </View>
+                  <Label text="PIN Code" required />
                   <Input
                     ref={pinRef}
                     value={pincode}
                     keyboardType="number-pad"
                     maxLength={6}
-                    placeholder={t('placeholder_pincode', 'e.g. 560001')}
+                    placeholder="Enter PIN code"
                     onChangeText={v => setPincode(v.replace(/[^0-9]/g, ''))}
-                    onFocus={() => triggerHaptic(HapticFeedbackTypes.impactLight)}
-                    containerStyle={styles.flatInputContainer}
                     inputContainerStyle={styles.flatInputInner}
                     style={styles.flatInput}
                     placeholderTextColor="#9CA3AF"
+                    LeadingAccessory={
+                      <Ionicons name="archive-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                    }
                   />
-                  {pincode.length > 0 && pincode.length < 6 && (
-                    <Text style={styles.errorText}>{t('enter_valid_pincode')}</Text>
-                  )}
                 </View>
               </View>
+
+              {/* COUNTRY */}
+              <View style={[styles.fieldBox, styles.mt]}>
+                <Label text="Country" required />
+                <Input
+                  value={country}
+                  editable={false}
+                  inputContainerStyle={styles.flatInputInner}
+                  style={[styles.flatInput, { color: isDark ? '#F9FAFB' : '#111827' }]}
+                  placeholderTextColor="#9CA3AF"
+                  LeadingAccessory={
+                    <Ionicons name="globe-outline" size={18} color="#0062FF" style={{ marginRight: 8 }} />
+                  }
+                  TailingAccessory={
+                    <Ionicons name="chevron-down-outline" size={18} color="#111827" />
+                  }
+                />
+              </View>
+
             </Animated.View>
+
+            {/* IMPORTANT ALERT BOX */}
+              <View style={styles.alertBox}>
+                <View style={styles.alertIconWrapper}>
+                  <Ionicons name="shield-checkmark" size={18} color="#0062FF" />
+                </View>
+                <View style={styles.alertTextWrapper}>
+                  <Text style={styles.alertTitle} numberOfLines={1} adjustsFontSizeToFit>Important</Text>
+                  <Text style={styles.alertSubtitle} numberOfLines={1} adjustsFontSizeToFit>Please make sure the address matches your official documents.</Text>
+                </View>
+              </View>
+
+            {/* SUPPORT CHAT BUTTON */}
+            <TouchableOpacity style={styles.chatButton} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav as never)}>
+              <View style={styles.chatIconWrapper}>
+                <Ionicons name="chatbubbles" size={16} color="#0062FF" />
+              </View>
+              <View style={styles.chatTextWrapper}>
+                <Text style={styles.chatTitle}>Start Chatting</Text>
+                <Text style={styles.chatSubtitle}>Get help from our assistant</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#FFF" />
+            </TouchableOpacity>
+
           </ScrollView>
 
-          {/* FOOTER */}
+          {/* FOOTER BUTTON */}
           <View style={styles.footer}>
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={handleSubmit}
               disabled={!isFormValid || isSubmitting || isLoading}
-              activeOpacity={0.8}
               style={[
-                styles.ctaButton,
-                isFormValid && { backgroundColor: colors.primary },
-                (!isFormValid || isSubmitting || isLoading) && styles.ctaDisabled,
+                styles.continueBtn,
+                (!isFormValid || isSubmitting || isLoading) && styles.continueBtnDisabled
               ]}
             >
-              <Text style={styles.ctaText} numberOfLines={1} adjustsFontSizeToFit>
-                {isSubmitting || isLoading ? <DotLoader /> : t('verify_and_continue', 'Verify & Continue')}
+              <Text style={styles.continueText}>
+                {isSubmitting || isLoading ? 'Saving...' : 'Save & Continue'}
               </Text>
+              {!(isSubmitting || isLoading) && (
+                <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
+              )}
             </TouchableOpacity>
-            <Text style={styles.securityNote} numberOfLines={1} adjustsFontSizeToFit>
-              {t('footer_encrypted', '🔒 Your details are encrypted and used for verification only')}
-            </Text>
           </View>
         </KeyboardAvoidingView>
-
 
       </SafeAreaView>
     </View>
@@ -583,181 +639,194 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
 export default AddressDetails;
 
 /* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  stateCol: {
-    flex: 2,
-  },
-  pinCol: {
     flex: 1,
   },
   root: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 10,
-  },
-  progressHeader: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  
+  /* --- PROGRESS BAR --- */
+  progressWrapper: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    position: 'relative',
     marginBottom: 4,
   },
-  progressContainer: {
+  progressLineContainer: {
+    position: 'absolute',
+    top: 21,
+    left: 45,
+    right: 45,
+    height: 2,
     flexDirection: 'row',
-    gap: 6,
-    height: 4,
+    zIndex: 1,
   },
-  progressBar: {
-    flex: 1,
+  progressLine: {
     height: '100%',
-    borderRadius: 2,
   },
-  progressLabelRow: {
+  progressStepsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    zIndex: 2,
+  },
+  stepContainer: {
     alignItems: 'center',
-    marginTop: 6,
+    width: 60,
   },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  activeProgressText: {
-    color: '#2563EB',
-  },
-  headerSection: {
-    marginBottom: 14,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    lineHeight: 32,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  titleItalic: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    lineHeight: 32,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 19,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  locationCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 14,
+  stepCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-    gap: 12,
-  },
-  locationIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  locationTitle: {
-    fontSize: 14,
+  stepNumber: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  stepText: {
+    fontSize: 9,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
+    lineHeight: 12,
+  },
+
+  /* --- HEADER --- */
+  headerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingRight: 10,
+  },
+  headerTextContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  headerTitle: {
+    fontSize: 22,
     fontWeight: '700',
     color: '#111827',
+    marginBottom: 6,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  headerImage: {
+    width: 100,
+    height: 70,
+    resizeMode: 'contain',
+  },
+
+  /* --- LOCATION CARD --- */
+  locationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  locationCardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+  },
+  locationIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  locationTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
   },
   locationSubtitle: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 1,
-  },
-  locationAllow: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 11,
     color: '#6B7280',
   },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-    gap: 10,
+  locationActionBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    maxWidth: 100,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  dividerText: {
+  locationActionText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
-    letterSpacing: 1.5,
+    color: '#0062FF',
+    textAlign: 'center',
   },
-  fieldBox: {
-    marginBottom: 10,
-    width: '100%',
-  },
-  fieldLabelRow: {
+  locationSuccessBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-    paddingLeft: 4,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#DCFCE7',
   },
-  fieldLabel: {
+  locationSuccessText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#374151',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    fontWeight: '600',
+    color: '#059669',
+    marginLeft: 6,
   },
-  requiredStar: {
-    color: '#D97706',
-    fontSize: 12,
-    fontWeight: '700',
+
+  /* --- FORM FIELDS --- */
+  row: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  hashIcon: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#6B7280',
-    marginTop: -1,
+  mt: {
+    marginTop: 8,
   },
-  flatInputContainer: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 0,
+  fieldBox: {
     width: '100%',
+  },
+  labelText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+    marginLeft: 2,
   },
   flatInputInner: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 54,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
   },
   flatInput: {
     fontSize: 13,
@@ -766,45 +835,77 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     backgroundColor: 'transparent',
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 12,
+
+  /* --- ALERT BOX --- */
+  alertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 8,
   },
-  ctaButton: {
-    height: 50,
-    borderRadius: 14,
+  alertIconWrapper: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#D1D5DB',
+    marginRight: 10,
   },
-  ctaDisabled: {
-    backgroundColor: '#D1D5DB',
-    opacity: 0.7,
+  alertTextWrapper: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  ctaText: {
-    color: '#FFFFFF',
-    fontSize: 17,
+  alertTitle: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
   },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 2,
-    marginLeft: 4,
-    marginBottom: 4,
+  alertSubtitle: {
+    fontSize: 11,
+    color: '#4B5563',
   },
-  securityNote: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    marginTop: 12,
-    fontWeight: '500',
+
+  /* --- FOOTER BUTTON --- */
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    backgroundColor: 'transparent',
   },
-  suggestionBox: {
-    backgroundColor: '#FFFFFF',
+  continueBtn: {
+    backgroundColor: '#0062FF',
+    height: 48,
     borderRadius: 12,
-    marginTop: 4,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  continueBtnDisabled: {
+    backgroundColor: '#93C5FD',
+  },
+  continueText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  continueIcon: {
+    position: 'absolute',
+    right: 20,
+  },
+
+  /* --- AUTOCOMPLETE --- */
+  suggestionBox: {
+    position: 'absolute',
+    top: 70,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     elevation: 4,
@@ -812,6 +913,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    zIndex: 99,
   },
   suggestionItem: {
     padding: 12,
@@ -819,9 +921,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   suggestionText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#111827',
-    fontWeight: '500',
   },
   loaderContainer: {
     flexDirection: 'row',
@@ -834,67 +935,35 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#FFFFFF',
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '100%',
-    height: '80%',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 12,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E5E7EB',
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  cityItem: {
+  chatButton: {
+    backgroundColor: '#0062FF',
+    marginBottom: 4,
+    marginTop: 8,
+    borderRadius: 10,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    gap: 16,
   },
-  cityText: {
-    fontSize: 16,
-  },
-  citySubtext: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  customCityIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
+  chatIconWrapper: {
+    backgroundColor: '#FFF',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
-  },
-  emptyContainer: {
     alignItems: 'center',
-    marginTop: 60,
+    marginRight: 10,
   },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 16,
+  chatTextWrapper: {
+    flex: 1,
+  },
+  chatTitle: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  chatSubtitle: {
+    color: '#E0E7FF',
+    fontSize: 10,
   },
 });

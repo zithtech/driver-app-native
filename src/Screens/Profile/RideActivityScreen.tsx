@@ -23,6 +23,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { calculateDistance } from '../../utils/locationUtils';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { startOfDay, startOfWeek, startOfMonth, endOfDay } from 'date-fns';
 import colors from '../../constant/colors';
@@ -205,17 +206,6 @@ const RideActivityScreen = ({ navigation, route }: any) => {
     const pLng = parseFloat(tripData.pickup_lng || '0');
     const dLat = parseFloat(tripData.drop_lat || '0');
     const dLng = parseFloat(tripData.drop_lng || '0');
-
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-      if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
-      const R = 6371; // km
-      const dLat = (lat2 - lat1) * (Math.PI / 180);
-      const dLon = (lon2 - lon1) * (Math.PI / 180);
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-    };
 
     let distKm = parseFloat(tripData.distance_km || '0');
     const calculatedDist = calculateDistance(pLat, pLng, dLat, dLng);

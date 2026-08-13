@@ -25,10 +25,12 @@ export interface ImageSourcePickerRef {
 interface ImageSourcePickerProps {
   onCameraSelect: (sideName: string) => void;
   onGallerySelect: (sideName: string) => void;
+  allowFile?: boolean;
+  onFileSelect?: (sideName: string) => void;
 }
 
 const ImageSourcePicker = forwardRef<ImageSourcePickerRef, ImageSourcePickerProps>(
-  ({ onCameraSelect, onGallerySelect }, ref) => {
+  ({ onCameraSelect, onGallerySelect, allowFile, onFileSelect }, ref) => {
     const { t } = useTranslation();
     const { theme, isDark } = useAppTheme();
     const { triggerHaptic } = useHaptic();
@@ -60,6 +62,14 @@ const ImageSourcePicker = forwardRef<ImageSourcePickerRef, ImageSourcePickerProp
       bottomSheetModalRef.current?.dismiss();
       setTimeout(() => {
         onGallerySelect(currentSide);
+      }, 150);
+    };
+
+    const handleFilePress = () => {
+      triggerHaptic(HapticFeedbackTypes.selection);
+      bottomSheetModalRef.current?.dismiss();
+      setTimeout(() => {
+        if (onFileSelect) onFileSelect(currentSide);
       }, 150);
     };
 
@@ -126,7 +136,7 @@ const ImageSourcePicker = forwardRef<ImageSourcePickerRef, ImageSourcePickerProp
                   end={{ x: 0.5, y: 0.6 }}
                   style={[StyleSheet.absoluteFillObject, { borderRadius: ms(20) }]}
                 />
-                
+
                 <View style={styles.iconWrapper}>
                   <Ionicons name="camera" size={ms(54)} color={isDark ? "#60A5FA" : "#3B82F6"} style={styles.iconShadow} />
                 </View>
@@ -156,7 +166,7 @@ const ImageSourcePicker = forwardRef<ImageSourcePickerRef, ImageSourcePickerProp
                   end={{ x: 0.5, y: 0.6 }}
                   style={[StyleSheet.absoluteFillObject, { borderRadius: ms(20) }]}
                 />
-                
+
                 <View style={styles.iconWrapper}>
                   <Ionicons name="images" size={ms(54)} color={isDark ? "#34D399" : "#10B981"} style={styles.iconShadow} />
                 </View>
@@ -172,6 +182,38 @@ const ImageSourcePicker = forwardRef<ImageSourcePickerRef, ImageSourcePickerProp
                 </Text>
               </View>
             </TouchableOpacity>
+
+            {/* Document Card (Conditional) */}
+            {allowFile && (
+              <TouchableOpacity
+                style={styles.cardWrapper}
+                activeOpacity={0.8}
+                onPress={handleFilePress}
+              >
+                <View style={[styles.card, { backgroundColor: isDark ? 'rgba(31, 41, 55, 0.8)' : '#FFFFFF' }]}>
+                  <LinearGradient
+                    colors={isDark ? ['rgba(245, 158, 11, 0.2)', 'transparent'] : ['#FEF3C7', '#FFFFFF']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 0.6 }}
+                    style={[StyleSheet.absoluteFillObject, { borderRadius: ms(20) }]}
+                  />
+                  
+                  <View style={styles.iconWrapper}>
+                    <Ionicons name="document-text" size={ms(54)} color={isDark ? "#FBBF24" : "#F59E0B"} style={styles.iconShadow} />
+                  </View>
+
+                  <Text style={[styles.cardTitle, { color: theme.colors.text }]}>
+                    {t('document', 'Files')}
+                  </Text>
+                  <Text style={[styles.cardSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+                    {t('upload_pdf', 'Upload PDF')}
+                  </Text>
+                  <Text style={[styles.cardSmallText, { color: isDark ? '#6B7280' : '#9CA3AF' }]}>
+                    {t('pdf_only_desc', 'Select from files')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         </BottomSheetView>
       </BottomSheetModal>

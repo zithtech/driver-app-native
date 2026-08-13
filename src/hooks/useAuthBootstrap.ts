@@ -83,20 +83,25 @@ export const useAuthBootstrap = () => {
     }, [dispatch]);
 
     // Track token — reset profileProcessed on token change (handles re-login)
-    const reduxToken = useSelector((state: RootState) => state.userSlice.user?.accessToken);
+    const user = useSelector((state: RootState) => state.userSlice.user);
+    const reduxToken = user?.accessToken;
     const prevTokenRef = useRef(reduxToken);
 
     useEffect(() => {
         if (prevTokenRef.current !== reduxToken) {
             prevTokenRef.current = reduxToken;
             if (reduxToken) {
-                setProfileProcessed(false);
+                // If the user just actively logged in, we already have their full profile
+                if (user?.isLoggedIn) {
+                    setProfileProcessed(true);
+                } else {
+                    setProfileProcessed(false);
+                }
             }
         }
-    }, [reduxToken]);
+    }, [reduxToken, user?.isLoggedIn]);
 
     // Profile rehydration logic
-    const user = useSelector((state: RootState) => state.userSlice.user);
     const driverIdFromRedux = user?.driverId;
     const existingLanguage = user?.language;
     

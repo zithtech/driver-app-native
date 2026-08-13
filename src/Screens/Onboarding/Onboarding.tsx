@@ -11,9 +11,8 @@ import {
   Dashboard_Nav,
   DocumentScreen_Nav,
   OnboardingSos_Nav,
+  HelpCenter_Nav,
 } from '../../Navigations/navigations';
-
-import HelpCenterModal from './HelpCenterModal';
 import OnboardingBackground from './components/OnboardingBackground';
 import { useTranslation } from 'react-i18next';
 
@@ -56,7 +55,6 @@ const Onboarding = ({ navigation }: any) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const [index, setIndex] = useState(0);
-  const [helpVisible, setHelpVisible] = useState(false);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
   const { colors } = useTheme() as any;
   const { t } = useTranslation();
@@ -80,7 +78,7 @@ const Onboarding = ({ navigation }: any) => {
   }));
 
   // Typewriter animation
-  const words = useMemo(() => ['VDrive', 'Partner', 'Future', 'Flexibility', 'Success', 'Reliability', 'Growth'], []);
+  const words = useMemo(() => ['T2drive', 'Partner', 'Future', 'Flexibility', 'Success', 'Reliability', 'Growth'], []);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -163,45 +161,41 @@ const Onboarding = ({ navigation }: any) => {
 
             <View style={styles.titleWrapper}>
               <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
-              <AnimatedReanimated.View
-                entering={BounceIn.duration(1000).delay(200)}
+              <View
                 style={styles.brandWrapper}
               >
                 <AnimatedReanimated.View style={pulseStyle}>
                   <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
                 </AnimatedReanimated.View>
-              </AnimatedReanimated.View>
+              </View>
             </View>
 
-            <AnimatedReanimated.Text
-              entering={FadeInDown.duration(800).delay(300)}
+            <Text
               style={styles.subtitle}
             >
-              VDrive Partner App
-            </AnimatedReanimated.Text>
+              T2drive Partner App
+            </Text>
 
-            <AnimatedReanimated.Text
-              entering={FadeInDown.duration(800).delay(500)}
+            <Text
               style={styles.tagline}
               adjustsFontSizeToFit
               numberOfLines={2}
             >
               {t('onboarding_tagline', 'Your trusted platform to earn, drive, and grow with confidence.')}
-            </AnimatedReanimated.Text>
+            </Text>
 
-            <AnimatedReanimated.View
-              entering={FadeIn.duration(800).delay(800)}
+            <View
               style={{ alignSelf: 'flex-end' }}
             >
               <TouchableOpacity
                 style={styles.helpButton}
                 activeOpacity={0.8}
-                onPress={() => setHelpVisible(true)}
+                onPress={() => navigation.navigate(HelpCenter_Nav as never)}
               >
                 <Ionicons name="headset-outline" size={mS(12)} color="#4B5563" style={{ marginRight: hS(4) }} />
                 <Text style={styles.helpText} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
               </TouchableOpacity>
-            </AnimatedReanimated.View>
+            </View>
           </View>
 
           {/* PAGES */}
@@ -258,10 +252,7 @@ const Onboarding = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
-          <HelpCenterModal
-            visible={helpVisible}
-            onClose={() => setHelpVisible(false)}
-          />
+
 
           {/* CONGRATS MODAL */}
           <Modal

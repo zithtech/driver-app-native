@@ -1,9 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
-import Animated, {
-  FadeInUp,
-  FadeOutUp,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useToast } from '../context/ToastContext';
@@ -41,9 +37,7 @@ const Toast: React.FC = () => {
   const config = getToastStyles();
 
   return (
-    <Animated.View
-      entering={FadeInUp.springify().damping(15)}
-      exiting={FadeOutUp.duration(300)}
+    <View
       style={[
         styles.container,
         {
@@ -59,7 +53,7 @@ const Toast: React.FC = () => {
           {message}
         </Text>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -69,7 +63,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     zIndex: 9999,
     backgroundColor: 'rgba(28, 28, 30, 0.95)', // Sleek dark aesthetic
-    borderRadius: 100, // Pill shape
+    borderRadius: 8, // Minimal professional curve
     paddingVertical: vs(10),
     paddingHorizontal: ms(16),
     shadowColor: '#000',

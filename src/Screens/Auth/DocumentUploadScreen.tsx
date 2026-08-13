@@ -11,6 +11,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from '@react-navigation/native';
 import ImagePicker from 'react-native-image-crop-picker';
 import DocumentScanner from 'react-native-document-scanner-plugin';
+import { pick, types } from '@react-native-documents/picker';
 import { useDispatch, useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Svg, { Circle } from 'react-native-svg';
@@ -122,8 +123,8 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
     }
 
     // --- PERMISSION CHECK ---
-    const hasPermission = fromCamera 
-      ? await checkCameraPermission() 
+    const hasPermission = fromCamera
+      ? await checkCameraPermission()
       : await checkPhotoLibraryPermission();
 
     if (!hasPermission) {
@@ -193,7 +194,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         const res = (fromCamera
           ? await ImagePicker.openCamera(pickerConfig)
           : await ImagePicker.openPicker(pickerConfig)) as any;
-          
+
         rawPath = res.path;
       }
 
@@ -226,8 +227,12 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
   /* ---------------- SOURCE SELECT ---------------- */
   const chooseSource = (sideName: string) => {
-    // Open the new premium bottom sheet instead of standard alert
-    imagePickerRef.current?.present(sideName);
+    if (docKey === 'Profile_Selfie') {
+      pickImage(sideName, true);
+    } else {
+      // Open the new premium bottom sheet instead of standard alert
+      imagePickerRef.current?.present(sideName);
+    }
   };
 
   const currentStatus = useMemo(() => {
@@ -397,7 +402,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       dispatch(setUser(profileUpdate));
       setIsSubmitting(false);
       setUploadStage(null);
-      
+
       showToast({
         type: 'success',
         message: t('upload_successful_msg', 'Your document uploaded successfully.'),
@@ -419,9 +424,9 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       // 3. { errorCode, message }                                — re-thrown from service
       const errorBody =
         error?.data?.errorCode ? error.data :
-        error?.error?.data?.errorCode ? error.error.data :
-        error?.errorCode ? error :
-        null;
+          error?.error?.data?.errorCode ? error.error.data :
+            error?.errorCode ? error :
+              null;
 
       if (errorBody?.errorCode && ['BLURRY', 'WRONG_DOCUMENT', 'EXPIRED', 'INSUFFICIENT_TEXT'].includes(errorBody.errorCode)) {
         setOcrErrorCode(errorBody.errorCode as OCRErrorCode);
@@ -458,16 +463,40 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <AppStatusBar />
       <View style={[Styles.flex, styles.container]}>
-        {/* HEADER */}
-        <View style={{ marginBottom: 20 }}>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.title, { color: colors.text }]}>
-            {t('upload_doc')} {t(labelKey)}
-          </Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.subtitle, { color: colors.text }]}>{getTip()}</Text>
+        {/* HEADER SECTION */}
+        <View style={styles.headerSection}>
+          <View style={styles.headerTextContainer}>
+            <Text style={[styles.headerTitle, { color: isDark ? '#FFF' : '#111827' }]} adjustsFontSizeToFit numberOfLines={1}>
+              {docKey === 'Aadhar_Card' ? 'Aadhaar Card' : docKey === 'Pan_Card' ? 'PAN Card' : docKey === 'Driving_License' ? 'Driving License' : t(labelKey)}
+            </Text>
+            {docKey === 'Aadhar_Card' ? (
+              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                Upload clear images of your Aadhaar card.
+              </Text>
+            ) : docKey === 'Pan_Card' ? (
+              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                Upload clear images of your PAN card.
+              </Text>
+            ) : docKey === 'Driving_License' ? (
+              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                Upload clear images of your Driving License.
+              </Text>
+            ) : (
+              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+                {getTip()}
+              </Text>
+            )}
+          </View>
+          <Image
+            source={
+              docKey === 'Profile_Selfie'
+                ? require('../../assets/images/profileTop.png')
+                : require('../../assets/images/documents.png')
+            }
+            style={styles.headerImage}
+          />
         </View>
 
-        {/* GUIDELINES */}
-        {docKey !== 'Profile_Selfie' && <DocGuidelines docKey={docKey} />}
 
         {/* REJECTION REASON */}
         {rejectionReason && (
@@ -481,184 +510,424 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         )}
 
         {/* UPLOAD BOXES */}
-        <View style={[styles.row, docKey === 'Profile_Selfie' && styles.selfieRow]}>
+        <View
+          style={[
+            styles.row,
+            docKey === 'Profile_Selfie' && styles.selfieRow,
+            (docKey === 'Driving_License' || docKey === 'Aadhar_Card' || docKey === 'Pan_Card' || docKey === 'Police_Verification') && { flexDirection: 'column', gap: 20 }
+          ]}
+        >
           {side.map((s: string) => {
             const hasImage = !!images[s];
             const isUploading = uploadingSide === s;
             const isSelfie = docKey === 'Profile_Selfie';
+            const isVerticalLayout = docKey === 'Driving_License' || docKey === 'Aadhar_Card' || docKey === 'Pan_Card' || docKey === 'Police_Verification';
 
             return (
-              <View key={s} style={[styles.col, isSelfie && styles.selfieCol]}>
-                {!isSelfie && <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.sideLabel, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>{getSideLabel(s)}</Text>}
+              <View
+                key={s}
+                style={[
+                  !isVerticalLayout && styles.col,
+                  isSelfie && styles.selfieCol,
+                  isVerticalLayout && { width: '100%' }
+                ]}
+              >
+                {!isSelfie && !isVerticalLayout && <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.sideLabel, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>{getSideLabel(s)}</Text>}
 
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => chooseSource(s)}
-                  disabled={isSubmitting}
-                  style={[
-                    styles.uploadBox,
-                    isSelfie && styles.selfieBox,
-                    {
-                      backgroundColor: isDark ? '#374151' : '#F9FAFB',
-                      borderColor: hasImage
-                        ? '#2E7D32'
-                        : (isDark ? '#4B5563' : '#E5E7EB'),
-                    },
-                  ]}
-                >
-                  {hasImage ? (
-                    <>
-                      <Image
-                        source={{ uri: images[s] }}
-                        style={[styles.image, isSelfie ? styles.selfieImage : { resizeMode: 'contain' }]}
-                      />
+                {isSelfie ? (
+                  <View style={styles.selfieDetailedContainer}>
+                    <View style={[styles.selfieCircleWrapper, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]}>
+                      <View style={[styles.selfiePlaceholderCircle, hasImage && styles.selfieHasImage, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+                        {hasImage ? (
+                          <Image source={{ uri: images[s] }} style={styles.selfieCapturedImage} />
+                        ) : (
+                          <Ionicons name="person" size={60} color={isDark ? '#4B5563' : '#D1D5DB'} />
+                        )}
 
-                      {isSubmitting && currentlyUploading[s] && (
-                        <View style={[styles.uploadOverlay, isSelfie && { borderRadius: 75 }]}>
-                          <View style={styles.progressCircleContainer}>
-                            <Svg width="60" height="60" viewBox="0 0 100 100">
-                              {/* Background Circle */}
-                              <Circle
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                stroke="#FFFFFF33"
-                                strokeWidth="8"
-                                fill="transparent"
-                              />
-                              {/* Progress Circle */}
-                              <Circle
-                                cx="50"
-                                cy="50"
-                                r="45"
-                                stroke="#10B981"
-                                strokeWidth="8"
-                                fill="transparent"
-                                strokeDasharray={`${2 * Math.PI * 45}`}
-                                strokeDashoffset={`${2 * Math.PI * 45 * (1 - (uploadProgress[s] || 0))}`}
-                                strokeLinecap="round"
-                                transform="rotate(-90 50 50)"
-                              />
-                            </Svg>
-                            <View style={styles.percentageTextContainer}>
-                              <Text style={styles.percentageText}>
-                                {Math.round((uploadProgress[s] || 0) * 100)}%
-                              </Text>
+                        {isSubmitting && currentlyUploading[s] && (
+                          <View style={[styles.uploadOverlay, { borderRadius: 100 }]}>
+                            <View style={styles.progressCircleContainer}>
+                              <Svg width="60" height="60" viewBox="0 0 100 100">
+                                <Circle cx="50" cy="50" r="45" stroke="#FFFFFF33" strokeWidth="8" fill="transparent" />
+                                <Circle cx="50" cy="50" r="45" stroke="#10B981" strokeWidth="8" fill="transparent" strokeDasharray={`${2 * Math.PI * 45}`} strokeDashoffset={`${2 * Math.PI * 45 * (1 - (uploadProgress[s] || 0))}`} strokeLinecap="round" transform="rotate(-90 50 50)" />
+                              </Svg>
+                              <View style={styles.percentageTextContainer}>
+                                <Text style={styles.percentageText}>{Math.round((uploadProgress[s] || 0) * 100)}%</Text>
+                              </View>
                             </View>
                           </View>
-                        </View>
-                      )}
-
-                      {/* ERROR & RETRY */}
-                      {uploadErrors[s] && !currentlyUploading[s] && (
-                        <View style={[styles.uploadOverlay, isSelfie && { borderRadius: 75 }, { backgroundColor: 'rgba(220, 38, 38, 0.7)' }]}>
-                          <Ionicons name="alert-circle-outline" size={30} color="#fff" />
-                          <TouchableOpacity
-                            style={styles.errorRetryBtn}
-                            onPress={() => handleContinue()}
-                          >
-                            <Text style={styles.errorRetryText} numberOfLines={1} adjustsFontSizeToFit>{t('retry') || 'Retry'}</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-
-                      {/* SUCCESS BADGE */}
-                      {successfulUploads[s] && !currentlyUploading[s] && (
-                        <View style={[styles.successBadge, isSelfie && { top: 5, right: 5 }]}>
-                          <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                        </View>
-                      )}
-
-                      {/* ACTION BUTTONS (View & Retake) - Non-Selfie stays inside */}
-                      {!isSubmitting && !isSelfie && (
-                        <View style={styles.actionButtonsRow}>
-
-                          <TouchableOpacity
-                            style={[styles.actionButton, styles.retakeButton]}
-                            onPress={() => chooseSource(s)}
-                            activeOpacity={0.8}
-                          >
-                            <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
-                            <Text style={styles.actionButtonText} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
-                    </>
-                  ) : (
-                    <View style={styles.placeholder}>
-                      {isUploading ? (
-                        <ActivityIndicator color={colors.primary} />
-                      ) : (
-                        <>
-
-                          <View>
-                            <Ionicons
-                              name={isSelfie ? "person-outline" : "camera-outline"}
-                              size={isSelfie ? 40 : 26}
-                              color={isSelfie ? colors.primary : colors.border}
-                              style={isSelfie && { opacity: 0.8 }}
-                            />
+                        )}
+                        {uploadErrors[s] && !currentlyUploading[s] && (
+                          <View style={[styles.uploadOverlay, { borderRadius: 100, backgroundColor: 'rgba(220, 38, 38, 0.7)' }]}>
+                            <Ionicons name="alert-circle-outline" size={30} color="#fff" />
+                            <TouchableOpacity style={styles.errorRetryBtn} onPress={() => handleContinue()}>
+                              <Text style={styles.errorRetryText} numberOfLines={1} adjustsFontSizeToFit>{t('retry') || 'Retry'}</Text>
+                            </TouchableOpacity>
                           </View>
-                          <Text style={[styles.placeholderText, { color: isDark ? '#6B7280' : '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>
-                            {isSelfie ? t('profile_selfie') : t('tap_to_upload')}
-                          </Text>
-                          {isSelfie && (
-                            <Text style={[styles.placeholderText, { fontSize: 12, marginTop: 4, color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>
-                              {t('tap_to_upload')}
-                            </Text>
-                          )}
-                        </>
-                      )}
+                        )}
+                        {successfulUploads[s] && !currentlyUploading[s] && (
+                          <View style={[styles.successBadge, { top: 10, right: 10 }]}>
+                            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  )}
-                </TouchableOpacity>
 
-                {/* SELFIE ACTION BUTTONS - Rendered outside the circle */}
-                {hasImage && isSelfie && !isSubmitting && (
-                  <View style={styles.selfieActionRowOutside}>
+                    <Text style={[styles.selfieTitle, { color: isDark ? '#FFF' : '#111827' }]}>Take a Selfie</Text>
+                    <Text style={[styles.selfieSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                      Position your face in the frame{"\n"}and take a clear selfie.
+                    </Text>
 
                     <TouchableOpacity
-                      style={[styles.selfieCircleBtn, { backgroundColor: '#374151' }]}
+                      style={styles.selfieCaptureButtonWrapper}
                       onPress={() => chooseSource(s)}
+                      disabled={isSubmitting}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons name="camera-reverse-outline" size={20} color="#fff" />
+                      <View style={[styles.selfieCaptureRing, { borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF' }]}>
+                        <View style={[styles.selfieCaptureButton, { backgroundColor: '#2563EB' }]}>
+                          <Ionicons name="camera" size={20} color="#FFF" />
+                        </View>
+                      </View>
                     </TouchableOpacity>
+
+                    <Text style={[styles.selfieCaptureTitle, { color: isDark ? '#FFF' : '#111827' }]}>{hasImage ? 'Retake Selfie' : 'Capture Selfie'}</Text>
+                    <Text style={[styles.selfieCaptureSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Tap to open camera</Text>
+
+                    <View style={[styles.selfieTipsContainer, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC' }]}>
+                      <View style={styles.selfieTipsHeader}>
+                        <Ionicons name="bulb-outline" size={20} color="#2563EB" />
+                        <Text style={[styles.selfieTipsTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>Tips for a perfect selfie</Text>
+                      </View>
+
+                      <View style={styles.selfieTipsGrid}>
+                        <View style={styles.selfieTipsCol}>
+                          <View style={styles.selfieTipsListItem}>
+                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Look straight into the camera</Text>
+                          </View>
+                          <View style={styles.selfieTipsListItem}>
+                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Ensure good lighting</Text>
+                          </View>
+                        </View>
+                        <View style={styles.selfieTipsCol}>
+                          <View style={styles.selfieTipsListItem}>
+                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Remove sunglasses, mask or hat</Text>
+                          </View>
+                          <View style={styles.selfieTipsListItem}>
+                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Keep your face within the frame</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
                   </View>
+                ) : isVerticalLayout ? (
+                  <View style={[styles.detailedCard, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
+                    <View style={styles.detailedCardContent}>
+                      <Text style={[styles.detailedCardTitle, { color: isDark ? '#FFF' : '#111827' }]}>
+                        {s === 'front' ? 'Upload Front Side' : 'Upload Back Side'}
+                      </Text>
+                      <Text style={[styles.detailedCardSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        Capture a clear photo of the{'\n'}
+                        {s === 'front' ? 'front side' : 'back side'} of your document.
+                      </Text>
+
+                      <View style={styles.actionButtonGroup}>
+                        <TouchableOpacity
+                          style={styles.primaryButton}
+                          onPress={() => pickImage(s, true)}
+                          disabled={isSubmitting}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="camera" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                          <Text style={styles.primaryButtonText} numberOfLines={1} adjustsFontSizeToFit>Camera</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.secondaryButton, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]}
+                          onPress={() => pickImage(s, false)}
+                          disabled={isSubmitting}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="image-outline" size={16} color={isDark ? '#3B82F6' : '#2563EB'} style={{ marginRight: 4 }} />
+                          <Text style={[styles.secondaryButtonText, { color: isDark ? '#3B82F6' : '#2563EB' }]} numberOfLines={1} adjustsFontSizeToFit>Gallery</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={styles.fileInfoText}>JPG, PNG or PDF • Max size 5MB</Text>
+                    </View>
+
+                    <View style={styles.detailedCardImageContainer}>
+                      <View style={[styles.scannerBracket, styles.bracketTopLeft, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
+                      <View style={[styles.scannerBracket, styles.bracketTopRight, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
+                      <View style={[styles.scannerBracket, styles.bracketBottomLeft, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
+                      <View style={[styles.scannerBracket, styles.bracketBottomRight, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
+
+                      <View style={styles.mockImageWrapper}>
+                        {hasImage ? (
+                          <>
+                            <Image source={{ uri: images[s] }} style={styles.uploadedDetailedImage} />
+
+                            {isSubmitting && currentlyUploading[s] && (
+                              <View style={[styles.uploadOverlay, { borderRadius: 12 }]}>
+                                <View style={styles.progressCircleContainer}>
+                                  <Svg width="60" height="60" viewBox="0 0 100 100">
+                                    <Circle cx="50" cy="50" r="45" stroke="#FFFFFF33" strokeWidth="8" fill="transparent" />
+                                    <Circle
+                                      cx="50" cy="50" r="45" stroke="#10B981" strokeWidth="8" fill="transparent"
+                                      strokeDasharray={`${2 * Math.PI * 45}`}
+                                      strokeDashoffset={`${2 * Math.PI * 45 * (1 - (uploadProgress[s] || 0))}`}
+                                      strokeLinecap="round" transform="rotate(-90 50 50)"
+                                    />
+                                  </Svg>
+                                  <View style={styles.percentageTextContainer}>
+                                    <Text style={styles.percentageText}>{Math.round((uploadProgress[s] || 0) * 100)}%</Text>
+                                  </View>
+                                </View>
+                              </View>
+                            )}
+
+                            {uploadErrors[s] && !currentlyUploading[s] && (
+                              <View style={[styles.uploadOverlay, { borderRadius: 12, backgroundColor: 'rgba(220, 38, 38, 0.7)' }]}>
+                                <Ionicons name="alert-circle-outline" size={30} color="#fff" />
+                                <TouchableOpacity style={styles.errorRetryBtn} onPress={() => handleContinue()}>
+                                  <Text style={styles.errorRetryText} numberOfLines={1} adjustsFontSizeToFit>{t('retry') || 'Retry'}</Text>
+                                </TouchableOpacity>
+                              </View>
+                            )}
+
+                            {successfulUploads[s] && !currentlyUploading[s] && (
+                              <View style={[styles.successBadge, { top: 4, right: 4 }]}>
+                                <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                              </View>
+                            )}
+                          </>
+                        ) : (
+                          <Image
+                            source={
+                              docKey === 'Aadhar_Card'
+                                ? (s === 'front' ? require('../../assets/images/aadhar.png') : require('../../assets/images/aadhar_back.png'))
+                                : docKey === 'Pan_Card'
+                                  ? require('../../assets/images/pan.png')
+                                  : docKey === 'Driving_License'
+                                    ? require('../../assets/images/dl.png')
+                                    : require('../../assets/images/documents.png')
+                            }
+                            style={styles.mockImage}
+                          />
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => chooseSource(s)}
+                    disabled={isSubmitting}
+                    style={[
+                      styles.uploadBox,
+                      isSelfie && styles.selfieBox,
+                      {
+                        backgroundColor: isDark ? '#374151' : '#F9FAFB',
+                        borderColor: hasImage
+                          ? '#2E7D32'
+                          : (isDark ? '#4B5563' : '#E5E7EB'),
+                      },
+                    ]}
+                  >
+                    {hasImage ? (
+                      <>
+                        <Image
+                          source={{ uri: images[s] }}
+                          style={[styles.image, isSelfie ? styles.selfieImage : { resizeMode: 'contain' }]}
+                        />
+
+                        {isSubmitting && currentlyUploading[s] && (
+                          <View style={[styles.uploadOverlay, isSelfie && { borderRadius: 75 }]}>
+                            <View style={styles.progressCircleContainer}>
+                              <Svg width="60" height="60" viewBox="0 0 100 100">
+                                {/* Background Circle */}
+                                <Circle
+                                  cx="50"
+                                  cy="50"
+                                  r="45"
+                                  stroke="#FFFFFF33"
+                                  strokeWidth="8"
+                                  fill="transparent"
+                                />
+                                {/* Progress Circle */}
+                                <Circle
+                                  cx="50"
+                                  cy="50"
+                                  r="45"
+                                  stroke="#10B981"
+                                  strokeWidth="8"
+                                  fill="transparent"
+                                  strokeDasharray={`${2 * Math.PI * 45}`}
+                                  strokeDashoffset={`${2 * Math.PI * 45 * (1 - (uploadProgress[s] || 0))}`}
+                                  strokeLinecap="round"
+                                  transform="rotate(-90 50 50)"
+                                />
+                              </Svg>
+                              <View style={styles.percentageTextContainer}>
+                                <Text style={styles.percentageText}>
+                                  {Math.round((uploadProgress[s] || 0) * 100)}%
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        )}
+
+                        {/* ERROR & RETRY */}
+                        {uploadErrors[s] && !currentlyUploading[s] && (
+                          <View style={[styles.uploadOverlay, isSelfie && { borderRadius: 75 }, { backgroundColor: 'rgba(220, 38, 38, 0.7)' }]}>
+                            <Ionicons name="alert-circle-outline" size={30} color="#fff" />
+                            <TouchableOpacity
+                              style={styles.errorRetryBtn}
+                              onPress={() => handleContinue()}
+                            >
+                              <Text style={styles.errorRetryText} numberOfLines={1} adjustsFontSizeToFit>{t('retry') || 'Retry'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+
+                        {/* SUCCESS BADGE */}
+                        {successfulUploads[s] && !currentlyUploading[s] && (
+                          <View style={[styles.successBadge, isSelfie && { top: 5, right: 5 }]}>
+                            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                          </View>
+                        )}
+
+                        {/* ACTION BUTTONS (View & Retake) - Non-Selfie stays inside */}
+                        {!isSubmitting && !isSelfie && (
+                          <View style={styles.actionButtonsRow}>
+
+                            <TouchableOpacity
+                              style={[styles.actionButton, styles.retakeButton]}
+                              onPress={() => chooseSource(s)}
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons name="camera-reverse-outline" size={16} color="#fff" />
+                              <Text style={styles.actionButtonText} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.placeholder}>
+                        {isUploading ? (
+                          <ActivityIndicator color={colors.primary} />
+                        ) : (
+                          <>
+
+                            <View>
+                              <Ionicons
+                                name={isSelfie ? "person-outline" : "camera-outline"}
+                                size={isSelfie ? 40 : 26}
+                                color={isSelfie ? colors.primary : colors.border}
+                                style={isSelfie && { opacity: 0.8 }}
+                              />
+                            </View>
+                            <Text style={[styles.placeholderText, { color: isDark ? '#6B7280' : '#9CA3AF' }]} numberOfLines={1} adjustsFontSizeToFit>
+                              {isSelfie ? t('profile_selfie') : t('tap_to_upload')}
+                            </Text>
+                            {isSelfie && (
+                              <Text style={[styles.placeholderText, { fontSize: 12, marginTop: 4, color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>
+                                {t('tap_to_upload')}
+                              </Text>
+                            )}
+                          </>
+                        )}
+                      </View>
+                    )}
+                  </TouchableOpacity>
                 )}
               </View>
             );
           })}
         </View>
 
-        {/* SECURITY */}
-        <View style={styles.secureRow}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={16}
-            color={colors.text}
-          />
-          <Text style={[styles.secureText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
-            {t('docs_secure_note')}
-          </Text>
-        </View>
-
-        {/* CONTINUE */}
-        <Button
-          disabled={Object.keys(images).length !== side.length || isSubmitting}
-          onPress={handleContinue}
-          style={{ height: 56, borderRadius: 16 }}
-        >
-          {isSubmitting ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <ActivityIndicator color="#fff" size="small" />
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
-                {uploadStage === 'uploading' ? t('uploading_doc', 'Uploading...') :
-                 uploadStage === 'verifying' ? t('verifying_doc', 'Verifying document...') :
-                 uploadStage === 'saving' ? t('saving_doc', 'Saving...') : t('processing', 'Processing...')}
-              </Text>
+        {/* TIPS SECTION */}
+        {docKey !== 'Profile_Selfie' && (
+          <View style={[styles.tipsCardContainer, { backgroundColor: isDark ? '#1E293B' : '#F0F5FF' }]}>
+            <View style={styles.tipsIconContainer}>
+              <Ionicons name="shield-checkmark" size={28} color="#2563EB" />
             </View>
-          ) : t('save_continue')}
-        </Button>
+
+            <View style={styles.tipsContentContainer}>
+              <Text style={[styles.tipsTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+                Tips for a successful upload
+              </Text>
+
+              <View style={styles.tipsListItem}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#2563EB" />
+                <Text style={[styles.tipsListText, { color: isDark ? '#CBD5E1' : '#334155', flex: 1, flexWrap: 'wrap' }]}>
+                  Capture all corners of the document
+                </Text>
+              </View>
+
+              <View style={styles.tipsListItem}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#2563EB" />
+                <Text style={[styles.tipsListText, { color: isDark ? '#CBD5E1' : '#334155', flex: 1, flexWrap: 'wrap' }]}>
+                  The text and photo must be clearly visible
+                </Text>
+              </View>
+
+              <View style={styles.tipsListItem}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#2563EB" />
+                <Text style={[styles.tipsListText, { color: isDark ? '#CBD5E1' : '#334155', flex: 1, flexWrap: 'wrap' }]}>
+                  Avoid blur, glare or dark images
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.tipsRightImageWrapper}>
+              <Image
+                source={require('../../assets/images/clearImg.png')}
+                style={styles.tipsRightImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+        )}
+
+        {/* FOOTER SECTION */}
+        <View style={{ marginTop: 'auto' }}>
+          {/* CONTINUE */}
+          {Object.keys(images).length === side.length && (
+            <Button
+              disabled={isSubmitting}
+              onPress={handleContinue}
+              style={{ height: 48, borderRadius: 12, backgroundColor: '#2563EB', borderColor: '#2563EB' }}
+            >
+              {isSubmitting ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                    {uploadStage === 'uploading' ? t('uploading_doc', 'Uploading...') :
+                      uploadStage === 'verifying' ? t('verifying_doc', 'Verifying document...') :
+                        uploadStage === 'saving' ? t('saving_doc', 'Saving...') : t('processing', 'Processing...')}
+                  </Text>
+                </View>
+              ) : t('save_continue')}
+            </Button>
+          )}
+
+          {/* SECURITY */}
+          <View style={styles.secureRow}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={16}
+              color={colors.text}
+            />
+            <Text style={[styles.secureText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+              {t('docs_secure_note')}
+            </Text>
+          </View>
+        </View>
       </View>
 
       <ImageZoomModal
@@ -690,7 +959,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
           // Open camera directly for the first side
           const firstSide = side[0];
           if (firstSide) {
-            imagePickerRef.current?.present(firstSide);
+            chooseSource(firstSide);
           }
         }}
       />
@@ -704,17 +973,30 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: '#111827',
+  headerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
   },
-  subtitle: {
-    fontSize: 14,
-    opacity: 0.6,
-    marginBottom: 20,
-    color: '#4B5563',
+  headerTextContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
+  headerImage: {
+    width: 140,
+    height: 100,
+    resizeMode: 'contain',
   },
   row: {
     flexDirection: 'row',
@@ -729,7 +1011,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selfieCol: {
-    flex: 0,
+    width: '100%',
     alignItems: 'center',
   },
   sideLabel: {
@@ -914,5 +1196,268 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
+  },
+  detailedCard: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 10,
+  },
+  detailedCardContent: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  detailedCardTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  detailedCardSubtitle: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 10,
+  },
+  actionButtonGroup: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  primaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563EB',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  primaryButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  secondaryButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  fileInfoText: {
+    fontSize: 10,
+    color: '#9CA3AF',
+  },
+  detailedCardImageContainer: {
+    width: 120,
+    height: 86,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mockImageWrapper: {
+    width: 100,
+    height: 66,
+    borderRadius: 6,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  mockImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  uploadedDetailedImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  scannerBracket: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderWidth: 2,
+    borderColor: '#2563EB',
+    zIndex: 10,
+    borderRadius: 2,
+  },
+  bracketTopLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bracketTopRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bracketBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bracketBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  tipsCardContainer: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tipsIconContainer: {
+    marginRight: 8,
+  },
+  tipsContentContainer: {
+    flex: 1,
+    paddingRight: 6,
+  },
+  tipsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  tipsListItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 2,
+  },
+  tipsListText: {
+    fontSize: 11,
+    marginLeft: 4,
+  },
+  tipsRightImageWrapper: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tipsRightImage: {
+    width: '100%',
+    height: '100%',
+  },
+  selfieDetailedContainer: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  selfieCircleWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  selfiePlaceholderCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  selfieHasImage: {
+    backgroundColor: 'transparent',
+  },
+  selfieCapturedImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  selfieTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  selfieSubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: 20,
+  },
+  selfieCaptureButtonWrapper: {
+    marginBottom: 12,
+  },
+  selfieCaptureRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selfieCaptureButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selfieCaptureTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  selfieCaptureSubtitle: {
+    fontSize: 11,
+    marginBottom: 20,
+  },
+  selfieTipsContainer: {
+    width: '100%',
+    borderRadius: 12,
+    padding: 12,
+  },
+  selfieTipsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  selfieTipsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  selfieTipsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  selfieTipsCol: {
+    flex: 1,
+  },
+  selfieTipsListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  selfieTipsListText: {
+    fontSize: 10,
+    marginLeft: 4,
+    flexShrink: 1,
   },
 });

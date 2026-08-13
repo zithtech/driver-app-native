@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import RNPrint from 'react-native-print';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import { calculateDistance } from '../../utils/locationUtils';
 import { useAlert } from '../../context/AlertContext';
 import { useHaptic } from '../../hooks/useHaptic';
 import { formatCurrency } from '../../lib/currency';
@@ -143,17 +144,6 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
     const dLat = parseFloat(tripData.drop_lat || initialRide.dropLat || '0');
     const dLng = parseFloat(tripData.drop_lng || initialRide.dropLng || '0');
     const tripTypeStr = tripData.trip_type || tripData.ride_type || initialRide.tripType || 'One-way';
-
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-      if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
-      const R = 6371; // km
-      const dLat = (lat2 - lat1) * (Math.PI / 180);
-      const dLon = (lon2 - lon1) * (Math.PI / 180);
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-                Math.sin(dLon/2) * Math.sin(dLon/2);
-      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-    };
 
     let distKm = parseFloat(tripData.distance_km || '0');
     const calculatedDist = calculateDistance(pLat, pLng, dLat, dLng);

@@ -38,6 +38,7 @@ import {
   ReferEarn_Nav,
   SubscriptionHistory_Nav,
   SubscriptionDetail_Nav,
+  VerificationSuccessScreen_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -101,6 +102,7 @@ import DocumentUploadScreen from '../Screens/Auth/DocumentUploadScreen';
 import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
 import PersonalDetails from '../Screens/Auth/PersonalDetails';
 import AddressDetails from '../Screens/Auth/AddressDetails';
+import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
 import VehicleVerificationScreen from '../Screens/Requests/VehicleVerificationScreen';
 import NavigationScreen from '../Screens/Navigation/NavigationScreen';
 import ChatScreen from '../Screens/Chatscreen';
@@ -429,6 +431,7 @@ const RootNavigation = () => {
           <Stack.Screen name={DocumentScreen_Nav} component={DocumentScreen} />
           <Stack.Screen name={DocumentUploadScreen_Nav} component={DocumentUploadScreen} />
           <Stack.Screen name={SmartSelfieScreen_Nav} component={SmartSelfieScreen} options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name={VerificationSuccessScreen_Nav} component={VerificationSuccessScreen} options={{ headerShown: false }} />
 
           {/* -------- DASHBOARD -------- */}
           <Stack.Screen name={Dashboard_Nav} component={DriverTabs} />

@@ -68,9 +68,19 @@ const OTPInput: React.FC<OTPInputProps> = ({
           index !== numberOfDigits - 1 && styles.gap,
         ]}
       >
-        <Text style={[fonts.medium, Styles.fs16, { color: colors.text }]}>
-          {digit}
-        </Text>
+        {digit ? (
+          <Text style={[fonts.bold, { fontSize: 20, color: isFocusedDigit ? colors.primary : colors.text }]}>
+            {digit}
+          </Text>
+        ) : isFocusedDigit ? (
+          <Text style={[fonts.medium, { fontSize: 20, color: colors.primary }]}>
+            |
+          </Text>
+        ) : (
+          <Text style={[fonts.medium, { fontSize: 20, color: colors.border || '#D1D5DB' }]}>
+            -
+          </Text>
+        )}
       </View>
     );
   };
@@ -115,13 +125,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   box: {
-    height: 48,
-    width: 48,
+    height: 42,
+    width: 42,
     justifyContent: 'center',
     alignItems: 'center',
   },
   gap: {
-    marginRight: 12,
+    marginRight: 8,
   },
   hiddenInput: {
     position: 'absolute',

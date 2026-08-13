@@ -732,9 +732,20 @@ const DriverDashboard = () => {
         {/* ── UPCOMING ACCEPTED RIDE ── */}
         <UpcomingAcceptedRide 
           trip={nextScheduledRide} 
-          onViewAllPress={() => navigation.navigate('SubscriptionHistoryScreen')} 
+          onViewAllPress={() => navigation.navigate('ScheduledRides')} 
           onNavigatePress={() => {
-            // Placeholder for navigation logic if needed
+            showAlert(
+              t('start_navigation', 'Start Navigation'),
+              t('confirm_navigation_msg', 'Do you want to start navigating to the scheduled ride location?'),
+              {
+                singleButton: false,
+                confirmText: t('continue', 'Continue'),
+                onConfirm: () => {
+                  setAlertModalVisible(false);
+                  navigation.navigate('PickupMapScreen', { ride: nextScheduledRide });
+                }
+              }
+            );
           }}
         />
 

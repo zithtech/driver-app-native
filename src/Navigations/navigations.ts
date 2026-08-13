@@ -13,6 +13,7 @@ export const DocumentScreen_Nav = 'DocumentScreen';
 export const DocumentUploadScreen_Nav = 'DocumentUploadScreen';
 export const CaptureSelfie_Nav = 'CaptureSelfie';
 export const SmartSelfieScreen_Nav = 'SmartSelfieScreen';
+export const VerificationSuccessScreen_Nav = 'VerificationSuccessScreen';
 /* ❌ REMOVED
 export const DocumentVerificationStatus_Nav = "DocumentVerificationStatus";
 */

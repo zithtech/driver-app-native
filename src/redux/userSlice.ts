@@ -79,6 +79,7 @@ export interface UserState {
 
   address?: {
     street?: string;
+    landmark?: string;
     city?: string;
     district?: string;
     state?: string;

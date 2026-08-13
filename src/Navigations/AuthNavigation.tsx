@@ -10,6 +10,7 @@ import {
   DocumentUploadScreen_Nav,
   SmartSelfieScreen_Nav,
   HelpCenter_Nav,
+  VerificationSuccessScreen_Nav,
 } from './navigations';
 
 import WelcomeScreen from '../Screens/Auth/WelcomeScreen';
@@ -19,6 +20,7 @@ import AddressDetails from '../Screens/Auth/AddressDetails';
 import DocumentScreen from '../Screens/Auth/DocumentScreen';
 import DocumentUploadScreen from '../Screens/Auth/DocumentUploadScreen';
 import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
+import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
 import HelpCenterScreen from '../Screens/Profile/Support/HelpCenterScreen';
 import { LeftArrow } from '../assets/svg';
 
@@ -98,6 +100,13 @@ const AuthNavigation = () => {
         name={SmartSelfieScreen_Nav}
         component={SmartSelfieScreen}
         options={{ headerShown: false, presentation: 'modal' }}
+      />
+
+      {/* VERIFICATION SUCCESS SCREEN */}
+      <Stack.Screen
+        name={VerificationSuccessScreen_Nav}
+        component={VerificationSuccessScreen}
+        options={headerNoBack}
       />
 
       {/* HELP CENTER SCREEN */}
