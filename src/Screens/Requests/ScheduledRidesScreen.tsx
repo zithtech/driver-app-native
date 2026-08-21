@@ -6,8 +6,6 @@ import {
   StyleSheet,
   Pressable,
   FlatList,
-  Alert,
-  Linking,
   TouchableOpacity,
   Animated,
   RefreshControl,
@@ -15,6 +13,7 @@ import {
   Image,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -24,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { PickupMapScreen_Nav, ScheduledRideDetails_Nav } from '../../Navigations/navigations';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -80,7 +80,7 @@ const ScheduledRidesScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'live' | 'scheduled'>('scheduled');
-  const [selectedDate, setSelectedDate] = useState<string>(moment().format('YYYY-MM-DD'));
+  const [selectedDate, setSelectedDate] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [sortBy, setSortBy] = useState<SortOption>('time');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -98,6 +98,7 @@ const ScheduledRidesScreen = () => {
   const [acceptingRideId, setAcceptingRideId] = useState<string | null>(null);
   const [acceptedSuccessId, setAcceptedSuccessId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // 🛡️ Ref to always have the latest myAcceptedRideId inside socket callbacks (avoids stale closure)
   const myAcceptedRideIdRef = useRef<string | null>(myAcceptedRideId);
@@ -163,16 +164,12 @@ const ScheduledRidesScreen = () => {
   const switchTab = useCallback((tab: 'live' | 'scheduled') => {
     setActiveTab(prevTab => {
       if (prevTab === tab) { return prevTab; }
-
       triggerHaptic(HapticFeedbackTypes.impactLight);
-      
-      if (tab === 'live') {
-        navigation.navigate('Dashboard');
-      }
-
       return tab;
     });
-  }, [triggerHaptic, navigation]);
+    // Auto-refresh data when switching tabs
+    refetchTrips();
+  }, [triggerHaptic, navigation, refetchTrips]);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -223,7 +220,7 @@ const ScheduledRidesScreen = () => {
           scheduled_status: trip.scheduled_status,
           re_dispatch_count: trip.re_dispatch_count,
           car_name: trip.car_name || trip.vehicle_model || trip.vehicle_type || 'Standard Sedan',
-          transmission: trip.transmission || trip.transmission_type || 'Manual',
+          transmission: String(trip.transmission || trip.transmission_type || 'Manual').replace('_', ' '),
           fuel_type: trip.fuel_type || trip.engine_type || 'Petrol',
         };
       });
@@ -254,7 +251,7 @@ const ScheduledRidesScreen = () => {
           scheduled_status: currentRide.scheduled_status,
           re_dispatch_count: currentRide.re_dispatch_count,
           car_name: currentRide.car_name || currentRide.vehicle_model || currentRide.vehicle_type || 'Standard Sedan',
-          transmission: currentRide.transmission || currentRide.transmission_type || 'Manual',
+          transmission: String(currentRide.transmission || currentRide.transmission_type || 'Manual').replace('_', ' '),
           fuel_type: currentRide.fuel_type || currentRide.engine_type || 'Petrol',
         } as Ride);
       }
@@ -302,7 +299,8 @@ const ScheduledRidesScreen = () => {
       if (ride.booking_type !== 'SCHEDULED') { return false; }
 
       // ALWAYS allow my accepted ride to show in the accepted tab
-      if (String(ride.trip_id) === String(myAcceptedRideId)) return true;
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user.driverId || user.id);
+      if (isMine) return true;
 
       // 2. No new scheduled rides if it's a 'day' plan or no subscription
       if (billingCycle === 'day' || !billingCycle) {
@@ -317,28 +315,44 @@ const ScheduledRidesScreen = () => {
       const type = (ride.ride_type || ride.service_type || '').toLowerCase();
 
       if (isBasic) {
-        // Basic: only one_way
-        if (type !== 'one_way') return false;
-      } else if (isElite) {
-        // Elite: local, one_way, outstation (NO round_trip)
-        if (type === 'round_trip') return false;
+        // Basic: local, one_way, and round_trip ONLY (no outstation)
+        if (!['local', 'one_way', 'round_trip'].includes(type)) {
+          return false;
+        }
       }
-
-      // Premium allows all
+      
+      // Elite and Premium allow all
       return true;
     });
   }, [rides, myAcceptedRideId, subData, user]);
 
   const filteredRides = useMemo(() => {
     let result = baseEligibleRides.filter((ride) => {
-      const rideDateStr = moment(ride.scheduled_start_time).format('YYYY-MM-DD');
-      if (rideDateStr !== selectedDate) return false;
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user.driverId || user.id);
+      const status = ride.trip_status;
+      
+      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
+        return false;
+      }
+
+      if (activeTab === 'live') {
+        if (!isMine || status === 'PENDING') return false;
+        // If it belongs to this driver and we are in the live tab, bypass date and category filters
+        return true;
+      } else {
+        // In the scheduled tab, hide rides that are active/accepted (they belong in live)
+        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return false;
+      }
+
+      if (selectedDate !== 'all') {
+        const rideDateStr = moment(ride.scheduled_start_time).format('YYYY-MM-DD');
+        if (rideDateStr !== selectedDate) return false;
+      }
 
       // Filter by Type (Categories)
       if (filterType !== 'all') {
         const type = (ride.ride_type || ride.service_type || '').toLowerCase();
 
-        // Local condition removed
         if (filterType === 'outstation_one_way') { if (type !== 'outstation_one_way') return false; }
         else if (filterType === 'outstation_round_trip') {
           if (type !== 'outstation_round_trip') return false;
@@ -347,21 +361,6 @@ const ScheduledRidesScreen = () => {
         else if (filterType === 'round_trip') { if (type !== 'round_trip') return false; }
         else if (filterType === 'high_value') {
           if (ride.total_fare < 300) return false;
-        }
-      }
-
-      // Filter by Status: Only show available requests OR my own active ride
-      // ALWAYS exclude COMPLETED, CANCELLED, or REJECTED
-      const status = ride.trip_status;
-      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
-        return false;
-      }
-
-      // If it's another driver's active/accepted ride, exclude it
-      const isMine = String(ride.trip_id) === String(myAcceptedRideId);
-      if (!isMine) {
-        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
-          return false;
         }
       }
 
@@ -428,16 +427,23 @@ const ScheduledRidesScreen = () => {
         return false;
       }
 
-      const isMine = r.trip_id === myAcceptedRideId;
-      if (!isMine) {
-        // Exclude others' active/accepted rides
-        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
-          return false;
+      const isMine = String(r.trip_id) === String(myAcceptedRideId);
+
+      if (activeTab === 'live') {
+        if (!isMine || status === 'PENDING') return false;
+      } else {
+        if (!isMine) {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return false;
+        } else {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return false;
         }
       }
 
-      const rideDateStr = moment(r.scheduled_start_time).format('YYYY-MM-DD');
-      return rideDateStr === selectedDate;
+      if (selectedDate !== 'all') {
+        const rideDateStr = moment(r.scheduled_start_time).format('YYYY-MM-DD');
+        return rideDateStr === selectedDate;
+      }
+      return true;
     });
 
     const getCount = (type: FilterType) => {
@@ -458,6 +464,27 @@ const ScheduledRidesScreen = () => {
       outstation_round_trip: getCount('outstation_round_trip'),
       high_value: getCount('high_value'),
     };
+  }, [baseEligibleRides, activeTab, myAcceptedRideId]);
+
+  // 📊 Compute available dates for the Date Selector dot indicators
+  const availableDates = useMemo(() => {
+    const dates = new Set<string>();
+    baseEligibleRides.forEach(r => {
+      const status = r.trip_status;
+      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) return;
+      const isMine = String(r.trip_id) === String(myAcceptedRideId);
+      if (activeTab === 'live') {
+        if (!isMine || status === 'PENDING') return;
+      } else {
+        if (!isMine) {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return;
+        } else {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return;
+        }
+      }
+      dates.add(moment(r.scheduled_start_time).format('YYYY-MM-DD'));
+    });
+    return dates;
   }, [baseEligibleRides, activeTab, myAcceptedRideId]);
 
   // No pulse animation needed for new UI
@@ -584,6 +611,7 @@ const ScheduledRidesScreen = () => {
       // Delay to let the driver see the success state
       setTimeout(() => {
         setSelectedDate(moment(rideToStore.scheduled_start_time).format('YYYY-MM-DD'));
+        switchTab('live');
         setAcceptedSuccessId(null);
         setSelectedRide(null);
         refetchTrips();
@@ -987,6 +1015,7 @@ const ScheduledRidesScreen = () => {
       style={[styles.container, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}
       edges={['top']}
     >
+      <AppStatusBar />
       {/* Header Section */}
       <HeaderSection 
         isOnline={isOnline}
@@ -999,6 +1028,7 @@ const ScheduledRidesScreen = () => {
       <TopTabs 
         activeTab={activeTab}
         onTabChange={switchTab}
+        hasAcceptedRide={!!myAcceptedRideId}
         theme={theme}
         isDark={isDark}
         t={t}
@@ -1008,10 +1038,32 @@ const ScheduledRidesScreen = () => {
         selectedDate={selectedDate}
         onDateSelect={setSelectedDate}
         onFilterPress={() => setShowSortModal(true)}
+        onPickDatePress={() => setShowDatePicker(true)}
+        availableDates={availableDates}
         theme={theme}
         isDark={isDark}
         t={t}
       />
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate && selectedDate !== 'all' ? moment(selectedDate).toDate() : new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            if (Platform.OS === 'android') {
+              setShowDatePicker(false);
+            }
+            if (event.type === 'set' || event.type === 'dismissed') {
+              setShowDatePicker(false);
+            }
+            if (date) {
+              setSelectedDate(moment(date).format('YYYY-MM-DD'));
+              setShowDatePicker(false);
+            }
+          }}
+        />
+      )}
 
       <Text style={[styles.sectionTitle, { color: theme.colors.text, marginHorizontal: ms(16), marginTop: vs(8), marginBottom: vs(8) }]}>Select Ride Type</Text>
       <View style={styles.filterBar}>
@@ -1079,6 +1131,8 @@ const ScheduledRidesScreen = () => {
         />
       </View>
 
+      <View style={{ height: 1, backgroundColor: isDark ? theme.colors.border : '#E2E8F0', marginHorizontal: ms(16), marginBottom: vs(12) }} />
+
       {loading ? (
         <FlatList
           data={[1, 2, 3]}
@@ -1098,7 +1152,17 @@ const ScheduledRidesScreen = () => {
                 theme={theme}
                 isDark={isDark}
                 t={t}
-                onPress={(ride: any) => navigation.navigate(ScheduledRideDetails_Nav, { ride })}
+                activeTab={activeTab}
+                onPress={(ride: any) => navigation.navigate(ScheduledRideDetails_Nav, { 
+                  ride, 
+                  onAccept: () => acceptRide(ride), 
+                  onStartNavigation: () => startHeadingToPickup(ride),
+                  onCancelPress: () => {
+                    navigation.goBack();
+                    setRideToCancel(ride);
+                    setShowCancelModal(true);
+                  }
+                })}
               />
             );
           }}

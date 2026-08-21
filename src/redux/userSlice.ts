@@ -17,6 +17,8 @@ export interface UserState {
   userId?: string;
   driverId?: string;
   device_id?: string;
+  today_earnings?: number | string;
+  total_earnings?: number | string;
 
   /* Phone — backend sends phone_number */
   phone_number?: string;
@@ -121,6 +123,7 @@ export interface UserState {
   referred_by?: string;
   
   /* Credit / Wallet */
+  wallet_balance?: number;
   credit?: {
     limit: number;
     balance: number;

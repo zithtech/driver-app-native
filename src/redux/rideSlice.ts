@@ -6,6 +6,7 @@ export interface Ride {
     trip_id: string;
     trip_code?: string;
     user_id: string;
+    driver_id?: string | number | null;
     vehicle_id: string | null;
     ride_type: string;
     service_type: string;

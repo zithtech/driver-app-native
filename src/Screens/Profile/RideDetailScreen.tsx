@@ -762,6 +762,17 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
                         {formatCurrency(platformFee)}
                       </Text>
                     </View>
+                    
+                    {!!ride.driver_allowance && ride.driver_allowance > 0 && !isCancelled && (
+                      <View style={styles.fareItemRow}>
+                        <Text style={[styles.fareItemLabel, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                          {tt('driver_allowance', 'Driver Allowance')}
+                        </Text>
+                        <Text style={[styles.fareItemValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                          {formatCurrency(ride.driver_allowance)}
+                        </Text>
+                      </View>
+                    )}
 
                     <View style={[styles.fareDivider, { borderColor: isDark ? '#374151' : '#E5E7EB' }]} />
 

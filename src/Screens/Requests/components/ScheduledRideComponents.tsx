@@ -7,16 +7,16 @@ import moment from 'moment';
 // --- Header Section ---
 export const HeaderSection = ({ isOnline, onToggleStatus, theme, isDark, t }: any) => {
   return (
-    <View style={[styles.headerContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F4FF' }]}>
+    <View style={[styles.headerContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F0F4FF', padding: ms(8), marginBottom: vs(4) }]}>
       <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-        <View style={styles.onlineRing}>
-          <View style={[styles.onlineDot, !isOnline && { backgroundColor: '#EF4444' }]} />
+        <View style={[styles.onlineRing, { backgroundColor: isOnline ? '#D1FAE5' : '#FEE2E2' }]}>
+          <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#10B981' : '#EF4444' }]} />
         </View>
-        <View style={{ flex: 1, marginLeft: ms(12) }}>
+        <View style={{ flex: 1, marginLeft: ms(10) }}>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             {isOnline ? "You're Online" : "You're Offline"}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.paragraphText }]}>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.paragraphText }]} numberOfLines={2}>
             You will receive scheduled ride requests as per your availability.
           </Text>
         </View>
@@ -26,16 +26,21 @@ export const HeaderSection = ({ isOnline, onToggleStatus, theme, isDark, t }: an
 };
 
 // --- Top Tabs Section ---
-export const TopTabs = ({ activeTab, onTabChange, theme, isDark, t }: any) => {
+export const TopTabs = ({ activeTab, onTabChange, hasAcceptedRide, theme, isDark, t }: any) => {
   return (
     <View style={[styles.tabsWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#FFF', borderColor: isDark ? theme.colors.border : '#E2E8F0' }]}>
       <TouchableOpacity 
         style={[styles.tab, activeTab === 'live' && styles.activeTab]}
         onPress={() => onTabChange('live')}
       >
-        <Ionicons name="radio-outline" size={ms(18)} color={activeTab === 'live' ? '#2563EB' : theme.colors.textMuted} />
+        <View style={{ position: 'relative' }}>
+          <Ionicons name="radio-outline" size={ms(18)} color={activeTab === 'live' ? '#2563EB' : theme.colors.textMuted} />
+          {hasAcceptedRide && (
+            <View style={{ position: 'absolute', top: -vs(2), right: -ms(2), width: ms(8), height: ms(8), borderRadius: ms(4), backgroundColor: '#10B981', borderWidth: 1, borderColor: isDark ? theme.colors.background : '#FFF' }} />
+          )}
+        </View>
         <Text style={[styles.tabText, { color: activeTab === 'live' ? '#2563EB' : theme.colors.textMuted }]}>
-          Live Rides
+          Accepted Ride
         </Text>
       </TouchableOpacity>
       
@@ -53,10 +58,16 @@ export const TopTabs = ({ activeTab, onTabChange, theme, isDark, t }: any) => {
 };
 
 // --- Date Selector Section ---
-export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress, theme, isDark, t }: any) => {
+export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress, onPickDatePress, availableDates = new Set(), theme, isDark, t }: any) => {
   const dates = useMemo(() => {
     const list = [];
-    for (let i = 0; i < 4; i++) {
+    list.push({
+      id: 'all',
+      dayName: 'Show',
+      dateNum: 'All',
+      month: 'Dates'
+    });
+    for (let i = 0; i < 3; i++) {
       const d = moment().add(i, 'days');
       list.push({
         id: d.format('YYYY-MM-DD'),
@@ -65,8 +76,19 @@ export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress,
         month: d.format('MMM')
       });
     }
+    
+    // If selectedDate is not 'all' and not in the list, add it as a custom date
+    if (selectedDate && selectedDate !== 'all' && !list.find(d => d.id === selectedDate)) {
+      const customD = moment(selectedDate);
+      list.push({
+        id: selectedDate,
+        dayName: customD.format('ddd'),
+        dateNum: customD.format('DD'),
+        month: customD.format('MMM')
+      });
+    }
     return list;
-  }, []);
+  }, [selectedDate]);
 
   return (
     <View style={styles.sectionContainer}>
@@ -80,6 +102,7 @@ export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress,
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateList}>
         {dates.map((dateItem) => {
           const isActive = selectedDate === dateItem.id;
+          const hasRides = dateItem.id === 'all' ? availableDates.size > 0 : availableDates.has(dateItem.id);
           return (
             <TouchableOpacity
               key={dateItem.id}
@@ -92,14 +115,20 @@ export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress,
               ]}
               onPress={() => onDateSelect(dateItem.id)}
             >
+              {hasRides && (
+                <View style={{ position: 'absolute', top: vs(4), right: ms(4), width: ms(6), height: ms(6), borderRadius: ms(3), backgroundColor: '#10B981' }} />
+              )}
               <Text style={[styles.dateDayText, { color: isActive ? '#BFDBFE' : theme.colors.paragraphText }]}>{dateItem.dayName}</Text>
-              <Text style={[styles.dateNumText, { color: isActive ? '#FFF' : theme.colors.text }]}>{dateItem.dateNum}</Text>
+              <Text style={[{ fontSize: dateItem.id === 'all' ? ms(12) : ms(14), fontWeight: '700', marginVertical: vs(0) }, { color: isActive ? '#FFF' : theme.colors.text }]}>{dateItem.dateNum}</Text>
               <Text style={[styles.dateMonthText, { color: isActive ? '#BFDBFE' : theme.colors.paragraphText }]}>{dateItem.month}</Text>
             </TouchableOpacity>
           );
         })}
-        <TouchableOpacity style={[styles.dateCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#E2E8F0', justifyContent: 'center' }]}>
-          <Ionicons name="calendar-outline" size={ms(24)} color={theme.colors.textMuted} style={{ alignSelf: 'center', marginBottom: vs(4) }}/>
+        <TouchableOpacity 
+          style={[styles.dateCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#E2E8F0', justifyContent: 'center' }]}
+          onPress={onPickDatePress}
+        >
+          <Ionicons name="calendar-outline" size={ms(20)} color={theme.colors.textMuted} style={{ alignSelf: 'center', marginBottom: vs(2) }}/>
           <Text style={[styles.dateDayText, { color: theme.colors.textMuted }]}>Pick Date</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -135,112 +164,130 @@ export const StatsRow = ({ stats, theme, isDark, t }: any) => {
         <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Est. Earnings</Text>
         <Ionicons name="information-circle-outline" size={ms(12)} color={theme.colors.textMuted} style={{ position: 'absolute', right: ms(2), bottom: vs(2) }} />
       </View>
+      {!!stats.driverAllowance && stats.driverAllowance > 0 && (
+        <>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Ionicons name="wallet-outline" size={ms(18)} color="#D97706" />
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>₹{stats.driverAllowance}</Text>
+            <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Allowance</Text>
+          </View>
+        </>
+      )}
     </View>
   );
 };
 
 // --- Scheduled Ride Card ---
-export const ScheduledRideCard = ({ item, getRemainingTime, theme, isDark, t, onPress }: any) => {
-  const { text: timeText, isUrgent } = getRemainingTime(item.startTime);
+export const ScheduledRideCard = ({ item, getRemainingTime, theme, isDark, t, onPress, activeTab }: any) => {
   const startTimeObj = moment(item.startTime);
-  const timeStr = startTimeObj.format('hh:mm A');
-  const dateStr = startTimeObj.calendar(null, {
-    sameDay: '[Today] DD MMM',
-    nextDay: '[Tomorrow] DD MMM',
-    nextWeek: 'ddd DD MMM',
-    lastDay: '[Yesterday] DD MMM',
-    lastWeek: 'ddd DD MMM',
-    sameElse: 'DD MMM'
-  });
+  const remainingTime = getRemainingTime ? getRemainingTime(item.startTime) : { text: '', isUrgent: false };
+  const timeText = remainingTime?.text?.replace(/\s*left\s*/i, '')?.replace(t('left'), '')?.trim() || '';
+  const pickupLabel = remainingTime?.text?.toLowerCase().includes('now') || timeText.toLowerCase().includes('now') 
+    ? remainingTime.text 
+    : `Pickup in ${timeText}`;
 
   const getRideTypeLabel = (type: string) => {
     const map: any = {
-      'one_way': 'One-way',
-      'round_trip': 'Round-trip',
-      'outstation_one_way': 'Outstation One-way',
-      'outstation_round_trip': 'Outstation Round-trip'
+      'one_way': 'One-Way',
+      'round_trip': 'Round-Trip',
+      'outstation_one_way': 'Outstation\nOne-Way',
+      'outstation_round_trip': 'Outstation\nRound-Trip'
     };
-    return map[type?.toLowerCase()] || type || 'One-way';
+    return map[type?.toLowerCase()] || type || 'One-Way';
   };
 
-  const getStatusColor = (status: string) => {
-    if (status === 'ACCEPTED' || status === 'PENDING') return '#F59E0B'; // Orange
-    return '#2563EB'; // Blue for Upcoming
-  };
-
-  const getStatusText = (status: string) => {
-    if (status === 'ACCEPTED') return 'Pending'; // Matches design where accepted but not started is pending/upcoming
-    return 'Upcoming';
-  };
-
-  const isAccepted = item.trip_status === 'ACCEPTED';
-  const displayStatus = isAccepted ? 'Pending' : 'Upcoming';
-  const statusColor = getStatusColor(displayStatus);
+  const isLive = activeTab === 'live';
 
   return (
     <TouchableOpacity 
-      style={[styles.rideCard, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#F3F4F6' }]}
+      style={[styles.rideCard, { backgroundColor: 'transparent', borderColor: isLive ? '#10B981' : (isDark ? theme.colors.border : '#E2E8F0'), padding: ms(12), marginHorizontal: ms(8) }]}
       onPress={() => onPress(item)}
       activeOpacity={0.8}
     >
-      <View style={styles.cardRow}>
-        {/* Left Side: Time */}
-        <View style={styles.timeCol}>
+      <View style={[styles.cardRow, { alignItems: 'center' }]}>
+        {/* Left Side: Time & Date */}
+        <View style={[styles.timeCol, { borderRightWidth: 1, borderRightColor: isDark ? theme.colors.border : '#F3F4F6', paddingRight: ms(12), marginRight: ms(12), width: undefined }]}>
+          {isLive && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: vs(4) }}>
+              <View style={{ width: ms(6), height: ms(6), borderRadius: ms(3), backgroundColor: '#10B981', marginRight: s(4) }} />
+              <Text style={{ fontSize: ms(9), color: '#10B981', fontWeight: '800' }}>LIVE</Text>
+            </View>
+          )}
           <Text style={[styles.cardTimeText, { color: theme.colors.text }]}>{startTimeObj.format('hh:mm')}</Text>
           <Text style={[styles.cardAmPmText, { color: theme.colors.text }]}>{startTimeObj.format('A')}</Text>
-          <Text style={[styles.cardDateText, { color: theme.colors.textMuted }]}>{dateStr}</Text>
+          <View style={{ width: ms(24), height: 1, backgroundColor: isDark ? theme.colors.border : '#E2E8F0', marginVertical: vs(6) }} />
+          <Text style={[styles.cardDateText, { color: theme.colors.textMuted, marginTop: 0 }]}>{startTimeObj.format('ddd, DD MMM')}</Text>
         </View>
 
-        {/* Middle Side: Timeline & Locations */}
-        <View style={styles.timelineCol}>
-          <View style={styles.timelineGraphic}>
-            <View style={[styles.dot, { backgroundColor: '#10B981' }]} />
-            <View style={[styles.line, { backgroundColor: isDark ? theme.colors.border : '#E2E8F0' }]} />
-            <View style={[styles.dot, { backgroundColor: '#EF4444' }]} />
-          </View>
-          <View style={styles.addressList}>
-            <Text style={[styles.addressText, { color: theme.colors.text, marginBottom: vs(24) }]} numberOfLines={2}>
-              {item.pickup_address}
-            </Text>
-            <Text style={[styles.addressText, { color: theme.colors.text }]} numberOfLines={2}>
-              {item.drop_address}
-            </Text>
-            
-            <View style={styles.badgesRow}>
-              <View style={[styles.badge, { backgroundColor: '#E0E7FF' }]}>
-                <Text style={[styles.badgeText, { color: '#4F46E5' }]}>{getRideTypeLabel(item.ride_type)}</Text>
+        {/* Right Side: Details */}
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1 }}>
+            {/* Addresses */}
+            <View style={{ flexDirection: 'row' }}>
+              <View style={styles.timelineGraphic}>
+                <View style={[styles.dot, { backgroundColor: '#10B981', marginTop: vs(4) }]} />
+                <View style={[styles.line, { backgroundColor: isDark ? theme.colors.border : '#F3F4F6', height: vs(16) }]} />
+                <View style={[styles.dot, { backgroundColor: '#EF4444' }]} />
               </View>
-              <View style={[styles.badge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-                <Ionicons name="person-outline" size={ms(10)} color={isDark ? theme.colors.textMuted : '#64748B'} />
-                <Text style={[styles.badgeText, { color: isDark ? theme.colors.textMuted : '#64748B', marginLeft: s(4) }]}>
-                  {item.passenger_count || 1} Passenger
+              <View style={styles.addressList}>
+                <Text style={[styles.addressText, { color: theme.colors.text, marginBottom: vs(8) }]} numberOfLines={2}>
+                  {item.pickup_address}
+                </Text>
+                <Text style={[styles.addressText, { color: theme.colors.text }]} numberOfLines={2}>
+                  {item.drop_address}
                 </Text>
               </View>
             </View>
+
+            {/* Badges */}
+            <View style={[styles.badgesRow, { marginTop: vs(8) }]}>
+              <View style={[styles.badge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                <Text style={[styles.badgeText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{getRideTypeLabel(item.ride_type)}</Text>
+              </View>
+              
+              <View style={[styles.badge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                <Ionicons name="map-outline" size={ms(10)} color={isDark ? theme.colors.textMuted : '#64748B'} />
+                <Text style={[styles.badgeText, { color: isDark ? theme.colors.textMuted : '#64748B', marginLeft: s(4) }]}>
+                  {`${item.distance_km || 0} km`}
+                </Text>
+              </View>
+
+              <View style={[styles.badge, { backgroundColor: '#D1FAE5' }]}>
+                <Ionicons name="cash-outline" size={ms(10)} color="#10B981" />
+                <Text style={[styles.badgeText, { color: '#10B981', marginLeft: s(4) }]}>
+                  {`₹${item.total_fare || 0}`}
+                </Text>
+              </View>
+              {!!item.driver_allowance && item.driver_allowance > 0 && (
+                <View style={{ justifyContent: 'center', marginLeft: s(4) }}>
+                  <Text style={[styles.badgeText, { color: '#D97706' }]}>
+                    {`+₹${Math.round(item.driver_allowance)}`}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
+      </View>
 
-        {/* Right Side: Status & Distance */}
-        <View style={styles.statusCol}>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
-            <Text style={styles.statusBadgeText}>{displayStatus}</Text>
-          </View>
-          
-          <View style={{ alignItems: 'flex-end', marginTop: vs(12) }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="time-outline" size={ms(12)} color={theme.colors.textMuted} />
-              <Text style={[styles.otpTimeText, { color: theme.colors.text }]}> {timeStr}</Text>
-            </View>
-            <Text style={[styles.otpSubText, { color: theme.colors.textMuted }]}>OTP at Pickup</Text>
-          </View>
-          
-          <View style={{ alignItems: 'flex-end', marginTop: vs(12), flexDirection: 'row', justifyContent: 'flex-end', gap: ms(4) }}>
-            <View style={{ alignItems: 'flex-end' }}>
-               <Text style={[styles.distanceText, { color: theme.colors.text }]}>{Math.round(item.distance_km || 0)} km</Text>
-               <Text style={[styles.distanceSubText, { color: theme.colors.textMuted }]}>Est. Distance</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={ms(16)} color={theme.colors.textMuted} style={{ alignSelf: 'center' }} />
-          </View>
+      {/* Footer Divider */}
+      <View style={{ height: 1, backgroundColor: isDark ? theme.colors.border : '#F3F4F6', marginVertical: vs(8), marginTop: vs(12) }} />
+      
+      {/* Footer Row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: vs(2) }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="time-outline" size={ms(16)} color={theme.colors.textMuted} />
+          <Text style={{ marginLeft: s(6), fontSize: ms(12), color: theme.colors.text, fontWeight: '600' }}>
+            {pickupLabel.startsWith('Pickup in') ? 'Pickup in ' : ''}
+            <Text style={{ color: remainingTime?.isUrgent ? '#EF4444' : '#10B981' }}>
+              {pickupLabel.startsWith('Pickup in') ? pickupLabel.replace('Pickup in ', '') : pickupLabel}
+            </Text>
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ color: '#2563EB', fontSize: ms(12), fontWeight: '600', marginRight: s(4) }}>View Details</Text>
+          <Ionicons name="chevron-forward" size={ms(14)} color="#2563EB" />
         </View>
       </View>
     </TouchableOpacity>
@@ -359,15 +406,15 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   dateCard: {
-    width: ms(56),
-    height: ms(56),
+    width: ms(52),
+    height: ms(52),
     borderRadius: ms(10),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
   },
   dateDayText: {
-    fontSize: ms(9),
+    fontSize: ms(8),
     fontWeight: '500',
   },
   dateNumText: {
@@ -376,7 +423,7 @@ const styles = StyleSheet.create({
     marginVertical: vs(0),
   },
   dateMonthText: {
-    fontSize: ms(9),
+    fontSize: ms(8),
     fontWeight: '500',
   },
 
@@ -417,11 +464,6 @@ const styles = StyleSheet.create({
     borderRadius: ms(12),
     padding: ms(10),
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   cardRow: {
     flexDirection: 'row',
@@ -431,15 +473,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTimeText: {
-    fontSize: ms(16),
+    fontSize: ms(14),
     fontWeight: '700',
   },
   cardAmPmText: {
-    fontSize: ms(12),
+    fontSize: ms(10),
     fontWeight: '700',
   },
   cardDateText: {
-    fontSize: ms(10),
+    fontSize: ms(9),
     marginTop: vs(4),
     textAlign: 'center',
   },
@@ -463,15 +505,15 @@ const styles = StyleSheet.create({
   },
   line: {
     width: 1,
-    height: vs(24),
+    height: vs(16),
     marginVertical: vs(2),
   },
   addressList: {
     flex: 1,
   },
   addressText: {
-    fontSize: ms(12),
-    lineHeight: vs(16),
+    fontSize: ms(11),
+    lineHeight: vs(14),
     fontWeight: '500',
   },
   badgesRow: {
@@ -482,13 +524,14 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: ms(8),
-    paddingVertical: vs(4),
+    paddingHorizontal: ms(6),
+    paddingVertical: vs(3),
     borderRadius: ms(12),
   },
   badgeText: {
-    fontSize: ms(10),
+    fontSize: ms(9),
     fontWeight: '600',
+    textAlign: 'center',
   },
   statusCol: {
     width: ms(90),

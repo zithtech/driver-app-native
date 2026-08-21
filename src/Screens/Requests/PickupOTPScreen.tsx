@@ -123,7 +123,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         hideAlert();
         onClose();
         dispatch(clearAcceptedRide());
-        navigation.replace('DashboardScreen');
+        navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
     } catch (error: any) {
       console.error('Cancellation failed:', error);
@@ -146,7 +146,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         onConfirm: shouldAllowForceClear ? () => {
           onClose(); // Close OTP modal
           dispatch(clearAcceptedRide());
-          navigation.dispatch(StackActions.replace('DashboardScreen'));
+          navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
       });
     }

@@ -283,7 +283,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   );
 
   const renderLineChart = () => (
-    <View style={styles.card}>
+    <View style={{ marginHorizontal: 16, marginTop: 24, marginBottom: 24 }}>
       <View style={styles.cardHeaderRow}>
         <Text style={styles.cardTitle}>Earnings Trend</Text>
         <Pressable style={styles.dropdownButton}>
@@ -293,11 +293,11 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           <Ionicons name="chevron-down" size={16} color="#1E293B" />
         </Pressable>
       </View>
-      <View style={{ marginTop: 8 }}>
+      <View style={{ marginTop: 16 }}>
         <LineChart
           areaChart
           data={lineData}
-          width={width - 64}
+          width={width - 32}
           height={80}
           isAnimated
           animationDuration={1200}
@@ -305,7 +305,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           endFillColor="#3B82F6"
           startOpacity={0.2}
           endOpacity={0.0}
-          spacing={lineData.length > 1 ? (width - 80) / (lineData.length - 1) : width - 80}
+          adjustToWidth={true}
           color="#3B82F6"
           thickness={3}
           hideRules
@@ -454,7 +454,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
 
   return (
     <View style={[styles.safeArea, { paddingTop: insets.top }]}>
-      {isFocused && <AppStatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />}
+      {isFocused && <AppStatusBar barStyle="dark-content" backgroundColor="#FFF" />}
       {renderHeader()}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -490,7 +490,7 @@ const LegendItem = ({ color, title, amount, percent }: any) => (
 export default EarningsScreen;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F8FAFC' },
+  safeArea: { flex: 1, backgroundColor: '#FFF' },
   scrollContent: { paddingBottom: 100 },
 
   // Header
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
 
 
   // Earnings Overview
-  overviewCard: { backgroundColor: '#FFF', marginHorizontal: 16, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 4, borderWidth: 1, borderColor: '#F1F5F9' },
+  overviewCard: { backgroundColor: 'transparent', marginHorizontal: 16, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 4, borderWidth: 1, borderColor: '#E2E8F0' },
   overviewRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   overviewItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
   overviewIconBox: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   statGrowthTextPos: { fontSize: 9, fontWeight: '600', color: '#16A34A', marginLeft: 2 },
 
   // Cards General
-  card: { backgroundColor: '#FFF', marginHorizontal: 16, marginBottom: 16, borderRadius: 16, padding: 12 },
+  card: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#E2E8F0', marginHorizontal: 16, marginBottom: 16, borderRadius: 16, padding: 12 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
 
@@ -604,7 +604,7 @@ const styles = StyleSheet.create({
   legendPercent: { fontSize: 12, color: '#64748B', width: 45, textAlign: 'right' },
 
   // Transactions
-  transactionsContainer: { marginHorizontal: 16, marginBottom: 16, backgroundColor: '#FFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+  transactionsContainer: { marginHorizontal: 16, marginBottom: 16, backgroundColor: 'transparent', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' },
   txHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   viewAllText: { fontSize: 12, color: '#3B82F6', fontWeight: '600' },
   txItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
