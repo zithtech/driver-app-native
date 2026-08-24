@@ -1019,8 +1019,8 @@ const styles = StyleSheet.create({
   },
   rideScrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: vs(50),
+    justifyContent: 'flex-end',
+    paddingBottom: vs(16),
     paddingHorizontal: s(8),
   },
   swipeBox: {

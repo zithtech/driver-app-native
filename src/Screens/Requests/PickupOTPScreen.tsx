@@ -351,6 +351,13 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
               </View>
             </View>
 
+            {/* DEVELOPMENT ONLY: Show OTP */}
+            <View style={{ backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginTop: 16, marginBottom: -10, borderWidth: 1, borderColor: '#F59E0B', borderStyle: 'dashed', alignSelf: 'center', width: '80%' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#D97706', textAlign: 'center' }}>
+                🚧 Dev Mode OTP: {ride?.otp || DEMO_OTP} 🚧
+              </Text>
+            </View>
+
             {/* OTP SECTION */}
             <View style={styles.otpSection}>
               <Animated.View style={[styles.otpRow, animatedStyle]}>

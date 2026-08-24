@@ -359,6 +359,15 @@ const OTPScreen = ({ navigation }: any) => {
                 Enter 6-digit OTP
               </Text>
 
+              {/* DEVELOPMENT ONLY: Show OTP */}
+              {user?.otp ? (
+                <View style={{ backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#F59E0B', borderStyle: 'dashed' }}>
+                  <Text style={[fonts.bold, { fontSize: 14, color: '#D97706', textAlign: 'center' }]}>
+                    🚧 Dev Mode OTP: {user.otp} 🚧
+                  </Text>
+                </View>
+              ) : null}
+
               {showSuccess ? (
                 <View style={{ alignItems: 'center', marginVertical: 30 }}>
                   <Reanimated.View style={successIconStyle}>
