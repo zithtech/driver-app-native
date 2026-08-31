@@ -574,34 +574,34 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         remainingText = `${hours}h ${mins}m remaining`;
       }
     } else {
-      remainingText = 'Expired';
+      remainingText = t('expired', 'Expired');
     }
 
     return (
       <View style={[styles.activeStatusCard, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
-        <Text style={[styles.activeStatusTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>Live Plan Status</Text>
+        <Text style={[styles.activeStatusTitle, { color: isDark ? '#F3F4F6' : '#111827' }]}>{t('live_plan_status', 'Live Plan Status')}</Text>
         
         <View style={styles.statusRow}>
-          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Start Date</Text>
+          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('start_date', 'Start Date')}</Text>
           <Text style={[styles.statusValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>{startDate.toLocaleDateString()}</Text>
         </View>
 
         <View style={styles.statusRow}>
-          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>End Date</Text>
+          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('end_date', 'End Date')}</Text>
           <Text style={[styles.statusValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>{endDate.toLocaleDateString()}</Text>
         </View>
 
         <View style={[styles.statusRow, { borderTopWidth: 1, borderTopColor: isDark ? '#374151' : '#E5E7EB', paddingTop: 12, marginTop: 4, marginBottom: 0 }]}>
-          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280', fontWeight: 'bold' }]}>Time Remaining</Text>
+          <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280', fontWeight: 'bold' }]}>{t('time_remaining', 'Time Remaining')}</Text>
           <Text style={[styles.statusValue, { color: '#10B981', fontWeight: 'bold' }]}>{remainingText}</Text>
         </View>
 
         {activePlan.razorpay_subscription_id && (
           <View style={[styles.statusRow, { borderTopWidth: 1, borderTopColor: isDark ? '#374151' : '#E5E7EB', paddingTop: 12, marginTop: 12, marginBottom: 0 }]}>
             <View>
-              <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280', fontWeight: 'bold', marginBottom: 2 }]}>Auto-Renew Status</Text>
+              <Text style={[styles.statusLabel, { color: isDark ? '#9CA3AF' : '#6B7280', fontWeight: 'bold', marginBottom: 2 }]}>{t('auto_renew_status', 'Auto-Renew Status')}</Text>
               <Text style={{ color: activePlan.auto_renew ? '#2563EB' : '#EF4444', fontSize: 13, fontWeight: '600' }}>
-                {activePlan.auto_renew ? 'Active' : 'Cancelled'}
+                {activePlan.auto_renew ? t('active', 'Active') : t('cancelled', 'Cancelled')}
               </Text>
             </View>
             {activePlan.auto_renew && (
@@ -613,7 +613,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 {isTogglingAutoRenew ? (
                   <ActivityIndicator size="small" color="#EF4444" />
                 ) : (
-                  <Text style={styles.cancelRenewBtnText}>Cancel</Text>
+                  <Text style={styles.cancelRenewBtnText}>{t('cancel', 'Cancel')}</Text>
                 )}
               </Pressable>
             )}
@@ -657,12 +657,12 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>Subscription Plans</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#000000' }]}>{t('subscription_plans', 'Subscription Plans')}</Text>
           <Pressable onPress={() => navigation.navigate('SubscriptionHistoryScreen')} style={styles.backButton}>
             <Ionicons name="time-outline" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
           </Pressable>
         </View>
-        <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Choose the best plan to maximize your earnings</Text>
+        <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('choose_best_plan', 'Choose the best plan to maximize your earnings')}</Text>
       </View>
 
       <ScrollView
@@ -712,8 +712,8 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
         {(!activePlan || activePlan.status?.toUpperCase() !== 'ACTIVE' || isSwitchPlanMode) && selectedDuration !== 'daily' && (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 16 }}>
             <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }}>Auto-Renew Subscription</Text>
-              <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>Automatically renew your plan to avoid interruption.</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }}>{t('auto_renew_sub', 'Auto-Renew Subscription')}</Text>
+              <Text style={{ fontSize: 12, color: isDark ? '#9CA3AF' : '#6B7280', marginTop: 2 }}>{t('auto_renew_desc', 'Automatically renew your plan to avoid interruption.')}</Text>
             </View>
             <Switch
               value={isAutoRenewEnabled}
@@ -786,7 +786,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                    <Text style={[styles.highlightText, { color: tier.color }]}>{tier.highlight}</Text>
                 </View>
 
-                <Text style={[styles.featuresLabel, { color: tier.color }]}>Features</Text>
+                <Text style={[styles.featuresLabel, { color: tier.color }]}>{t('features', 'Features')}</Text>
                 
                 <View style={styles.featuresList}>
                   {(() => {
@@ -818,7 +818,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                         {tier.features.length > 2 && (
                           <Pressable onPress={() => setExpandedPlans(prev => ({...prev, [tier.id]: !prev[tier.id]}))}>
                             <Text style={{ color: tier.color, fontSize: 13, fontWeight: '600', marginTop: 4 }}>
-                              {isExpanded ? 'View Less' : 'View All Features'}
+                              {isExpanded ? t('view_less', 'View Less') : t('view_all_features', 'View All Features')}
                             </Text>
                           </Pressable>
                         )}
@@ -848,7 +848,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                         ? { color: tier.color } 
                         : { color: '#FFFFFF' }
                   ]}>
-                    {isActivePlan ? 'Current Plan' : isDowngrade ? 'Unavailable' : `Choose ${tier.name}`}
+                    {isActivePlan ? t('current_plan', 'Current Plan') : isDowngrade ? t('unavailable', 'Unavailable') : t('choose_plan', 'Choose {{planName}}', { planName: tier.name })}
                   </Text>
                 </Pressable>
               </View>
@@ -862,8 +862,8 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             <Ionicons name="lock-closed" size={ms(18)} color="#FFFFFF" />
           </View>
           <View style={styles.infoTextContainer}>
-            <Text style={[styles.infoTitle, { color: colors.text }]}>Secure Payments</Text>
-            <Text style={[styles.infoDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Your payment information is safe with us.</Text>
+            <Text style={[styles.infoTitle, { color: colors.text }]}>{t('secure_payments', 'Secure Payments')}</Text>
+            <Text style={[styles.infoDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('secure_payments_desc', 'Your payment information is safe with us.')}</Text>
           </View>
           <Image 
             source={require('../../assets/images/bank.png')}
@@ -878,14 +878,14 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             <Ionicons name="headset-outline" size={ms(20)} color="#2563EB" />
           </View>
           <View style={[styles.infoTextContainer, { paddingRight: 0 }]}>
-            <Text style={[styles.infoTitle, { color: colors.text }]}>Need Help?</Text>
-            <Text style={[styles.infoDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Our support team is here for you 24/7.</Text>
+            <Text style={[styles.infoTitle, { color: colors.text }]}>{t('need_help', 'Need Help?')}</Text>
+            <Text style={[styles.infoDesc, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('need_help_desc', 'Our support team is here for you 24/7.')}</Text>
           </View>
           <Pressable 
             style={styles.contactButton}
             onPress={() => navigation.navigate('HelpCenterScreen')}
           >
-            <Text style={styles.contactButtonText}>Contact Support</Text>
+            <Text style={styles.contactButtonText}>{t('contact_support', 'Contact Support')}</Text>
             <Ionicons name="chevron-forward" size={ms(14)} color="#2563EB" />
           </Pressable>
         </View>
@@ -979,22 +979,22 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
               Plan Locked
             </Text>
             <Text style={[styles.modalDesc, { color: isDark ? '#D1D5DB' : '#4B5563', marginBottom: 12 }]}>
-              You are currently not eligible to subscribe to the <Text style={{ fontWeight: 'bold' }}>{ineligiblePlanName}</Text> plan.
+              {t('not_eligible', 'You are currently not eligible to subscribe to the')} <Text style={{ fontWeight: 'bold' }}>{ineligiblePlanName}</Text> {t('plan', 'Plan')}.
             </Text>
             
             <View style={[styles.keyPointsContainer, { backgroundColor: isDark ? '#374151' : '#F3F4F6', padding: 12, marginBottom: 16 }]}>
-              <Text style={[styles.keyPointsTitle, { color: isDark ? '#F9FAFB' : '#111827', marginBottom: 8 }]}>How to unlock?</Text>
+              <Text style={[styles.keyPointsTitle, { color: isDark ? '#F9FAFB' : '#111827', marginBottom: 8 }]}>{t('how_to_unlock', 'How to unlock?')}</Text>
               <View style={[styles.keyPointRow, { marginBottom: 6 }]}>
                 <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Maintain high trip completion rate</Text>
+                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>{t('maintain_completion_rate', 'Maintain high trip completion rate')}</Text>
               </View>
               <View style={[styles.keyPointRow, { marginBottom: 6 }]}>
                 <Ionicons name="star" size={16} color="#F59E0B" />
-                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Keep good customer ratings</Text>
+                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>{t('keep_good_ratings', 'Keep good customer ratings')}</Text>
               </View>
               <View style={[styles.keyPointRow, { marginBottom: 6 }]}>
                 <Ionicons name="time" size={16} color="#3B82F6" />
-                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>Complete minimum tenure as a Basic driver</Text>
+                <Text style={[styles.keyPointText, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>{t('complete_minimum_tenure', 'Complete minimum tenure as a Basic driver')}</Text>
               </View>
             </View>
 
@@ -1016,7 +1016,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                 style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: '#2563EB', flex: 0.7 }]}
                 onPress={() => setEligibilityModalVisible(false)}
               >
-                <Text style={[styles.modalBtnPrimaryText, { fontWeight: '600' }]}>OK</Text>
+                <Text style={[styles.modalBtnPrimaryText, { fontWeight: '600' }]}>{t('ok', 'OK')}</Text>
               </Pressable>
             </View>
           </View>
@@ -1053,7 +1053,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
               Confirm Upgrade
             </Text>
             <Text style={[styles.modalSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', marginBottom: 16, fontSize: 13 }]}>
-              Review your upgrade details below{'\n'}before proceeding.
+              {t('review_upgrade_details', 'Review your upgrade details below\nbefore proceeding.')}
             </Text>
             
             {/* Details Card */}
@@ -1071,8 +1071,8 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   <Ionicons name="wallet-outline" size={18} color="#2563EB" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>Unused Credit</Text>
-                  <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>From your current plan</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>{t('unused_credit', 'Unused Credit')}</Text>
+                  <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>{t('from_current_plan', 'From your current plan')}</Text>
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#10B981' }}>- ₹{upgradeConfirmData.unusedCredit}</Text>
               </View>
@@ -1085,7 +1085,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   <Ionicons name="calendar-outline" size={18} color="#2563EB" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>New Plan</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>{t('new_plan', 'New Plan')}</Text>
                   <Text style={{ fontSize: 11, color: isDark ? '#9CA3AF' : '#6B7280' }}>{upgradeConfirmData.tier?.name} Plan ({selectedDuration.charAt(0).toUpperCase() + selectedDuration.slice(1)})</Text>
                 </View>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#F9FAFB' : '#111827' }}>₹{upgradeConfirmData.newPlanCost}</Text>
@@ -1097,9 +1097,9 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   <Ionicons name="card-outline" size={18} color="#2563EB" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>You Pay Today</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: isDark ? '#F9FAFB' : '#111827', marginBottom: 2 }}>{t('you_pay_today', 'You Pay Today')}</Text>
                   <Text style={{ fontSize: 10, color: isDark ? '#9CA3AF' : '#6B7280' }} numberOfLines={1} adjustsFontSizeToFit>
-                    (₹{upgradeConfirmData.newPlanCost} - ₹{upgradeConfirmData.unusedCredit} unused credit)
+                    (₹{upgradeConfirmData.newPlanCost} - ₹{upgradeConfirmData.unusedCredit}  ${t('unused_credit_small', 'unused credit')})
                   </Text>
                 </View>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: '#2563EB' }}>₹{upgradeConfirmData.amountToPay}</Text>
@@ -1110,7 +1110,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
             <View style={{ flexDirection: 'row', backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F4F6FB', borderRadius: 8, padding: 10, marginBottom: 16, alignItems: 'center' }}>
               <Ionicons name="information-circle" size={18} color="#2563EB" style={{ marginRight: 8 }} />
               <Text style={{ flex: 1, fontSize: 11, color: isDark ? '#D1D5DB' : '#4B5563', lineHeight: 16 }}>
-                Your new plan will be activated immediately after successful payment.
+                {t('plan_activated_desc', 'Your new plan will be activated immediately after successful payment.')}
               </Text>
             </View>
             
@@ -1123,7 +1123,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   setIsProcessing(false);
                 }}
               >
-                <Text style={{ color: '#2563EB', fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+                <Text style={{ color: '#2563EB', fontSize: 15, fontWeight: '600' }}>{t('cancel', 'Cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.modalBtn, { backgroundColor: '#2563EB', borderRadius: 8, paddingVertical: 10 }]}
@@ -1136,7 +1136,7 @@ const RechargePlanScreen: React.FC<any> = ({ navigation }) => {
                   }
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Proceed</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>{t('proceed', 'Proceed')}</Text>
               </Pressable>
             </View>
           </View>

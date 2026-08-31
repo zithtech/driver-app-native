@@ -21,6 +21,7 @@ import { useGetEarningsSummaryQuery, useGetEarningsTransactionsQuery, useGetWall
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '../../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 
@@ -30,6 +31,7 @@ import { LineChart, PieChart } from 'react-native-gifted-charts';
 const { width } = Dimensions.get('window');
 
 const EarningsScreen: React.FC<any> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { theme, isDark } = useAppTheme();
   const user = useSelector((state: RootState) => state.userSlice.user);
   const { triggerHaptic } = useHaptic();
@@ -145,28 +147,31 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
 
   const hasBreakdownData = summary.total > 0;
 
-  // Pie Chart Data (Donut)
-  const pieData = hasBreakdownData ? [
-    { value: breakdown.baseFare || 0.1, color: '#3B82F6', focused: true }, // Blue (Base Fare)
-    { value: breakdown.extraTiming || 0.1, color: '#10B981' }, // Green (Extra Timing)
-    { value: breakdown.incentives || 0.1, color: '#F59E0B' }, // Orange (Incentives)
-    { value: breakdown.tips || 0.1, color: '#8B5CF6' }, // Purple (Tips)
-  ] : [{ value: 1, color: '#E5E7EB' }]; // Empty state
+  const pieDataRaw = [
+    { value: breakdown.baseFare, color: '#3B82F6', focused: true }, // Blue (Base Fare)
+    { value: breakdown.extraTiming, color: '#10B981' }, // Green (Extra Timing)
+    { value: breakdown.incentives, color: '#F59E0B' }, // Orange (Incentives)
+    { value: breakdown.tips, color: '#8B5CF6' }, // Purple (Tips)
+  ].filter(item => item.value && item.value > 0);
+
+  const pieData = pieDataRaw.length > 0 
+    ? pieDataRaw 
+    : [{ value: 1, color: isDark ? '#374151' : '#E5E7EB' }]; // Empty state
 
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
         <Pressable onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </Pressable>
         <View style={{ marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Earnings</Text>
-          <Text style={styles.headerSubtitle}>Track your income and trips</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('earnings_title', 'Earnings')}</Text>
+          <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('track_income_subtitle', 'Track your income and trips')}</Text>
         </View>
       </View>
       <View style={styles.headerRight}>
-        <Pressable style={styles.iconBtn} onPress={() => navigation.navigate('EarningsTransactionsScreen')}>
-          <Ionicons name="time-outline" size={22} color="#111827" />
+        <Pressable style={[styles.iconBtn, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? '#374151' : '#F1F5F9' }]} onPress={() => navigation.navigate('EarningsTransactionsScreen')}>
+          <Ionicons name="time-outline" size={22} color={theme.colors.text} />
         </Pressable>
       </View>
     </View>
@@ -182,14 +187,14 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
       <View style={styles.heroTopRow}>
         <View style={styles.heroTopLeft}>
           <View style={styles.heroTitleRow}>
-            <Text style={styles.heroTitle}>Total Earnings</Text>
+            <Text style={styles.heroTitle}>{t('total_earnings_label', 'Total Earnings')}</Text>
           </View>
 
           <Text style={styles.heroAmount}>₹ {summary.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
 
           {summary.growthPercentage !== undefined && filterType !== 'lifetime' ? (
             <View style={styles.heroVsRow}>
-              <Text style={styles.heroSubText}>vs Last {filterType === 'today' ? 'Day' : filterType === 'week' ? 'Week' : 'Month'}</Text>
+              <Text style={styles.heroSubText}>{filterType === 'today' ? t('vs_last_day', 'vs Last Day') : filterType === 'week' ? t('vs_last_week', 'vs Last Week') : t('vs_last_month', 'vs Last Month')}</Text>
               <View style={[styles.percentBadge, { backgroundColor: summary.growthPercentage >= 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)' }]}>
                 <Ionicons name={summary.growthPercentage >= 0 ? "arrow-up" : "arrow-down"} size={10} color={summary.growthPercentage >= 0 ? "#4ADE80" : "#F87171"} />
                 <Text style={[styles.percentText, { color: summary.growthPercentage >= 0 ? "#4ADE80" : "#F87171" }]}>{Math.abs(summary.growthPercentage).toFixed(2)}%</Text>
@@ -197,7 +202,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
             </View>
           ) : (
             <View style={styles.heroVsRow}>
-              <Text style={styles.heroSubText}>{filterType === 'lifetime' ? 'Lifetime Earnings' : filterType === 'today' ? 'Today' : filterType === 'week' ? 'This Week' : 'This Month'}</Text>
+              <Text style={styles.heroSubText}>{filterType === 'lifetime' ? t('lifetime_earnings', 'Lifetime Earnings') : filterType === 'today' ? t('today_filter', 'Today') : filterType === 'week' ? t('this_week_filter', 'This Week') : t('this_month_filter', 'This Month')}</Text>
             </View>
           )}
         </View>
@@ -207,7 +212,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
         <Pressable style={styles.actionBox}>
           <Ionicons name="wallet-outline" size={20} color="#FFF" />
           <View style={styles.actionBoxTexts}>
-            <Text style={styles.actionBoxLabel}>Available Balance</Text>
+            <Text style={styles.actionBoxLabel}>{t('available_balance_label', 'Available Balance')}</Text>
             <Text style={styles.actionBoxAmount}>₹ {walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color="#FFF" style={{ marginLeft: 8 }} />
@@ -221,7 +226,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
               style={[styles.filterPill, filterType === opt && styles.filterPillActive]}
             >
               <Text style={[styles.filterPillText, filterType === opt && styles.filterPillTextActive]}>
-                {opt === 'lifetime' ? 'All' : opt === 'month' ? '1M' : opt === 'week' ? '1W' : '1D'}
+                {opt === 'lifetime' ? t('filter_all', 'All') : opt === 'month' ? t('filter_1m', '1M') : opt === 'week' ? t('filter_1w', '1W') : t('filter_1d', '1D')}
               </Text>
             </Pressable>
           ))}
@@ -232,48 +237,48 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
 
   const renderStatsGrid = () => (
     <View>
-      <View style={styles.overviewCard}>
+      <View style={[styles.overviewCard, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
         <View style={styles.overviewRow}>
 
           <View style={styles.overviewItem}>
-            <View style={[styles.overviewIconBox, { backgroundColor: '#DCFCE7' }]}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7' }]}>
               <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#16A34A' }}>₹</Text>
             </View>
-            <Text style={styles.overviewLabel} numberOfLines={2}>Total Earnings</Text>
-            <Text style={styles.overviewValue}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>Total Earnings</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
             {renderGrowthBadge(summary.growth.earnings)}
           </View>
 
-          <View style={styles.overviewDivider} />
+          <View style={[styles.overviewDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
 
           <View style={styles.overviewItem}>
-            <View style={[styles.overviewIconBox, { backgroundColor: '#DBEAFE' }]}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#DBEAFE' }]}>
               <Ionicons name="car-outline" size={14} color="#2563EB" />
             </View>
-            <Text style={styles.overviewLabel} numberOfLines={2}>Total Rides</Text>
-            <Text style={styles.overviewValue}>{summary.trips}</Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('total_rides_label', 'Total Rides')}</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>{summary.trips}</Text>
             {renderGrowthBadge(summary.growth.trips)}
           </View>
 
-          <View style={styles.overviewDivider} />
+          <View style={[styles.overviewDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
 
           <View style={styles.overviewItem}>
-            <View style={[styles.overviewIconBox, { backgroundColor: '#F3E8FF' }]}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(147, 51, 234, 0.15)' : '#F3E8FF' }]}>
               <Ionicons name="time-outline" size={14} color="#9333EA" />
             </View>
-            <Text style={styles.overviewLabel} numberOfLines={2}>Total Hours</Text>
-            <Text style={styles.overviewValue}>{summary.hours}</Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('total_hours_label', 'Total Hours')}</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>{summary.hours}</Text>
             {renderGrowthBadge(summary.growth.hours)}
           </View>
 
-          <View style={styles.overviewDivider} />
+          <View style={[styles.overviewDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
 
           <View style={styles.overviewItem}>
-            <View style={[styles.overviewIconBox, { backgroundColor: '#FFEDD5' }]}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(234, 88, 12, 0.15)' : '#FFEDD5' }]}>
               <Ionicons name="star-outline" size={14} color="#EA580C" />
             </View>
-            <Text style={styles.overviewLabel} numberOfLines={2}>Avg Earnings</Text>
-            <Text style={styles.overviewValue}>₹{summary.avgPerTrip.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('avg_earnings_label', 'Avg Earnings')}</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>₹{summary.avgPerTrip.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
             {renderGrowthBadge(summary.growth.avgPerTrip)}
           </View>
 
@@ -285,12 +290,12 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   const renderLineChart = () => (
     <View style={{ marginHorizontal: 16, marginTop: 24, marginBottom: 24 }}>
       <View style={styles.cardHeaderRow}>
-        <Text style={styles.cardTitle}>Earnings Trend</Text>
-        <Pressable style={styles.dropdownButton}>
-          <Text style={styles.dropdownText}>
-            {filterType === 'today' ? 'Today' : filterType === 'week' ? 'This Week' : filterType === 'month' ? 'This Month' : 'All Time'}
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('earnings_trend_title', 'Earnings Trend')}</Text>
+        <Pressable style={[styles.dropdownButton, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
+          <Text style={[styles.dropdownText, { color: theme.colors.text }]}>
+            {filterType === 'today' ? t('today_filter', 'Today') : filterType === 'week' ? t('this_week_filter', 'This Week') : filterType === 'month' ? t('this_month_filter', 'This Month') : t('all_time_filter', 'All Time')}
           </Text>
-          <Ionicons name="chevron-down" size={16} color="#1E293B" />
+          <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
         </Pressable>
       </View>
       <View style={{ marginTop: 16 }}>
@@ -313,8 +318,8 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           yAxisTextStyle={{ color: '#9CA3AF', fontSize: 8 }}
           yAxisLabelWidth={26}
           xAxisLabelTextStyle={{ color: '#9CA3AF', fontSize: 10, textAlign: 'center' }}
-          yAxisColor="#E5E7EB"
-          xAxisColor="#E5E7EB"
+          yAxisColor={isDark ? '#374151' : '#E5E7EB'}
+          xAxisColor={isDark ? '#374151' : '#E5E7EB'}
           yAxisLabelTexts={filterType === 'lifetime' ? ['0', '10K', '20K', '30K', '40K'] : ['0', '5k', '10k', '15k', '20k']}
           maxValue={filterType === 'lifetime' ? 40000 : 20000}
           noOfSections={4}
@@ -322,7 +327,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           dataPointsRadius={4}
           pointerConfig={{
             pointerStripHeight: 120,
-            pointerStripColor: '#E5E7EB',
+            pointerStripColor: isDark ? '#374151' : '#E5E7EB',
             pointerStripWidth: 2,
             pointerColor: '#3B82F6',
             radius: 6,
@@ -344,11 +349,11 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   );
 
   const renderDonutChart = () => (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
       <View style={styles.cardHeaderRow}>
-        <Text style={styles.cardTitle}>Earnings Breakdown</Text>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('earnings_breakdown_title', 'Earnings Breakdown')}</Text>
         <Pressable>
-          <Text style={styles.viewDetailsText}>View Details <Ionicons name="chevron-forward" size={12} /></Text>
+          <Text style={styles.viewDetailsText}>{t('view_details_link', 'View Details')} <Ionicons name="chevron-forward" size={12} /></Text>
         </Pressable>
       </View>
 
@@ -357,13 +362,14 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           <PieChart
             data={pieData}
             donut
+            innerCircleColor={isDark ? theme.colors.background : '#FFF'}
             radius={45}
             innerRadius={30}
             centerLabelComponent={() => {
               return (
                 <View style={styles.donutCenter}>
-                  <Text style={styles.donutCenterVal}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
-                  <Text style={styles.donutCenterLabel}>Total</Text>
+                  <Text style={[styles.donutCenterVal, { color: theme.colors.text }]}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+                  <Text style={[styles.donutCenterLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('total_label', 'Total')}</Text>
                 </View>
               );
             }}
@@ -371,10 +377,10 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
         </View>
 
         <View style={styles.legendContainer}>
-          <LegendItem color="#3B82F6" icon="car" title="Base Fare" amount={`₹ ${breakdown.baseFare.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.baseFare, summary.total)}%`} />
-          <LegendItem color="#10B981" icon="time" title="Extra Timing" amount={`₹ ${breakdown.extraTiming.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.extraTiming, summary.total)}%`} />
-          <LegendItem color="#F59E0B" icon="gift" title="Incentives" amount={`₹ ${breakdown.incentives.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.incentives, summary.total)}%`} />
-          <LegendItem color="#8B5CF6" icon="heart" title="Tips" amount={`₹ ${breakdown.tips.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.tips, summary.total)}%`} />
+          <LegendItem color="#3B82F6" icon="car" title={t('base_fare_label', 'Base Fare')} amount={`₹ ${breakdown.baseFare.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.baseFare, summary.total)}%`} />
+          <LegendItem color="#10B981" icon="time" title={t('extra_timing_label', 'Extra Timing')} amount={`₹ ${breakdown.extraTiming.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.extraTiming, summary.total)}%`} />
+          <LegendItem color="#F59E0B" icon="gift" title={t('incentives_label', 'Incentives')} amount={`₹ ${breakdown.incentives.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.incentives, summary.total)}%`} />
+          <LegendItem color="#8B5CF6" icon="heart" title={t('tips_label', 'Tips')} amount={`₹ ${breakdown.tips.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.tips, summary.total)}%`} />
         </View>
       </View>
     </View>
@@ -399,38 +405,38 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   };
 
   const getBgColor = (tx: any) => {
-    if (tx.type === 'Credit') return '#DCFCE7';
-    if (tx.badge === 'Subscription') return '#EFF6FF';
-    if (tx.badge === 'Penalty') return '#FEE2E2';
-    if (tx.badge === 'Incentive') return '#FFEDD5';
-    return '#F1F5F9';
+    if (tx.type === 'Credit') return isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7';
+    if (tx.badge === 'Subscription') return isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF';
+    if (tx.badge === 'Penalty') return isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2';
+    if (tx.badge === 'Incentive') return isDark ? 'rgba(234, 88, 12, 0.15)' : '#FFEDD5';
+    return isDark ? 'rgba(100, 116, 139, 0.15)' : '#F1F5F9';
   };
 
   const renderTransactions = () => (
-    <View style={styles.transactionsContainer}>
+    <View style={[styles.transactionsContainer, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
       <View style={styles.txHeaderRow}>
-        <Text style={styles.cardTitle}>Recent Transactions</Text>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('recent_transactions_title', 'Recent Transactions')}</Text>
         <Pressable onPress={() => navigation.navigate('EarningsTransactionsScreen')}>
-          <Text style={styles.viewAllText}>View All</Text>
+          <Text style={styles.viewAllText}>{t('view_all_link', 'View All')}</Text>
         </Pressable>
       </View>
 
       {transactions.length === 0 && (
         <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-          <Ionicons name="receipt-outline" size={32} color="#CBD5E1" />
-          <Text style={{ color: '#94A3B8', fontSize: 13, marginTop: 8 }}>No transactions yet</Text>
+          <Ionicons name="receipt-outline" size={32} color={isDark ? '#4B5563' : '#CBD5E1'} />
+          <Text style={{ color: '#94A3B8', fontSize: 13, marginTop: 8 }}>{t('no_transactions_msg', 'No transactions yet')}</Text>
         </View>
       )}
 
       {transactions.map((tx: any, index: number) => (
-        <Pressable key={tx.id} onPress={() => handleTransactionPress(tx)} style={[styles.txItem, index !== transactions.length - 1 && styles.txBorder]}>
+        <Pressable key={tx.id} onPress={() => handleTransactionPress(tx)} style={[styles.txItem, index !== transactions.length - 1 && styles.txBorder, index !== transactions.length - 1 && { borderBottomColor: isDark ? '#374151' : '#F1F5F9' }]}>
           <View style={styles.txLeftRow}>
             <View style={[styles.txIconBox, { backgroundColor: getBgColor(tx) }]}>
               <Ionicons name={getIconForTx(tx)} size={16} color={getIconColor(tx)} />
             </View>
             <View style={styles.txInfo}>
-              <Text style={styles.txTitle}>{tx.title}</Text>
-              <Text style={styles.txDate}>{tx.date}, {tx.time}</Text>
+              <Text style={[styles.txTitle, { color: theme.colors.text }]}>{tx.title}</Text>
+              <Text style={[styles.txDate, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{tx.date}, {tx.time}</Text>
             </View>
           </View>
 
@@ -445,7 +451,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
                 </Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={14} color={isDark ? '#4B5563' : '#94A3B8'} />
           </View>
         </Pressable>
       ))}
@@ -453,8 +459,8 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
   );
 
   return (
-    <View style={[styles.safeArea, { paddingTop: insets.top }]}>
-      {isFocused && <AppStatusBar barStyle="dark-content" backgroundColor="#FFF" />}
+    <View style={[styles.safeArea, { paddingTop: insets.top, backgroundColor: isDark ? theme.colors.background : '#FFF' }]}>
+      {isFocused && <AppStatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? theme.colors.background : "#FFF"} />}
       {renderHeader()}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -474,18 +480,21 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
 };
 
 // Subcomponent for Legend
-const LegendItem = ({ color, title, amount, percent }: any) => (
+const LegendItem = ({ color, title, amount, percent }: any) => {
+  const { theme, isDark } = useAppTheme();
+  return (
   <View style={styles.legendRow}>
     <View style={styles.legendLeft}>
       <View style={[styles.legendDot, { backgroundColor: color }]} />
-      <Text style={styles.legendTitle}>{title}</Text>
+      <Text style={[styles.legendTitle, { color: theme.colors.text }]}>{title}</Text>
     </View>
     <View style={styles.legendRightRow}>
-      <Text style={styles.legendAmount}>{amount}</Text>
-      <Text style={styles.legendPercent}>{percent}</Text>
+      <Text style={[styles.legendAmount, { color: theme.colors.text }]}>{amount}</Text>
+      <Text style={[styles.legendPercent, { color: isDark ? '#9CA3AF' : '#64748B' }]}>{percent}</Text>
     </View>
   </View>
-);
+  );
+};
 
 export default EarningsScreen;
 

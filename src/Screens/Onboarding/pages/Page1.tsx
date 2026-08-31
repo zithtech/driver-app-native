@@ -11,9 +11,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const Page1 = () => {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
 
   return (
     <ScrollView
@@ -37,7 +39,7 @@ const Page1 = () => {
       {/* TITLE */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
-        style={styles.title}
+        style={[styles.title, { color: theme.colors.text }]}
         adjustsFontSizeToFit
         numberOfLines={1}
       >
@@ -47,7 +49,7 @@ const Page1 = () => {
       {/* DESCRIPTION */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(300)}
-        style={styles.desc}
+        style={[styles.desc, { color: isDark ? '#9CA3AF' : '#4B5563' }]}
         adjustsFontSizeToFit
         numberOfLines={3}
       >
@@ -61,17 +63,17 @@ const Page1 = () => {
       >
         <View style={styles.iconBox}>
           <Icon name="cpu" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.iconLabel}>{t('ob_tech_driven')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.iconLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_tech_driven')}</Text>
         </View>
 
         <View style={styles.iconBox}>
           <MCIcon name="shield-check" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.iconLabel}>{t('ob_safe_secure')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.iconLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_safe_secure')}</Text>
         </View>
 
         <View style={styles.iconBox}>
           <MCIcon name="map-marker-radius" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.iconLabel}>{t('ob_wide_coverage')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.iconLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_wide_coverage')}</Text>
         </View>
       </Animated.View>
 
@@ -80,31 +82,31 @@ const Page1 = () => {
         entering={FadeInDown.duration(600).delay(500)}
         style={styles.grid}
       >
-        <View style={styles.card}>
-          <Text style={styles.cardValue}>{t('stat_active_drivers')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_active_drivers')}</Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+          <Text style={[styles.cardValue, { color: theme.colors.text }]}>{t('stat_active_drivers')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_active_drivers')}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardValue}>{t('stat_support')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_driver_support')}</Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+          <Text style={[styles.cardValue, { color: theme.colors.text }]}>{t('stat_support')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_driver_support')}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardValue}>{t('stat_payouts')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_payouts')}</Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+          <Text style={[styles.cardValue, { color: theme.colors.text }]}>{t('stat_payouts')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_payouts')}</Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardValue}>{t('stat_transparency')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardText}>{t('ob_transparency')}</Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+          <Text style={[styles.cardValue, { color: theme.colors.text }]}>{t('stat_transparency')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_transparency')}</Text>
         </View>
       </Animated.View>
 
       {/* FOOTER TEXT */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(600)}
-        style={styles.footerText}
+        style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
       >
         {t('about_footer')}
       </Animated.Text>

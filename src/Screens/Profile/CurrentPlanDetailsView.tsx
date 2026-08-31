@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -83,6 +84,7 @@ const getFeaturesList = (features: any): string[] => {
 
 export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan, navigation }: any) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const item = activePlan || {};
 
   const [showAllBenefits, setShowAllBenefits] = useState(false);
@@ -152,7 +154,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
               <span class="value">${planDisplayName}<br><span style="font-size:14px; color:#666; font-weight: 500;">${getBillingCycleLabel(item.billing_cycle)}</span></span>
             </div>
             <div class="row">
-              <span class="label">Start Date</span>
+              <span class="label">{t('start_date', 'Start Date')}</span>
               <span class="value">${formatDate(item.start_date)} ${formatTime(item.start_date)}</span>
             </div>
             <div class="row">
@@ -213,7 +215,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
                 <Ionicons name="arrow-back" size={24} color="#111827" />
               </Pressable>
               <View style={styles.headerTextWrap}>
-                <Text style={styles.headerTitle}>Current Plan Details</Text>
+                <Text style={styles.headerTitle}>{t('current_plan_details', 'Current Plan Details')}</Text>
                 <Text style={styles.headerSubtitle} numberOfLines={1}>
                   Details of your active subscription
                 </Text>
@@ -228,10 +230,10 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
           <View style={styles.planCard}>
             <View style={[styles.planCardLeft, { backgroundColor: topCardColor }]}>
               <MaterialCommunityIcons name="crown" size={32} color="#FBBF24" />
-              <Text style={styles.planNameTextWhite}>{planName.toUpperCase()} PLAN</Text>
+              <Text style={styles.planNameTextWhite}>{planName.toUpperCase()} {t('plan', 'PLAN')}</Text>
               <View style={styles.activeBadgeWhite}>
                 <Ionicons name="checkmark-circle" size={14} color="#FFF" />
-                <Text style={styles.activeBadgeTextWhite}>Active</Text>
+                <Text style={styles.activeBadgeTextWhite}>{t('active', 'Active')}</Text>
               </View>
             </View>
             <View style={styles.planCardRight}>
@@ -245,7 +247,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
                   <Ionicons name={item.auto_renew ? "shield-checkmark-outline" : "shield-half-outline"} size={24} color={item.auto_renew ? "#2E7D32" : "#EF4444"} />
                 </View>
                 <Text style={[styles.autoRenewTextGreen, { color: item.auto_renew ? '#2E7D32' : '#EF4444' }]} numberOfLines={1} adjustsFontSizeToFit>
-                  Auto-renew {item.auto_renew ? 'ON' : 'OFF'}
+                  {t('auto_renew', 'Auto-renew')} {item.auto_renew ? t('on', 'ON') : t('off', 'OFF')}
                 </Text>
               </View>
             </View>
@@ -269,7 +271,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
                 <View style={styles.dateIconWrap}>
                   <Ionicons name="calendar-outline" size={20} color="#2E7D32" />
                 </View>
-                <Text style={styles.dateLabelText}>Next Billing Date</Text>
+                <Text style={styles.dateLabelText}>{t('next_billing_date', 'Next Billing Date')}</Text>
                 <Text style={styles.dateValueText}>{formatDate(item.expiry_date)}</Text>
                 <Text style={styles.timeValueText}>{formatTime(item.expiry_date)}</Text>
               </View>
@@ -280,13 +282,13 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
                 <View style={styles.dateIconWrap}>
                   <Ionicons name="receipt-outline" size={20} color="#2E7D32" />
                 </View>
-                <Text style={styles.dateLabelText}>Billing Cycle</Text>
+                <Text style={styles.dateLabelText}>{t('billing_cycle', 'Billing Cycle')}</Text>
                 <Text style={styles.dateValueText}>
                   {item.billing_cycle === 'day' || item.billing_cycle === 'daily'
-                    ? 'Daily'
+                    ? t('daily', 'Daily')
                     : item.billing_cycle === 'week' || item.billing_cycle === 'weekly'
-                    ? 'Weekly'
-                    : 'Monthly'}
+                    ? t('weekly', 'Weekly')
+                    : t('monthly', 'Monthly')}
                 </Text>
               </View>
             </View>
@@ -295,9 +297,9 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
           {/* ─── PLAN BENEFITS ─── */}
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Plan Benefits</Text>
+              <Text style={styles.sectionTitle}>{t('plan_benefits', 'Plan Benefits')}</Text>
               <Pressable onPress={() => setShowAllBenefits(!showAllBenefits)}>
-                <Text style={styles.viewAllBtnText}>{showAllBenefits ? 'View Less' : 'View All Benefits >'}</Text>
+                <Text style={styles.viewAllBtnText}>{showAllBenefits ? t('view_less', 'View Less') : t('view_all_benefits', 'View All Benefits >')}</Text>
               </Pressable>
             </View>
             <View style={styles.benefitsContainer}>
@@ -321,7 +323,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
 
           {/* ─── TIME REMAINING ─── */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Time Remaining</Text>
+            <Text style={styles.sectionTitle}>{t('time_remaining', 'Time Remaining')}</Text>
             <View style={styles.timeRemainingCard}>
               <View style={styles.timeIconWrap}>
                 <Ionicons name="time-outline" size={28} color="#F59E0B" />
@@ -329,16 +331,16 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
               <View style={styles.timeRemainingContent}>
                 <Text style={styles.timeRemainingText}>
                   {(() => {
-                    if (!item.expiry_date) return 'Unknown';
+                    if (!item.expiry_date) return t('unknown', 'Unknown');
                     const diff = new Date(item.expiry_date).getTime() - new Date().getTime();
-                    if (diff <= 0) return 'Expired';
+                    if (diff <= 0) return t('expired', 'Expired');
                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     if (days > 0) return `${days} day${days > 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`;
                     return `${hours} hour${hours !== 1 ? 's' : ''}`;
                   })()}
                 </Text>
-                <Text style={styles.timeRemainingSub}>Until next billing cycle</Text>
+                <Text style={styles.timeRemainingSub}>{t('until_next_billing', 'Until next billing cycle')}</Text>
               </View>
             </View>
           </View>
@@ -350,14 +352,14 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
             <View style={styles.statusBoxLeft}>
               <Ionicons name="shield-checkmark" size={24} color="#2E7D32" style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusBoxTitle}>You're all set!</Text>
+                <Text style={styles.statusBoxTitle}>{t('you_are_all_set', "You're all set!")}</Text>
                 <Text style={styles.statusBoxSubtitle}>
-                  Your {planDisplayName} is active {item.auto_renew ? 'and will renew automatically.' : 'but auto-renewal is off.'}
+                  {t('plan_is_active', 'Your {{planName}} is active', { planName: planDisplayName })} {item.auto_renew ? t('will_renew', 'and will renew automatically.') : t('renew_off', 'but auto-renewal is off.')}
                 </Text>
               </View>
             </View>
             <Pressable style={styles.managePlanBtn} onPress={onManagePlan}>
-              <Text style={styles.managePlanBtnText}>Manage Plan</Text>
+              <Text style={styles.managePlanBtnText}>{t('manage_plan', 'Manage Plan')}</Text>
               <Ionicons name="settings-outline" size={16} color="#2E7D32" style={{ marginLeft: 6 }} />
             </Pressable>
           </View>

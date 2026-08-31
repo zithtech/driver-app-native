@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useAppTheme } from '../../../context/ThemeContext';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -17,6 +18,7 @@ interface OnboardingBackgroundProps {
 }
 
 const OnboardingBackground: React.FC<OnboardingBackgroundProps> = ({ children }) => {
+    const { isDark, theme } = useAppTheme();
     const blob1Pos = useSharedValue({ x: SCREEN_WIDTH * 0.1, y: SCREEN_HEIGHT * 0.2 });
     const blob2Pos = useSharedValue({ x: SCREEN_WIDTH * 0.7, y: SCREEN_HEIGHT * 0.6 });
     const blob3Pos = useSharedValue({ x: SCREEN_WIDTH * 0.4, y: SCREEN_HEIGHT * 0.4 });
@@ -75,10 +77,10 @@ const OnboardingBackground: React.FC<OnboardingBackgroundProps> = ({ children })
     }));
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}>
             {/* BASE GRADIENT */}
             <LinearGradient
-                colors={['#FFFFFF', '#F8FAFC', '#F1F5F9']}
+                colors={isDark ? ['#111827', '#1F2937', '#111827'] : ['#FFFFFF', '#F8FAFC', '#F1F5F9']}
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -90,7 +92,7 @@ const OnboardingBackground: React.FC<OnboardingBackgroundProps> = ({ children })
             <Animated.View style={[styles.blob, styles.blob3, blob3Style]} />
 
             {/* OVERLAY FOR TEXT READABILITY */}
-            <View style={[StyleSheet.absoluteFill, styles.overlay]} />
+            <View style={[StyleSheet.absoluteFill, styles.overlay, { backgroundColor: isDark ? 'rgba(17, 24, 39, 0.7)' : 'rgba(255, 255, 255, 0.4)' }]} />
 
             {/* CONTENT */}
             {children}

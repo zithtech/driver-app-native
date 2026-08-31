@@ -78,7 +78,8 @@ const DotLoader = () => {
 /* ================= SCREEN ================= */
 const AddressDetails: React.FC<any> = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { colors, fonts } = useTheme() as any;
+  const theme = useTheme() as any;
+  const { colors, fonts } = theme;
   const { isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const { t, i18n } = useTranslation();
@@ -96,7 +97,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const [stateSuggestions, setStateSuggestions] = useState<string[]>([]);
   const [pincode, setPincode] = useState('');
   const [country] = useState('India');
-  
+
   const [locationString, setLocationString] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -211,7 +212,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
       const address = await getAddressFromCoords(pos.coords.latitude, pos.coords.longitude);
 
       if (pos?.coords) {
-         setLocationString(`${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E`);
+        setLocationString(`${pos.coords.latitude.toFixed(4)}° N, ${pos.coords.longitude.toFixed(4)}° E`);
       }
 
       if (address) {
@@ -222,13 +223,13 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
         setStateName(address.state || '');
         setPincode(address.pincode || '');
       } else {
-        showAlert({ title: 'Error', message: 'Could not fetch address details.', singleButton: true, icon: 'alert-circle-outline' });
+        showAlert({ title: t('error', 'Error'), message: t('fetch_address_error', 'Could not fetch address details.'), singleButton: true, icon: 'alert-circle-outline' });
       }
     } catch (error) {
       if (error === 'Permission denied') {
-        showAlert({ title: 'Permission Denied', message: 'Please enable location permissions in your settings.', singleButton: true, icon: 'alert-circle-outline' });
+        showAlert({ title: t('permission_denied', 'Permission Denied'), message: t('enable_location_permissions', 'Please enable location permissions in your settings.'), singleButton: true, icon: 'alert-circle-outline' });
       } else {
-        showAlert({ title: 'Location Error', message: 'Could not fetch your current location.', singleButton: true, icon: 'alert-circle-outline' });
+        showAlert({ title: t('location_error', 'Location Error'), message: t('fetch_location_error', 'Could not fetch your current location.'), singleButton: true, icon: 'alert-circle-outline' });
       }
     }
   };
@@ -236,12 +237,12 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async () => {
     if (!user?.phone_number) {
-      showAlert({ title: 'Session Expired', message: 'Please login again', singleButton: true, icon: 'alert-circle-outline' });
+      showAlert({ title: t('session_expired', 'Session Expired'), message: t('please_login_again', 'Please login again'), singleButton: true, icon: 'alert-circle-outline' });
       return;
     }
 
     if (!user?.driverId) {
-      showAlert({ title: 'Session Expired', message: 'Driver ID missing, please login again', singleButton: true, icon: 'alert-circle-outline' });
+      showAlert({ title: t('session_expired', 'Session Expired'), message: t('driver_id_missing_login', 'Driver ID missing, please login again'), singleButton: true, icon: 'alert-circle-outline' });
       return;
     }
 
@@ -292,8 +293,8 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
     } catch (err: any) {
       setIsSubmitting(false);
       showAlert({
-        title: 'Update Failed',
-        message: 'Failed to update address details. Please try again.',
+        title: t('update_failed', 'Update Failed'),
+        message: t('update_address_failed', 'Failed to update address details. Please try again.'),
         singleButton: true,
         icon: 'alert-circle-outline',
       });
@@ -307,7 +308,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   }, []);
 
   const Label = ({ text, required }: { text: string; required?: boolean }) => (
-    <Text style={styles.labelText}>
+    <Text style={[styles.labelText, { color: colors.text }]}>
       {text} {required && <Text style={{ color: '#EF4444' }}>*</Text>}
     </Text>
   );
@@ -320,37 +321,37 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
         {/* PROGRESS BAR */}
         <View style={styles.progressWrapper}>
           <View style={styles.progressLineContainer}>
-             <View style={[styles.progressLine, { width: '66%', backgroundColor: '#0062FF' }]} />
-             <View style={[styles.progressLine, { width: '34%', backgroundColor: '#E5E7EB' }]} />
+            <View style={[styles.progressLine, { width: '66%', backgroundColor: colors.primary }]} />
+            <View style={[styles.progressLine, { width: '34%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
           </View>
           <View style={styles.progressStepsRow}>
             {/* Step 1 */}
             <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Ionicons name="checkmark" size={16} color="#FFF" />
               </View>
-              <Text style={styles.stepText}>Mobile{'\n'}Verification</Text>
+              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('mobile_verification_step', 'Mobile\nVerification')}</Text>
             </View>
             {/* Step 2 */}
             <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Ionicons name="checkmark" size={16} color="#FFF" />
               </View>
-              <Text style={styles.stepText}>Personal{'\n'}Details</Text>
+              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('personal_details_step', 'Personal\nDetails')}</Text>
             </View>
             {/* Step 3 */}
             <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Text style={[styles.stepNumber, { color: '#FFF' }]}>3</Text>
               </View>
-              <Text style={[styles.stepText, { color: '#0062FF' }]}>Address{'\n'}Details</Text>
+              <Text style={[styles.stepText, { color: colors.primary }]}>{t('address_details_step', 'Address\nDetails')}</Text>
             </View>
             {/* Step 4 */}
             <View style={styles.stepContainer}>
-              <View style={styles.stepCircle}>
-                <Text style={styles.stepNumber}>4</Text>
+              <View style={[styles.stepCircle, { backgroundColor: isDark ? colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
+                <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>4</Text>
               </View>
-              <Text style={styles.stepText}>Documents{'\n'}Upload</Text>
+              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('documents_upload_step', 'Documents\nUpload')}</Text>
             </View>
           </View>
         </View>
@@ -368,14 +369,14 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
             {/* HEADER SECTION */}
             <View style={styles.headerSection}>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Address Details</Text>
-                <Text style={styles.headerSubtitle}>
-                  Please enter your current address as per your proof of address.
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('address_details_title', 'Address Details')}</Text>
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  {t('address_details_subtitle', 'Please enter your current address as per your proof of address.')}
                 </Text>
               </View>
-              <Image 
-                source={isDark ? require('../../assets/images/addressDarkmode.png') : require('../../assets/images/addressLightmode.png')} 
-                style={styles.headerImage} 
+              <Image
+                source={isDark ? require('../../assets/images/addressDarkmode.png') : require('../../assets/images/addressLightmode.png')}
+                style={styles.headerImage}
               />
             </View>
 
@@ -389,29 +390,29 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               }}
               onPressOut={() => { locationScale.value = withSpring(1); }}
             >
-              <Animated.View style={[styles.locationCard, locationAnimatedStyle, isDark && { backgroundColor: '#1F2937', borderColor: '#374151' }]}>
+              <Animated.View style={[styles.locationCard, locationAnimatedStyle, isDark && { backgroundColor: theme.colors.card, borderColor: 'rgba(255,255,255,0.1)' }]}>
                 <View style={styles.locationCardInner}>
-                  <View style={styles.locationIconCircle}>
+                  <View style={[styles.locationIconCircle, { backgroundColor: colors.primary }]}>
                     {locationLoading ? (
-                      <ActivityIndicator size="small" color="#0062FF" />
+                      <ActivityIndicator size="small" color="#FFF" />
                     ) : (
-                      <Ionicons name="locate" size={20} color="#0062FF" />
+                      <Ionicons name="locate" size={20} color="#FFF" />
                     )}
                   </View>
                   <View style={{ flex: 1, paddingRight: 8 }}>
-                    <Text style={[styles.locationTitle, isDark && { color: '#F9FAFB' }]} numberOfLines={1} adjustsFontSizeToFit>Use Current Location</Text>
-                    <Text style={styles.locationSubtitle} numberOfLines={1} adjustsFontSizeToFit>Detect your current location and fill address automatically</Text>
+                    <Text style={[styles.locationTitle, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('use_current_location', 'Use Current Location')}</Text>
+                    <Text style={[styles.locationSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('detect_location_subtitle', 'Detect your current location and fill address automatically')}</Text>
                   </View>
-                  <View style={styles.locationActionBtn}>
-                    <Text style={styles.locationActionText} numberOfLines={1} adjustsFontSizeToFit>Use Current Location</Text>
+                  <View style={[styles.locationActionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                    <Text style={[styles.locationActionText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('use_current_location', 'Use Current Location')}</Text>
                   </View>
                 </View>
 
                 {/* Location Success Banner */}
                 {locationString !== '' && !locationLoading && (
-                  <View style={styles.locationSuccessBanner}>
-                    <Ionicons name="checkmark-circle-outline" size={16} color="#059669" />
-                    <Text style={styles.locationSuccessText}>Location detected: {locationString}</Text>
+                  <View style={[styles.locationSuccessBanner, { backgroundColor: isDark ? 'rgba(5, 150, 105, 0.1)' : '#F0FDF4', borderTopColor: isDark ? 'rgba(5, 150, 105, 0.2)' : '#DCFCE7' }]}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color={isDark ? '#4ADE80' : '#059669'} />
+                    <Text style={[styles.locationSuccessText, { color: isDark ? '#4ADE80' : '#059669' }]}>{t('location_detected_prefix', 'Location detected:')} {locationString}</Text>
                   </View>
                 )}
               </Animated.View>
@@ -419,17 +420,17 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
 
             {/* FORM FIELDS */}
             <Animated.View style={animatedShakeStyle}>
-              
+
               {/* ADDRESS LINE 1 */}
               <View style={styles.fieldBox}>
-                <Label text="Address Line 1" required />
+                <Label text={t('address_line_1', 'Address Line 1')} required />
                 <Input
                   value={street}
                   autoCapitalize="words"
-                  placeholder="House / Flat / Building, Street"
+                  placeholder={t('address_line_1_placeholder', 'House / Flat / Building, Street')}
                   onChangeText={setStreet}
-                  inputContainerStyle={styles.flatInputInner}
-                  style={styles.flatInput}
+                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
+                  style={[styles.flatInput, { color: colors.text }]}
                   placeholderTextColor="#9CA3AF"
                   LeadingAccessory={
                     <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
@@ -439,14 +440,14 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
 
               {/* ADDRESS LINE 2 */}
               <View style={[styles.fieldBox, styles.mt]}>
-                <Label text="Address Line 2 (Optional)" />
+                <Label text={t('address_line_2_optional', 'Address Line 2 (Optional)')} />
                 <Input
                   value={addressLine2}
                   autoCapitalize="words"
-                  placeholder="Area, Landmark, Nearby place"
+                  placeholder={t('address_line_2_placeholder', 'Area, Landmark, Nearby place')}
                   onChangeText={setAddressLine2}
-                  inputContainerStyle={styles.flatInputInner}
-                  style={styles.flatInput}
+                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
+                  style={[styles.flatInput, { color: colors.text }]}
                   placeholderTextColor="#9CA3AF"
                   LeadingAccessory={
                     <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
@@ -457,27 +458,27 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               {/* CITY & DISTRICT */}
               <View style={[styles.row, styles.mt]}>
                 <View style={[styles.fieldBox, { flex: 1, zIndex: 10 }]}>
-                  <Label text="City / Town" required />
+                  <Label text={t('city_town', 'City / Town')} required />
                   <Input
                     value={city}
-                    placeholder="Enter city / town"
+                    placeholder={t('enter_city_town', 'Enter city / town')}
                     onChangeText={handleCityChange}
-                    inputContainerStyle={styles.flatInputInner}
-                    style={styles.flatInput}
+                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
+                    style={[styles.flatInput, { color: colors.text }]}
                     placeholderTextColor="#9CA3AF"
                     LeadingAccessory={
                       <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
                   />
                   {citySuggestions.length > 0 && (
-                    <View style={styles.suggestionBox}>
+                    <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
                       {citySuggestions.map((item, index) => (
                         <TouchableOpacity
                           key={index}
-                          style={styles.suggestionItem}
+                          style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
                           onPress={() => selectCitySuggestion(item)}
                         >
-                          <Text style={styles.suggestionText}>{item}</Text>
+                          <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -485,27 +486,27 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 </View>
 
                 <View style={[styles.fieldBox, { flex: 1, zIndex: 9 }]}>
-                  <Label text="District" required />
+                  <Label text={t('district', 'District')} required />
                   <Input
                     value={district}
-                    placeholder="Enter district"
+                    placeholder={t('enter_district', 'Enter district')}
                     onChangeText={handleDistrictChange}
-                    inputContainerStyle={styles.flatInputInner}
-                    style={styles.flatInput}
+                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
+                    style={[styles.flatInput, { color: colors.text }]}
                     placeholderTextColor="#9CA3AF"
                     LeadingAccessory={
                       <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
                   />
                   {districtSuggestions.length > 0 && (
-                    <View style={styles.suggestionBox}>
+                    <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
                       {districtSuggestions.map((item, index) => (
                         <TouchableOpacity
                           key={index}
-                          style={styles.suggestionItem}
+                          style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
                           onPress={() => selectDistrictSuggestion(item)}
                         >
-                          <Text style={styles.suggestionText}>{item}</Text>
+                          <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -516,30 +517,30 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               {/* STATE & PINCODE */}
               <View style={[styles.row, styles.mt]}>
                 <View style={[styles.fieldBox, { flex: 1, zIndex: 8 }]}>
-                  <Label text="State" required />
+                  <Label text={t('state', 'State')} required />
                   <Input
                     value={stateName}
-                    placeholder="Select state"
+                    placeholder={t('select_state', 'Select state')}
                     onChangeText={handleStateChange}
-                    inputContainerStyle={styles.flatInputInner}
-                    style={styles.flatInput}
+                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
+                    style={[styles.flatInput, { color: colors.text }]}
                     placeholderTextColor="#9CA3AF"
                     LeadingAccessory={
                       <Ionicons name="map-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
                     TailingAccessory={
-                      <Ionicons name="chevron-down-outline" size={18} color="#111827" />
+                      <Ionicons name="chevron-down-outline" size={18} color={colors.text} />
                     }
                   />
                   {stateSuggestions.length > 0 && (
-                    <View style={styles.suggestionBox}>
+                    <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
                       {stateSuggestions.map((item, index) => (
                         <TouchableOpacity
                           key={index}
-                          style={styles.suggestionItem}
+                          style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
                           onPress={() => selectStateSuggestion(item)}
                         >
-                          <Text style={styles.suggestionText}>{item}</Text>
+                          <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -547,16 +548,16 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 </View>
 
                 <View style={[styles.fieldBox, { flex: 1 }]}>
-                  <Label text="PIN Code" required />
+                  <Label text={t('pin_code', 'PIN Code')} required />
                   <Input
                     ref={pinRef}
                     value={pincode}
                     keyboardType="number-pad"
                     maxLength={6}
-                    placeholder="Enter PIN code"
+                    placeholder={t('enter_pin_code', 'Enter PIN code')}
                     onChangeText={v => setPincode(v.replace(/[^0-9]/g, ''))}
-                    inputContainerStyle={styles.flatInputInner}
-                    style={styles.flatInput}
+                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
+                    style={[styles.flatInput, { color: colors.text }]}
                     placeholderTextColor="#9CA3AF"
                     LeadingAccessory={
                       <Ionicons name="archive-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
@@ -565,45 +566,29 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                 </View>
               </View>
 
-              {/* COUNTRY */}
-              <View style={[styles.fieldBox, styles.mt]}>
-                <Label text="Country" required />
-                <Input
-                  value={country}
-                  editable={false}
-                  inputContainerStyle={styles.flatInputInner}
-                  style={[styles.flatInput, { color: isDark ? '#F9FAFB' : '#111827' }]}
-                  placeholderTextColor="#9CA3AF"
-                  LeadingAccessory={
-                    <Ionicons name="globe-outline" size={18} color="#0062FF" style={{ marginRight: 8 }} />
-                  }
-                  TailingAccessory={
-                    <Ionicons name="chevron-down-outline" size={18} color="#111827" />
-                  }
-                />
-              </View>
+
 
             </Animated.View>
 
             {/* IMPORTANT ALERT BOX */}
-              <View style={styles.alertBox}>
-                <View style={styles.alertIconWrapper}>
-                  <Ionicons name="shield-checkmark" size={18} color="#0062FF" />
-                </View>
-                <View style={styles.alertTextWrapper}>
-                  <Text style={styles.alertTitle} numberOfLines={1} adjustsFontSizeToFit>Important</Text>
-                  <Text style={styles.alertSubtitle} numberOfLines={1} adjustsFontSizeToFit>Please make sure the address matches your official documents.</Text>
-                </View>
+            <View style={[styles.alertBox, { backgroundColor: isDark ? theme.colors.card : '#EFF6FF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#BFDBFE', borderWidth: isDark ? 1 : 0 }]}>
+              <View style={[styles.alertIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#DBEAFE' }]}>
+                <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
               </View>
+              <View style={styles.alertTextWrapper}>
+                <Text style={[styles.alertTitle, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('important', 'Important')}</Text>
+                <Text style={[styles.alertSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]} numberOfLines={1} adjustsFontSizeToFit>{t('address_matches_documents', 'Please make sure the address matches your official documents.')}</Text>
+              </View>
+            </View>
 
             {/* SUPPORT CHAT BUTTON */}
-            <TouchableOpacity style={styles.chatButton} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav as never)}>
-              <View style={styles.chatIconWrapper}>
-                <Ionicons name="chatbubbles" size={16} color="#0062FF" />
+            <TouchableOpacity style={[styles.chatButton, { backgroundColor: colors.primary }]} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav as never)}>
+              <View style={[styles.chatIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFF' }]}>
+                <Ionicons name="chatbubbles" size={16} color={isDark ? '#FFF' : colors.primary} />
               </View>
               <View style={styles.chatTextWrapper}>
-                <Text style={styles.chatTitle}>Start Chatting</Text>
-                <Text style={styles.chatSubtitle}>Get help from our assistant</Text>
+                <Text style={styles.chatTitle}>{t('start_chatting', 'Start Chatting')}</Text>
+                <Text style={styles.chatSubtitle}>{t('get_help_from_assistant', 'Get help from our assistant')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#FFF" />
             </TouchableOpacity>
@@ -618,11 +603,12 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               disabled={!isFormValid || isSubmitting || isLoading}
               style={[
                 styles.continueBtn,
+                { backgroundColor: colors.primary },
                 (!isFormValid || isSubmitting || isLoading) && styles.continueBtnDisabled
               ]}
             >
               <Text style={styles.continueText}>
-                {isSubmitting || isLoading ? 'Saving...' : 'Save & Continue'}
+                {isSubmitting || isLoading ? t('saving', 'Saving...') : t('save_and_continue', 'Save & Continue')}
               </Text>
               {!(isSubmitting || isLoading) && (
                 <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
@@ -651,7 +637,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
   },
-  
+
   /* --- PROGRESS BAR --- */
   progressWrapper: {
     paddingHorizontal: 24,

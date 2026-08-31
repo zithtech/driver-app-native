@@ -4,15 +4,18 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { ms, vs } from '../../../lib/scale';
 import { useAppTheme } from '../../../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import { getLanguageScaledSize } from '../../../utils/languageSizings';
 
 export default function QuickActions() {
   const navigation = useNavigation<any>();
   const { isDark, theme } = useAppTheme();
+  const { t } = useTranslation();
 
   const actions = [
     {
       id: 'activity',
-      title: 'Ride Activity',
+      title: t('dashboard.ride_activity'),
       icon: 'clipboard-outline',
       color: '#3B82F6', // Blue
       bgColor: '#EFF6FF',
@@ -20,7 +23,7 @@ export default function QuickActions() {
     },
     {
       id: 'performance',
-      title: 'Performance',
+      title: t('dashboard.performance'),
       icon: 'speedometer-outline',
       color: '#10B981', // Green
       bgColor: '#ECFDF5',
@@ -28,7 +31,7 @@ export default function QuickActions() {
     },
     {
       id: 'profile',
-      title: 'Profile',
+      title: t('dashboard.profile'),
       icon: 'person-outline',
       color: '#8B5CF6', // Purple
       bgColor: '#F5F3FF',
@@ -36,7 +39,7 @@ export default function QuickActions() {
     },
     {
       id: 'recharge',
-      title: 'Recharge Plan',
+      title: t('dashboard.recharge_plan'),
       icon: 'card-outline',
       color: '#06B6D4', // Cyan
       bgColor: '#ECFEFF',
@@ -44,7 +47,7 @@ export default function QuickActions() {
     },
     {
       id: 'wallet',
-      title: 'Wallet',
+      title: t('dashboard.wallet'),
       icon: 'wallet-outline',
       color: '#F59E0B', // Orange
       bgColor: '#FEF3C7',
@@ -54,7 +57,7 @@ export default function QuickActions() {
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-      <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Quick Actions</Text>
+      <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('dashboard.quick_actions')}</Text>
       
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {actions.map((action) => (
@@ -85,7 +88,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: ms(12),
   },
   headerTitle: {
-    fontSize: ms(13),
+    fontSize: getLanguageScaledSize(13),
     fontWeight: '700',
     marginBottom: vs(10),
   },
@@ -107,7 +110,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(6),
   },
   actionTitle: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '500',
     textAlign: 'center',
   }

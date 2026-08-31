@@ -466,8 +466,8 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         {/* HEADER SECTION */}
         <View style={styles.headerSection}>
           <View style={styles.headerTextContainer}>
-            <Text style={[styles.headerTitle, { color: isDark ? '#FFF' : '#111827' }]} adjustsFontSizeToFit numberOfLines={1}>
-              {docKey === 'Aadhar_Card' ? 'Aadhaar Card' : docKey === 'Pan_Card' ? 'PAN Card' : docKey === 'Driving_License' ? 'Driving License' : t(labelKey)}
+            <Text style={[styles.headerTitle, { color: colors.text }]} adjustsFontSizeToFit numberOfLines={1}>
+              {t(labelKey)}
             </Text>
             {docKey === 'Aadhar_Card' ? (
               <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
@@ -536,7 +536,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
                 {isSelfie ? (
                   <View style={styles.selfieDetailedContainer}>
-                    <View style={[styles.selfieCircleWrapper, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]}>
+                    <View style={[styles.selfieCircleWrapper, { borderColor: colors.primary }]}>
                       <View style={[styles.selfiePlaceholderCircle, hasImage && styles.selfieHasImage, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
                         {hasImage ? (
                           <Image source={{ uri: images[s] }} style={styles.selfieCapturedImage} />
@@ -573,7 +573,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                       </View>
                     </View>
 
-                    <Text style={[styles.selfieTitle, { color: isDark ? '#FFF' : '#111827' }]}>Take a Selfie</Text>
+                    <Text style={[styles.selfieTitle, { color: colors.text }]}>{t('take_a_selfie', 'Take a Selfie')}</Text>
                     <Text style={[styles.selfieSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
                       Position your face in the frame{"\n"}and take a clear selfie.
                     </Text>
@@ -585,86 +585,85 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                       activeOpacity={0.8}
                     >
                       <View style={[styles.selfieCaptureRing, { borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF' }]}>
-                        <View style={[styles.selfieCaptureButton, { backgroundColor: '#2563EB' }]}>
+                        <View style={[styles.selfieCaptureButton, { backgroundColor: colors.primary }]}>
                           <Ionicons name="camera" size={20} color="#FFF" />
                         </View>
                       </View>
                     </TouchableOpacity>
 
-                    <Text style={[styles.selfieCaptureTitle, { color: isDark ? '#FFF' : '#111827' }]}>{hasImage ? 'Retake Selfie' : 'Capture Selfie'}</Text>
-                    <Text style={[styles.selfieCaptureSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Tap to open camera</Text>
+                    <Text style={[styles.selfieCaptureTitle, { color: colors.text }]}>{hasImage ? t('retake_selfie', 'Retake Selfie') : t('capture_selfie', 'Capture Selfie')}</Text>
+                    <Text style={[styles.selfieCaptureSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('tap_to_open_camera', 'Tap to open camera')}</Text>
 
-                    <View style={[styles.selfieTipsContainer, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC' }]}>
+                    <View style={[styles.selfieTipsContainer, { backgroundColor: isDark ? theme.colors.card : '#F8FAFC' }]}>
                       <View style={styles.selfieTipsHeader}>
-                        <Ionicons name="bulb-outline" size={20} color="#2563EB" />
-                        <Text style={[styles.selfieTipsTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>Tips for a perfect selfie</Text>
+                        <Ionicons name="bulb-outline" size={20} color={colors.primary} />
+                        <Text style={[styles.selfieTipsTitle, { color: colors.text }]}>{t('selfie_tips_title', 'Tips for a perfect selfie')}</Text>
                       </View>
 
                       <View style={styles.selfieTipsGrid}>
                         <View style={styles.selfieTipsCol}>
                           <View style={styles.selfieTipsListItem}>
                             <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Look straight into the camera</Text>
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_1', 'Look straight into the camera')}</Text>
                           </View>
                           <View style={styles.selfieTipsListItem}>
                             <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Ensure good lighting</Text>
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_2', 'Ensure good lighting')}</Text>
                           </View>
                         </View>
                         <View style={styles.selfieTipsCol}>
                           <View style={styles.selfieTipsListItem}>
                             <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Remove sunglasses, mask or hat</Text>
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_3', 'Remove sunglasses, mask or hat')}</Text>
                           </View>
                           <View style={styles.selfieTipsListItem}>
                             <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>Keep your face within the frame</Text>
+                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_4', 'Keep your face within the frame')}</Text>
                           </View>
                         </View>
                       </View>
                     </View>
                   </View>
                 ) : isVerticalLayout ? (
-                  <View style={[styles.detailedCard, { backgroundColor: isDark ? '#1F2937' : '#FFFFFF', borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
+                  <View style={[styles.detailedCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
                     <View style={styles.detailedCardContent}>
-                      <Text style={[styles.detailedCardTitle, { color: isDark ? '#FFF' : '#111827' }]}>
-                        {s === 'front' ? 'Upload Front Side' : 'Upload Back Side'}
+                      <Text style={[styles.detailedCardTitle, { color: colors.text }]}>
+                        {s === 'front' ? t('upload_front_side', 'Upload Front Side') : t('upload_back_side', 'Upload Back Side')}
                       </Text>
                       <Text style={[styles.detailedCardSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                        Capture a clear photo of the{'\n'}
-                        {s === 'front' ? 'front side' : 'back side'} of your document.
+                        {s === 'front' ? t('capture_front_side', 'Capture a clear photo of the\nfront side of your document.') : t('capture_back_side', 'Capture a clear photo of the\nback side of your document.')}
                       </Text>
 
                       <View style={styles.actionButtonGroup}>
                         <TouchableOpacity
-                          style={styles.primaryButton}
+                          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
                           onPress={() => pickImage(s, true)}
                           disabled={isSubmitting}
                           activeOpacity={0.8}
                         >
                           <Ionicons name="camera" size={16} color="#FFF" style={{ marginRight: 4 }} />
-                          <Text style={styles.primaryButtonText} numberOfLines={1} adjustsFontSizeToFit>Camera</Text>
+                          <Text style={styles.primaryButtonText} numberOfLines={1} adjustsFontSizeToFit>{t('camera', 'Camera')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={[styles.secondaryButton, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]}
+                          style={[styles.secondaryButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                           onPress={() => pickImage(s, false)}
                           disabled={isSubmitting}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="image-outline" size={16} color={isDark ? '#3B82F6' : '#2563EB'} style={{ marginRight: 4 }} />
-                          <Text style={[styles.secondaryButtonText, { color: isDark ? '#3B82F6' : '#2563EB' }]} numberOfLines={1} adjustsFontSizeToFit>Gallery</Text>
+                          <Ionicons name="image-outline" size={16} color="#FFF" style={{ marginRight: 4 }} />
+                          <Text style={[styles.secondaryButtonText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('gallery', 'Gallery')}</Text>
                         </TouchableOpacity>
                       </View>
 
-                      <Text style={styles.fileInfoText}>JPG, PNG or PDF • Max size 5MB</Text>
+                      <Text style={styles.fileInfoText}>{t('file_info_text', 'JPG, PNG or PDF • Max size 5MB')}</Text>
                     </View>
 
                     <View style={styles.detailedCardImageContainer}>
-                      <View style={[styles.scannerBracket, styles.bracketTopLeft, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
-                      <View style={[styles.scannerBracket, styles.bracketTopRight, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
-                      <View style={[styles.scannerBracket, styles.bracketBottomLeft, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
-                      <View style={[styles.scannerBracket, styles.bracketBottomRight, { borderColor: isDark ? '#3B82F6' : '#2563EB' }]} />
+                      <View style={[styles.scannerBracket, styles.bracketTopLeft, { borderColor: colors.primary }]} />
+                      <View style={[styles.scannerBracket, styles.bracketTopRight, { borderColor: colors.primary }]} />
+                      <View style={[styles.scannerBracket, styles.bracketBottomLeft, { borderColor: colors.primary }]} />
+                      <View style={[styles.scannerBracket, styles.bracketBottomRight, { borderColor: colors.primary }]} />
 
                       <View style={styles.mockImageWrapper}>
                         {hasImage ? (
@@ -852,13 +851,13 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
         {/* TIPS SECTION */}
         {docKey !== 'Profile_Selfie' && (
-          <View style={[styles.tipsCardContainer, { backgroundColor: isDark ? '#1E293B' : '#F0F5FF' }]}>
+          <View style={[styles.tipsCardContainer, { backgroundColor: isDark ? theme.colors.card : '#F0F5FF' }]}>
             <View style={styles.tipsIconContainer}>
-              <Ionicons name="shield-checkmark" size={28} color="#2563EB" />
+              <Ionicons name="shield-checkmark" size={28} color={colors.primary} />
             </View>
 
             <View style={styles.tipsContentContainer}>
-              <Text style={[styles.tipsTitle, { color: isDark ? '#F8FAFC' : '#0F172A' }]}>
+              <Text style={[styles.tipsTitle, { color: colors.text }]}>
                 Tips for a successful upload
               </Text>
 
@@ -901,7 +900,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
             <Button
               disabled={isSubmitting}
               onPress={handleContinue}
-              style={{ height: 48, borderRadius: 12, backgroundColor: '#2563EB', borderColor: '#2563EB' }}
+              style={{ height: 48, borderRadius: 12, backgroundColor: colors.primary, borderColor: colors.primary }}
             >
               {isSubmitting ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

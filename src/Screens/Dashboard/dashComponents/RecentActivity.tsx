@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
 import { useAppTheme } from '../../../context/ThemeContext';
+import { getLanguageScaledSize } from '../../../utils/languageSizings';
 interface RecentActivityItem {
     id: string | number;
     trip_code?: string;
@@ -100,12 +101,12 @@ const styles = StyleSheet.create({
         marginBottom: vs(14),
     },
     activityTitle: {
-        fontSize: ms(13),
+        fontSize: getLanguageScaledSize(13),
         fontWeight: '700',
         color: '#111827',
     },
     seeAllText: {
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         color: '#2563EB',
         fontWeight: '600',
     },
@@ -142,12 +143,12 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     activityLoc: {
-        fontSize: ms(14),
+        fontSize: getLanguageScaledSize(14),
         fontWeight: '500',
         color: '#111827',
     },
     activityTime: {
-        fontSize: ms(11),
+        fontSize: getLanguageScaledSize(11),
         color: '#6B7280',
         marginTop: vs(2),
     },

@@ -189,7 +189,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
   const onTimeRate = dynamicMetrics.onTimeRate; // -1 means no data available
 
   // Overall composite score
-  const overallScore = useMemo(() => calculateOverallScore(dynamicMetrics), [dynamicMetrics]);
+  const overallScore = useMemo(() => calculateOverallScore(dynamicMetrics, t), [dynamicMetrics, t]);
 
   // Sync score to backend and get actual percentile
   React.useEffect(() => {
@@ -206,15 +206,15 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
   }, [driverId, overallScore.score, timeframe, updateDriverScore]);
 
   // Dynamic tips based on weakest metrics
-  const tips = useMemo(() => getDynamicTips(dynamicMetrics), [dynamicMetrics]);
+  const tips = useMemo(() => getDynamicTips(dynamicMetrics, t), [dynamicMetrics, t]);
 
   // Dynamic greeting based on score
   const getGreeting = () => {
-    if (overallScore.score >= 90) return `Excellent Work, ${firstName}! 🌟`;
-    if (overallScore.score >= 80) return `Great Job, ${firstName}! 👍`;
-    if (overallScore.score >= 70) return `Keep Going, ${firstName}! 💪`;
-    if (overallScore.score > 0) return `You Can Do Better, ${firstName}! 🚀`;
-    return `Welcome, ${firstName}! 👋`;
+    if (overallScore.score >= 90) return t('greeting_excellent', 'Excellent Work, {{name}}! 🌟', { name: firstName });
+    if (overallScore.score >= 80) return t('greeting_great', 'Great Job, {{name}}! 👍', { name: firstName });
+    if (overallScore.score >= 70) return t('greeting_keep_going', 'Keep Going, {{name}}! 💪', { name: firstName });
+    if (overallScore.score > 0) return t('greeting_can_do_better', 'You Can Do Better, {{name}}! 🚀', { name: firstName });
+    return t('greeting_welcome', 'Welcome, {{name}}! 👋', { name: firstName });
   };
 
   const onRefresh = async () => {
@@ -232,17 +232,17 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
 
   const getStatusText = (value: number, type: 'rating' | 'rate' | 'cancellation') => {
     if (type === 'rating') {
-      if (value >= 4.8) return 'Excellent';
-      if (value >= 4.5) return 'Great';
-      return 'Good';
+      if (value >= 4.8) return t('status_excellent', 'Excellent');
+      if (value >= 4.5) return t('status_great', 'Great');
+      return t('status_good', 'Good');
     } else if (type === 'rate') {
-      if (value >= 95) return 'Excellent';
-      if (value >= 90) return 'Great';
-      return 'Good';
+      if (value >= 95) return t('status_excellent', 'Excellent');
+      if (value >= 90) return t('status_great', 'Great');
+      return t('status_good', 'Good');
     } else {
-      if (value <= 3) return 'Good';
-      if (value <= 5) return 'Fair';
-      return 'Poor';
+      if (value <= 3) return t('status_good', 'Good');
+      if (value <= 5) return t('status_fair', 'Fair');
+      return t('status_poor', 'Poor');
     }
   };
 
@@ -253,7 +253,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#111827'} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Driver Performance</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('performance_screen_title', 'Driver Performance')}</Text>
         <Pressable style={styles.infoBtn}>
           <Ionicons name="help-circle-outline" size={24} color={isDark ? '#FFFFFF' : '#6B7280'} />
         </Pressable>
@@ -294,7 +294,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
               </View>
               <View style={styles.greetingSection}>
                 <Text style={styles.greetingTitle}>{getGreeting()}</Text>
-                <Text style={styles.greetingSub}>{overallScore.score > 0 ? `Score: ${overallScore.score}/100 · ${overallScore.label}` : 'Complete rides to build your score'}</Text>
+                <Text style={styles.greetingSub}>{overallScore.score > 0 ? t('score_text', 'Score: {{score}}/100 · {{label}}', { score: overallScore.score, label: overallScore.label }) : t('complete_rides_for_score', 'Complete rides to build your score')}</Text>
               </View>
             </View>
             <View style={styles.rightHeroIcons}>
@@ -313,7 +313,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <Ionicons name="star" size={16} color="#FBBF24" />
                 <Text style={styles.heroStatValue}>{rating.toFixed(1)}</Text>
               </View>
-              <Text style={styles.heroStatLabel}>Rating</Text>
+              <Text style={styles.heroStatLabel}>{t('rating_label', 'Rating')}</Text>
               <View style={styles.starsRowSmall}>
                 {[1,2,3,4,5].map(i => (
                   <Ionicons key={i} name={i <= Math.round(rating) ? "star" : "star-outline"} size={10} color="#FBBF24" />
@@ -326,7 +326,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <Ionicons name="cellular" size={16} color="#4ADE80" />
                 <Text style={styles.heroStatValue}>{acceptanceRate}%</Text>
               </View>
-              <Text style={styles.heroStatLabel}>Acceptance{'\n'}Rate</Text>
+              <Text style={styles.heroStatLabel}>{t('acceptance_rate_label_multiline', 'Acceptance\nRate')}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStatItem}>
@@ -334,7 +334,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <Ionicons name="time" size={16} color="#C084FC" />
                 <Text style={styles.heroStatValue}>{completionRate}%</Text>
               </View>
-              <Text style={styles.heroStatLabel}>Completion{'\n'}Rate</Text>
+              <Text style={styles.heroStatLabel}>{t('completion_rate_label_multiline', 'Completion\nRate')}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStatItem}>
@@ -342,7 +342,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <Ionicons name="ribbon" size={16} color="#FCA5A5" />
                 <Text style={styles.heroStatValue}>{totalRides}</Text>
               </View>
-              <Text style={styles.heroStatLabel}>Total Rides{'\n'}This {timeframe === 'month' ? 'Month' : 'Week'}</Text>
+              <Text style={styles.heroStatLabel}>{timeframe === 'month' ? t('total_rides_this_month', 'Total Rides\nThis Month') : t('total_rides_this_week', 'Total Rides\nThis Week')}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -350,13 +350,13 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         {/* Overall Performance Card */}
         <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Overall Performance</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('overall_performance_title', 'Overall Performance')}</Text>
             <Pressable 
               style={[styles.sectionAction, { backgroundColor: isDark ? '#374151' : '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }]} 
               onPress={() => setTimeframe(t => t === 'month' ? 'week' : 'month')}
             >
               <Text style={[styles.sectionActionText, { color: isDark ? '#D1D5DB' : '#4B5563', marginRight: 4 }]}>
-                This {timeframe === 'month' ? 'Month' : 'Week'}
+                {timeframe === 'month' ? t('this_month_action', 'This Month') : t('this_week_action', 'This Week')}
               </Text>
               <Ionicons name="swap-vertical" size={14} color={isDark ? '#D1D5DB' : '#6B7280'} />
             </Pressable>
@@ -375,9 +375,9 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <>
                   <Text style={[styles.rankingText, { color: isDark ? '#D1D5DB' : '#374151' }]}>
                     {backendPercentile > 0 ? (
-                      <>You are among the <Text style={styles.rankingHighlight}>top {100 - backendPercentile}%</Text> drivers in your city</>
+                      <>{t('ranking_text_prefix', 'You are among the ')}<Text style={styles.rankingHighlight}>{t('ranking_highlight', 'top {{percent}}%', { percent: 100 - backendPercentile })}</Text>{t('ranking_text_suffix', ' drivers in your city')}</>
                     ) : (
-                      'Complete more rides to see your ranking'
+                      t('no_ranking_yet', 'Complete more rides to see your ranking')
                     )}
                   </Text>
                   <View style={styles.percentileContainer}>
@@ -405,9 +405,9 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         {/* Performance Breakdown */}
         <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFF' }]}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Performance Breakdown</Text>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('performance_breakdown_title', 'Performance Breakdown')}</Text>
             <Pressable style={styles.sectionAction} onPress={() => setShowAllBreakdown(!showAllBreakdown)}>
-              <Text style={styles.sectionActionText}>{showAllBreakdown ? 'View Less' : 'View All'}</Text>
+              <Text style={styles.sectionActionText}>{showAllBreakdown ? t('view_less_action', 'View Less') : t('view_all_action', 'View All')}</Text>
               <Ionicons name={showAllBreakdown ? 'chevron-up' : 'chevron-down'} size={16} color="#6B7280" />
             </Pressable>
           </View>
@@ -416,8 +416,8 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
             <BreakdownItem
               icon="thumbs-up"
               iconColor="#10B981"
-              title="Rider Rating"
-              subtitle="Based on rider feedback"
+              title={t('rider_rating_title', 'Rider Rating')}
+              subtitle={t('rider_rating_subtitle', 'Based on rider feedback')}
               value={`${rating.toFixed(1)} / 5.0`}
               status={getStatusText(rating, 'rating')}
               statusColor="#10B981"
@@ -427,8 +427,8 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
             <BreakdownItem
               icon="checkmark"
               iconColor="#3B82F6"
-              title="Acceptance Rate"
-              subtitle="Rides you accepted"
+              title={t('acceptance_rate_title', 'Acceptance Rate')}
+              subtitle={t('acceptance_rate_subtitle', 'Rides you accepted')}
               value={`${acceptanceRate}%`}
               status={getStatusText(acceptanceRate, 'rate')}
               statusColor="#3B82F6"
@@ -441,8 +441,8 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <BreakdownItem
                   icon="flag"
                   iconColor="#8B5CF6"
-                  title="Completion Rate"
-                  subtitle="Rides you completed"
+                  title={t('completion_rate_title', 'Completion Rate')}
+                  subtitle={t('completion_rate_subtitle', 'Rides you completed')}
                   value={`${completionRate}%`}
                   status={getStatusText(completionRate, 'rate')}
                   statusColor="#10B981"
@@ -452,10 +452,10 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <BreakdownItem
                   icon="time"
                   iconColor="#F97316"
-                  title="On-time Rate"
-                  subtitle={onTimeRate >= 0 ? 'Punctuality maintained' : 'Data not available yet'}
+                  title={t('on_time_rate_title', 'On-time Rate')}
+                  subtitle={onTimeRate >= 0 ? t('on_time_rate_subtitle_maintained', 'Punctuality maintained') : t('data_not_available', 'Data not available yet')}
                   value={onTimeRate >= 0 ? `${onTimeRate}%` : 'N/A'}
-                  status={onTimeRate >= 0 ? getStatusText(onTimeRate, 'rate') : 'Pending'}
+                  status={onTimeRate >= 0 ? getStatusText(onTimeRate, 'rate') : t('status_pending', 'Pending')}
                   statusColor={onTimeRate >= 0 ? '#3B82F6' : '#9CA3AF'}
                   progress={onTimeRate >= 0 ? onTimeRate : 0}
                   isDark={isDark}
@@ -463,8 +463,8 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
                 <BreakdownItem
                   icon="shield-checkmark"
                   iconColor="#EF4444"
-                  title="Cancellation Rate"
-                  subtitle="Rides you cancelled"
+                  title={t('cancellation_rate_title', 'Cancellation Rate')}
+                  subtitle={t('cancellation_rate_subtitle', 'Rides you cancelled')}
                   value={`${cancellationRate}%`}
                   status={getStatusText(cancellationRate, 'cancellation')}
                   statusColor="#10B981"
@@ -481,7 +481,7 @@ const DriverPerformanceScreen = ({ navigation }: any) => {
         <View style={[styles.tipsCard, { backgroundColor: isDark ? '#1E3A8A20' : '#EEF2FF' }]}>
           <View style={styles.tipsHeaderRow}>
             <Ionicons name="megaphone" size={18} color={isDark ? '#9CA3AF' : '#6B7280'} style={{ marginRight: 6 }} />
-            <Text style={[styles.tipsTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Tips to Improve</Text>
+            <Text style={[styles.tipsTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{t('tips_to_improve_title', 'Tips to Improve')}</Text>
           </View>
           <View style={styles.tipsContentRow}>
             <View style={styles.tipsList}>

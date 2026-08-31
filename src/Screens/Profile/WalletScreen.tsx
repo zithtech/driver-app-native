@@ -16,6 +16,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { RootState } from '../../redux/store';
 import { useGetWalletBalanceQuery, useGetWalletTransactionsQuery } from '../../service/driverApi';
 import { useTheme } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useAlert } from '../../context/AlertContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +39,7 @@ const Skeleton = ({ width, height, style, isDark, borderRadius = 8 }: { width?: 
 type TransactionType = 'INCENTIVE' | 'PENALTY' | 'REFERRAL_BONUS' | 'WALLET_TOPUP' | 'REFUND';
 
 const WalletScreen = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const { theme, isDark } = useAppTheme();
   const { colors } = useTheme();
   const { showAlert } = useAlert();
@@ -119,30 +121,30 @@ Status: ${selectedTransaction.status}`;
     const t = title.toLowerCase();
     
     if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) {
-       if (item.paymentMethod) return `Paid via ${item.paymentMethod}`;
+       if (item.paymentMethod) return t('paid_via', 'Paid via {{method}}', { method: item.paymentMethod });
        if (t.includes('via')) {
            const method = title.split(/via/i)[1].trim();
-           return method ? `Paid via ${method}` : 'Razorpay';
+           return method ? t('paid_via', 'Paid via {{method}}', { method }) : 'Razorpay';
        }
        return 'Razorpay';
     }
-    if (t.includes('subscription')) return 'Premium Plan - 7 Days';
-    if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return 'Referral ID: REF12345';
-    if (t.includes('refund') || type === 'REFUND') return 'Trip ID: #TRP12340';
+    if (t.includes('subscription')) return t('premium_plan_7_days', 'Premium Plan - 7 Days');
+    if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return t('referral_id_demo', 'Referral ID: REF12345');
+    if (t.includes('refund') || type === 'REFUND') return t('trip_id_demo', 'Trip ID: #TRP12340');
     return item.description || null;
   };
 
   const getTransactionTitle = (type: TransactionType, title: string) => {
     const t = title.toLowerCase();
-    if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return 'Added to Wallet';
-    if (t.includes('subscription')) return 'Subscription Plan';
-    if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return 'Referral Bonus';
-    if (t.includes('refund')) return 'Refund Received';
+    if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return t('added_to_wallet', 'Added to Wallet');
+    if (t.includes('subscription')) return t('subscription_plan', 'Subscription Plan');
+    if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return t('referral_bonus', 'Referral Bonus');
+    if (t.includes('refund')) return t('refund_received', 'Refund Received');
     return title;
   };
 
   return (
-    <ImageBackground source={require('../../assets/images/walletback.png')} style={[styles.container, { backgroundColor: isDark ? '#111827' : 'transparent' }]}>
+    <ImageBackground source={require('../../assets/images/walletback.png')} style={[styles.container, { backgroundColor: isDark ? '#111827' : '#fdfdfd' }]} imageStyle={{ opacity: isDark ? 0.1 : 1 }}>
       {isFocused && <AppStatusBar backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />}
       
       <FlatList
@@ -159,7 +161,7 @@ Status: ${selectedTransaction.status}`;
                   <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color={isDark ? "#ffffff" : "#0f172a"} />
                   </Pressable>
-                  <Text style={[styles.headerTitle, { color: isDark ? "#ffffff" : "#0f172a" }]}>Wallet</Text>
+                  <Text style={[styles.headerTitle, { color: isDark ? "#ffffff" : "#0f172a" }]}>{t('wallet', 'Wallet')}</Text>
                 </View>
                 <Pressable>
                   <Ionicons name="help-circle-outline" size={24} color={isDark ? "#ffffff" : "#0f172a"} />
@@ -168,11 +170,11 @@ Status: ${selectedTransaction.status}`;
 
               <View style={styles.topBalanceArea}>
                 <View style={styles.topLeft}>
-                  <Text style={[styles.totalBalanceLabel, { color: isDark ? "#9ca3af" : "#64748b" }]}>Total Balance</Text>
+                  <Text style={[styles.totalBalanceLabel, { color: isDark ? "#9ca3af" : "#64748b" }]}>{t('total_balance', 'Total Balance')}</Text>
                   <Text style={[styles.totalBalanceValue, { color: isDark ? "#ffffff" : "#0f172a" }]}>₹{balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</Text>
-                  <View style={styles.secureBadge}>
-                    <Ionicons name="shield-checkmark" size={14} color="#16a34a" />
-                    <Text style={styles.secureBadgeText}>100% Secure Payments</Text>
+                  <View style={[styles.secureBadge, { backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#dcfce7' }]}>
+                    <Ionicons name="shield-checkmark" size={14} color={isDark ? '#4ade80' : '#16a34a'} />
+                    <Text style={[styles.secureBadgeText, { color: isDark ? '#4ade80' : '#16a34a' }]}>{t('secure_payments_badge', '100% Secure Payments')}</Text>
                   </View>
                 </View>
               </View>
@@ -183,12 +185,12 @@ Status: ${selectedTransaction.status}`;
               <LinearGradient colors={['#4ade80', '#22c55e']} start={{x:0, y:0}} end={{x:1, y:1}} style={styles.greenCard}>
                 <View style={styles.greenCardTop}>
                   <View>
-                    <Text style={styles.greenCardLabel}>Available Balance</Text>
+                    <Text style={styles.greenCardLabel}>{t('available_balance', 'Available Balance')}</Text>
                     <Text style={styles.greenCardValue}>₹{balance.toLocaleString('en-IN', {minimumFractionDigits: 2})}</Text>
                   </View>
                   <Pressable style={styles.addMoneyBtn} onPress={() => navigation.navigate('AddMoneyScreen', { balance })}>
                     <Ionicons name="add" size={16} color="#16a34a" />
-                    <Text style={styles.addMoneyBtnText}>Add Money</Text>
+                    <Text style={styles.addMoneyBtnText}>{t('add_money', 'Add Money')}</Text>
                   </Pressable>
                 </View>
                 
@@ -198,7 +200,7 @@ Status: ${selectedTransaction.status}`;
                   <View style={styles.greenCardStat}>
                     <View style={styles.statIconRow}>
                       <Ionicons name="wallet-outline" size={14} color="#fff" />
-                      <Text style={styles.statLabel}>Used Balance</Text>
+                      <Text style={styles.statLabel}>{t('used_balance', 'Used Balance')}</Text>
                     </View>
                     <Text style={styles.statValue}>₹0.00</Text>
                   </View>
@@ -208,7 +210,7 @@ Status: ${selectedTransaction.status}`;
                   <View style={styles.greenCardStat}>
                     <View style={styles.statIconRow}>
                       <Ionicons name="time-outline" size={14} color="#fff" />
-                      <Text style={styles.statLabel}>In Hold</Text>
+                      <Text style={styles.statLabel}>{t('in_hold', 'In Hold')}</Text>
                     </View>
                     <Text style={styles.statValue}>₹0.00</Text>
                   </View>
@@ -218,7 +220,7 @@ Status: ${selectedTransaction.status}`;
                   <View style={styles.greenCardStat}>
                     <View style={styles.statIconRow}>
                       <Ionicons name="gift-outline" size={14} color="#fff" />
-                      <Text style={styles.statLabel}>Bonus Balance</Text>
+                      <Text style={styles.statLabel}>{t('bonus_balance', 'Bonus Balance')}</Text>
                     </View>
                     <Text style={styles.statValue}>₹0.00</Text>
                   </View>
@@ -227,34 +229,34 @@ Status: ${selectedTransaction.status}`;
 
               {/* Quick Actions */}
               <View style={[styles.quickActionsCard, { backgroundColor: isDark ? '#1F2937' : '#fff' }]}>
-                <Text style={[styles.quickActionsTitle, { color: isDark ? '#ffffff' : '#0f172a' }]}>Quick Actions</Text>
+                <Text style={[styles.quickActionsTitle, { color: isDark ? '#ffffff' : '#0f172a' }]}>{t('quick_actions', 'Quick Actions')}</Text>
                 <View style={styles.quickActionsRow}>
                   <Pressable style={styles.actionItem} onPress={() => navigation.navigate('AddMoneyScreen', { balance })}>
                     <View style={[styles.actionIconBg, { backgroundColor: isDark ? '#374151' : '#f0fdf4' }]}>
                       <Ionicons name="add" size={24} color="#16a34a" />
                     </View>
-                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>Add Money</Text>
+                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>{t('add_money', 'Add Money')}</Text>
                   </Pressable>
                   
                   <Pressable style={styles.actionItem} onPress={() => navigation.navigate('RechargePlanScreen')}>
                     <View style={[styles.actionIconBg, { backgroundColor: isDark ? '#374151' : '#f0fdf4' }]}>
                       <Ionicons name="ribbon" size={18} color="#16a34a" />
                     </View>
-                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>Subscription</Text>
+                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>{t('subscription', 'Subscription')}</Text>
                   </Pressable>
                   
                   <Pressable style={styles.actionItem} onPress={() => navigation.navigate('TransactionHistoryScreen')}>
                     <View style={[styles.actionIconBg, { backgroundColor: isDark ? '#374151' : '#f0fdf4' }]}>
                       <Ionicons name="document-text" size={20} color="#16a34a" />
                     </View>
-                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>Transaction{'\n'}History</Text>
+                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>{t('transaction_history', 'Transaction\nHistory')}</Text>
                   </Pressable>
                   
                   <Pressable style={styles.actionItem} onPress={() => navigation.navigate('WalletPinSetupScreen')}>
                     <View style={[styles.actionIconBg, { backgroundColor: isDark ? '#374151' : '#f0fdf4' }]}>
                       <Ionicons name="keypad" size={20} color="#16a34a" />
                     </View>
-                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>{user?.has_wallet_pin ? 'Update' : 'Set'}{'\n'}PIN</Text>
+                    <Text style={[styles.actionItemText, { color: isDark ? '#9ca3af' : '#475569' }]}>{user?.has_wallet_pin ? t('update_pin', 'Update\nPIN') : t('set_pin', 'Set\nPIN')}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -262,9 +264,9 @@ Status: ${selectedTransaction.status}`;
 
               {/* Recent Transactions Header */}
               <View style={styles.recentTxnHeader}>
-                <Text style={[styles.recentTxnTitle, { color: isDark ? '#ffffff' : '#0f172a' }]}>Recent Transactions</Text>
+                <Text style={[styles.recentTxnTitle, { color: isDark ? '#ffffff' : '#0f172a' }]}>{t('recent_transactions', 'Recent Transactions')}</Text>
                 <Pressable onPress={() => navigation.navigate('TransactionHistoryScreen')}>
-                  <Text style={styles.viewAllText}>View All</Text>
+                  <Text style={styles.viewAllText}>{t('view_all', 'View All')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -280,7 +282,7 @@ Status: ${selectedTransaction.status}`;
                 {iconConfig.name === 'wallet' ? (
                   <View style={{ width: 18, height: 18, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="wallet-outline" size={18} color={iconConfig.color} />
-                    <View style={{ position: 'absolute', top: -3, right: -3, backgroundColor: iconConfig.bg, borderRadius: 10, width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ position: 'absolute', top: -3, right: -3, backgroundColor: isDark ? '#374151' : iconConfig.bg, borderRadius: 10, width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
                       <Ionicons name={isPositive ? "add" : "remove"} size={10} color={iconConfig.color} />
                     </View>
                   </View>
@@ -300,8 +302,8 @@ Status: ${selectedTransaction.status}`;
                   <Text style={[styles.txnItemAmount, { color: isPositive ? '#16a34a' : '#ef4444' }]}>
                     {isPositive ? '+' : '-'} {`\u20B9`}{Math.abs(item.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}
                   </Text>
-                  <Text style={[styles.txnItemBalance, { color: isDark ? '#64748b' : '#64748b' }]}>
-                    Balance: {`\u20B9`}{item.closingBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                  <Text style={[styles.txnItemBalance, { color: isDark ? '#9ca3af' : '#64748b' }]}>
+                    {t('balance_label', 'Balance')}: {`\u20B9`}{item.closingBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}
                   </Text>
                 </View>
               </View>
@@ -325,17 +327,17 @@ Status: ${selectedTransaction.status}`;
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={56} color="#cbd5e1" />
-              <Text style={styles.emptyText}>No recent transactions</Text>
+              <Ionicons name="receipt-outline" size={56} color={isDark ? '#4b5563' : '#cbd5e1'} />
+              <Text style={[styles.emptyText, { color: isDark ? '#9ca3af' : '#94a3b8' }]}>{t('no_recent_transactions', 'No recent transactions')}</Text>
             </View>
           )
         }
         ListFooterComponent={
           recentTransactions.length > 0 ? (
             <View style={[styles.secureFooter, { backgroundColor: isDark ? '#1F2937' : '#f0fdf4' }]}>
-              <Ionicons name="shield-checkmark-outline" size={18} color="#16a34a" />
-              <Text style={styles.secureFooterText}>Your payments are secure with 256-bit encryption</Text>
-              <Ionicons name="chevron-forward" size={16} color="#16a34a" />
+              <Ionicons name="shield-checkmark-outline" size={18} color={isDark ? '#4ade80' : '#16a34a'} />
+              <Text style={[styles.secureFooterText, { color: isDark ? '#4ade80' : '#16a34a' }]}>{t('secure_encryption_msg', 'Your payments are secure with 256-bit encryption')}</Text>
+              <Ionicons name="chevron-forward" size={16} color={isDark ? '#4ade80' : '#16a34a'} />
             </View>
           ) : null
         }

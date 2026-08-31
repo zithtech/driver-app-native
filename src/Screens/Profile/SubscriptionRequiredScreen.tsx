@@ -70,35 +70,35 @@ const SubscriptionRequiredScreen = () => {
           </Text>
           <View style={styles.featuresRow}>
             <View style={styles.featureItem}>
-              <View style={[styles.iconWrapper, { borderColor: '#E5E7EB', borderWidth: 1 }]}>
-                <Ionicons name="shield-checkmark-outline" size={ms(20)} color="#2563EB" />
+              <View style={[styles.iconWrapper, { borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1 }]}>
+                <Ionicons name="shield-checkmark-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
               </View>
               <Text style={[styles.featureText, { color: theme.colors.text }]}>
                 Get Ride{'\n'}Requests
               </Text>
             </View>
-            <View style={styles.verticalDivider} />
+            <View style={[styles.verticalDivider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
             <View style={styles.featureItem}>
-              <View style={[styles.iconWrapper, { borderColor: '#E5E7EB', borderWidth: 1 }]}>
-                <Ionicons name="wallet-outline" size={ms(20)} color="#2563EB" />
+              <View style={[styles.iconWrapper, { borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1 }]}>
+                <Ionicons name="wallet-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
               </View>
               <Text style={[styles.featureText, { color: theme.colors.text }]}>
                 Increase{'\n'}Earnings
               </Text>
             </View>
-            <View style={styles.verticalDivider} />
+            <View style={[styles.verticalDivider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
             <View style={styles.featureItem}>
-              <View style={[styles.iconWrapper, { borderColor: '#E5E7EB', borderWidth: 1 }]}>
-                <Ionicons name="time-outline" size={ms(20)} color="#2563EB" />
+              <View style={[styles.iconWrapper, { borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1 }]}>
+                <Ionicons name="time-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
               </View>
               <Text style={[styles.featureText, { color: theme.colors.text }]}>
                 Priority{'\n'}Support
               </Text>
             </View>
-            <View style={styles.verticalDivider} />
+            <View style={[styles.verticalDivider, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
             <View style={styles.featureItem}>
-              <View style={[styles.iconWrapper, { borderColor: '#E5E7EB', borderWidth: 1 }]}>
-                <Ionicons name="ribbon-outline" size={ms(20)} color="#2563EB" />
+              <View style={[styles.iconWrapper, { borderColor: isDark ? '#374151' : '#E5E7EB', borderWidth: 1 }]}>
+                <Ionicons name="ribbon-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
               </View>
               <Text style={[styles.featureText, { color: theme.colors.text }]}>
                 Premium{'\n'}Benefits
@@ -110,7 +110,7 @@ const SubscriptionRequiredScreen = () => {
         {/* Date Image & Plan Card container */}
         <View style={styles.planContainer}>
           {/* Blue background card */}
-          <View style={styles.blueCard}>
+          <View style={[styles.blueCard, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F0F5FF', borderColor: isDark ? 'rgba(37, 99, 235, 0.2)' : '#E0E7FF' }]}>
             <View style={styles.blueCardContent}>
               <View style={styles.dateImageContainer}>
                 <Image
@@ -120,8 +120,8 @@ const SubscriptionRequiredScreen = () => {
                 />
               </View>
               <View style={styles.blueCardTextContainer}>
-                <Text style={styles.blueCardTitle}>Stay Online. Earn More.</Text>
-                <Text style={styles.blueCardDesc}>
+                <Text style={[styles.blueCardTitle, { color: theme.colors.text }]}>Stay Online. Earn More.</Text>
+                <Text style={[styles.blueCardDesc, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
                   Choose a plan that works best for you and start getting more rides.
                 </Text>
                 <TouchableOpacity
@@ -134,9 +134,9 @@ const SubscriptionRequiredScreen = () => {
               </View>
             </View>
             
-            <View style={styles.cancelRenewContainer}>
-              <Ionicons name="lock-closed" size={ms(12)} color="#6B7280" />
-              <Text style={styles.cancelRenewText}>You can cancel or renew anytime.</Text>
+            <View style={[styles.cancelRenewContainer, { borderTopColor: isDark ? '#374151' : '#E5E7EB' }]}>
+              <Ionicons name="lock-closed" size={ms(12)} color={isDark ? '#9CA3AF' : '#6B7280'} />
+              <Text style={[styles.cancelRenewText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>You can cancel or renew anytime.</Text>
             </View>
           </View>
         </View>
@@ -152,7 +152,7 @@ const SubscriptionRequiredScreen = () => {
         <View style={styles.reasonsRow}>
           <View style={styles.reasonItem}>
             <View style={[styles.reasonIconWrapper, { backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF' }]}>
-              <Ionicons name="stats-chart" size={ms(24)} color="#2563EB" />
+              <Ionicons name="stats-chart" size={ms(24)} color={isDark ? '#60A5FA' : '#2563EB'} />
             </View>
             <View style={styles.reasonTextContainer}>
               <Text style={[styles.reasonTitle, { color: theme.colors.text }]}>More Rides</Text>
@@ -200,18 +200,18 @@ const SubscriptionRequiredScreen = () => {
         {/* Need Help Card */}
         <View style={[styles.infoCard, { backgroundColor: theme.colors.card, marginBottom: vs(40) }]}>
           <View style={[styles.infoIconWrapper, { backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF' }]}>
-            <Ionicons name="headset-outline" size={ms(20)} color="#2563EB" />
+            <Ionicons name="headset-outline" size={ms(20)} color={isDark ? '#60A5FA' : '#2563EB'} />
           </View>
           <View style={styles.infoTextContainer}>
             <Text style={[styles.infoTitle, { color: theme.colors.text }]}>Need Help?</Text>
             <Text style={[styles.infoDesc, { color: theme.colors.textMuted }]}>Our support team is here for you 24/7.</Text>
           </View>
           <TouchableOpacity 
-            style={styles.contactButton}
+            style={[styles.contactButton, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.2)' : '#EFF6FF' }]}
             onPress={() => navigation.navigate('HelpCenterScreen')}
           >
-            <Text style={styles.contactButtonText}>Contact Support</Text>
-            <Ionicons name="chevron-forward" size={ms(14)} color="#2563EB" />
+            <Text style={[styles.contactButtonText, { color: isDark ? '#60A5FA' : '#2563EB' }]}>Contact Support</Text>
+            <Ionicons name="chevron-forward" size={ms(14)} color={isDark ? '#60A5FA' : '#2563EB'} />
           </TouchableOpacity>
         </View>
 

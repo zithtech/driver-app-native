@@ -45,6 +45,7 @@ type FilterType = 'all' | 'outstation_one_way' | 'one_way' | 'round_trip' | 'out
 
 
 import { HeaderSection, TopTabs, DateSelectorSection, StatsRow, ScheduledRideCard } from './components/ScheduledRideComponents';
+import { getLanguageScaledSize } from '../../utils/languageSizings';
 
 const getRideTypeDisplayText = (rideType: string) => {
   let displayType = rideType || 'ONE_WAY';
@@ -1065,7 +1066,7 @@ const ScheduledRidesScreen = () => {
         />
       )}
 
-      <Text style={[styles.sectionTitle, { color: theme.colors.text, marginHorizontal: ms(16), marginTop: vs(8), marginBottom: vs(8) }]}>Select Ride Type</Text>
+      <Text style={[styles.sectionTitle, { color: theme.colors.text, marginHorizontal: ms(16), marginTop: vs(8), marginBottom: vs(8) }]}>{t('select_ride_type', 'Select Ride Type')}</Text>
       <View style={styles.filterBar}>
         <FlatList
           horizontal
@@ -1122,7 +1123,7 @@ const ScheduledRidesScreen = () => {
                   styles.filterChipText,
                   { color: filterType === item ? '#FFF' : (isDark ? theme.colors.text : '#374151') },
                 ]}>
-                  {item === 'outstation_one_way' ? 'Outstation\nOne-way' : item === 'outstation_round_trip' ? 'Outstation\nRound-trip' : item === 'one_way' ? 'One-way' : item === 'round_trip' ? 'Round-trip' : 'All'}
+                  {item === 'outstation_one_way' ? t('outstation_one_way_multiline', 'Outstation\nOne-way') : item === 'outstation_round_trip' ? t('outstation_round_trip_multiline', 'Outstation\nRound-trip') : item === 'one_way' ? t('one_way_filter', 'One-way') : item === 'round_trip' ? t('round_trip_filter', 'Round-trip') : t('all_filter', 'All')}
                 </Text>
                 {/* No badges for the new design pills */}
                 </TouchableOpacity>
@@ -1182,9 +1183,9 @@ const ScheduledRidesScreen = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Image source={require('../../assets/images/noride.png')} style={styles.emptyImage} resizeMode="contain" />
-              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Scheduled Rides</Text>
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>{t('no_scheduled_rides', 'No Scheduled Rides')}</Text>
               <Text style={[styles.emptySubtitle, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
-                You don't have any scheduled rides yet.{'\n'}New bookings for later will appear here.
+                {t('no_scheduled_rides_desc', "You don't have any scheduled rides yet.\nNew bookings for later will appear here.")}
               </Text>
               
               <View style={[styles.emptyBanner, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#E2E8F0' }]}>
@@ -1192,9 +1193,9 @@ const ScheduledRidesScreen = () => {
                   <Ionicons name="calendar-outline" size={ms(20)} color="#2563EB" />
                 </View>
                 <View style={styles.emptyBannerTextContainer}>
-                  <Text style={[styles.emptyBannerTitle, { color: theme.colors.text }]}>Stay Ready for Upcoming Bookings</Text>
+                  <Text style={[styles.emptyBannerTitle, { color: theme.colors.text }]}>{t('stay_ready_upcoming_bookings', 'Stay Ready for Upcoming Bookings')}</Text>
                   <Text style={[styles.emptyBannerSubtitle, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
-                    Keep your availability up to date to receive more scheduled ride requests.
+                    {t('keep_availability_up_to_date', 'Keep your availability up to date to receive more scheduled ride requests.')}
                   </Text>
                 </View>
               </View>
@@ -1219,7 +1220,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionTitle: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
   offlineBanner: {
@@ -1232,7 +1233,7 @@ const styles = StyleSheet.create({
   },
   offlineText: {
     color: '#FFF',
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '600',
     flexShrink: 1,
     textAlign: 'center',
@@ -1246,7 +1247,7 @@ const styles = StyleSheet.create({
     paddingVertical: vs(8),
   },
   headerTitle: {
-    fontSize: ms(18),
+    fontSize: getLanguageScaledSize(18),
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -1256,7 +1257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: s(8),
   },
   headerSubtitle: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '500',
     marginTop: vs(2),
     textAlign: 'center',
@@ -1292,7 +1293,7 @@ const styles = StyleSheet.create({
 
   },
   tabText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '500',
   },
   activeTabText: {
@@ -1312,7 +1313,7 @@ const styles = StyleSheet.create({
   },
   countBadgeText: {
     color: '#FFF',
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '800',
   },
   listContent: {
@@ -1341,7 +1342,7 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   modalTitle: {
-    fontSize: ms(20),
+    fontSize: getLanguageScaledSize(20),
     fontWeight: '800',
     marginBottom: vs(24),
   },
@@ -1354,7 +1355,7 @@ const styles = StyleSheet.create({
     gap: ms(14),
   },
   sortOptionText: {
-    fontSize: ms(17),
+    fontSize: getLanguageScaledSize(17),
     fontWeight: '600',
   },
   footerActions: {
@@ -1368,13 +1369,13 @@ const styles = StyleSheet.create({
     gap: vs(10),
   },
   primaryBtnText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '700',
     letterSpacing: 0.5,
     color: '#FFF',
   },
   outlineBtnText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '600',
   },
   cardHeader: {
@@ -1394,16 +1395,16 @@ const styles = StyleSheet.create({
     gap: ms(6),
   },
   dateSubHeaderText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   timeSubHeaderText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '800',
   },
   cardHeaderText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -1431,17 +1432,17 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   metadataText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   timeBadgeText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
     marginLeft: ms(4),
   },
   priceBig: {
-    fontSize: ms(24),
+    fontSize: getLanguageScaledSize(24),
     fontWeight: '800',
   },
   miniTag: {
@@ -1452,7 +1453,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   miniTagText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '700',
   },
   remainingTag: {
@@ -1464,7 +1465,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   remainingTagText: {
-    fontSize: ms(11),
+    fontSize: getLanguageScaledSize(11),
     fontWeight: '600',
   },
   locationContainer: {
@@ -1490,13 +1491,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addrLabel: {
-    fontSize: ms(13),
+    fontSize: getLanguageScaledSize(13),
     fontWeight: '700',
     textTransform: 'uppercase',
     marginBottom: vs(2),
   },
   addrText: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '500',
   },
   vehicleInfoContainer: {
@@ -1509,7 +1510,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(6),
   },
   vehicleNameText: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '900',
     letterSpacing: 0.5,
     marginBottom: vs(4),
@@ -1527,7 +1528,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   vehicleBadgeText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -1542,12 +1543,12 @@ const styles = StyleSheet.create({
     gap: ms(8),
   },
   rideStatsText: {
-    fontSize: ms(13),
+    fontSize: getLanguageScaledSize(13),
     fontWeight: '500',
   },
   rideStatsTextBold: {
     fontWeight: '800',
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
   },
   statItemRow: {
     flexDirection: 'row',
@@ -1560,7 +1561,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   ecoBadgeText: {
-    fontSize: ms(6),
+    fontSize: getLanguageScaledSize(6),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -1600,7 +1601,7 @@ const styles = StyleSheet.create({
   },
   textBtnRed: {
     color: '#EF4444',
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '600',
   },
   floatCallBtn: {
@@ -1635,11 +1636,11 @@ const styles = StyleSheet.create({
     marginRight: ms(12),
   },
   psgrName: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '800',
   },
   psgrDetail: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
   },
   psgrDetailRow: {
     flexDirection: 'row',
@@ -1653,12 +1654,12 @@ const styles = StyleSheet.create({
     gap: ms(3),
   },
   ratingText: {
-    fontSize: ms(11),
+    fontSize: getLanguageScaledSize(11),
     fontWeight: '800',
     color: '#92400E',
   },
   avatarText: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '800',
   },
   callBtn: {
@@ -1689,7 +1690,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   filterChipText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '600',
     lineHeight: vs(12),
   },
@@ -1706,7 +1707,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(16),
   },
   modalSubtitle: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     marginBottom: vs(20),
   },
   reasonsList: {
@@ -1724,7 +1725,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   reasonText: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '500',
   },
   radioCircle: {
@@ -1747,7 +1748,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmCancelBtnText: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
   otherReasonInput: {
@@ -1755,7 +1756,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: ms(8),
     padding: ms(12),
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     textAlignVertical: 'top',
   },
   emptyContainer: {
@@ -1772,13 +1773,13 @@ const styles = StyleSheet.create({
     marginBottom: vs(12),
   },
   emptyTitle: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
     marginBottom: vs(4),
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     textAlign: 'center',
     marginBottom: vs(16),
     lineHeight: vs(18),
@@ -1806,12 +1807,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyBannerTitle: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '700',
     marginBottom: vs(2),
   },
   emptyBannerSubtitle: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     lineHeight: vs(14),
   },
   clearFilterBtn: {
@@ -1821,7 +1822,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   clearFilterText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '700',
   },
   filterCountBadge: {
@@ -1834,7 +1835,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterCountText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
   },
   bottomSheet: {
@@ -1853,13 +1854,13 @@ const styles = StyleSheet.create({
     marginBottom: vs(16),
   },
   sheetTitle: {
-    fontSize: ms(20),
+    fontSize: getLanguageScaledSize(20),
     fontWeight: '700',
     marginBottom: vs(8),
     textAlign: 'center',
   },
   sheetSubtitle: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     marginBottom: vs(24),
     lineHeight: vs(20),
   },
@@ -1878,7 +1879,7 @@ const styles = StyleSheet.create({
   },
   sheetCancelBtnText: {
     color: '#374151',
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
   sheetConfirmBtn: {
@@ -1889,7 +1890,7 @@ const styles = StyleSheet.create({
   },
   sheetConfirmBtnText: {
     color: '#FFFFFF',
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
 });

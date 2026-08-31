@@ -95,8 +95,8 @@ const PersonalDetails = ({ navigation }: any) => {
       (alternateContact.trim() && !isValidAlternateContact(alternateContact.trim()))
     ) {
       showAlert({
-        title: 'Validation Error',
-        message: 'Please fill all required fields correctly.',
+        title: t('validation_error', 'Validation Error'),
+        message: t('fill_all_fields_correctly', 'Please fill all required fields correctly.'),
         singleButton: true,
         icon: 'information-circle-outline',
       });
@@ -151,9 +151,9 @@ const PersonalDetails = ({ navigation }: any) => {
     } catch (error: any) {
       setIsSubmitting(false);
       showAlert({
-        title: 'Update Failed',
-        message: error?.data?.message || 'Failed to update personal details.',
-        confirmText: 'Try Again',
+        title: t('update_failed', 'Update Failed'),
+        message: error?.data?.message || t('failed_to_update_personal_details', 'Failed to update personal details.'),
+        confirmText: t('try_again', 'Try Again'),
         singleButton: true,
         icon: 'alert-circle-outline',
       });
@@ -224,7 +224,7 @@ const PersonalDetails = ({ navigation }: any) => {
   };
 
   const Label = ({ text, required }: { text: string; required?: boolean }) => (
-    <Text style={styles.labelText}>
+    <Text style={[styles.labelText, { color: colors.text }]}>
       {text} {required && <Text style={{ color: '#EF4444' }}>*</Text>}
     </Text>
   );
@@ -237,37 +237,37 @@ const PersonalDetails = ({ navigation }: any) => {
         {/* PROGRESS BAR */}
         <View style={styles.progressWrapper}>
           <View style={styles.progressLineContainer}>
-             <View style={[styles.progressLine, { width: '33%', backgroundColor: '#0062FF' }]} />
-             <View style={[styles.progressLine, { width: '67%', backgroundColor: '#E5E7EB' }]} />
+             <View style={[styles.progressLine, { width: '33%', backgroundColor: colors.primary }]} />
+             <View style={[styles.progressLine, { width: '67%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
           </View>
           <View style={styles.progressStepsRow}>
             {/* Step 1 */}
             <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Ionicons name="checkmark" size={16} color="#FFF" />
               </View>
-              <Text style={styles.stepText}>Mobile{'\n'}Verification</Text>
+              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('mobile_verification_step', 'Mobile\nVerification')}</Text>
             </View>
             {/* Step 2 */}
             <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Text style={[styles.stepNumber, { color: '#FFF' }]}>2</Text>
               </View>
-              <Text style={[styles.stepText, { color: '#0062FF' }]}>Personal{'\n'}Details</Text>
+              <Text style={[styles.stepText, { color: colors.primary }]}>{t('personal_details_step', 'Personal\nDetails')}</Text>
             </View>
             {/* Step 3 */}
             <View style={styles.stepContainer}>
-              <View style={styles.stepCircle}>
-                <Text style={styles.stepNumber}>3</Text>
+              <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
+                <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>3</Text>
               </View>
-              <Text style={styles.stepText}>Address{'\n'}Details</Text>
+              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('address_details_step', 'Address\nDetails')}</Text>
             </View>
             {/* Step 4 */}
             <View style={styles.stepContainer}>
-              <View style={styles.stepCircle}>
-                <Text style={styles.stepNumber}>4</Text>
+              <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
+                <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>4</Text>
               </View>
-              <Text style={styles.stepText}>Documents{'\n'}Upload</Text>
+              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('documents_upload_step', 'Documents\nUpload')}</Text>
             </View>
           </View>
         </View>
@@ -285,9 +285,9 @@ const PersonalDetails = ({ navigation }: any) => {
             {/* HEADER SECTION */}
             <View style={styles.headerSection}>
               <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Personal Details</Text>
-                <Text style={styles.headerSubtitle}>
-                  Please enter your details exactly as per your official documents.
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('personal_details_title', 'Personal Details')}</Text>
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  {t('personal_details_subtitle', 'Please enter your details exactly as per your official documents.')}
                 </Text>
               </View>
               <Image 
@@ -302,30 +302,30 @@ const PersonalDetails = ({ navigation }: any) => {
               {/* FIRST & LAST NAME */}
               <View style={styles.row}>
                 <View style={styles.half}>
-                  <Label text="First Name" required />
+                  <Label text={t('first_name', 'First Name')} required />
                   <Input
                     value={firstName}
                     autoCapitalize="words"
                     onChangeText={setFirstName}
-                    placeholder="Enter first name"
+                    placeholder={t('enter_first_name', 'Enter first name')}
                     placeholderTextColor="#9CA3AF"
-                    style={{ fontSize: 13 }}
-                    inputContainerStyle={styles.inputContainer}
+                    style={{ fontSize: 13, color: colors.text }}
+                    inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                     LeadingAccessory={
                       <Ionicons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
                   />
                 </View>
                 <View style={styles.half}>
-                  <Label text="Last Name" required />
+                  <Label text={t('last_name', 'Last Name')} required />
                   <Input
                     value={lastName}
                     autoCapitalize="words"
                     onChangeText={setLastName}
-                    placeholder="Enter last name"
+                    placeholder={t('enter_last_name', 'Enter last name')}
                     placeholderTextColor="#9CA3AF"
-                    style={{ fontSize: 13 }}
-                    inputContainerStyle={styles.inputContainer}
+                    style={{ fontSize: 13, color: colors.text }}
+                    inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                     LeadingAccessory={
                       <Ionicons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
@@ -335,7 +335,7 @@ const PersonalDetails = ({ navigation }: any) => {
 
               {/* DATE OF BIRTH */}
               <View style={styles.mt}>
-                <Label text="Date of Birth" required />
+                <Label text={t('date_of_birth_label', 'Date of Birth')} required />
                 <Input
                   value={dobText}
                   onChangeText={handleDateTextChange}
@@ -343,14 +343,14 @@ const PersonalDetails = ({ navigation }: any) => {
                   maxLength={14}
                   placeholder="DD / MM / YYYY"
                   placeholderTextColor="#9CA3AF"
-                  style={{ fontSize: 13 }}
-                  inputContainerStyle={styles.inputContainer}
+                  style={{ fontSize: 13, color: colors.text }}
+                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                   LeadingAccessory={
                     <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
                   }
                   TailingAccessory={
                     <TouchableOpacity onPress={() => setShowDatePicker(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="chevron-down-outline" size={20} color="#111827" />
+                      <Ionicons name="chevron-down-outline" size={20} color={colors.text} />
                     </TouchableOpacity>
                   }
                 />
@@ -358,7 +358,7 @@ const PersonalDetails = ({ navigation }: any) => {
 
               {/* GENDER */}
               <View style={styles.mt}>
-                <Label text="Gender" required />
+                <Label text={t('gender_label', 'Gender')} required />
                 <View style={styles.genderRow}>
                   {['Male', 'Female', 'Other'].map((option) => {
                     const isActive = gender === option;
@@ -383,14 +383,15 @@ const PersonalDetails = ({ navigation }: any) => {
                         }}
                         style={[
                           styles.genderBtn,
-                          isActive && styles.genderBtnActive
+                          { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' },
+                          isActive && [styles.genderBtnActive, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF', borderColor: colors.primary }]
                         ]}
                       >
-                        <View style={[styles.radioCircle, isActive && styles.radioCircleActive]}>
-                          {isActive && <View style={styles.radioDot} />}
+                        <View style={[styles.radioCircle, { borderColor: isDark ? 'rgba(255,255,255,0.3)' : '#D1D5DB' }, isActive && [styles.radioCircleActive, { borderColor: colors.primary }]]}>
+                          {isActive && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
                         </View>
                         <Ionicons name={iconName} size={18} color={isActive ? iconColor : '#9CA3AF'} />
-                        <Text style={[styles.genderText, isActive && styles.genderTextActive]}>
+                        <Text style={[styles.genderText, { color: isDark ? '#9CA3AF' : '#6B7280' }, isActive && [styles.genderTextActive, { color: colors.text }]]}>
                           {option}
                         </Text>
                       </TouchableOpacity>
@@ -401,41 +402,41 @@ const PersonalDetails = ({ navigation }: any) => {
 
               {/* EMAIL */}
               <View style={styles.mt}>
-                <Label text="Email Address (Optional)" />
+                <Label text={t('email_address_optional', 'Email Address (Optional)')} />
                 <Input
                   value={email}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   onChangeText={setEmail}
-                  placeholder="Enter email address"
+                  placeholder={t('enter_email_address', 'Enter email address')}
                   placeholderTextColor="#9CA3AF"
-                  style={{ fontSize: 13 }}
-                  inputContainerStyle={styles.inputContainer}
+                  style={{ fontSize: 13, color: colors.text }}
+                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                   LeadingAccessory={
                     <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
                   }
-                  error={(email.length > 0 && !isValidEmail(email)) ? "Please enter a valid email address" : undefined}
+                  error={(email.length > 0 && !isValidEmail(email)) ? t('valid_email_error', 'Please enter a valid email address') : undefined}
                 />
               </View>
 
               {/* ALTERNATIVE CONTACT NUMBER */}
               <View style={styles.mt}>
-                <Label text="Alternative Contact Number (Optional)" />
+                <Label text={t('alternative_contact_optional', 'Alternative Contact Number (Optional)')} />
                 <Input
                   value={alternateContact}
                   keyboardType="numeric"
                   maxLength={10}
                   onChangeText={(text) => setAlternateContact(text.replace(/[^0-9]/g, ''))}
-                  placeholder="Enter alternative contact number"
+                  placeholder={t('enter_alternative_contact', 'Enter alternative contact number')}
                   placeholderTextColor="#9CA3AF"
-                  style={{ fontSize: 13 }}
-                  inputContainerStyle={styles.inputContainer}
+                  style={{ fontSize: 13, color: colors.text }}
+                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                   LeadingAccessory={
                     <View style={styles.phonePrefixContainer}>
                       <Ionicons name="phone-portrait-outline" size={20} color="#9CA3AF" />
-                      <Text style={styles.phonePrefixText}>+91</Text>
-                      <Ionicons name="chevron-down-outline" size={16} color="#111827" />
-                      <View style={styles.phoneDivider} />
+                      <Text style={[styles.phonePrefixText, { color: colors.text }]}>+91</Text>
+                      <Ionicons name="chevron-down-outline" size={16} color={colors.text} />
+                      <View style={[styles.phoneDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
                     </View>
                   }
                 />
@@ -444,13 +445,13 @@ const PersonalDetails = ({ navigation }: any) => {
             </View>
 
             {/* SUPPORT CHAT BUTTON */}
-            <TouchableOpacity style={styles.chatButton} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav)}>
-              <View style={styles.chatIconWrapper}>
-                <Ionicons name="chatbubbles" size={16} color="#0062FF" />
+            <TouchableOpacity style={[styles.chatButton, { backgroundColor: colors.primary }]} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav)}>
+              <View style={[styles.chatIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFF' }]}>
+                <Ionicons name="chatbubbles" size={16} color={isDark ? '#FFF' : colors.primary} />
               </View>
               <View style={styles.chatTextWrapper}>
-                <Text style={styles.chatTitle}>Start Chatting</Text>
-                <Text style={styles.chatSubtitle}>Get help from our assistant</Text>
+                <Text style={styles.chatTitle}>{t('start_chatting', 'Start Chatting')}</Text>
+                <Text style={styles.chatSubtitle}>{t('get_help_from_assistant', 'Get help from our assistant')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color="#FFF" />
             </TouchableOpacity>
@@ -459,18 +460,19 @@ const PersonalDetails = ({ navigation }: any) => {
 
           {/* FOOTER BUTTON */}
           {isFormValid && (
-            <View style={styles.footer}>
+            <View style={[styles.footer, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={handleContinue}
                 disabled={isSubmitting || isUpdating}
                 style={[
                   styles.continueBtn,
+                  { backgroundColor: colors.primary },
                   (isSubmitting || isUpdating) && styles.continueBtnDisabled
                 ]}
               >
                 <Text style={styles.continueText}>
-                  {isSubmitting || isUpdating ? 'Saving...' : 'Continue'}
+                  {isSubmitting || isUpdating ? t('saving', 'Saving...') : t('continue_btn', 'Continue')}
                 </Text>
                 {!(isSubmitting || isUpdating) && (
                   <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
@@ -478,8 +480,8 @@ const PersonalDetails = ({ navigation }: any) => {
               </TouchableOpacity>
               
               <View style={styles.secureTextContainer}>
-                <Ionicons name="lock-closed-outline" size={14} color="#6B7280" />
-                <Text style={styles.secureText}>
+                <Ionicons name="lock-closed-outline" size={14} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                <Text style={[styles.secureText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
                   Your information is safe and secure with us
                 </Text>
               </View>
@@ -491,11 +493,11 @@ const PersonalDetails = ({ navigation }: any) => {
           Platform.OS === 'ios' ? (
             <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
               <Pressable style={styles.modalOverlay} onPress={() => setShowDatePicker(false)} />
-              <View style={styles.pickerContainer}>
-                <View style={styles.pickerHeader}>
-                  <Text style={styles.pickerTitle}>Date of Birth</Text>
+              <View style={[styles.pickerContainer, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+                <View style={[styles.pickerHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}>
+                  <Text style={[styles.pickerTitle, { color: colors.text }]}>Date of Birth</Text>
                   <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={styles.doneText}>Done</Text>
+                    <Text style={[styles.doneText, { color: colors.primary }]}>{t('done', 'Done')}</Text>
                   </TouchableOpacity>
                 </View>
                 <DateTimePicker
@@ -503,6 +505,7 @@ const PersonalDetails = ({ navigation }: any) => {
                   mode="date"
                   display="spinner"
                   maximumDate={new Date()}
+                  textColor={colors.text}
                   onChange={(_event, selectedDate) => {
                     if (selectedDate) {
                       triggerHaptic(HapticFeedbackTypes.selection);

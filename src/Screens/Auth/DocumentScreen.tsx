@@ -119,7 +119,7 @@ const AnimatedTips = ({ t, fonts }: { t: any; fonts: any }) => {
             ]}
           >
             <Ionicons name={tip.icon} size={16} color="#6B7280" />
-            <Text style={styles.tipText} numberOfLines={1} adjustsFontSizeToFit>{t(tip.key)}</Text>
+            <Text style={[styles.tipText, { color: fonts?.colors?.text || '#4B5563' }]} numberOfLines={1} adjustsFontSizeToFit>{t(tip.key)}</Text>
           </Animated.View>
         ))}
       </View>
@@ -446,36 +446,36 @@ const DocumentScreen = ({ navigation }: any) => {
       {/* PROGRESS BAR */}
       <View style={styles.progressWrapper}>
         <View style={styles.progressLineContainer}>
-           <View style={[styles.progressLine, { width: '100%', backgroundColor: '#0062FF' }]} />
+           <View style={[styles.progressLine, { width: '100%', backgroundColor: colors.primary }]} />
         </View>
         <View style={styles.progressStepsRow}>
           {/* Step 1 */}
           <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={styles.stepText}>Mobile{'\n'}Verification</Text>
+            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Mobile{'\n'}Verification</Text>
           </View>
           {/* Step 2 */}
           <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={styles.stepText}>Personal{'\n'}Details</Text>
+            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Personal{'\n'}Details</Text>
           </View>
           {/* Step 3 */}
           <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={styles.stepText}>Address{'\n'}Details</Text>
+            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Address{'\n'}Details</Text>
           </View>
           {/* Step 4 */}
           <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: '#0062FF', borderColor: '#0062FF' }]}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Text style={[styles.stepNumber, { color: '#FFF' }]}>4</Text>
             </View>
-            <Text style={[styles.stepText, { color: '#0062FF' }]}>Documents{'\n'}Upload</Text>
+            <Text style={[styles.stepText, { color: colors.primary }]}>Documents{'\n'}Upload</Text>
           </View>
         </View>
       </View>
@@ -501,8 +501,8 @@ const DocumentScreen = ({ navigation }: any) => {
             {/* HEADER SECTION */}
             <View style={styles.headerSection}>
               <View style={styles.headerTextContainer}>
-                <Text style={[styles.headerTitle, { color: isDark ? '#FFF' : '#111827' }]}>Documents Upload</Text>
-                <Text style={styles.headerSubtitle}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('documents_upload_title', 'Documents Upload')}</Text>
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
                   Please upload clear and original documents.
                 </Text>
               </View>
@@ -513,11 +513,11 @@ const DocumentScreen = ({ navigation }: any) => {
             </View>
 
             {/* INFO BANNER */}
-            <View style={styles.infoBanner}>
-              <View style={styles.infoIconContainer}>
+            <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : '#EFF6FF' }]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: colors.primary }]}>
                 <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>i</Text>
               </View>
-              <Text style={[styles.infoBannerText, { color: isDark ? '#FFF' : '#1F2937' }]}>
+              <Text style={[styles.infoBannerText, { color: colors.text }]}>
                 All documents are secure and will be used only for verification purposes.
               </Text>
             </View>
@@ -573,7 +573,7 @@ const DocumentScreen = ({ navigation }: any) => {
                   ]}
                 >
                   <View style={styles.docRowLeft}>
-                    <View style={[styles.docIconBoxLarge, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }]}>
+                    <View style={[styles.docIconBoxLarge, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? theme.colors.card : '#F9FAFB' }]}>
                       {doc.key === 'Profile_Selfie' ? (
                          <Image source={require('../../assets/images/3.png')} style={styles.thumbnailLarge} resizeMode="cover" />
                       ) : doc.key === 'Aadhar_Card' ? (
@@ -597,7 +597,7 @@ const DocumentScreen = ({ navigation }: any) => {
                     </View>
           
                     <View style={styles.docInfo}>
-                      <Text style={[styles.docTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1}>
+                      <Text style={[styles.docTitle, { color: colors.text }]} numberOfLines={1}>
                         {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
                       </Text>
                       

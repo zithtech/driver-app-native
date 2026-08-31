@@ -63,8 +63,8 @@ const SosContactsScreen = ({ navigation }: any) => {
     setModalData({
       title: options.title || '',
       message: options.message || '',
-      confirmText: options.confirmText || t('ok'),
-      cancelText: options.cancelText || t('cancel'),
+      confirmText: options.confirmText || t('ok', 'OK'),
+      cancelText: options.cancelText || t('cancel', 'Cancel'),
       icon: options.icon || 'shield-checkmark',
       isDestructive: options.isDestructive || false,
       onConfirm: options.onConfirm || (() => setModalVisible(false)),
@@ -148,11 +148,11 @@ const SosContactsScreen = ({ navigation }: any) => {
 
   const handleDeleteContact = (id: number) => {
     showConfirm({
-      title: t('remove_contact'),
-      message: t('remove_contact_confirm'),
+      title: t('remove_contact', 'Remove Contact'),
+      message: t('remove_contact_confirm', 'Are you sure you want to remove this contact?'),
       icon: 'trash',
       isDestructive: true,
-      confirmText: t('remove'),
+      confirmText: t('remove', 'Remove'),
       onConfirm: async () => {
         try {
           setModalVisible(false);
@@ -199,7 +199,7 @@ const SosContactsScreen = ({ navigation }: any) => {
               <Ionicons name="person-add-outline" size={22} color={textPrimary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.addCardTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('add_new_contact')}</Text>
+              <Text style={[styles.addCardTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('add_new_contact', 'Add New Contact')}</Text>
             </View>
           </View>
 
@@ -231,7 +231,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Name Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_name')}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_name', 'Contact Name')}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: name ? colors.primary : inputBorder }]}>
               <Ionicons name="person-outline" size={18} color={name ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -251,7 +251,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Phone Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('phone_number')}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('phone_number', 'Phone Number')}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: phone ? colors.primary : inputBorder }]}>
               <Ionicons name="call-outline" size={18} color={phone ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -340,7 +340,7 @@ const SosContactsScreen = ({ navigation }: any) => {
         {/* ── CONTACTS LIST ── */}
         <View style={styles.contactsList}>
           <View style={styles.listHeaderRow}>
-            <Text style={[styles.listTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_trusted_contacts')}</Text>
+            <Text style={[styles.listTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_trusted_contacts', 'My Trusted Contacts')}</Text>
             <Text style={[styles.countText, { color: textSecondary }]}>{contacts.length} / 5</Text>
           </View>
 
@@ -349,7 +349,7 @@ const SosContactsScreen = ({ navigation }: any) => {
           ) : contacts.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: 'transparent' }]}>
               <Ionicons name="people-outline" size={48} color={textMuted} style={{ marginBottom: 16 }} />
-              <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('no_contacts_added')}</Text>
+              <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('no_contacts_added', 'No Contacts Added')}</Text>
               <Text style={[styles.emptySubText, { color: textSecondary }]}>
                 {t('add_contact_hint') || 'Add a trusted contact using the form above'}
               </Text>
@@ -610,6 +610,7 @@ const AVATAR_COLORS = [
 ];
 
 const SosContactCard = ({ name, phone, relationship, status = 'verified', onDelete, index }: any) => {
+  const { t } = useTranslation();
   const { isDark } = useAppTheme();
   const avatarStyle = AVATAR_COLORS[index % AVATAR_COLORS.length];
 
@@ -657,7 +658,7 @@ const SosContactCard = ({ name, phone, relationship, status = 'verified', onDele
               color={status === 'verified' ? '#10B981' : '#F59E0B'} 
             />
             <Text style={[cardStyles.statusText, { color: status === 'verified' ? '#10B981' : '#F59E0B' }]}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === 'verified' ? t('status_verified', 'Verified') : t('status_pending', 'Pending')}
             </Text>
           </View>
         </View>

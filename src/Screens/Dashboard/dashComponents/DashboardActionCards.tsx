@@ -8,6 +8,8 @@ import { RootState } from '../../../redux/store';
 import { calculateCompletion, getProfileMissingText } from '../../../utils/profileUtils';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { getLanguageScaledSize } from '../../../utils/languageSizings';
 
 const { width } = Dimensions.get('window');
 
@@ -50,16 +52,11 @@ const CircleChart = ({ percentage, isDark }: { percentage: number, isDark: boole
   );
 };
 
-const safetyTips = [
-  "Follow safety guidelines and drive safe.",
-  "Always wear your seatbelt while driving.",
-  "Avoid distractions and stay focused on the road.",
-  "Maintain a safe distance from other vehicles.",
-  "Take regular breaks on long trips to stay alert."
-];
 
 export default function DashboardActionCards() {
   const { theme, isDark } = useAppTheme();
+  const { t } = useTranslation();
+  const safetyTips = t('dashboard.safety_tips', { returnObjects: true }) as string[];
   const user = useSelector((state: RootState) => state.userSlice.user);
   const completionPercentage = calculateCompletion(user);
   const missingText = getProfileMissingText(user);
@@ -83,7 +80,7 @@ export default function DashboardActionCards() {
       >
         <View style={{ zIndex: 10, position: 'absolute', top: ms(12), left: ms(12), right: ms(12) }}>
           <Text style={[styles.title, { color: isDark ? '#F8FAFC' : '#1E1B4B' }]}>
-            Stay Safe on the Road
+            {t('dashboard.stay_safe')}
           </Text>
           <View style={styles.subtitleRow}>
             <Text style={[styles.subtitle, { color: isDark ? '#94A3B8' : '#334155', flex: 1, paddingRight: ms(4) }]} numberOfLines={2}>
@@ -101,7 +98,7 @@ export default function DashboardActionCards() {
         onPress={() => navigation.navigate('ProfileDetailsScreen')}
       >
         <Text style={[styles.title, { color: isDark ? theme.colors.text : '#1E1B4B' }]}>
-          Complete Your Profile
+          {t('dashboard.complete_profile')}
         </Text>
 
         <View style={styles.profileContent}>
@@ -145,11 +142,11 @@ const styles = StyleSheet.create({
     marginTop: vs(4),
   },
   title: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '700',
   },
   subtitle: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     lineHeight: vs(14),
   },
   carImage: {

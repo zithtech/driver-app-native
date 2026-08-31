@@ -52,11 +52,11 @@ const CustomTabBarButton = ({ isOnline, theme, label }: any) => (
     }}>
       <Ionicons name="power" size={ms(28)} color="#FFFFFF" />
     </View>
-    <Text style={{
+     <Text style={{
        fontSize: ms(11),
        fontWeight: '600',
        marginTop: vs(6),
-       color: theme.colors.text || '#000',
+       color: theme.dark ? '#9CA3AF' : '#94A3B8',
        textAlign: 'center'
     }}>
       {label}
@@ -108,7 +108,7 @@ const getScreenOptions = (theme: any, isDark: boolean, insets: any) => ({ route 
 
   // COLORS
   tabBarActiveTintColor: theme.colors.primary,
-  tabBarInactiveTintColor: theme.colors.paragraphText || '#94A3B8',
+  tabBarInactiveTintColor: isDark ? '#9CA3AF' : (theme.colors.paragraphText || '#94A3B8'),
 
   // ✅ hide tabs when keyboard opens
   tabBarHideOnKeyboard: false, // Changed from true to prevent jumping
@@ -116,7 +116,8 @@ const getScreenOptions = (theme: any, isDark: boolean, insets: any) => ({ route 
   // ✅ SAFE AREA + RESPONSIVE HEIGHT
   tabBarStyle: {
     backgroundColor: theme.colors.card,
-    borderTopWidth: 0,
+    borderTopWidth: isDark ? 1 : 0,
+    borderTopColor: isDark ? '#374151' : 'transparent',
     height: vs(65) + Math.max(insets.bottom, vs(10)),
     paddingBottom: Math.max(insets.bottom, vs(5)),
     paddingTop: vs(10),

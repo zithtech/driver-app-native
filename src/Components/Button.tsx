@@ -51,11 +51,11 @@ const Button: React.FC<ButtonProps> = ({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={colors.background} />
+        <ActivityIndicator color="#FFF" />
       ) : (
         <Text
           style={[
-            { color: colors.background },
+            { color: '#FFF', fontWeight: 'bold' },
             labelStyle,
           ]}
         >

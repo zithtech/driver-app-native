@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated } from '
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { ms, vs, s } from '../../../lib/scale';
 import moment from 'moment';
+import { getLanguageScaledSize, isTamilLanguage } from '../../../utils/languageSizings';
 
 // --- Header Section ---
 export const HeaderSection = ({ isOnline, onToggleStatus, theme, isDark, t }: any) => {
@@ -14,10 +15,10 @@ export const HeaderSection = ({ isOnline, onToggleStatus, theme, isDark, t }: an
         </View>
         <View style={{ flex: 1, marginLeft: ms(10) }}>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            {isOnline ? "You're Online" : "You're Offline"}
+            {isOnline ? t('you_are_online_header', "You're Online") : t('you_are_offline_header', "You're Offline")}
           </Text>
           <Text style={[styles.headerSubtitle, { color: theme.colors.paragraphText }]} numberOfLines={2}>
-            You will receive scheduled ride requests as per your availability.
+            {t('scheduled_requests_availability_msg', "You will receive scheduled ride requests as per your availability.")}
           </Text>
         </View>
       </View>
@@ -27,6 +28,7 @@ export const HeaderSection = ({ isOnline, onToggleStatus, theme, isDark, t }: an
 
 // --- Top Tabs Section ---
 export const TopTabs = ({ activeTab, onTabChange, hasAcceptedRide, theme, isDark, t }: any) => {
+  const isTa = isTamilLanguage();
   return (
     <View style={[styles.tabsWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#FFF', borderColor: isDark ? theme.colors.border : '#E2E8F0' }]}>
       <TouchableOpacity 
@@ -39,8 +41,12 @@ export const TopTabs = ({ activeTab, onTabChange, hasAcceptedRide, theme, isDark
             <View style={{ position: 'absolute', top: -vs(2), right: -ms(2), width: ms(8), height: ms(8), borderRadius: ms(4), backgroundColor: '#10B981', borderWidth: 1, borderColor: isDark ? theme.colors.background : '#FFF' }} />
           )}
         </View>
-        <Text style={[styles.tabText, { color: activeTab === 'live' ? '#2563EB' : theme.colors.textMuted }]}>
-          Accepted Ride
+        <Text 
+          style={[styles.tabText, { color: activeTab === 'live' ? '#2563EB' : theme.colors.textMuted, flexShrink: isTa ? 1 : 0 }]}
+          numberOfLines={isTa ? 1 : undefined}
+          adjustsFontSizeToFit={isTa}
+        >
+          {t('accepted_ride_tab', 'Accepted Ride')}
         </Text>
       </TouchableOpacity>
       
@@ -49,8 +55,12 @@ export const TopTabs = ({ activeTab, onTabChange, hasAcceptedRide, theme, isDark
         onPress={() => onTabChange('scheduled')}
       >
         <Ionicons name="calendar-outline" size={ms(18)} color={activeTab === 'scheduled' ? '#2563EB' : theme.colors.textMuted} />
-        <Text style={[styles.tabText, { color: activeTab === 'scheduled' ? '#2563EB' : theme.colors.textMuted }]}>
-          Scheduled Rides
+        <Text 
+          style={[styles.tabText, { color: activeTab === 'scheduled' ? '#2563EB' : theme.colors.textMuted, flexShrink: isTa ? 1 : 0 }]}
+          numberOfLines={isTa ? 1 : undefined}
+          adjustsFontSizeToFit={isTa}
+        >
+          {t('scheduled_rides_tab', 'Scheduled Rides')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -63,15 +73,15 @@ export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress,
     const list = [];
     list.push({
       id: 'all',
-      dayName: 'Show',
-      dateNum: 'All',
-      month: 'Dates'
+      dayName: t('show_dates_label', 'Show'),
+      dateNum: t('all_dates_label', 'All'),
+      month: t('dates_month_label', 'Dates')
     });
     for (let i = 0; i < 3; i++) {
       const d = moment().add(i, 'days');
       list.push({
         id: d.format('YYYY-MM-DD'),
-        dayName: i === 0 ? 'Today' : d.format('ddd'),
+        dayName: i === 0 ? t('today_date_label', 'Today') : d.format('ddd'),
         dateNum: d.format('DD'),
         month: d.format('MMM')
       });
@@ -93,10 +103,10 @@ export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress,
   return (
     <View style={styles.sectionContainer}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Upcoming Schedule</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('upcoming_schedule', 'Upcoming Schedule')}</Text>
         <TouchableOpacity style={[styles.filterBtn, { borderColor: isDark ? theme.colors.border : '#E2E8F0' }]} onPress={onFilterPress}>
           <Ionicons name="filter" size={ms(14)} color="#2563EB" />
-          <Text style={[styles.filterBtnText, { color: '#2563EB' }]}>Filter</Text>
+          <Text style={[styles.filterBtnText, { color: '#2563EB' }]}>{t('filter_btn', 'Filter')}</Text>
         </TouchableOpacity>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateList}>
@@ -129,7 +139,7 @@ export const DateSelectorSection = ({ selectedDate, onDateSelect, onFilterPress,
           onPress={onPickDatePress}
         >
           <Ionicons name="calendar-outline" size={ms(20)} color={theme.colors.textMuted} style={{ alignSelf: 'center', marginBottom: vs(2) }}/>
-          <Text style={[styles.dateDayText, { color: theme.colors.textMuted }]}>Pick Date</Text>
+          <Text style={[styles.dateDayText, { color: theme.colors.textMuted }]}>{t('pick_date_label', 'Pick Date')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -143,25 +153,25 @@ export const StatsRow = ({ stats, theme, isDark, t }: any) => {
       <View style={styles.statItem}>
         <Ionicons name="calendar-outline" size={ms(18)} color="#3B82F6" />
         <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalRides || 0}</Text>
-        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Total Rides</Text>
+        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('total_rides_stat', 'Total Rides')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Ionicons name="time-outline" size={ms(18)} color="#8B5CF6" />
         <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalTime || '0h'}</Text>
-        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Total Time</Text>
+        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('total_time_stat', 'Total Time')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Ionicons name="map-outline" size={ms(18)} color="#10B981" />
         <Text style={[styles.statValue, { color: theme.colors.text }]}>{stats.totalDistance || 0} km</Text>
-        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Total Distance</Text>
+        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('total_distance_stat', 'Total Distance')}</Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Ionicons name="cash-outline" size={ms(18)} color="#10B981" />
         <Text style={[styles.statValue, { color: theme.colors.text }]}>₹{stats.estEarnings || 0}</Text>
-        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Est. Earnings</Text>
+        <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('est_earnings_stat', 'Est. Earnings')}</Text>
         <Ionicons name="information-circle-outline" size={ms(12)} color={theme.colors.textMuted} style={{ position: 'absolute', right: ms(2), bottom: vs(2) }} />
       </View>
       {!!stats.driverAllowance && stats.driverAllowance > 0 && (
@@ -170,7 +180,7 @@ export const StatsRow = ({ stats, theme, isDark, t }: any) => {
           <View style={styles.statItem}>
             <Ionicons name="wallet-outline" size={ms(18)} color="#D97706" />
             <Text style={[styles.statValue, { color: theme.colors.text }]}>₹{stats.driverAllowance}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>Allowance</Text>
+            <Text style={[styles.statLabel, { color: theme.colors.paragraphText }]}>{t('allowance_stat', 'Allowance')}</Text>
           </View>
         </>
       )}
@@ -185,16 +195,16 @@ export const ScheduledRideCard = ({ item, getRemainingTime, theme, isDark, t, on
   const timeText = remainingTime?.text?.replace(/\s*left\s*/i, '')?.replace(t('left'), '')?.trim() || '';
   const pickupLabel = remainingTime?.text?.toLowerCase().includes('now') || timeText.toLowerCase().includes('now') 
     ? remainingTime.text 
-    : `Pickup in ${timeText}`;
+    : `${t('pickup_in_prefix', 'Pickup in ')}${timeText}`;
 
   const getRideTypeLabel = (type: string) => {
     const map: any = {
-      'one_way': 'One-Way',
-      'round_trip': 'Round-Trip',
-      'outstation_one_way': 'Outstation\nOne-Way',
-      'outstation_round_trip': 'Outstation\nRound-Trip'
+      'one_way': t('one_way_label', 'One-Way'),
+      'round_trip': t('round_trip_label', 'Round-Trip'),
+      'outstation_one_way': t('outstation_one_way_label', 'Outstation\nOne-Way'),
+      'outstation_round_trip': t('outstation_round_trip_label', 'Outstation\nRound-Trip')
     };
-    return map[type?.toLowerCase()] || type || 'One-Way';
+    return map[type?.toLowerCase()] || type || t('one_way_label', 'One-Way');
   };
 
   const isLive = activeTab === 'live';
@@ -211,7 +221,7 @@ export const ScheduledRideCard = ({ item, getRemainingTime, theme, isDark, t, on
           {isLive && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: vs(4) }}>
               <View style={{ width: ms(6), height: ms(6), borderRadius: ms(3), backgroundColor: '#10B981', marginRight: s(4) }} />
-              <Text style={{ fontSize: ms(9), color: '#10B981', fontWeight: '800' }}>LIVE</Text>
+              <Text style={{ fontSize: getLanguageScaledSize(9), color: '#10B981', fontWeight: '800' }}>{t('live_badge', 'LIVE')}</Text>
             </View>
           )}
           <Text style={[styles.cardTimeText, { color: theme.colors.text }]}>{startTimeObj.format('hh:mm')}</Text>
@@ -278,15 +288,15 @@ export const ScheduledRideCard = ({ item, getRemainingTime, theme, isDark, t, on
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: vs(2) }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Ionicons name="time-outline" size={ms(16)} color={theme.colors.textMuted} />
-          <Text style={{ marginLeft: s(6), fontSize: ms(12), color: theme.colors.text, fontWeight: '600' }}>
-            {pickupLabel.startsWith('Pickup in') ? 'Pickup in ' : ''}
+          <Text style={{ marginLeft: s(6), fontSize: getLanguageScaledSize(12), color: theme.colors.text, fontWeight: '600' }}>
+            {pickupLabel.startsWith(t('pickup_in_prefix', 'Pickup in ')) ? t('pickup_in_prefix', 'Pickup in ') : ''}
             <Text style={{ color: remainingTime?.isUrgent ? '#EF4444' : '#10B981' }}>
-              {pickupLabel.startsWith('Pickup in') ? pickupLabel.replace('Pickup in ', '') : pickupLabel}
+              {pickupLabel.startsWith(t('pickup_in_prefix', 'Pickup in ')) ? pickupLabel.replace(t('pickup_in_prefix', 'Pickup in '), '') : pickupLabel}
             </Text>
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ color: '#2563EB', fontSize: ms(12), fontWeight: '600', marginRight: s(4) }}>View Details</Text>
+          <Text style={{ color: '#2563EB', fontSize: getLanguageScaledSize(12), fontWeight: '600', marginRight: s(4) }}>{t('view_details_btn', 'View Details')}</Text>
           <Ionicons name="chevron-forward" size={ms(14)} color="#2563EB" />
         </View>
       </View>
@@ -321,11 +331,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563EB',
   },
   headerTitle: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '700',
   },
   headerSubtitle: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     marginTop: vs(0),
     lineHeight: vs(12),
   },
@@ -343,7 +353,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   offlineBtnText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '600',
   },
 
@@ -368,7 +378,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
   },
   tabText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '600',
   },
 
@@ -384,7 +394,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(8),
   },
   sectionTitle: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
   filterBtn: {
@@ -397,7 +407,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   filterBtnText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '600',
   },
   dateList: {
@@ -414,16 +424,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dateDayText: {
-    fontSize: ms(8),
+    fontSize: getLanguageScaledSize(8),
     fontWeight: '500',
   },
   dateNumText: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
     marginVertical: vs(0),
   },
   dateMonthText: {
-    fontSize: ms(8),
+    fontSize: getLanguageScaledSize(8),
     fontWeight: '500',
   },
 
@@ -442,13 +452,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statValue: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '700',
     marginTop: vs(4),
     marginBottom: vs(2),
   },
   statLabel: {
-    fontSize: ms(9),
+    fontSize: getLanguageScaledSize(9),
   },
   statDivider: {
     width: 1,
@@ -473,15 +483,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cardTimeText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '700',
   },
   cardAmPmText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '700',
   },
   cardDateText: {
-    fontSize: ms(9),
+    fontSize: getLanguageScaledSize(9),
     marginTop: vs(4),
     textAlign: 'center',
   },
@@ -512,7 +522,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addressText: {
-    fontSize: ms(11),
+    fontSize: getLanguageScaledSize(11),
     lineHeight: vs(14),
     fontWeight: '500',
   },
@@ -529,7 +539,7 @@ const styles = StyleSheet.create({
     borderRadius: ms(12),
   },
   badgeText: {
-    fontSize: ms(9),
+    fontSize: getLanguageScaledSize(9),
     fontWeight: '600',
     textAlign: 'center',
   },
@@ -545,23 +555,23 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     color: '#FFF',
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '600',
   },
   otpTimeText: {
-    fontSize: ms(11),
+    fontSize: getLanguageScaledSize(11),
     fontWeight: '600',
   },
   otpSubText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     marginTop: vs(2),
   },
   distanceText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '700',
   },
   distanceSubText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     marginTop: vs(2),
   },
 });

@@ -15,6 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../../context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 import { HelpCenter_Nav } from '../../../Navigations/navigations';
+import { isTamilLanguage } from '../../../utils/languageSizings';
+import { ScrollView } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -61,7 +63,7 @@ const PulseCircle = ({ color }: { color: string }) => {
   );
 };
 
-const HorizontalTimeline = ({ t, fonts, colors, isRejected, isDark }: { t: any; fonts: any; colors: any; isRejected?: boolean; isDark: boolean }) => {
+const HorizontalTimeline = ({ t, fonts, colors, isRejected, isDark, isTamil }: { t: any; fonts: any; colors: any; isRejected?: boolean; isDark: boolean; isTamil: boolean }) => {
   const steps = [
     { key: 'docs_upload', label: 'Document Upload', icon: 'cloud-done-outline', completed: true, active: false },
     { key: 'under_review', label: 'Under Review', icon: isRejected ? 'close' : 'search-outline', completed: false, active: true, error: isRejected },
@@ -85,7 +87,7 @@ const HorizontalTimeline = ({ t, fonts, colors, isRejected, isDark }: { t: any; 
             {step.active && !step.error && <PulseCircle color="#F59E0B" />}
             <Ionicons name={step.completed ? 'checkmark' : step.icon} size={16} color={step.active || step.completed ? '#FFF' : (isDark ? '#6B7280' : '#9CA3AF')} />
           </View>
-          <Text style={[fonts.medium, styles.timelineStepText, (step.active || step.completed) && { color: isDark ? '#F9FAFB' : '#111827' }]} numberOfLines={2} adjustsFontSizeToFit>
+          <Text style={[fonts.medium, styles.timelineStepText, (step.active || step.completed) && { color: colors.text }, { fontSize: isTamil ? 9 : 12 }]} numberOfLines={2} adjustsFontSizeToFit>
             {t(step.key, step.label)}
           </Text>
         </View>
@@ -94,17 +96,19 @@ const HorizontalTimeline = ({ t, fonts, colors, isRejected, isDark }: { t: any; 
   );
 };
 
-const SLIDES = [
-  { id: '1', title: 'PAN Card', desc: 'Verifying your permanent account number.', icon: 'card-outline' },
-  { id: '2', title: 'Aadhar Card', desc: 'Verifying your identity and address.', icon: 'finger-print-outline' },
-  { id: '3', title: 'Driving License', desc: 'Ensuring your authorization to drive.', icon: 'car-sport-outline' },
-  { id: '4', title: 'Police Verification (Optional)', desc: 'Background check for community safety.', icon: 'shield-half-outline' },
-  { id: '5', title: 'Profile Selfie', desc: 'Matching your identity with documents.', icon: 'camera-outline' },
-  { id: '6', title: 'Background Check', desc: 'Ensuring a secure platform for everyone.', icon: 'shield-checkmark-outline' },
-  { id: '7', title: 'Final Review', desc: 'Almost there! Thanks for your patience.', icon: 'checkmark-circle-outline' },
+const getSlides = (t: any) => [
+  { id: '1', title: t('pan_card', 'PAN Card'), desc: t('verifying_pan', 'Verifying your permanent account number.'), icon: 'card-outline' },
+  { id: '2', title: t('aadhar_card', 'Aadhaar Card'), desc: t('verifying_aadhar', 'Verifying your identity and address.'), icon: 'finger-print-outline' },
+  { id: '3', title: t('driving_license', 'Driving License'), desc: t('verifying_dl', 'Ensuring your authorization to drive.'), icon: 'car-sport-outline' },
+  { id: '4', title: t('police_verification_optional', 'Police Verification (Optional)'), desc: t('background_check_safety', 'Background check for community safety.'), icon: 'shield-half-outline' },
+  { id: '5', title: t('profile_selfie', 'Profile Selfie'), desc: t('matching_identity', 'Matching your identity with documents.'), icon: 'camera-outline' },
+  { id: '6', title: t('background_check', 'Background Check'), desc: t('secure_platform_desc', 'Ensuring a secure platform for everyone.'), icon: 'shield-checkmark-outline' },
+  { id: '7', title: t('final_review', 'Final Review'), desc: t('almost_there_desc', 'Almost there! Thanks for your patience.'), icon: 'checkmark-circle-outline' },
 ];
 
 const AutoSwipeVerificationInfo = ({ fonts, isDark, theme }: { fonts: any, isDark: boolean, theme: any }) => {
+  const { t } = useTranslation();
+  const SLIDES = getSlides(t);
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -128,7 +132,7 @@ const AutoSwipeVerificationInfo = ({ fonts, isDark, theme }: { fonts: any, isDar
   const renderItem = ({ item }: { item: any }) => (
     <View style={[styles.slideContainer, { width: SCREEN_WIDTH - 24 }]}>
       <View style={[styles.slideIconWrapper, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
-        <Ionicons name={item.icon} size={24} color={theme.colors.primary} />
+        <Ionicons name={item.icon} size={24} color={isDark ? '#FFF' : theme.colors.primary} />
       </View>
       <View style={styles.slideTextContainer}>
         <Text style={[fonts.bold, styles.slideTitle, { color: theme.colors.text }]}>{item.title}</Text>
@@ -179,6 +183,7 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
   const { theme, isDark } = useAppTheme();
   const navigation = useNavigation<any>();
   const isRejected = status === 'rejected';
+  const isTamil = isTamilLanguage();
 
   const spinValue = useRef(new RNAnimated.Value(0)).current;
 
@@ -202,6 +207,7 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
     <Modal visible={visible} animationType="fade" transparent={true} statusBarTranslucent={true}>
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <SafeAreaView style={styles.safeArea}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
 
           <View style={styles.content}>
             {/* Top Image Section */}
@@ -268,10 +274,10 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
                   </RNAnimated.View>
                 </View>
                 <View style={styles.supportTextContent}>
-                  <Text style={[fonts.bold, styles.supportTitle, { color: isDark ? '#FCD34D' : '#92400E' }]}>
+                  <Text style={[fonts.bold, styles.supportTitle, { color: isDark ? '#FCD34D' : '#92400E', fontSize: isTamil ? 13 : 15 }]} numberOfLines={2} adjustsFontSizeToFit>
                     {t('refresh_status', 'Refresh Status')}
                   </Text>
-                  <Text style={[styles.supportSubtitle, { color: isDark ? '#FDE68A' : '#B45309' }]}>
+                  <Text style={[styles.supportSubtitle, { color: isDark ? '#FDE68A' : '#B45309', fontSize: isTamil ? 10 : 12 }]} numberOfLines={2} adjustsFontSizeToFit>
                     {t('check_update_desc', 'Check for the latest updates')}
                   </Text>
                 </View>
@@ -280,25 +286,25 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
                   onPress={handleRefresh}
                   activeOpacity={0.8}
                 >
-                  <Text style={[fonts.medium, styles.supportBtnText]}>{t('refresh', 'Refresh')}</Text>
+                  <Text style={[fonts.medium, styles.supportBtnText, { fontSize: isTamil ? 11 : 13 }]} numberOfLines={1} adjustsFontSizeToFit>{t('refresh', 'Refresh')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <HorizontalTimeline t={t} fonts={fonts} colors={theme.colors} isRejected={isRejected} isDark={isDark} />
+              <HorizontalTimeline t={t} fonts={fonts} colors={theme.colors} isRejected={isRejected} isDark={isDark} isTamil={isTamil} />
             </Animated.View>
           </View>
 
           <AutoSwipeVerificationInfo fonts={fonts} isDark={isDark} theme={theme} />
 
-          <Animated.View entering={FadeInDown.duration(800).delay(300)} style={[styles.supportCard, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }]}>
+          <Animated.View entering={FadeInDown.duration(800).delay(300)} style={[styles.supportCard, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.supportIconWrapper, { backgroundColor: theme.colors.primary }]}>
               <Ionicons name="headset-outline" size={20} color="#FFF" />
             </View>
             <View style={styles.supportTextContent}>
-              <Text style={[fonts.bold, styles.supportTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              <Text style={[fonts.bold, styles.supportTitle, { color: theme.colors.text, fontSize: isTamil ? 13 : 15 }]} numberOfLines={2} adjustsFontSizeToFit>
                 {t('need_help', 'Need Help?')}
               </Text>
-              <Text style={[styles.supportSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+              <Text style={[styles.supportSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 10 : 12 }]} numberOfLines={2} adjustsFontSizeToFit>
                 {t('chat_with_support', 'Chat with our support team')}
               </Text>
             </View>
@@ -308,10 +314,11 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
               activeOpacity={0.8}
             >
               <Ionicons name="chatbubble-outline" size={14} color="#FFF" style={{ marginRight: 4 }} />
-              <Text style={[fonts.medium, styles.supportBtnText, { color: '#FFF' }]}>{t('chat_now', 'Chat Now')}</Text>
+              <Text style={[fonts.medium, styles.supportBtnText, { color: '#FFF', fontSize: isTamil ? 11 : 13 }]} numberOfLines={1} adjustsFontSizeToFit>{t('chat_now', 'Chat Now')}</Text>
             </TouchableOpacity>
           </Animated.View>
 
+          </ScrollView>
         </SafeAreaView>
       </View>
     </Modal>

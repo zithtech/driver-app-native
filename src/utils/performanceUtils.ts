@@ -315,10 +315,10 @@ export interface OverallScoreResult {
   percentile: number;
 }
 
-export const calculateOverallScore = (metrics: PerformanceMetrics): OverallScoreResult => {
+export const calculateOverallScore = (metrics: PerformanceMetrics, t: any): OverallScoreResult => {
   // If no trips at all, return zero gracefully
   if (metrics.totalTrips === 0) {
-    return { score: 0, label: 'No Data', percentile: 0 };
+    return { score: 0, label: t('label_no_data', 'No Data'), percentile: 0 };
   }
 
   const ratingNorm = (metrics.rating / 5) * 100;
@@ -379,12 +379,12 @@ export interface PerformanceTip {
   color: string;
 }
 
-export const getDynamicTips = (metrics: PerformanceMetrics): PerformanceTip[] => {
+export const getDynamicTips = (metrics: PerformanceMetrics, t: any): PerformanceTip[] => {
   if (metrics.totalTrips === 0) {
     return [
-      { text: 'Complete your first ride to start building your performance score!', icon: 'car-sport-outline', color: '#3B82F6' },
-      { text: 'Stay online during peak hours (6–9 PM) for more ride requests.', icon: 'time-outline', color: '#F59E0B' },
-      { text: 'Keep your phone charged and GPS on for best results.', icon: 'battery-charging-outline', color: '#10B981' },
+      { text: t('tip_first_ride', 'Complete your first ride to start building your performance score!'), icon: 'car-sport-outline', color: '#3B82F6' },
+      { text: t('tip_peak_hours', 'Stay online during peak hours (6–9 PM) for more ride requests.'), icon: 'time-outline', color: '#F59E0B' },
+      { text: t('tip_gps_charged', 'Keep your phone charged and GPS on for best results.'), icon: 'battery-charging-outline', color: '#10B981' },
     ];
   }
 
@@ -393,9 +393,9 @@ export const getDynamicTips = (metrics: PerformanceMetrics): PerformanceTip[] =>
 
   // Acceptance Rate
   if (metrics.acceptanceRate < 60) {
-    weaknesses.push({ priority: 1, tip: { text: 'Your acceptance rate is critically low. Accept more ride requests to avoid account restrictions.', icon: 'alert-circle-outline', color: '#EF4444' } });
+    weaknesses.push({ priority: 1, tip: { text: t('tip_acceptance_crit', 'Your acceptance rate is critically low. Accept more ride requests to avoid account restrictions.'), icon: 'alert-circle-outline', color: '#EF4444' } });
   } else if (metrics.acceptanceRate < 80) {
-    weaknesses.push({ priority: 3, tip: { text: 'Try accepting more ride requests to boost your acceptance rate above 80%.', icon: 'checkmark-circle-outline', color: '#F59E0B' } });
+    weaknesses.push({ priority: 3, tip: { text: t('tip_acceptance_warn', 'Try accepting more ride requests to boost your acceptance rate above 80%.'), icon: 'checkmark-circle-outline', color: '#F59E0B' } });
   }
 
   // Rating

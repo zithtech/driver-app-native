@@ -87,7 +87,7 @@ const AddMoneyScreen = ({ navigation, route }: any) => {
   const isLoading = isCreating || isVerifying;
 
   return (
-    <ImageBackground source={require('../../assets/images/walletback.png')} style={[styles.container, { backgroundColor: isDark ? '#111827' : '#fafafa' }]}>
+    <ImageBackground source={require('../../assets/images/walletback.png')} style={[styles.container, { backgroundColor: isDark ? '#111827' : '#fafafa' }]} imageStyle={{ opacity: isDark ? 0.1 : 1 }}>
       <AppStatusBar backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} />
       
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
@@ -124,9 +124,9 @@ const AddMoneyScreen = ({ navigation, route }: any) => {
                 </Text>
               </View>
               
-              <View style={styles.secureBadge}>
-                <Ionicons name="shield-checkmark" size={12} color="#16a34a" />
-                <Text style={styles.secureBadgeText}>100% Secure Payments</Text>
+              <View style={[styles.secureBadge, { backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#f0fdf4' }]}>
+                <Ionicons name="shield-checkmark" size={12} color={isDark ? '#4ade80' : '#16a34a'} />
+                <Text style={[styles.secureBadgeText, { color: isDark ? '#4ade80' : '#16a34a' }]}>100% Secure Payments</Text>
               </View>
             </View>
           </View>
@@ -179,10 +179,10 @@ const AddMoneyScreen = ({ navigation, route }: any) => {
               </Pressable>
             </View>
             
-            <View style={[styles.footerBanner, { backgroundColor: isDark ? '#1F2937' : '#f0fdf4' }]}>
-               <Ionicons name="shield-checkmark" size={24} color="#16a34a" />
+            <View style={[styles.footerBanner, { backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#f0fdf4' }]}>
+               <Ionicons name="shield-checkmark" size={24} color={isDark ? '#4ade80' : '#16a34a'} />
                <View style={styles.footerBannerContent}>
-                 <Text style={styles.footerBannerTitle}>100% Secure Payments</Text>
+                 <Text style={[styles.footerBannerTitle, { color: isDark ? '#4ade80' : '#16a34a' }]}>100% Secure Payments</Text>
                  <Text style={[styles.footerBannerSub, { color: isDark ? '#9ca3af' : '#64748b' }]}>Your money is safe with us.</Text>
                </View>
             </View>
@@ -191,7 +191,7 @@ const AddMoneyScreen = ({ navigation, route }: any) => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={[styles.bottomAction, { paddingBottom: insets.bottom + 16, backgroundColor: isDark ? '#111827' : '#fafafa' }]}>
+      <View style={[styles.bottomAction, { paddingBottom: insets.bottom + 16, backgroundColor: isDark ? '#111827' : '#fafafa', borderTopColor: isDark ? '#374151' : '#f1f5f9' }]}>
         <Pressable 
             style={({ pressed }) => [
                 styles.primaryBtn,

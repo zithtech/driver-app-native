@@ -11,9 +11,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const Page4 = () => {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
 
   return (
     <ScrollView
@@ -37,7 +39,7 @@ const Page4 = () => {
       {/* TITLE */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
-        style={styles.title}
+        style={[styles.title, { color: theme.colors.text }]}
         adjustsFontSizeToFit
         numberOfLines={1}
       >
@@ -47,7 +49,7 @@ const Page4 = () => {
       {/* RULES DESCRIPTION / FOOTER */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(250)}
-        style={styles.footerText}
+        style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
       >
         {t('rules_footer')}
       </Animated.Text>
@@ -57,13 +59,13 @@ const Page4 = () => {
         entering={FadeInDown.duration(600).delay(300)}
         style={styles.list}
       >
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon
             name="alert-circle-outline"
             size={mS(20)}
             color="#FFD54F"
           />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemText}>{t('ob_rule_traffic')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>{t('ob_rule_traffic')}</Text>
           <Icon
             name="check-circle"
             size={mS(18)}
@@ -71,13 +73,13 @@ const Page4 = () => {
           />
         </View>
 
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon
             name="account-check-outline"
             size={mS(20)}
             color="#64B5F6"
           />
-          <Text adjustsFontSizeToFit numberOfLines={2} style={styles.itemText}>
+          <Text adjustsFontSizeToFit numberOfLines={2} style={[styles.itemText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
             {t('ob_rule_professional')}
           </Text>
           <Icon
@@ -87,13 +89,13 @@ const Page4 = () => {
           />
         </View>
 
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon
             name="file-document-outline"
             size={mS(20)}
             color="#64B5F6"
           />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemText}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
             {t('ob_rule_documents')}
           </Text>
           <Icon
@@ -103,13 +105,13 @@ const Page4 = () => {
           />
         </View>
 
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon
             name="car-outline"
             size={mS(20)}
             color="#64B5F6"
           />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemText}>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
             {t('ob_rule_safe_drive')}
           </Text>
           <Icon

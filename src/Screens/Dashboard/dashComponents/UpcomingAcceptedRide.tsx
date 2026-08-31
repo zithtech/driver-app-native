@@ -5,6 +5,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hS as s, vS as vs, ms } from '../../../lib/scale';
 import { useLocation } from '../../../hooks/useLocation';
 import { calculateDistance } from '../../../utils/locationUtils';
+import { useTranslation } from 'react-i18next';
+import { getLanguageScaledSize } from '../../../utils/languageSizings';
 
 interface UpcomingAcceptedRideProps {
     trip: any;
@@ -13,6 +15,7 @@ interface UpcomingAcceptedRideProps {
 }
 
 const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onViewAllPress, onNavigatePress }) => {
+    const { t } = useTranslation();
     if (!trip) return null;
 
     // Parse date and time
@@ -61,9 +64,9 @@ const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onVie
         <View style={styles.cardContainer}>
             {/* Header */}
             <View style={styles.headerRow}>
-                <Text style={styles.headerTitle}>Upcoming Accepted Ride</Text>
+                <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.upcoming_ride', 'Upcoming Accepted Ride')}</Text>
                 <Pressable onPress={onViewAllPress}>
-                    <Text style={styles.viewAllText}>View All</Text>
+                    <Text style={styles.viewAllText}>{t('view_all', 'View All')}</Text>
                 </Pressable>
             </View>
 
@@ -106,7 +109,7 @@ const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onVie
 
                     {/* Fare info */}
                     <View style={styles.fareContainer}>
-                        <Text style={styles.fareLabel}>Estimated Fare</Text>
+                        <Text style={styles.fareLabel}>{t('estimated_fare', 'Estimated Fare')}</Text>
                         <Text style={styles.fareValue}>₹{parseFloat(estimatedFare).toFixed(2)}</Text>
                     </View>
                 </View>
@@ -120,7 +123,7 @@ const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onVie
                     />
                     <Pressable style={styles.navigateBtn} onPress={onNavigatePress}>
                         <Ionicons name="navigate" size={ms(16)} color="#FFFFFF" />
-                        <Text style={styles.navigateBtnText}>Navigate</Text>
+                        <Text style={styles.navigateBtnText} numberOfLines={1}>{t('navigate', 'Navigate')}</Text>
                     </Pressable>
                 </View>
             </View>
@@ -147,12 +150,12 @@ const styles = StyleSheet.create({
         marginBottom: vs(8),
     },
     headerTitle: {
-        fontSize: ms(14),
+        fontSize: getLanguageScaledSize(14),
         fontWeight: '700',
         color: '#1E293B',
     },
     viewAllText: {
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         fontWeight: '600',
         color: '#3B82F6',
     },
@@ -224,14 +227,14 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
     },
     addressText: {
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         color: '#1E293B',
         fontWeight: '500',
         marginRight: s(6),
         flexShrink: 1,
     },
     distanceText: {
-        fontSize: ms(10),
+        fontSize: getLanguageScaledSize(10),
         color: '#3B82F6',
         fontWeight: '500',
     },
@@ -252,12 +255,12 @@ const styles = StyleSheet.create({
         marginLeft: s(20), // Align under the text, avoiding the dots
     },
     fareLabel: {
-        fontSize: ms(10),
+        fontSize: getLanguageScaledSize(10),
         color: '#64748B',
         marginBottom: vs(2),
     },
     fareValue: {
-        fontSize: ms(13),
+        fontSize: getLanguageScaledSize(13),
         fontWeight: '700',
         color: '#0F172A',
     },
@@ -283,7 +286,7 @@ const styles = StyleSheet.create({
     },
     navigateBtnText: {
         color: '#FFFFFF',
-        fontSize: ms(11),
+        fontSize: getLanguageScaledSize(11),
         fontWeight: '600',
         marginLeft: s(4),
     }

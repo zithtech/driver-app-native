@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Animated, FlatList, Dimensions, TouchableOpacity, Platform, Modal, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -56,7 +57,8 @@ const Onboarding = ({ navigation }: any) => {
 
   const [index, setIndex] = useState(0);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
-  const { colors } = useTheme() as any;
+  const { isDark, theme } = useAppTheme();
+  const { colors } = theme;
   const { t } = useTranslation();
 
   // Pulse animation for brand text
@@ -151,8 +153,8 @@ const Onboarding = ({ navigation }: any) => {
   }, [index]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <AppStatusBar forceDark />
+    <SafeAreaView style={[styles.safe, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]} edges={['top', 'bottom', 'left', 'right']}>
+      <AppStatusBar forceDark={false} />
       <OnboardingBackground>
         <View style={styles.container}>
           {/* HEADER */}
@@ -160,24 +162,24 @@ const Onboarding = ({ navigation }: any) => {
 
 
             <View style={styles.titleWrapper}>
-              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
+              <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
               <View
                 style={styles.brandWrapper}
               >
                 <AnimatedReanimated.View style={pulseStyle}>
-                  <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
+                  <Text style={[styles.brand, { color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
                 </AnimatedReanimated.View>
               </View>
             </View>
 
             <Text
-              style={styles.subtitle}
+              style={[styles.subtitle, { color: colors.text }]}
             >
               T2drive Partner App
             </Text>
 
             <Text
-              style={styles.tagline}
+              style={[styles.tagline, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
               adjustsFontSizeToFit
               numberOfLines={2}
             >
@@ -188,12 +190,12 @@ const Onboarding = ({ navigation }: any) => {
               style={{ alignSelf: 'flex-end' }}
             >
               <TouchableOpacity
-                style={styles.helpButton}
+                style={[styles.helpButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 0, 0, 0.1)' }]}
                 activeOpacity={0.8}
                 onPress={() => navigation.navigate(HelpCenter_Nav as never)}
               >
-                <Ionicons name="headset-outline" size={mS(12)} color="#4B5563" style={{ marginRight: hS(4) }} />
-                <Text style={styles.helpText} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
+                <Ionicons name="headset-outline" size={mS(12)} color={colors.text} style={{ marginRight: hS(4) }} />
+                <Text style={[styles.helpText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -231,7 +233,7 @@ const Onboarding = ({ navigation }: any) => {
                   styles.dot,
                   {
                     backgroundColor:
-                      i === index ? '#2563EB' : 'rgba(0, 0, 0, 0.15)',
+                      i === index ? colors.primary : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'),
                   },
                 ]}
               />

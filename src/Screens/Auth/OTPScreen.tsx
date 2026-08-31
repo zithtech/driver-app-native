@@ -298,7 +298,7 @@ const OTPScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       edges={['top', 'bottom']}
     >
       <AppStatusBar />
@@ -309,14 +309,14 @@ const OTPScreen = ({ navigation }: any) => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <MaterialCommunityIcons name="chevron-left" size={26} color="#000" />
+          <MaterialCommunityIcons name="chevron-left" size={26} color={colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => navigation.navigate(HelpCenter_Nav)}
-          style={styles.helpButton}
+          style={[styles.helpButton, { borderColor: dark ? 'rgba(255,255,255,0.2)' : '#E5E7EB' }]}
         >
           <Ionicons name="help-circle-outline" size={16} color={colors.primary} />
-          <Text style={[fonts.medium, { color: '#000', fontSize: 13, marginLeft: 4 }]}>Help</Text>
+          <Text style={[fonts.medium, { color: colors.text, fontSize: 13, marginLeft: 4 }]}>{t('help', 'Help')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -325,38 +325,38 @@ const OTPScreen = ({ navigation }: any) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1, paddingTop: 120, paddingBottom: 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <View style={styles.cardContainer}>
+          <View style={[styles.cardContainer, { borderColor: dark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
             {/* PHONE ICON BADGE */}
             <View style={styles.badgeContainer}>
-              <View style={styles.badgeCircle}>
+              <View style={[styles.badgeCircle, { backgroundColor: dark ? theme.colors.card : '#FFF' }]}>
                 <MaterialCommunityIcons name="cellphone" size={24} color={colors.primary} />
-                <View style={styles.badgeCheck}>
+                <View style={[styles.badgeCheck, { backgroundColor: dark ? theme.colors.card : '#FFF' }]}>
                   <MaterialCommunityIcons name="check-circle" size={16} color="#10B981" />
                 </View>
               </View>
             </View>
 
             <View style={styles.cardContent}>
-              <Text style={[fonts.bold, { fontSize: 18, color: '#000', textAlign: 'center' }]}>
+              <Text style={[fonts.bold, { fontSize: 18, color: colors.text, textAlign: 'center' }]}>
                 OTP sent successfully!
               </Text>
-              <Text style={[fonts.medium, { fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 4 }]}>
-                We've sent a 6-digit OTP to
+              <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginTop: 4 }]}>
+                {t('otp_sent_to', "We've sent a 6-digit OTP to")}
               </Text>
 
               <View style={styles.phoneContainer}>
-                <Text style={[fonts.bold, { fontSize: 16, color: '#3B82F6', fontWeight: 'bold' }]}>
+                <Text style={[fonts.bold, { fontSize: 16, color: colors.primary, fontWeight: 'bold' }]}>
                   +91 {user?.phone_number || '98765 43210'}
                 </Text>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.editButton}>
-                  <MaterialCommunityIcons name="pencil-outline" size={16} color="#6B7280" />
+                  <MaterialCommunityIcons name="pencil-outline" size={16} color={dark ? '#9CA3AF' : '#6B7280'} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.divider} />
+              <View style={[styles.divider, { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]} />
 
-              <Text style={[fonts.medium, { fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 10 }]}>
-                Enter 6-digit OTP
+              <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginBottom: 10 }]}>
+                {t('enter_6_digit_otp', 'Enter 6-digit OTP')}
               </Text>
 
               {/* DEVELOPMENT ONLY: Show OTP */}
@@ -422,30 +422,30 @@ const OTPScreen = ({ navigation }: any) => {
 
                   <View style={styles.disclaimerContainer}>
                     <MaterialCommunityIcons name="shield-check" size={16} color={colors.primary} />
-                    <Text style={[styles.disclaimerText, fonts.medium]}>
-                      Your verification code is secure and confidential
+                    <Text style={[styles.disclaimerText, fonts.medium, { color: dark ? '#9CA3AF' : '#6B7280' }]}>
+                      {t('otp_secure_confidential', 'Your verification code is secure and confidential')}
                     </Text>
                   </View>
 
                   {!canResend ? (
                     <View style={styles.countdownContainer}>
-                      <MaterialCommunityIcons name="clock-outline" size={16} color="#6B7280" />
-                      <Text style={[fonts.medium, { color: '#6B7280', fontSize: 13, marginLeft: 6 }]}>
-                        Resend OTP in <Text style={{ color: colors.primary }}>00:{resendTimer.toString().padStart(2, '0')}</Text>
+                      <MaterialCommunityIcons name="clock-outline" size={16} color={dark ? '#9CA3AF' : '#6B7280'} />
+                      <Text style={[fonts.medium, { color: dark ? '#9CA3AF' : '#6B7280', fontSize: 13, marginLeft: 6 }]}>
+                        {t('resend_otp_in', 'Resend OTP in')} <Text style={{ color: colors.primary }}>00:{resendTimer.toString().padStart(2, '0')}</Text>
                       </Text>
                     </View>
                   ) : null}
 
                   <Reanimated.View style={[{ width: '100%', marginTop: 12 }, btnAnimatedStyle]}>
                     <Button
-                      style={styles.verifyBtn}
+                      style={[styles.verifyBtn, { backgroundColor: colors.primary }]}
                       onPress={handleContinue}
                       disabled={otp.length !== 6 || isLoading}
                     >
                       {isLoading ? <ActivityIndicator color="#FFF" /> : (
                         <>
                           <Text style={[fonts.bold, { color: '#FFF', fontSize: 16 }]}>
-                            Verify & Continue
+                            {t('verify_and_continue', 'Verify & Continue')}
                           </Text>
                           <MaterialCommunityIcons name="arrow-right" size={20} color="#FFF" style={{ position: 'absolute', right: 20 }} />
                         </>
@@ -455,13 +455,13 @@ const OTPScreen = ({ navigation }: any) => {
 
                   {canResend && (
                     <TouchableOpacity
-                      style={styles.resendBtnFull}
+                      style={[styles.resendBtnFull, { backgroundColor: dark ? theme.colors.card : '#FFF', borderColor: dark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                       onPress={handleResend}
                       disabled={isResending}
                     >
-                      <MaterialCommunityIcons name="chat-processing-outline" size={18} color="#000" style={{ marginRight: 8 }} />
-                      <Text style={[fonts.bold, { color: '#000', fontSize: 14 }]}>
-                        Didn't receive OTP? <Text style={{ color: colors.primary }}>Resend OTP</Text>
+                      <MaterialCommunityIcons name="chat-processing-outline" size={18} color={colors.text} style={{ marginRight: 8 }} />
+                      <Text style={[fonts.bold, { color: colors.text, fontSize: 14 }]}>
+                        {t('didnt_receive_otp', "Didn't receive OTP?")} <Text style={{ color: colors.primary }}>{t('resend_otp', 'Resend OTP')}</Text>
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -469,17 +469,17 @@ const OTPScreen = ({ navigation }: any) => {
               )}
 
               {/* SAFE & SECURE BANNER */}
-              <View style={styles.safeBanner}>
-                <View style={styles.safeIconContainer}>
+              <View style={[styles.safeBanner, { backgroundColor: dark ? theme.colors.card : '#F9FAFB' }]}>
+                <View style={[styles.safeIconContainer, { backgroundColor: colors.primary }]}>
                   <MaterialCommunityIcons name="shield-check" size={20} color="#FFF" />
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={[fonts.bold, { color: '#000', fontSize: 13 }]}>Safe & Secure</Text>
-                  <Text style={[fonts.medium, { color: '#6B7280', fontSize: 11, marginTop: 2 }]}>
-                    We never share your number with anyone.
+                  <Text style={[fonts.bold, { color: colors.text, fontSize: 13 }]}>{t('safe_and_secure', 'Safe & Secure')}</Text>
+                  <Text style={[fonts.medium, { color: dark ? '#9CA3AF' : '#6B7280', fontSize: 11, marginTop: 2 }]}>
+                    {t('never_share_number', 'We never share your number with anyone.')}
                   </Text>
                 </View>
-                <MaterialCommunityIcons name="lock" size={60} color="#E5E7EB" style={{ position: 'absolute', right: -10, top: -10, opacity: 0.4 }} />
+                <MaterialCommunityIcons name="lock" size={60} color={dark ? 'rgba(255,255,255,0.05)' : '#E5E7EB'} style={{ position: 'absolute', right: -10, top: -10, opacity: 0.4 }} />
               </View>
 
             </View>

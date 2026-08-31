@@ -2,30 +2,32 @@ import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
 import { Text } from '../../../Components';
 import { format } from 'date-fns';
+import { getLanguageScaledSize } from '../../../utils/languageSizings';
 
 const PLAN_CONFIG: any = {
     basic: {
         gradient: ['#60A5FA', '#2563EB'],
         icon: 'shield',
         color: '#2563EB',
-        bgColor: '#EFF6FF'
+        bgColor: '#EFF6FF', darkBgColor: 'rgba(37, 99, 235, 0.15)'
     },
     elite: {
         gradient: ['#A78BFA', '#6D28D9'],
         icon: 'ribbon',
         color: '#6D28D9',
-        bgColor: '#F5F3FF'
+        bgColor: '#F5F3FF', darkBgColor: 'rgba(109, 40, 217, 0.15)'
     },
     premium: {
         gradient: ['#FBBF24', '#D97706'],
         icon: 'trophy',
         color: '#D97706',
-        bgColor: '#FEF3C7'
+        bgColor: '#FEF3C7', darkBgColor: 'rgba(217, 119, 6, 0.15)'
     },
 };
 
@@ -35,6 +37,7 @@ interface SubscriptionCardProps {
 
 const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
     const { t } = useTranslation();
+    const { isDark, theme } = useAppTheme();
     const navigation = useNavigation<NavigationProp<any>>();
 
     const activePlan = subscription;
@@ -79,69 +82,69 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
 
     if (!isActive) {
         return (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F1F5F9' }]}>
                 {/* INACTIVE HEADER */}
-                <View style={styles.headerRow}>
+                <View style={[styles.headerRow, { borderBottomColor: isDark ? '#374151' : '#F1F5F9' }]}>
                     <View style={styles.inactiveHeaderLeft}>
-                        <View style={styles.redShieldWrap}>
+                        <View style={[styles.redShieldWrap, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}>
                             <Ionicons name="shield-outline" size={ms(24)} color="#EF4444" />
                             <View style={styles.exclamationDot}>
-                                <Text style={{ color: '#FFF', fontSize: ms(10), fontWeight: 'bold' }}>!</Text>
+                                <Text style={{ color: '#FFF', fontSize: getLanguageScaledSize(10), fontWeight: 'bold' }}>!</Text>
                             </View>
                         </View>
                         <View style={styles.inactiveTitles}>
-                            <Text style={styles.inactiveTitleMain}>No Active Plan</Text>
-                            <Text style={styles.inactiveTitleSub}>Subscribe to start receiving trips</Text>
-                            <View style={styles.inactiveBadge}>
+                            <Text style={[styles.inactiveTitleMain, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.no_active_plan')}</Text>
+                            <Text style={[styles.inactiveTitleSub, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('dashboard.subscribe_to_start')}</Text>
+                            <View style={[styles.inactiveBadge, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}>
                                 <Ionicons name="information-circle-outline" size={ms(12)} color="#EF4444" />
-                                <Text style={styles.inactiveBadgeText}>Plan inactive</Text>
+                                <Text style={styles.inactiveBadgeText} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.plan_inactive')}</Text>
                             </View>
                         </View>
                     </View>
                     <View style={styles.inactiveHeaderRight}>
                         <Pressable style={styles.browsePlansBtn} onPress={() => navigation.navigate('RechargePlanScreen')}>
                             <Ionicons name="ribbon-outline" size={ms(16)} color="#EF4444" />
-                            <Text style={styles.browsePlansText}>Browse Plans</Text>
+                            <Text style={styles.browsePlansText} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.browse_plans')}</Text>
                         </Pressable>
-                        <Text style={styles.chooseBestText}>Choose the best plan for you</Text>
+                        <Text style={[styles.chooseBestText, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('dashboard.choose_best_plan')}</Text>
                     </View>
                 </View>
 
                 {/* INACTIVE DETAILS */}
                 <View style={styles.detailsGrid}>
                     <View style={styles.detailCol}>
-                        <View style={styles.redIconCircle}>
+                        <View style={[styles.redIconCircle, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}>
                             <Ionicons name="calendar-outline" size={ms(18)} color="#EF4444" />
                         </View>
-                        <Text style={styles.detailLabel}>Start Date</Text>
-                        <Text style={styles.detailValueInactive}>-</Text>
-                        <Text style={styles.detailSubInactive}>Not available</Text>
+                        <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.start_date')}</Text>
+                        <Text style={[styles.detailValueInactive, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>-</Text>
+                        <Text style={[styles.detailSubInactive, { color: isDark ? '#6B7280' : '#94A3B8' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.not_available')}</Text>
                     </View>
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
                     <View style={styles.detailCol}>
-                        <View style={styles.redIconCircle}>
+                        <View style={[styles.redIconCircle, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}>
                             <Ionicons name="calendar-outline" size={ms(18)} color="#EF4444" />
                         </View>
-                        <Text style={styles.detailLabel}>Next Billing Date</Text>
-                        <Text style={styles.detailValueInactive}>-</Text>
-                        <Text style={styles.detailSubInactive}>Not available</Text>
+                        <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.next_billing_date')}</Text>
+                        <Text style={[styles.detailValueInactive, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>-</Text>
+                        <Text style={[styles.detailSubInactive, { color: isDark ? '#6B7280' : '#94A3B8' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.not_available')}</Text>
                     </View>
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
                     <View style={styles.detailCol}>
-                        <View style={styles.redIconCircle}>
+                        <View style={[styles.redIconCircle, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}>
                             <Ionicons name="document-text-outline" size={ms(18)} color="#EF4444" />
                         </View>
-                        <Text style={styles.detailLabel}>Billing Cycle</Text>
-                        <Text style={styles.detailValueInactive}>-</Text>
-                        <Text style={styles.detailSubInactive}>Not available</Text>
+                        <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.billing_cycle')}</Text>
+                        <Text style={[styles.detailValueInactive, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>-</Text>
+                        <Text style={[styles.detailSubInactive, { color: isDark ? '#6B7280' : '#94A3B8' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.not_available')}</Text>
                     </View>
                 </View>
 
                 {/* INACTIVE FOOTER */}
-                <View style={styles.inactiveFooter}>
+                <View style={[styles.inactiveFooter, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 8 }}>
                         <Ionicons name="pricetag-outline" size={ms(18)} color="#EF4444" style={{ marginRight: s(8) }} />
-                        <Text style={styles.inactiveFooterText}>Unlock all features and start earning more.</Text>
+                        <Text style={[styles.inactiveFooterText, { color: theme.colors.text }]} numberOfLines={2}>{t('dashboard.unlock_features')}</Text>
                     </View>
                 </View>
             </View>
@@ -149,9 +152,9 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
     }
 
     return (
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? '#374151' : '#F1F5F9' }]}>
             {/* ACTIVE HEADER */}
-            <View style={styles.headerRow}>
+            <View style={[styles.headerRow, { borderBottomColor: isDark ? '#374151' : '#F1F5F9' }]}>
                 <LinearGradient
                     colors={tier.gradient}
                     style={styles.activeGradientBox}
@@ -159,25 +162,25 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
                     end={{ x: 1, y: 1 }}
                 >
                     <Ionicons name={tier.icon} size={ms(24)} color="#FCD34D" style={{ marginBottom: vs(4) }} />
-                    <Text style={styles.activePlanName}>{planName.toUpperCase()}</Text>
+                    <Text style={styles.activePlanName} numberOfLines={1} adjustsFontSizeToFit>{planName.toUpperCase()}</Text>
                     <View style={styles.activeBadge}>
                         <Ionicons name="checkmark-circle" size={ms(12)} color={tier.color} />
-                        <Text style={[styles.activeBadgeText, { color: tier.color }]}>Active</Text>
+                        <Text style={[styles.activeBadgeText, { color: tier.color }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.active')}</Text>
                     </View>
                 </LinearGradient>
 
                 <View style={styles.activeHeaderRight}>
                     <View style={styles.priceContainer}>
-                        <Text style={styles.priceText}>₹{price}</Text>
-                        <Text style={styles.cycleText}>{billingCycle} Subscription</Text>
+                        <Text style={[styles.priceText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>₹{price}</Text>
+                        <Text style={[styles.cycleText, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{billingCycle} {t('dashboard.subscription')}</Text>
                     </View>
-                    <View style={styles.headerVerticalDivider} />
+                    <View style={[styles.headerVerticalDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
                     <View style={styles.autoRenewContainer}>
-                        <View style={[styles.autoRenewIconCircle, { backgroundColor: autoRenew ? '#DCFCE7' : '#FEF2F2' }]}>
+                        <View style={[styles.autoRenewIconCircle, { backgroundColor: autoRenew ? (isDark ? 'rgba(34, 197, 94, 0.1)' : '#DCFCE7') : (isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2') }]}>
                             <Ionicons name="shield-checkmark-outline" size={ms(16)} color={autoRenew ? "#22C55E" : "#EF4444"} />
                         </View>
-                        <Text style={[styles.autoRenewText, { color: autoRenew ? "#22C55E" : "#EF4444" }]}>
-                            Auto-renew {autoRenew ? "ON" : "OFF"}
+                        <Text style={[styles.autoRenewText, { color: autoRenew ? "#22C55E" : "#EF4444" }]} numberOfLines={1} adjustsFontSizeToFit>
+                            {autoRenew ? t('dashboard.auto_renew_on') : t('dashboard.auto_renew_off')}
                         </Text>
                     </View>
                 </View>
@@ -186,40 +189,40 @@ const RechargeCard: React.FC<SubscriptionCardProps> = ({ subscription }) => {
             {/* ACTIVE DETAILS */}
             <View style={styles.detailsGrid}>
                 <View style={styles.detailCol}>
-                    <View style={[styles.iconCircle, { backgroundColor: tier.bgColor }]}>
+                    <View style={[styles.iconCircle, { backgroundColor: isDark ? tier.darkBgColor : tier.bgColor }]}>
                         <Ionicons name="calendar-outline" size={ms(18)} color={tier.color} />
                     </View>
-                    <Text style={styles.detailLabel}>Start Date</Text>
-                    <Text style={styles.detailValue}>{safeFormatDate(startDate)}</Text>
-                    <Text style={styles.detailSub}>{safeFormatTime(startDate)}</Text>
+                    <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.start_date')}</Text>
+                    <Text style={[styles.detailValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{safeFormatDate(startDate)}</Text>
+                    <Text style={[styles.detailSub, { color: isDark ? '#6B7280' : '#94A3B8' }]} numberOfLines={1} adjustsFontSizeToFit>{safeFormatTime(startDate)}</Text>
                 </View>
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
                 <View style={styles.detailCol}>
-                    <View style={[styles.iconCircle, { backgroundColor: tier.bgColor }]}>
+                    <View style={[styles.iconCircle, { backgroundColor: isDark ? tier.darkBgColor : tier.bgColor }]}>
                         <Ionicons name="calendar-outline" size={ms(18)} color={tier.color} />
                     </View>
-                    <Text style={styles.detailLabel}>Next Billing Date</Text>
-                    <Text style={styles.detailValue}>{safeFormatDate(expiryDate)}</Text>
-                    <Text style={styles.detailSub}>{safeFormatTime(expiryDate)}</Text>
+                    <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.next_billing_date')}</Text>
+                    <Text style={[styles.detailValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{safeFormatDate(expiryDate)}</Text>
+                    <Text style={[styles.detailSub, { color: isDark ? '#6B7280' : '#94A3B8' }]} numberOfLines={1} adjustsFontSizeToFit>{safeFormatTime(expiryDate)}</Text>
                 </View>
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
                 <View style={styles.detailCol}>
-                    <View style={[styles.iconCircle, { backgroundColor: tier.bgColor }]}>
+                    <View style={[styles.iconCircle, { backgroundColor: isDark ? tier.darkBgColor : tier.bgColor }]}>
                         <Ionicons name="document-text-outline" size={ms(18)} color={tier.color} />
                     </View>
-                    <Text style={styles.detailLabel}>Billing Cycle</Text>
-                    <Text style={styles.detailValue}>{billingCycle}</Text>
+                    <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.billing_cycle')}</Text>
+                    <Text style={[styles.detailValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{billingCycle}</Text>
                 </View>
             </View>
 
             {/* ACTIVE FOOTER */}
-            <View style={styles.activeFooter}>
+            <View style={[styles.activeFooter, { borderTopColor: isDark ? '#374151' : '#F1F5F9' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="document-text-outline" size={ms(16)} color={tier.color} style={{ marginRight: s(6) }} />
-                    <Text style={styles.footerMsg}>Manage your subscription anytime</Text>
+                    <Text style={[styles.footerMsg, { color: isDark ? '#D1D5DB' : '#334155' }]} numberOfLines={2} adjustsFontSizeToFit>{t('dashboard.manage_subscription')}</Text>
                 </View>
                 <Pressable style={styles.viewPlanDetailsBtn} onPress={() => navigation.navigate('SubscriptionHistoryScreen')}>
-                    <Text style={[styles.viewPlanDetailsText, { color: tier.color }]}>View Plan</Text>
+                    <Text style={[styles.viewPlanDetailsText, { color: tier.color }]} numberOfLines={1} adjustsFontSizeToFit>{t('dashboard.view_plan')}</Text>
                     <Ionicons name="chevron-forward" size={ms(14)} color={tier.color} />
                 </Pressable>
             </View>
@@ -284,13 +287,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     inactiveTitleMain: {
-        fontSize: ms(16),
+        fontSize: getLanguageScaledSize(16),
         fontWeight: '800',
         color: '#0F172A',
         marginBottom: vs(2),
     },
     inactiveTitleSub: {
-        fontSize: ms(11),
+        fontSize: getLanguageScaledSize(11),
         color: '#64748B',
         marginBottom: vs(6),
     },
@@ -304,7 +307,7 @@ const styles = StyleSheet.create({
         borderRadius: ms(10),
     },
     inactiveBadgeText: {
-        fontSize: ms(10),
+        fontSize: getLanguageScaledSize(10),
         fontWeight: '600',
         color: '#EF4444',
         marginLeft: s(4),
@@ -325,13 +328,13 @@ const styles = StyleSheet.create({
         marginBottom: vs(4),
     },
     browsePlansText: {
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         fontWeight: '700',
         color: '#EF4444',
         marginLeft: s(4),
     },
     chooseBestText: {
-        fontSize: ms(10),
+        fontSize: getLanguageScaledSize(10),
         color: '#64748B',
     },
     detailsGrid: {
@@ -355,19 +358,19 @@ const styles = StyleSheet.create({
         marginBottom: vs(4),
     },
     detailLabel: {
-        fontSize: ms(11),
+        fontSize: getLanguageScaledSize(11),
         color: '#64748B',
         marginBottom: vs(4),
         fontWeight: '500',
     },
     detailValueInactive: {
-        fontSize: ms(18),
+        fontSize: getLanguageScaledSize(18),
         fontWeight: '800',
         color: '#0F172A',
         marginBottom: vs(2),
     },
     detailSubInactive: {
-        fontSize: ms(11),
+        fontSize: getLanguageScaledSize(11),
         color: '#94A3B8',
     },
     divider: {
@@ -387,7 +390,7 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: ms(16),
     },
     inactiveFooterText: {
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         fontWeight: '600',
         color: '#0F172A',
         flex: 1,
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
     },
     viewPlansSolidText: {
         color: '#FFF',
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         fontWeight: '700',
         marginRight: s(4),
     },
@@ -417,7 +420,7 @@ const styles = StyleSheet.create({
         minHeight: vs(60),
     },
     activePlanName: {
-        fontSize: ms(14),
+        fontSize: getLanguageScaledSize(14),
         fontWeight: '800',
         color: '#FFFFFF',
         marginBottom: vs(4),
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
         borderRadius: ms(12),
     },
     activeBadgeText: {
-        fontSize: ms(10),
+        fontSize: getLanguageScaledSize(10),
         fontWeight: '700',
         marginLeft: s(4),
     },
@@ -453,13 +456,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     priceText: {
-        fontSize: ms(16),
+        fontSize: getLanguageScaledSize(16),
         fontWeight: '800',
         color: '#0F172A',
         marginBottom: vs(2),
     },
     cycleText: {
-        fontSize: ms(9),
+        fontSize: getLanguageScaledSize(9),
         color: '#64748B',
         fontWeight: '500',
     },
@@ -475,7 +478,7 @@ const styles = StyleSheet.create({
         marginBottom: vs(2),
     },
     autoRenewText: {
-        fontSize: ms(9),
+        fontSize: getLanguageScaledSize(9),
         fontWeight: '700',
     },
     iconCircle: {
@@ -487,14 +490,14 @@ const styles = StyleSheet.create({
         marginBottom: vs(4),
     },
     detailValue: {
-        fontSize: ms(14),
+        fontSize: getLanguageScaledSize(14),
         fontWeight: '800',
         color: '#0F172A',
         marginBottom: vs(2),
         textAlign: 'center',
     },
     detailSub: {
-        fontSize: ms(11),
+        fontSize: getLanguageScaledSize(11),
         color: '#94A3B8',
         fontWeight: '500',
     },
@@ -508,7 +511,7 @@ const styles = StyleSheet.create({
         borderTopColor: '#F1F5F9',
     },
     footerMsg: {
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         color: '#334155',
         fontWeight: '500',
     },
@@ -517,7 +520,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     viewPlanDetailsText: {
-        fontSize: ms(13),
+        fontSize: getLanguageScaledSize(13),
         fontWeight: '700',
         marginRight: s(2),
     },

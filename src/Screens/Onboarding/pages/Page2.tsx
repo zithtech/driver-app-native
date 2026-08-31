@@ -11,9 +11,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const Page2 = () => {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
 
   return (
     <ScrollView
@@ -37,7 +39,7 @@ const Page2 = () => {
       {/* TITLE */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
-        style={styles.title}
+        style={[styles.title, { color: theme.colors.text }]}
         adjustsFontSizeToFit
         numberOfLines={1}
       >
@@ -47,7 +49,7 @@ const Page2 = () => {
       {/* DESCRIPTION */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(300)}
-        style={styles.desc}
+        style={[styles.desc, { color: isDark ? '#9CA3AF' : '#4B5563' }]}
         adjustsFontSizeToFit
         numberOfLines={3}
       >
@@ -59,35 +61,35 @@ const Page2 = () => {
         entering={FadeInDown.duration(600).delay(400)}
         style={styles.grid}
       >
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <Icon name="check-circle" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_accept_rides')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_instant_requests')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_accept_rides')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_instant_requests')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <Icon name="trending-up" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_track_trips')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_live_monitoring')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_track_trips')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_live_monitoring')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon name="cash" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_view_earnings')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_daily_weekly')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_view_earnings')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_daily_weekly')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon name="calendar-check" size={mS(22)} color="#64B5F6" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_manage_bookings')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_all_rides_one')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_manage_bookings')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_all_rides_one')}</Text>
         </View>
       </Animated.View>
 
       {/* FOOTER TEXT */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(500)}
-        style={styles.footerText}
+        style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
       >
         {t('app_helps_footer')}
       </Animated.Text>

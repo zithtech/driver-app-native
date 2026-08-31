@@ -11,9 +11,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const Page6 = () => {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
 
   return (
     <ScrollView
@@ -37,7 +39,7 @@ const Page6 = () => {
       {/* TITLE */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
-        style={styles.title}
+        style={[styles.title, { color: theme.colors.text }]}
         adjustsFontSizeToFit
         numberOfLines={1}
       >
@@ -45,7 +47,7 @@ const Page6 = () => {
       </Animated.Text>
       <Animated.Text
         entering={FadeInDown.duration(600).delay(300)}
-        style={styles.desc}
+        style={[styles.desc, { color: isDark ? '#9CA3AF' : '#4B5563' }]}
         adjustsFontSizeToFit
         numberOfLines={1}
       >
@@ -57,51 +59,51 @@ const Page6 = () => {
         entering={FadeInDown.duration(600).delay(400)}
         style={styles.grid}
       >
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <Icon name="phone-call" size={mS(22)} color="#EF9A9A" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_emergency_support')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_emergency_support_sub')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_emergency_support')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_emergency_support_sub')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon name="wallet-outline" size={mS(22)} color="#81C784" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_wallet_recharge')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_wallet_recharge_sub')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_wallet_recharge')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_wallet_recharge_sub')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon name="headphones" size={mS(22)} color="#90CAF9" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_support_center')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_support_center_sub')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_support_center')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_support_center_sub')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon name="shield-check" size={mS(22)} color="#A5D6A7" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_safety_features')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_safety_features_sub')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_safety_features')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_safety_features_sub')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon
             name="alert-circle-outline"
             size={mS(22)}
             color="#FFF59D"
           />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_issue_reporting')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_issue_reporting_sub')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_issue_reporting')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_issue_reporting_sub')}</Text>
         </View>
 
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <MCIcon name="update" size={mS(22)} color="#81C784" />
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_app_updates')}</Text>
-          <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_app_updates_sub')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_app_updates')}</Text>
+          <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_app_updates_sub')}</Text>
         </View>
       </Animated.View>
 
       {/* FOOTER TEXT */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(500)}
-        style={styles.footerText}
+        style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
       >
         {t('guidelines_footer')}
       </Animated.Text>

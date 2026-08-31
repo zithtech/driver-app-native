@@ -375,7 +375,7 @@ const RideActivityScreen = ({ navigation, route }: any) => {
                   <Ionicons name="calendar-outline" size={14} color={isActive ? '#fff' : (isDark ? '#94A3B8' : '#64748B')} style={{ marginRight: 4 }} />
                 )}
                 <Text style={[styles.filterText, isActive ? styles.filterTextActive : { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                  {opt.label}
+                  {t(opt.key, opt.label)}
                 </Text>
               </Pressable>
             );
@@ -416,33 +416,33 @@ const RideActivityScreen = ({ navigation, route }: any) => {
         style={styles.overviewCard}
       >
         <View style={styles.overviewHeaderRow}>
-          <Text style={styles.dropdownTriggerText}>{t('overview', 'Overview')}</Text>
+          <Text style={styles.dropdownTriggerText}>{t('overview', t('overview', 'Overview'))}</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.overviewGrid}>
           <View style={styles.overviewCol}>
             <Text style={styles.overviewValue}>{dynamicStats.tripsCompleted}</Text>
-            <Text style={styles.overviewLabel}>{t('completed_rides', 'Completed Rides')}</Text>
+            <Text style={styles.overviewLabel}>{t('completed_rides', t('completed_rides', 'Completed Rides'))}</Text>
           </View>
 
           <View style={styles.overviewDivider} />
           <View style={styles.overviewCol}>
             <Text style={styles.overviewValue}>{dynamicStats.cancelledTrips}</Text>
-            <Text style={styles.overviewLabel}>{t('cancelled_rides', 'Cancelled Rides')}</Text>
+            <Text style={styles.overviewLabel}>{t('cancelled_rides', t('cancelled_rides', 'Cancelled Rides'))}</Text>
           </View>
           <View style={styles.overviewDivider} />
           <View style={styles.overviewCol}>
             <Text style={styles.overviewValue}>{formatDurationTime(dynamicStats.tripDurationHours)}</Text>
-            <Text style={styles.overviewLabel}>{t('total_trip_duration', 'Total Trip Duration')}</Text>
+            <Text style={styles.overviewLabel}>{t('total_trip_duration', t('total_trip_duration', 'Total Trip Duration'))}</Text>
           </View>
           <View style={styles.overviewDivider} />
           <View style={styles.overviewCol}>
             <Text style={styles.overviewValue}>{formatCurrency(dynamicStats.totalEarnings)}</Text>
-            <Text style={styles.overviewLabel}>{t('earnings', 'Earnings')}</Text>
+            <Text style={styles.overviewLabel}>{t('earnings', t('earnings', 'Earnings'))}</Text>
           </View>
           <View style={styles.overviewDivider} />
           <View style={styles.overviewCol}>
             <Text style={styles.overviewValue}>{avgRating}</Text>
-            <Text style={styles.overviewLabel}>{t('rating', 'Rating')}</Text>
+            <Text style={styles.overviewLabel}>{t('rating', t('rating', 'Rating'))}</Text>
           </View>
         </ScrollView>
       </LinearGradient>
@@ -450,10 +450,10 @@ const RideActivityScreen = ({ navigation, route }: any) => {
 
 
       <View style={styles.recentHeader}>
-        <Text style={[styles.recentTitle, { color: theme.colors.text }]}>{t('recent_rides', 'Recent Rides')}</Text>
+        <Text style={[styles.recentTitle, { color: theme.colors.text }]}>{t('recent_rides', t('recent_rides', 'Recent Rides'))}</Text>
         {filteredRides.length > 3 && (
           <Pressable onPress={() => setShowAllRides(!showAllRides)}>
-            <Text style={styles.viewAllText}>{showAllRides ? t('show_less', 'Show Less') : t('view_all', 'View All')}</Text>
+            <Text style={styles.viewAllText}>{showAllRides ? t('show_less', t('show_less', 'Show Less')) : t('view_all', t('view_all', 'View All'))}</Text>
           </Pressable>
         )}
       </View>
@@ -551,13 +551,13 @@ const RideActivityScreen = ({ navigation, route }: any) => {
         <Ionicons name="bar-chart" size={18} color="#FFFFFF" />
       </View>
       <View style={styles.promoTextContainer}>
-        <Text style={[styles.promoTitle, { color: theme.colors.text }]} numberOfLines={1}>Keep it up! You're doing great</Text>
+        <Text style={[styles.promoTitle, { color: theme.colors.text }]} numberOfLines={1}>{t('keep_it_up', "Keep it up! You're doing great")}</Text>
         <Text style={[styles.promoSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]} numberOfLines={1}>
           Completed <Text style={{ fontWeight: '700' }}>12.6%</Text> more rides.
         </Text>
       </View>
       <Pressable style={styles.promoButton}>
-        <Text style={styles.promoButtonText}>View</Text>
+        <Text style={styles.promoButtonText}>{t('view', 'View')}</Text>
         <Ionicons name="chevron-forward" size={12} color="#FFFFFF" style={{ marginLeft: 2 }} />
       </Pressable>
     </View>
@@ -572,8 +572,8 @@ const RideActivityScreen = ({ navigation, route }: any) => {
             <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
           </Pressable>
           <View>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1}>{t('ride_activity', 'Ride Activity')}</Text>
-            <Text style={styles.headerSubtitle}>{t('track_performance', 'Track your rides and performance')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1}>{t('ride_activity', t('ride_activity', 'Ride Activity'))}</Text>
+            <Text style={styles.headerSubtitle}>{t('track_performance', t('track_performance', 'Track your rides and performance'))}</Text>
           </View>
         </View>
       </View>

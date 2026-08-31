@@ -42,39 +42,45 @@ const StatCard = ({ icon, iconColor, iconBg, title, value, subtitle, s }: any) =
   </View>
 );
 
-const InfoRow = ({ icon, iconBg, label, value, verified, isLast, s }: any) => (
-  <View style={[s.infoRow, !isLast && s.infoRowBorder]}>
-    <View style={[s.infoIconBox, { backgroundColor: iconBg }]}>
-      {icon}
-    </View>
-    <View style={s.infoTextContent}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value || '-'}</Text>
-    </View>
-    {verified && (
-      <View style={s.verifiedBadgeSmall}>
-        <Ionicons name="checkmark-circle-outline" size={ms(14)} color="#16A34A" />
-        <Text style={s.verifiedBadgeText}>Verified</Text>
+const InfoRow = ({ icon, iconBg, label, value, verified, isLast, s }: any) => {
+  const { t } = useTranslation();
+  return (
+    <View style={[s.infoRow, !isLast && s.infoRowBorder]}>
+      <View style={[s.infoIconBox, { backgroundColor: iconBg }]}>
+        {icon}
       </View>
-    )}
-    <Ionicons name="chevron-forward" size={ms(20)} color="#9CA3AF" />
-  </View>
-);
+      <View style={s.infoTextContent}>
+        <Text style={s.infoLabel}>{label}</Text>
+        <Text style={s.infoValue}>{value || '-'}</Text>
+      </View>
+      {verified && (
+        <View style={s.verifiedBadgeSmall}>
+          <Ionicons name="checkmark-circle-outline" size={ms(14)} color="#16A34A" />
+          <Text style={s.verifiedBadgeText}>{t('verified_badge', 'Verified')}</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={ms(20)} color="#9CA3AF" />
+    </View>
+  );
+};
 
-const DocCard = ({ icon, iconBg, title, verified, expiry, s }: any) => (
-  <View style={s.docCard}>
-    {verified && (
-      <View style={s.docVerifiedTick}>
-        <Ionicons name="checkmark-circle" size={ms(16)} color="#16A34A" />
+const DocCard = ({ icon, iconBg, title, verified, expiry, s }: any) => {
+  const { t } = useTranslation();
+  return (
+    <View style={s.docCard}>
+      {verified && (
+        <View style={s.docVerifiedTick}>
+          <Ionicons name="checkmark-circle" size={ms(16)} color="#16A34A" />
+        </View>
+      )}
+      <View style={[s.docIconBox, { backgroundColor: iconBg }]}>
+        {icon}
       </View>
-    )}
-    <View style={[s.docIconBox, { backgroundColor: iconBg }]}>
-      {icon}
+      <Text style={s.docTitle}>{title}</Text>
+      <Text style={s.docExpiry}>{t('doc_exp_label', 'Exp: {{expiry}}', { expiry })}</Text>
     </View>
-    <Text style={s.docTitle}>{title}</Text>
-    <Text style={s.docExpiry}>Exp: {expiry}</Text>
-  </View>
-);
+  );
+};
 
 const SettingRow = ({ icon, iconBg, title, subtitle, s, isLast, onPress }: any) => (
   <Pressable style={[s.settingRow, !isLast && s.settingRowBorder]} onPress={onPress}>
@@ -156,13 +162,13 @@ export default function ProfileDetailsScreen() {
 
   const getDocConfig = (key: string) => {
     const k = key.toLowerCase();
-    if (k.includes('license') || k.includes('driving')) return { title: "Driving License", icon: <FontAwesome5 name="id-card" size={ms(16)} color="#3B82F6" />, iconBg: "#EFF6FF" };
-    if (k.includes('aadhar') || k.includes('aadhaar')) return { title: "Aadhaar Card", icon: <MaterialCommunityIcons name="fingerprint" size={ms(18)} color="#8B5CF6" />, iconBg: "#F5F3FF" };
-    if (k.includes('rc') || k.includes('registration')) return { title: "Vehicle RC", icon: <Ionicons name="car" size={ms(18)} color="#F59E0B" />, iconBg: "#FEF3C7" };
-    if (k.includes('insurance')) return { title: "Insurance", icon: <MaterialCommunityIcons name="shield-car" size={ms(18)} color="#EF4444" />, iconBg: "#FEF2F2" };
-    if (k.includes('pan')) return { title: "PAN Card", icon: <FontAwesome5 name="id-card" size={ms(16)} color="#10B981" />, iconBg: "#ECFDF5" };
-    if (k.includes('police')) return { title: "Police Verification", icon: <MaterialCommunityIcons name="police-badge" size={ms(18)} color="#8B5CF6" />, iconBg: "#F5F3FF" };
-    if (k.includes('selfie') || k.includes('profile')) return { title: "Profile Selfie", icon: <Ionicons name="person" size={ms(18)} color="#F59E0B" />, iconBg: "#FEF3C7" };
+    if (k.includes('license') || k.includes('driving')) return { title: t("doc_driving_license", "Driving License"), icon: <FontAwesome5 name="id-card" size={ms(16)} color="#3B82F6" />, iconBg: "#EFF6FF" };
+    if (k.includes('aadhar') || k.includes('aadhaar')) return { title: t("doc_aadhaar_card", "Aadhaar Card"), icon: <MaterialCommunityIcons name="fingerprint" size={ms(18)} color="#8B5CF6" />, iconBg: "#F5F3FF" };
+    if (k.includes('rc') || k.includes('registration')) return { title: t("doc_vehicle_rc", "Vehicle RC"), icon: <Ionicons name="car" size={ms(18)} color="#F59E0B" />, iconBg: "#FEF3C7" };
+    if (k.includes('insurance')) return { title: t("doc_insurance", "Insurance"), icon: <MaterialCommunityIcons name="shield-car" size={ms(18)} color="#EF4444" />, iconBg: "#FEF2F2" };
+    if (k.includes('pan')) return { title: t("doc_pan_card", "PAN Card"), icon: <FontAwesome5 name="id-card" size={ms(16)} color="#10B981" />, iconBg: "#ECFDF5" };
+    if (k.includes('police')) return { title: t("doc_police_verification", "Police Verification"), icon: <MaterialCommunityIcons name="police-badge" size={ms(18)} color="#8B5CF6" />, iconBg: "#F5F3FF" };
+    if (k.includes('selfie') || k.includes('profile')) return { title: t("doc_profile_selfie", "Profile Selfie"), icon: <Ionicons name="person" size={ms(18)} color="#F59E0B" />, iconBg: "#FEF3C7" };
     
     // Default
     return { 
@@ -727,8 +733,8 @@ export default function ProfileDetailsScreen() {
           <Ionicons name="arrow-back" size={ms(20)} color={isDark ? '#FFF' : '#111827'} />
         </Pressable>
         <View style={s.headerTitleWrapper}>
-          <Text style={s.headerTitle}>My Profile</Text>
-          <Text style={s.headerSubtitle}>Manage your account information</Text>
+          <Text style={s.headerTitle}>{t('my_profile_title', 'My Profile')}</Text>
+          <Text style={s.headerSubtitle}>{t('manage_account_info', 'Manage your account information')}</Text>
         </View>
         <Pressable style={s.iconButton}>
           <Ionicons name="settings-outline" size={ms(20)} color={isDark ? '#FFF' : '#111827'} />
@@ -780,20 +786,20 @@ export default function ProfileDetailsScreen() {
                   <MaterialIcons name="verified" size={ms(16)} color="#3B82F6" />
                 </View>
                 <View style={s.proBadge}>
-                  <Text style={s.proBadgeText}>Professional Driver</Text>
+                  <Text style={s.proBadgeText}>{t('professional_driver_badge', 'Professional Driver')}</Text>
                 </View>
                 <View style={s.ratingRow}>
                   <Ionicons name="star" size={ms(14)} color="#F59E0B" />
                   <Text style={s.ratingText}>{user?.rating ? Number(user.rating).toFixed(1) : '0.0'}</Text>
-                  <Text style={s.reviewsText}>({user?.total_reviews || 0} Reviews)</Text>
+                  <Text style={s.reviewsText}>({user?.total_reviews || 0} {t('reviews_label', 'Reviews')})</Text>
                 </View>
 
               </View>
 
               <View style={s.ridesBox}>
-                <Text style={s.ridesLabel}>Total Rides</Text>
+                <Text style={s.ridesLabel}>{t('total_rides_label', 'Total Rides')}</Text>
                 <Text style={s.ridesValue}>{todayOverview?.totalCompletedRides || user.total_trips || 0}</Text>
-                <Text style={s.ridesSince}>Since {joinDate}</Text>
+                <Text style={s.ridesSince}>{t('since_date_label', 'Since {{date}}', { date: joinDate })}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -801,10 +807,10 @@ export default function ProfileDetailsScreen() {
 
         {/* FLOATING STATS */}
         <View style={s.floatingStatsWrapper}>
-          <StatCard icon="wallet-outline" iconColor="#2563EB" iconBg="#EFF6FF" title="Total Earnings" value={stats.earnings} subtitle="This Month" s={s} />
-          <StatCard icon="stats-chart" iconColor="#10B981" iconBg="#ECFDF5" title="Total Trips" value={stats.trips} subtitle="This Month" s={s} />
-          <StatCard icon="time-outline" iconColor="#8B5CF6" iconBg="#F5F3FF" title="Online Hours" value={stats.hours} subtitle="This Month" s={s} />
-          <StatCard icon="star" iconColor="#F59E0B" iconBg="#FEF3C7" title="Acceptance Rate" value={stats.acceptance} subtitle={stats.acceptanceStatus} s={s} />
+          <StatCard icon="wallet-outline" iconColor="#2563EB" iconBg="#EFF6FF" title={t('total_earnings_label', 'Total Earnings')} value={stats.earnings} subtitle={t('this_month_action', 'This Month')} s={s} />
+          <StatCard icon="stats-chart" iconColor="#10B981" iconBg="#ECFDF5" title={t('total_trips_label', 'Total Trips')} value={stats.trips} subtitle="This Month" s={s} />
+          <StatCard icon="time-outline" iconColor="#8B5CF6" iconBg="#F5F3FF" title={t('online_hours_label', 'Online Hours')} value={stats.hours} subtitle="This Month" s={s} />
+          <StatCard icon="star" iconColor="#F59E0B" iconBg="#FEF3C7" title={t('acceptance_rate_title', 'Acceptance Rate')} value={stats.acceptance} subtitle={stats.acceptanceStatus} s={s} />
         </View>
 
         {/* PROFILE COMPLETION */}
@@ -812,15 +818,15 @@ export default function ProfileDetailsScreen() {
           <CircleChart percentage={completionPercentage} />
           <View style={s.completionText}>
             <View style={s.completionHeaderRow}>
-              <Text style={s.completionTitle}>Profile Completion</Text>
+              <Text style={s.completionTitle}>{t('profile_completion_title', 'Profile Completion')}</Text>
               <View style={s.completeRightCol}>
                 <Pressable style={s.completeBtn} onPress={handleCompleteNowPress}>
-                  <Text style={s.completeBtnText}>Complete Now</Text>
+                  <Text style={s.completeBtnText}>{t('complete_now_action', 'Complete Now')}</Text>
                 </Pressable>
                 <Ionicons name="chevron-forward" size={ms(18)} color="#9CA3AF" style={{ marginLeft: ms(6) }} />
               </View>
             </View>
-            <Text style={s.completionSub}>Unlock more ride requests</Text>
+            <Text style={s.completionSub}>{t('unlock_more_rides', 'Unlock more ride requests')}</Text>
             <View style={s.progressBarTrack}>
               <View style={[s.progressBarFill, { width: `${completionPercentage}%` }]} />
             </View>
@@ -831,38 +837,38 @@ export default function ProfileDetailsScreen() {
         <View style={s.sectionTitleRow}>
           <View style={s.sectionTitleLeft}>
             <Ionicons name="person" size={ms(18)} color="#3B82F6" />
-            <Text style={s.sectionTitleText}>Personal Information</Text>
+            <Text style={s.sectionTitleText}>{t('personal_info_title', 'Personal Information')}</Text>
           </View>
           <Pressable onPress={() => setShowAllPersonalInfo(!showAllPersonalInfo)}>
-            <Text style={s.viewAllText}>{showAllPersonalInfo ? 'View Less' : 'View All'}</Text>
+            <Text style={s.viewAllText}>{showAllPersonalInfo ? t('view_less_action', 'View Less') : t('view_all_action', 'View All')}</Text>
           </Pressable>
         </View>
         <View style={s.flatListContainer}>
           <InfoRow 
             icon={<Ionicons name="person" size={ms(18)} color="#3B82F6" />} iconBg="#EFF6FF"
-            label="Full Name" value={user.full_name || 'Karthikeyan R'} s={s} 
+            label={t('full_name_label', 'Full Name')} value={user.full_name || 'Karthikeyan R'} s={s} 
           />
           <InfoRow 
             icon={<Ionicons name="call" size={ms(18)} color="#10B981" />} iconBg="#ECFDF5"
-            label="Mobile Number" value={user.phone_number || '+91 98765 43210'} verified s={s} isLast={!showAllPersonalInfo}
+            label={t('mobile_number_label', 'Mobile Number')} value={user.phone_number || '+91 98765 43210'} verified s={s} isLast={!showAllPersonalInfo}
           />
           {showAllPersonalInfo && (
             <>
               <InfoRow 
                 icon={<Ionicons name="call-outline" size={ms(18)} color="#10B981" />} iconBg="#ECFDF5"
-                label="Alternate Number" value={user.alternate_contact || '-'} s={s} 
+                label={t('alternate_number_label', 'Alternate Number')} value={user.alternate_contact || '-'} s={s} 
               />
               <InfoRow 
                 icon={<Ionicons name="mail" size={ms(18)} color="#8B5CF6" />} iconBg="#F5F3FF"
-                label="Email Address" value={user.email || 'karthikeyan.r@email.com'} verified s={s} 
+                label={t('email_address_label', 'Email Address')} value={user.email || 'karthikeyan.r@email.com'} verified s={s} 
               />
               <InfoRow 
                 icon={<Ionicons name="calendar" size={ms(18)} color="#F59E0B" />} iconBg="#FEF3C7"
-                label="Date of Birth" value={user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Mar 1995'} s={s} 
+                label={t('date_of_birth_label', 'Date of Birth')} value={user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Mar 1995'} s={s} 
               />
               <InfoRow 
                 icon={<Ionicons name="location" size={ms(18)} color="#EF4444" />} iconBg="#FEF2F2"
-                label="Address" value={getFullAddress(user?.address) || '12, Anna Nagar, Chennai, Tamil Nadu - 600040'} isLast s={s} 
+                label={t('address_label', 'Address')} value={getFullAddress(user?.address) || '12, Anna Nagar, Chennai, Tamil Nadu - 600040'} isLast s={s} 
               />
             </>
           )}
@@ -872,13 +878,13 @@ export default function ProfileDetailsScreen() {
         <View style={s.sectionTitleRow}>
           <View style={s.sectionTitleLeft}>
             <Ionicons name="document-text" size={ms(18)} color="#3B82F6" />
-            <Text style={s.sectionTitleText}>Documents</Text>
+            <Text style={s.sectionTitleText}>{t('documents_title', 'Documents')}</Text>
           </View>
           <Pressable 
             style={{ flexDirection: 'row', alignItems: 'center' }}
             onPress={() => navigation.navigate('ProfileDocumentsScreen')}
           >
-            <Text style={[s.viewAllText, { marginRight: 4 }]}>Manage</Text>
+            <Text style={[s.viewAllText, { marginRight: 4 }]}>{t('manage_action', 'Manage')}</Text>
             <Ionicons name="create-outline" size={ms(14)} color="#2563EB" />
           </Pressable>
         </View>
@@ -921,17 +927,17 @@ export default function ProfileDetailsScreen() {
         <View style={[s.listCard, { marginTop: vs(24), backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF' }]}>
           <SettingRow 
             icon={<Ionicons name="call" size={ms(18)} color="#EF4444" />} iconBg="#FEF2F2"
-            title="Emergency Contact" subtitle="Add or update emergency contact" s={s}
+            title={t('emergency_contact_title', 'Emergency Contact')} subtitle={t('emergency_contact_subtitle', 'Add or update emergency contact')} s={s}
             onPress={() => navigation.navigate(SosContacts_Nav)}
           />
           <SettingRow 
             icon={<Ionicons name="settings" size={ms(18)} color="#10B981" />} iconBg="#ECFDF5"
-            title="App Settings" subtitle="Notifications, language and more" s={s}
+            title={t('app_settings_title', 'App Settings')} subtitle={t('app_settings_subtitle', 'Notifications, language and more')} s={s}
             onPress={() => navigation.navigate('ProfileSettingsScreen')}
           />
           <SettingRow 
             icon={<Ionicons name="headset" size={ms(18)} color="#F59E0B" />} iconBg="#FEF3C7"
-            title="Help & Support" subtitle="Get help and support" s={s} isLast
+            title={t('help_support_title', 'Help & Support')} subtitle={t('help_support_subtitle', 'Get help and support')} s={s} isLast
             onPress={() => navigation.navigate(HelpCenter_Nav)}
           />
         </View>

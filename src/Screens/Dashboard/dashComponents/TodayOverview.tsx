@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { hS as s, vS as vs, ms } from '../../../lib/scale';
 import { Text } from '../../../Components';
 import LinearGradient from 'react-native-linear-gradient';
+import { getLanguageScaledSize } from '../../../utils/languageSizings';
 
 interface TodayOverviewProps {
     earnings: string;
@@ -60,7 +61,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
         >
             <View style={styles.headerRow}>
                 <View style={styles.titleWrap}>
-                    <Text style={styles.titleText}>{t('todays_overview', "Today's Overview")}</Text>
+                    <Text style={styles.titleText} numberOfLines={1} adjustsFontSizeToFit>{t('todays_overview', "Today's Overview")}</Text>
                     <Ionicons name="eye-outline" size={ms(14)} color="#FFFFFF" style={{ marginLeft: s(6) }} />
                 </View>
                 <View style={styles.dateWrap}>
@@ -78,7 +79,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <View style={styles.iconCircle}>
                         <Text style={{color: '#fff', fontSize: ms(14), fontWeight: '600'}}>₹</Text>
                     </View>
-                    <Text style={styles.metricLabel}>{t('earnings', 'Earnings')}</Text>
+                    <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>{t('earnings', 'Earnings')}</Text>
                     <Text style={styles.metricValue}>₹{earnings}</Text>
                     {renderTrend(earningsTrend)}
                 </Pressable>
@@ -90,7 +91,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <View style={styles.iconCircle}>
                         <Ionicons name="car-outline" size={ms(14)} color="#FFFFFF" />
                     </View>
-                    <Text style={styles.metricLabel}>{t('rides', 'Rides')}</Text>
+                    <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>{t('rides', 'Rides')}</Text>
                     <Text style={styles.metricValue}>{rides}</Text>
                     {renderTrend(ridesTrend)}
                 </Pressable>
@@ -102,7 +103,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <View style={styles.iconCircle}>
                         <Ionicons name="time-outline" size={ms(14)} color="#FFFFFF" />
                     </View>
-                    <Text style={styles.metricLabel}>{t('online_hours', 'Online Hours')}</Text>
+                    <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>{t('online_hours', 'Online Hours')}</Text>
                     <Animated.Text style={[styles.metricValue, { transform: [{ scale: timerPulseAnim }] }]}>
                         {displayTimeFormatted}
                     </Animated.Text>
@@ -116,7 +117,7 @@ const TodayOverview: React.FC<TodayOverviewProps> = ({
                     <View style={styles.iconCircle}>
                         <Ionicons name="star-outline" size={ms(14)} color="#FBBF24" />
                     </View>
-                    <Text style={styles.metricLabel}>{t('rating', 'Rating')}</Text>
+                    <Text style={styles.metricLabel} numberOfLines={1} adjustsFontSizeToFit>{t('rating', 'Rating')}</Text>
                     <Text style={styles.metricValue}>{rating}</Text>
                     {renderTrend(ratingTrend)}
                 </View>
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     },
     titleText: {
         color: '#FFFFFF',
-        fontSize: ms(14),
+        fontSize: getLanguageScaledSize(14),
         fontWeight: '600',
     },
     dateWrap: {
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
     },
     dateText: {
         color: '#FFFFFF',
-        fontSize: ms(12),
+        fontSize: getLanguageScaledSize(12),
         marginLeft: s(4),
         fontWeight: '500',
     },
@@ -182,12 +183,12 @@ const styles = StyleSheet.create({
     },
     metricLabel: {
         color: '#E2E8F0',
-        fontSize: ms(10),
+        fontSize: getLanguageScaledSize(10),
         marginBottom: vs(2),
     },
     metricValue: {
         color: '#FFFFFF',
-        fontSize: ms(14),
+        fontSize: getLanguageScaledSize(14),
         fontWeight: '700',
         marginBottom: vs(2),
     },
@@ -197,7 +198,7 @@ const styles = StyleSheet.create({
     },
     trendText: {
         color: '#4ADE80',
-        fontSize: ms(9),
+        fontSize: getLanguageScaledSize(9),
         marginLeft: s(2),
         fontWeight: '500',
     },

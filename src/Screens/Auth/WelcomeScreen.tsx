@@ -131,8 +131,9 @@ const WelcomeScreen = ({ navigation }: any) => {
   }, []);
 
   /* ================= TYPING ANIMATION ================= */
+  const fullText = t('driver_partner_anim', 'Driver Partner!');
+
   useEffect(() => {
-    const fullText = "Driver Partner!";
     let currentLength = 0;
 
     // Slight delay to wait for the screen fade-in animation
@@ -149,7 +150,7 @@ const WelcomeScreen = ({ navigation }: any) => {
     }, 800);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [fullText]);
 
   /* ================= ANIMATIONS ================= */
   const triggerShake = () => {
@@ -298,7 +299,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                     style={{ height: 36, marginTop: -4, marginLeft: -2 }}
                     maskElement={
                       <Text style={[fonts.bold, { fontSize: 28, fontWeight: '900', backgroundColor: 'transparent' }]}>
-                        {"Driver Partner!".substring(0, typedTextLength)}
+                        {fullText.substring(0, typedTextLength)}
                       </Text>
                     }
                   >
@@ -311,10 +312,10 @@ const WelcomeScreen = ({ navigation }: any) => {
                   </MaskedView>
 
                   <View style={{ marginTop: 16 }}>
-                    <Text style={[fonts.medium, { fontSize: 13, color: '#6B7280' }]}>
+                    <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280' }]}>
                       Ready to hit the road?
                     </Text>
-                    <Text style={[fonts.medium, { fontSize: 13, color: '#6B7280', marginTop: 2 }]}>
+                    <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280', marginTop: 2 }]}>
                       Turn your miles into money with flexible hours.
                     </Text>
                   </View>
@@ -334,8 +335,8 @@ const WelcomeScreen = ({ navigation }: any) => {
                   <Ionicons name="phone-portrait-outline" size={20} color={dark ? '#60A5FA' : '#3B82F6'} />
                 </View>
                 <View>
-                  <Text style={[fonts.bold, { fontSize: 16, color: colors.text }]}>Let's get you started</Text>
-                  <Text style={[fonts.medium, { fontSize: 12, color: '#64748B', marginTop: 1 }]}>Enter your mobile number to continue</Text>
+                  <Text style={[fonts.bold, { fontSize: 16, color: colors.text }]}>{t('lets_get_started', "Let's get you started")}</Text>
+                  <Text style={[fonts.medium, { fontSize: 12, color: dark ? '#9CA3AF' : '#64748B', marginTop: 1 }]}>{t('enter_mobile_to_continue', 'Enter your mobile number to continue')}</Text>
                 </View>
               </View>
 
@@ -371,7 +372,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                   value={mobileNumber}
                   keyboardType="phone-pad"
                   maxLength={10}
-                  placeholder="Enter your mobile number"
+                  placeholder={t('enter_mobile_placeholder', 'Enter your mobile number')}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   returnKeyType="done"
@@ -419,12 +420,12 @@ const WelcomeScreen = ({ navigation }: any) => {
                   style={{
                     height: 48,
                     borderRadius: 12,
-                    backgroundColor: '#2563EB',
+                    backgroundColor: colors.primary,
                     borderWidth: 0,
                     flexDirection: 'row',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    shadowColor: '#2563EB',
+                    shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.3,
                     shadowRadius: 8,
@@ -448,8 +449,8 @@ const WelcomeScreen = ({ navigation }: any) => {
 
               {/* OTP Hint text */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-                <Ionicons name="lock-closed-outline" size={12} color="#64748B" />
-                <Text style={{ fontSize: 11, color: '#64748B', marginLeft: 6 }}>
+                <Ionicons name="lock-closed-outline" size={12} color={dark ? '#9CA3AF' : '#64748B'} />
+                <Text style={{ fontSize: 11, color: dark ? '#9CA3AF' : '#64748B', marginLeft: 6 }}>
                   We will send you a 6-digit OTP on this number
                 </Text>
               </View>
@@ -462,15 +463,15 @@ const WelcomeScreen = ({ navigation }: any) => {
                   </View>
 
                   <View style={{ flex: 1, paddingRight: 6 }}>
-                    <Text numberOfLines={1} style={[fonts.bold, { color: colors.text, fontSize: 12 }]}>Have a referral code?</Text>
-                    <Text numberOfLines={1} style={{ fontSize: 10, color: '#6B7280', marginTop: 2, lineHeight: 14 }}>Enter referral code and earn exciting rewards when you join!</Text>
+                    <Text numberOfLines={1} style={[fonts.bold, { color: colors.text, fontSize: 12 }]}>{t('have_referral_code', 'Have a referral code?')}</Text>
+                    <Text numberOfLines={1} style={{ fontSize: 10, color: dark ? '#9CA3AF' : '#6B7280', marginTop: 2, lineHeight: 14 }}>{t('referral_rewards_hint', 'Enter referral code and earn exciting rewards when you join!')}</Text>
                   </View>
 
                   {/* Referral Input & Apply Button Row */}
-                  <View style={{ width: 145, backgroundColor: dark ? theme.colors.card : '#FFF', borderRadius: 8, borderWidth: 1, borderColor: '#86EFAC', height: 40, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
+                  <View style={{ width: 145, backgroundColor: dark ? theme.colors.card : '#FFF', borderRadius: 8, borderWidth: 1, borderColor: dark ? 'rgba(74, 222, 128, 0.3)' : '#86EFAC', height: 40, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
                     <Input
                       value={referralCode}
-                      placeholder="Enter code"
+                      placeholder={t('enter_code_placeholder', 'Enter code')}
                       autoCapitalize="characters"
                       maxLength={20}
                       onChangeText={(text: string) => {
@@ -498,10 +499,10 @@ const WelcomeScreen = ({ navigation }: any) => {
                       style={{ paddingHorizontal: 8, height: '100%', justifyContent: 'center', backgroundColor: dark ? 'rgba(22, 163, 74, 0.1)' : 'transparent' }}
                     >
                       {isCheckingReferral ? (
-                        <ActivityIndicator size="small" color="#16A34A" />
+                        <ActivityIndicator size="small" color={dark ? '#4ADE80' : '#16A34A'} />
                       ) : (
-                        <Text style={[fonts.bold, { color: referralCodeStatus === 'valid' ? '#16A34A' : '#16A34A', fontSize: 12, opacity: (!referralCode) ? 0.5 : 1 }]}>
-                          {referralCodeStatus === 'valid' ? 'Applied' : 'Apply'}
+                        <Text style={[fonts.bold, { color: dark ? '#4ADE80' : '#16A34A', fontSize: 12, opacity: (!referralCode) ? 0.5 : 1 }]}>
+                          {referralCodeStatus === 'valid' ? t('applied', 'Applied') : t('apply', 'Apply')}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -527,12 +528,12 @@ const WelcomeScreen = ({ navigation }: any) => {
             <Reanimated.View
               style={{ marginTop: 'auto', marginBottom: 10 }}
             >
-              <Text style={styles.footerText}>
+              <Text style={[styles.footerText, { color: dark ? '#9CA3AF' : '#6B7280' }]}>
                 {t('agree_terms_prefix')}
-                <Text style={{ color: '#2563EB', fontWeight: '500' }}>{t('terms')}</Text>
+                <Text style={{ color: colors.primary, fontWeight: '500' }}>{t('terms')}</Text>
                 {'\n'}
                 {t('and')}
-                <Text style={{ color: '#2563EB', fontWeight: '500' }}>{t('privacy_policy')}</Text>
+                <Text style={{ color: colors.primary, fontWeight: '500' }}>{t('privacy_policy')}</Text>
               </Text>
             </Reanimated.View>
           </View>
