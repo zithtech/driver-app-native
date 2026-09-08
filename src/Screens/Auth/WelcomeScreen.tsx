@@ -211,7 +211,7 @@ const WelcomeScreen = ({ navigation }: any) => {
     buttonScale.value = withSequence(withSpring(0.95), withSpring(1));
     triggerHaptic(HapticFeedbackTypes.impactLight);
 
-    if (!mobileNumber || mobileNumber.length !== 10) {
+    if (!mobileNumber || mobileNumber.length !== 10 || !/^[6-9]/.test(mobileNumber)) {
       setHasError(true);
       triggerShake();
       return;
@@ -362,7 +362,6 @@ const WelcomeScreen = ({ navigation }: any) => {
                 {/* INDIA FLAG + CODE */}
                 <View style={[styles.countryCode, { paddingRight: 10 }]}>
                   <Text style={[fonts.bold, { fontSize: 15, color: colors.text, fontWeight: '700' }]}>+91</Text>
-                  <Ionicons name="chevron-down" size={16} color="#64748B" style={{ marginLeft: 4 }} />
                 </View>
 
                 <View style={[styles.divider, { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', height: 24 }]} />

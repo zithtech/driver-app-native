@@ -49,13 +49,7 @@ const PrivacyContent = ({ t, theme, isDark }: any) => (
         <LegalCard index={5} icon="lock-closed-outline" color="#10B981" title="4. Data Security" content={t('privacy_security', 'We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction.')} theme={theme} />
         <LegalCard index={6} icon="mail-outline" color="#64748B" title="5. Contact Us" content={t('privacy_contact', 'If you have any questions about this Privacy Policy, please contact us at privacy@vdrive.com.')} theme={theme} />
 
-        <View style={styles.controlsSection}>
-            <Text style={[styles.sectionLabel, { color: theme.colors.paragraphText }]}>{t('privacy_tools', 'PRIVACY TOOLS')}</Text>
-            <TouchableOpacity style={[styles.controlItem, { borderColor: theme.colors.border }]}>
-                <Text style={[styles.controlText, { color: theme.colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{t('download_data', 'Download My Data')}</Text>
-                <Ionicons name="download-outline" size={s(18)} color={theme.colors.primary} />
-            </TouchableOpacity>
-        </View>
+
     </Animated.View>
 );
 

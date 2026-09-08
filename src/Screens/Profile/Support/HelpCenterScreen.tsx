@@ -26,70 +26,76 @@ import AppStatusBar from '../../../Components/AppStatusBar';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
 import { FAQScreen_Nav, ChatbotScreen_Nav } from '../../../Navigations/navigations';
 
-const POPULAR_TOPICS = [
+const getPopularTopics = (t: any) => [
     {
         id: 1,
-        title: 'Payments &\nEarnings',
-        subtitle: 'Payouts, balance\nand invoices',
+        title: t('topic_payments_earnings', 'Payments & Earnings'),
+        subtitle: t('topic_payments_subtitle', 'Payouts, balance and invoices'),
         icon: 'wallet-outline',
         color: '#3B82F6',
         bgColor: '#EFF6FF',
+        category: 'Payments',
     },
     {
         id: 2,
-        title: 'Account &\nDocuments',
-        subtitle: 'KYC, documents\nand verification',
+        title: t('topic_account_documents', 'Account & Documents'),
+        subtitle: t('topic_account_subtitle', 'KYC, documents and verification'),
         icon: 'document-text-outline',
         color: '#10B981',
         bgColor: '#ECFDF5',
+        category: 'Account',
     },
     {
         id: 3,
-        title: 'Trips &\nBookings',
-        subtitle: 'Trip issues and\ncancellations',
+        title: t('topic_trips_bookings', 'Trips & Bookings'),
+        subtitle: t('topic_trips_subtitle', 'Trip issues and cancellations'),
         icon: 'car-outline',
         color: '#F59E0B',
         bgColor: '#FFFBEB',
+        category: 'Trips',
     },
     {
         id: 4,
-        title: 'Subscription &\nPlans',
-        subtitle: 'Plans, renewals and\nbenefits',
+        title: t('topic_subscription_plans', 'Subscription & Plans'),
+        subtitle: t('topic_subscription_subtitle', 'Plans, renewals and benefits'),
         icon: 'star-outline',
         color: '#8B5CF6',
         bgColor: '#F5F3FF',
+        category: 'Subscription',
     },
     {
         id: 5,
-        title: 'Safety &\nGuidelines',
-        subtitle: 'Safety tips and\ncommunity rules',
+        title: t('topic_safety_guidelines', 'Safety & Guidelines'),
+        subtitle: t('topic_safety_subtitle', 'Safety tips and community rules'),
         icon: 'shield-checkmark-outline',
         color: '#EF4444',
         bgColor: '#FEF2F2',
+        category: 'General',
     },
     {
         id: 6,
-        title: 'Other\nHelp',
-        subtitle: 'Other issues and\ngeneral queries',
+        title: t('topic_other_help', 'Other Help'),
+        subtitle: t('topic_other_subtitle', 'Other issues and general queries'),
         icon: 'chatbubble-ellipses-outline',
         color: '#3B82F6',
         bgColor: '#EFF6FF',
+        category: 'General',
     },
 ];
 
-const OTHER_WAYS_HELP = [
+const getOtherWaysHelp = (t: any) => [
     {
         id: 'whatsapp',
-        title: 'Chat on WhatsApp',
-        subtitle: 'Chat with our support team',
+        title: t('help_chat_whatsapp', 'Chat on WhatsApp'),
+        subtitle: t('help_chat_whatsapp_subtitle', 'Chat with our support team'),
         icon: 'logo-whatsapp',
         color: '#22C55E',
         bgColor: '#DCFCE7',
-        badge: 'Recommended'
+        badge: t('recommended', 'Recommended')
     },
     {
         id: 'email',
-        title: 'Email Us',
+        title: t('help_email_us', 'Email Us'),
         subtitle: 'support@t2drive.com',
         icon: 'mail-outline',
         color: '#8B5CF6',
@@ -97,8 +103,8 @@ const OTHER_WAYS_HELP = [
     },
     {
         id: 'faqs',
-        title: 'FAQs',
-        subtitle: 'Find quick answers here',
+        title: t('help_faqs', 'FAQs'),
+        subtitle: t('help_faqs_subtitle', 'Find quick answers here'),
         icon: 'help-circle-outline',
         color: '#F59E0B',
         bgColor: '#FFFBEB',
@@ -107,6 +113,9 @@ const OTHER_WAYS_HELP = [
 
 const HelpCenterScreen = ({ navigation, route }: any) => {
     const { t } = useTranslation();
+
+    const POPULAR_TOPICS = getPopularTopics(t);
+    const OTHER_WAYS_HELP = getOtherWaysHelp(t);
     const { theme, isDark } = useAppTheme();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -206,16 +215,17 @@ const HelpCenterScreen = ({ navigation, route }: any) => {
                                         borderBottomColor: isDark ? '#334155' : '#E2E8F0' 
                                     }
                                 ]}
+                                onPress={() => navigation.navigate(FAQScreen_Nav, { category: topic.category })}
                             >
                                 <View style={[styles.topicIconContainer, { backgroundColor: isDark ? `${topic.color}20` : topic.bgColor }]}>
                                     <Ionicons name={topic.icon} size={s(18)} color={topic.color} />
                                 </View>
                                 <View style={styles.topicContent}>
                                     <Text style={[styles.topicCardTitle, { color: theme.colors.text }]} numberOfLines={1}>
-                                        {topic.title.replace('\n', ' ')}
+                                        {topic.title}
                                     </Text>
                                     <Text style={[styles.topicCardSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]} numberOfLines={2}>
-                                        {topic.subtitle.replace('\n', ' ')}
+                                        {topic.subtitle}
                                     </Text>
                                 </View>
                                 <Ionicons name="chevron-forward" size={s(16)} color="#94A3B8" />

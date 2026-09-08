@@ -35,39 +35,39 @@ const Skeleton = ({ width, height, style, isDark, borderRadius = 8 }: { width?: 
 type TransactionType = 'INCENTIVE' | 'PENALTY' | 'REFERRAL_BONUS' | 'WALLET_TOPUP' | 'REFUND';
 
 const getTransactionIcon = (type: TransactionType, title: string = '', amount: number = 0) => {
-  const t = title.toLowerCase();
-  if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return { name: 'wallet', color: '#16a34a', bg: '#dcfce7' };
-  if (t.includes('subscription')) return { name: 'document-text-outline', color: '#7c3aed', bg: '#f3e8ff' };
-  if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return { name: 'trophy-outline', color: '#d97706', bg: '#fef9c3' };
-  if (t.includes('refund') || type === 'REFUND') return { name: 'arrow-undo-outline', color: '#ef4444', bg: '#fee2e2' };
+  const lowerTitle = title.toLowerCase();
+  if (type === 'WALLET_TOPUP' || lowerTitle.includes('added to wallet') || lowerTitle.includes('topup')) return { name: 'wallet', color: '#16a34a', bg: '#dcfce7' };
+  if (lowerTitle.includes('subscription')) return { name: 'document-text-outline', color: '#7c3aed', bg: '#f3e8ff' };
+  if (type === 'REFERRAL_BONUS' || lowerTitle.includes('referral') || lowerTitle.includes('bonus')) return { name: 'trophy-outline', color: '#d97706', bg: '#fef9c3' };
+  if (lowerTitle.includes('refund') || type === 'REFUND') return { name: 'arrow-undo-outline', color: '#ef4444', bg: '#fee2e2' };
   if (amount < 0) return { name: 'wallet', color: '#ef4444', bg: '#fee2e2' };
   return { name: 'pricetag-outline', color: '#475569', bg: '#f1f5f9' };
 };
 
 const getTransactionSubtitle = (type: TransactionType, title: string, item: any) => {
   if (item.subtitle) return item.subtitle;
-  const t = title.toLowerCase();
+  const lowerTitle = title.toLowerCase();
   
-  if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) {
+  if (type === 'WALLET_TOPUP' || lowerTitle.includes('added to wallet') || lowerTitle.includes('topup')) {
      if (item.paymentMethod) return `Paid via ${item.paymentMethod}`;
-     if (t.includes('via')) {
+     if (lowerTitle.includes('via')) {
          const method = title.split(/via/i)[1].trim();
          return method ? `Paid via ${method}` : 'Razorpay';
      }
      return 'Razorpay';
   }
-  if (t.includes('subscription')) return 'Premium Plan - 7 Days';
-  if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return 'Referral ID: REF12345';
-  if (t.includes('refund') || type === 'REFUND') return 'Trip ID: #TRP12340';
+  if (lowerTitle.includes('subscription')) return 'Premium Plan - 7 Days';
+  if (type === 'REFERRAL_BONUS' || lowerTitle.includes('referral') || lowerTitle.includes('bonus')) return 'Referral ID: REF12345';
+  if (lowerTitle.includes('refund') || type === 'REFUND') return 'Trip ID: #TRP12340';
   return item.description || null;
 };
 
 const getTransactionTitle = (type: TransactionType, title: string) => {
-  const t = title.toLowerCase();
-  if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return 'Added to Wallet';
-  if (t.includes('subscription')) return 'Subscription Plan';
-  if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return 'Referral Bonus';
-  if (t.includes('refund')) return 'Refund Received';
+  const lowerTitle = title.toLowerCase();
+  if (type === 'WALLET_TOPUP' || lowerTitle.includes('added to wallet') || lowerTitle.includes('topup')) return 'Added to Wallet';
+  if (lowerTitle.includes('subscription')) return 'Subscription Plan';
+  if (type === 'REFERRAL_BONUS' || lowerTitle.includes('referral') || lowerTitle.includes('bonus')) return 'Referral Bonus';
+  if (lowerTitle.includes('refund')) return 'Refund Received';
   return title;
 };
 

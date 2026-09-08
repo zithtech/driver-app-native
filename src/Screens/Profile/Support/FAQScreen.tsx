@@ -25,11 +25,11 @@ import AppStatusBar from '../../../Components/AppStatusBar';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
 import { ContactSupport_Nav, ChatbotScreen_Nav } from '../../../Navigations/navigations';
 
-const BROWSE_TOPICS = [
+const getBrowseTopics = (t: any) => [
     {
         id: 1,
-        title: 'Payments & Earnings',
-        subtitle: '12 questions',
+        title: t('faq_topic_payments', 'Payments & Earnings'),
+        subtitle: t('faq_topic_payments_count', '12 questions'),
         icon: 'wallet-outline',
         color: '#3B82F6',
         bgColor: '#EFF6FF',
@@ -37,8 +37,8 @@ const BROWSE_TOPICS = [
     },
     {
         id: 2,
-        title: 'Account & Documents',
-        subtitle: '10 questions',
+        title: t('faq_topic_account', 'Account & Documents'),
+        subtitle: t('faq_topic_account_count', '10 questions'),
         icon: 'document-text-outline',
         color: '#10B981',
         bgColor: '#ECFDF5',
@@ -46,8 +46,8 @@ const BROWSE_TOPICS = [
     },
     {
         id: 3,
-        title: 'Trips & Bookings',
-        subtitle: '14 questions',
+        title: t('faq_topic_trips', 'Trips & Bookings'),
+        subtitle: t('faq_topic_trips_count', '14 questions'),
         icon: 'car-outline',
         color: '#F59E0B',
         bgColor: '#FFFBEB',
@@ -55,8 +55,8 @@ const BROWSE_TOPICS = [
     },
     {
         id: 4,
-        title: 'Subscription & Plans',
-        subtitle: '10 questions',
+        title: t('faq_topic_subscription', 'Subscription & Plans'),
+        subtitle: t('faq_topic_subscription_count', '10 questions'),
         icon: 'star-outline',
         color: '#8B5CF6',
         bgColor: '#F5F3FF',
@@ -64,8 +64,8 @@ const BROWSE_TOPICS = [
     },
     {
         id: 5,
-        title: 'Safety & Guidelines',
-        subtitle: '10 questions',
+        title: t('faq_topic_safety', 'Safety & Guidelines'),
+        subtitle: t('faq_topic_safety_count', '10 questions'),
         icon: 'shield-checkmark-outline',
         color: '#EF4444',
         bgColor: '#FEF2F2',
@@ -73,7 +73,14 @@ const BROWSE_TOPICS = [
     },
 ];
 
-const FAQ_CATEGORIES = ['All', 'Payments', 'Trips', 'Account', 'Subscription', 'General'];
+const getFaqCategories = (t: any) => [
+    { key: 'All', label: t('faq_all', 'All') },
+    { key: 'Payments', label: t('faq_payments', 'Payments') },
+    { key: 'Trips', label: t('faq_trips', 'Trips') },
+    { key: 'Account', label: t('faq_account', 'Account') },
+    { key: 'Subscription', label: t('faq_subscription', 'Subscription') },
+    { key: 'General', label: t('faq_general', 'General') },
+];
 
 const FAQS_DATA = [
     {
@@ -582,17 +589,24 @@ const FAQS_DATA = [
     },
 ];
 
-const FAQScreen = ({ navigation }: any) => {
+const FAQScreen = ({ navigation, route }: any) => {
     const { t } = useTranslation();
     const { theme, isDark } = useAppTheme();
 
+    const BROWSE_TOPICS = getBrowseTopics(t);
+    const FAQ_CATEGORIES = getFaqCategories(t);
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('All');
+    const [selectedCategory, setSelectedCategory] = useState(route?.params?.category || 'All');
     const [expandedFaqId, setExpandedFaqId] = useState<number | null>(1);
 
-    const filteredFaqs = FAQS_DATA.filter(
-        (faq) => selectedCategory === 'All' || faq.category === selectedCategory
-    );
+    const filteredFaqs = FAQS_DATA.filter((faq) => {
+        const matchesCategory = selectedCategory === 'All' || faq.category === selectedCategory;
+        const matchesSearch = searchQuery.trim() === '' || 
+            faq.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -631,7 +645,7 @@ const FAQScreen = ({ navigation }: any) => {
                             {t('how_can', 'How can')} <Text style={styles.heroTitleHighlight}>{t('we_help', 'we help?')}</Text>
                         </Text>
                         <Text style={[styles.heroSubtitle, { color: isDark ? '#94A3B8' : '#3B82F6' }]}>
-                            {t('help_subtitle', 'Find quick answers to common questions or get help from our support team.')}
+                            {t('faq_help_subtitle', 'Find quick answers to common questions or get help from our support team.')}
                         </Text>
                     </View>
                     <View style={styles.heroRight}>
@@ -668,10 +682,10 @@ const FAQScreen = ({ navigation }: any) => {
                     <Text style={[styles.sectionTitle, { color: isDark ? '#F8FAFC' : '#0B193C' }]}>{t('frequently_asked', 'Frequently Asked Questions')}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
                         {FAQ_CATEGORIES.map((cat) => {
-                            const isSelected = selectedCategory === cat;
+                            const isSelected = selectedCategory === cat.key;
                             return (
                                 <TouchableOpacity
-                                    key={cat}
+                                    key={cat.key}
                                     style={[
                                         styles.categoryTab,
                                         {
@@ -679,12 +693,12 @@ const FAQScreen = ({ navigation }: any) => {
                                             borderColor: isSelected ? '#0052FF' : (isDark ? '#334155' : '#E2E8F0'),
                                         }
                                     ]}
-                                    onPress={() => setSelectedCategory(cat)}
+                                    onPress={() => setSelectedCategory(cat.key)}
                                 >
                                     <Text style={[
                                         styles.categoryText,
                                         { color: isSelected ? '#FFFFFF' : (isDark ? '#94A3B8' : '#64748B') }
-                                    ]}>{t(cat.toLowerCase(), cat)}</Text>
+                                    ]}>{cat.label}</Text>
                                 </TouchableOpacity>
                             );
                         })}

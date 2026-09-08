@@ -295,7 +295,6 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
           <Text style={[styles.dropdownText, { color: theme.colors.text }]}>
             {filterType === 'today' ? t('today_filter', 'Today') : filterType === 'week' ? t('this_week_filter', 'This Week') : filterType === 'month' ? t('this_month_filter', 'This Month') : t('all_time_filter', 'All Time')}
           </Text>
-          <Ionicons name="chevron-down" size={16} color={theme.colors.text} />
         </Pressable>
       </View>
       <View style={{ marginTop: 16 }}>
@@ -352,9 +351,6 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
     <View style={[styles.card, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
       <View style={styles.cardHeaderRow}>
         <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('earnings_breakdown_title', 'Earnings Breakdown')}</Text>
-        <Pressable>
-          <Text style={styles.viewDetailsText}>{t('view_details_link', 'View Details')} <Ionicons name="chevron-forward" size={12} /></Text>
-        </Pressable>
       </View>
 
       <View style={styles.donutRow}>

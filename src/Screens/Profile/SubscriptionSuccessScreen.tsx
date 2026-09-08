@@ -212,8 +212,8 @@ const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
             style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.7 }]}
             onPress={handleShareReceipt}
           >
-            <Ionicons name="share-social-outline" size={20} color={TEXT_DARK} style={{ marginRight: 8 }} />
-            <Text style={styles.secondaryBtnText}>Share receipt</Text>
+            <Ionicons name="download-outline" size={20} color={TEXT_DARK} style={{ marginRight: 8 }} />
+            <Text style={styles.secondaryBtnText}>Download receipt</Text>
           </Pressable>
 
         </Animated.View>

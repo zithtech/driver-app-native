@@ -17,24 +17,25 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import moment from 'moment';
 import RNPrint from 'react-native-print';
 import { useSelector } from 'react-redux';
+import { HelpCenter_Nav } from '../../Navigations/navigations';
 
 type TransactionType = 'INCENTIVE' | 'PENALTY' | 'REFERRAL_BONUS' | 'WALLET_TOPUP' | 'REFUND';
 
 const getTransactionTitle = (type: TransactionType, title: string) => {
-  const t = title?.toLowerCase() || '';
-  if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return 'Added to Wallet';
-  if (t.includes('subscription')) return 'Subscription Plan';
-  if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return 'Referral Bonus';
-  if (t.includes('refund')) return 'Refund Received';
+  const lowerTitle = title?.toLowerCase() || '';
+  if (type === 'WALLET_TOPUP' || lowerTitle.includes('added to wallet') || lowerTitle.includes('topup')) return 'Added to Wallet';
+  if (lowerTitle.includes('subscription')) return 'Subscription Plan';
+  if (type === 'REFERRAL_BONUS' || lowerTitle.includes('referral') || lowerTitle.includes('bonus')) return 'Referral Bonus';
+  if (lowerTitle.includes('refund')) return 'Refund Received';
   return title || 'Transaction';
 };
 
 const getTransactionIcon = (type: TransactionType, title: string = '', amount: number = 0) => {
-  const t = title?.toLowerCase() || '';
-  if (type === 'WALLET_TOPUP' || t.includes('added to wallet') || t.includes('topup')) return { name: 'wallet', color: '#16a34a', bg: '#dcfce7' };
-  if (t.includes('subscription')) return { name: 'document-text-outline', color: '#7c3aed', bg: '#f3e8ff' };
-  if (type === 'REFERRAL_BONUS' || t.includes('referral') || t.includes('bonus')) return { name: 'trophy-outline', color: '#d97706', bg: '#fef9c3' };
-  if (t.includes('refund') || type === 'REFUND') return { name: 'arrow-undo-outline', color: '#ef4444', bg: '#fee2e2' };
+  const lowerTitle = title?.toLowerCase() || '';
+  if (type === 'WALLET_TOPUP' || lowerTitle.includes('added to wallet') || lowerTitle.includes('topup')) return { name: 'wallet', color: '#16a34a', bg: '#dcfce7' };
+  if (lowerTitle.includes('subscription')) return { name: 'document-text-outline', color: '#7c3aed', bg: '#f3e8ff' };
+  if (type === 'REFERRAL_BONUS' || lowerTitle.includes('referral') || lowerTitle.includes('bonus')) return { name: 'trophy-outline', color: '#d97706', bg: '#fef9c3' };
+  if (lowerTitle.includes('refund') || type === 'REFUND') return { name: 'arrow-undo-outline', color: '#ef4444', bg: '#fee2e2' };
   if (amount < 0) return { name: 'wallet', color: '#ef4444', bg: '#fee2e2' };
   return { name: 'pricetag-outline', color: '#475569', bg: '#f1f5f9' };
 };
@@ -385,7 +386,7 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
         </View>
 
         {/* Need Help Card */}
-        <View style={[styles.helpCard, { backgroundColor: isDark ? '#1F2937' : '#f4fbf4', borderColor: isDark ? '#374151' : '#e5f3e7' }]}>
+        <Pressable style={[styles.helpCard, { backgroundColor: isDark ? '#1F2937' : '#f4fbf4', borderColor: isDark ? '#374151' : '#e5f3e7' }]} onPress={() => navigation.navigate(HelpCenter_Nav)}>
           <View style={[styles.helpIconWrap, { backgroundColor: isDark ? '#374151' : '#fff' }]}>
             <Ionicons name="headset" size={16} color="#16a34a" />
           </View>
@@ -393,18 +394,18 @@ const TransactionDetailScreen = ({ navigation, route }: any) => {
             <Text style={[styles.helpTitle, { color: isDark ? '#fff' : '#0f172a' }]}>Need Help?</Text>
             <Text style={[styles.helpDesc, { color: isDark ? '#9ca3af' : '#475569' }]}>If you have any issues with this transaction, our support team is here to help.</Text>
           </View>
-          <Pressable style={[styles.contactBtn, { backgroundColor: isDark ? '#1F2937' : '#fff' }]}>
+          <View style={[styles.contactBtn, { backgroundColor: isDark ? '#1F2937' : '#fff' }]}>
             <Text style={styles.contactBtnText}>Contact Support</Text>
-          </Pressable>
-        </View>
+          </View>
+        </Pressable>
 
-        {/* Share Receipt Button */}
+        {/* Download Receipt Button */}
         <Pressable 
           style={({ pressed }) => [styles.shareBtn, { backgroundColor: isDark ? '#374151' : '#f1f5f9' }, pressed && { opacity: 0.7 }]} 
           onPress={handleShareReceipt}
         >
-          <Ionicons name="share-social-outline" size={20} color={isDark ? '#e2e8f0' : '#0f172a'} style={{ marginRight: 8 }} />
-          <Text style={[styles.shareBtnText, { color: isDark ? '#e2e8f0' : '#0f172a' }]}>Share receipt</Text>
+          <Ionicons name="download-outline" size={20} color={isDark ? '#e2e8f0' : '#0f172a'} style={{ marginRight: 8 }} />
+          <Text style={[styles.shareBtnText, { color: isDark ? '#e2e8f0' : '#0f172a' }]}>Download receipt</Text>
         </Pressable>
 
       </ScrollView>

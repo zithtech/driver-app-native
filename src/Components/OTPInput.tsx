@@ -69,7 +69,7 @@ const OTPInput: React.FC<OTPInputProps> = ({
         ]}
       >
         {digit ? (
-          <Text style={[fonts.bold, { fontSize: 20, color: isFocusedDigit ? colors.primary : colors.text }]}>
+          <Text style={[fonts.bold, { fontSize: 20, color: colors.text }]}>
             {digit}
           </Text>
         ) : isFocusedDigit ? (

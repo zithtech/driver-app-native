@@ -51,11 +51,11 @@ const AddMoneyScreen = ({ navigation, route }: any) => {
       const options = {
         description: 'Wallet Topup',
         image: Image.resolveAssetSource(require('../../assets/images/applogo.png')).uri,
-        currency: orderResult.data?.currency || 'INR',
+        currency: orderResult?.data?.currency || orderResult?.currency || 'INR',
         key: Config.RAZORPAY_KEY_ID || 'rzp_test_SCjewpaZ96XBWa',
-        amount: orderResult.data?.amount || String(amount * 100),
+        amount: orderResult?.data?.amount || orderResult?.amount || String(amount * 100),
         name: 'T2drive',
-        order_id: orderResult.data?.id,
+        order_id: orderResult?.data?.order_id || orderResult?.data?.id || orderResult?.order_id || orderResult?.id,
         prefill: { email: user?.email || '', contact: user?.phone_number || '', name: user?.full_name || '' },
         theme: { color: '#2563eb' }
       };

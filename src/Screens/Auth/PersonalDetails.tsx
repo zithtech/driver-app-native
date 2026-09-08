@@ -86,12 +86,28 @@ const PersonalDetails = ({ navigation }: any) => {
 
   /* ---------- CONTINUE ---------- */
   const handleContinue = async () => {
+    if (alternateContact.trim() && isSameAsMobile(alternateContact.trim())) {
+      showAlert({
+        title: t('validation_error', 'Validation Error'),
+        message: t('alternate_same_as_mobile', 'Alternative contact cannot be the same as mobile number.'),
+        singleButton: true,
+        icon: 'information-circle-outline',
+      });
+      triggerHaptic(HapticFeedbackTypes.notificationError);
+      return;
+    }
+
     if (
       !firstName.trim() ||
+      !isValidName(firstName) ||
+      firstName.trim().length < 2 ||
       !lastName.trim() ||
+      !isValidName(lastName) ||
+      lastName.trim().length < 2 ||
       !dobDate ||
       !isAgeValid(dobDate) ||
       !gender ||
+      (email.trim() && !isValidEmail(email.trim())) ||
       (alternateContact.trim() && !isValidAlternateContact(alternateContact.trim()))
     ) {
       showAlert({
@@ -161,6 +177,15 @@ const PersonalDetails = ({ navigation }: any) => {
   };
 
   /* ---------- VALIDATION HELPERS ---------- */
+  const isValidName = (text: string) => {
+    if (!text.trim()) return false;
+    return /^[A-Za-z]+$/.test(text.trim());
+  };
+
+  const sanitizeName = (text: string) => {
+    return text.replace(/[^A-Za-z]/g, '');
+  };
+
   const isValidEmail = (text: string) => {
     if (!text) return true;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
@@ -168,14 +193,34 @@ const PersonalDetails = ({ navigation }: any) => {
 
   const isValidAlternateContact = (text: string) => {
     if (!text) return true;
-    return /^[0-9]{10}$/.test(text);
+    return /^[6-9][0-9]{9}$/.test(text);
+  };
+
+  const isSameAsMobile = (altContact: string) => {
+    if (!user?.phone_number || !altContact) return false;
+    const cleanAlt = altContact.replace(/[^0-9]/g, '');
+    const cleanMobile = user.phone_number.replace(/[^0-9]/g, '');
+    
+    if (cleanAlt.length >= 10 && cleanMobile.length >= 10) {
+      return cleanAlt.slice(-10) === cleanMobile.slice(-10);
+    }
+    return cleanAlt === cleanMobile;
+  };
+
+  const getNameError = (name: string, fieldLabel: string) => {
+    if (name.length === 0) return undefined;
+    if (name.trim().length < 2) return t('name_too_short', '{{field}} must be at least 2 characters', { field: fieldLabel });
+    if (name.trim().length > 50) return t('name_too_long', '{{field}} must be less than 50 characters', { field: fieldLabel });
+    return undefined;
   };
 
   const isFormValid =
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
+    firstName.trim().length >= 2 &&
+    isValidName(firstName) &&
+    lastName.trim().length >= 2 &&
+    isValidName(lastName) &&
     (email.trim() === '' || isValidEmail(email)) &&
-    (alternateContact.trim() === '' || isValidAlternateContact(alternateContact.trim())) &&
+    (alternateContact.trim() === '' || (isValidAlternateContact(alternateContact.trim()) && !isSameAsMobile(alternateContact.trim()))) &&
     dobDate !== null &&
     gender !== null &&
     isAgeValid(dobDate);
@@ -306,14 +351,16 @@ const PersonalDetails = ({ navigation }: any) => {
                   <Input
                     value={firstName}
                     autoCapitalize="words"
-                    onChangeText={setFirstName}
+                    onChangeText={(text: string) => setFirstName(sanitizeName(text))}
                     placeholder={t('enter_first_name', 'Enter first name')}
                     placeholderTextColor="#9CA3AF"
+                    maxLength={50}
                     style={{ fontSize: 13, color: colors.text }}
                     inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                     LeadingAccessory={
                       <Ionicons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
+                    error={getNameError(firstName, t('first_name', 'First Name'))}
                   />
                 </View>
                 <View style={styles.half}>
@@ -321,14 +368,16 @@ const PersonalDetails = ({ navigation }: any) => {
                   <Input
                     value={lastName}
                     autoCapitalize="words"
-                    onChangeText={setLastName}
+                    onChangeText={(text: string) => setLastName(sanitizeName(text))}
                     placeholder={t('enter_last_name', 'Enter last name')}
                     placeholderTextColor="#9CA3AF"
+                    maxLength={50}
                     style={{ fontSize: 13, color: colors.text }}
                     inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
                     LeadingAccessory={
                       <Ionicons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
+                    error={getNameError(lastName, t('last_name', 'Last Name'))}
                   />
                 </View>
               </View>
@@ -438,6 +487,13 @@ const PersonalDetails = ({ navigation }: any) => {
                       <Ionicons name="chevron-down-outline" size={16} color={colors.text} />
                       <View style={[styles.phoneDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
                     </View>
+                  }
+                  error={
+                    (alternateContact.length > 0 && !isValidAlternateContact(alternateContact)) 
+                      ? t('valid_phone_error', 'Please enter a valid phone number') 
+                      : (alternateContact.length > 0 && isSameAsMobile(alternateContact)) 
+                        ? t('alternate_same_as_mobile', 'Cannot be the same as mobile number') 
+                        : undefined
                   }
                 />
               </View>

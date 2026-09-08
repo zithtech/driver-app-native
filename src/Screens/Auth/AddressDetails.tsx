@@ -528,9 +528,6 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
                     LeadingAccessory={
                       <Ionicons name="map-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
                     }
-                    TailingAccessory={
-                      <Ionicons name="chevron-down-outline" size={18} color={colors.text} />
-                    }
                   />
                   {stateSuggestions.length > 0 && (
                     <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>

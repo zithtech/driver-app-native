@@ -8,7 +8,9 @@ import {
   Image,
   Dimensions,
   Platform,
-  RefreshControl
+  RefreshControl,
+  Alert,
+  Linking
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
@@ -59,18 +61,36 @@ const InfoRow = ({ icon, iconBg, label, value, verified, isLast, s }: any) => {
           <Text style={s.verifiedBadgeText}>{t('verified_badge', 'Verified')}</Text>
         </View>
       )}
-      <Ionicons name="chevron-forward" size={ms(20)} color="#9CA3AF" />
     </View>
   );
 };
 
-const DocCard = ({ icon, iconBg, title, verified, expiry, s }: any) => {
+const DocCard = ({ icon, iconBg, title, status, expiry, s }: any) => {
   const { t } = useTranslation();
+  
+  const getStatusDisplay = () => {
+    switch(status) {
+      case 'verified':
+      case 'approved':
+        return { icon: 'checkmark-circle', color: '#16A34A', show: true };
+      case 'pending':
+      case 'uploaded':
+        return { icon: 'time', color: '#D97706', show: true };
+      case 'rejected':
+        return { icon: 'close-circle', color: '#DC2626', show: true };
+      case 'missing':
+      default:
+        return { icon: 'alert-circle', color: '#9CA3AF', show: false };
+    }
+  };
+
+  const display = getStatusDisplay();
+
   return (
     <View style={s.docCard}>
-      {verified && (
+      {display.show && (
         <View style={s.docVerifiedTick}>
-          <Ionicons name="checkmark-circle" size={ms(16)} color="#16A34A" />
+          <Ionicons name={display.icon} size={ms(16)} color={display.color} />
         </View>
       )}
       <View style={[s.docIconBox, { backgroundColor: iconBg }]}>
@@ -736,8 +756,17 @@ export default function ProfileDetailsScreen() {
           <Text style={s.headerTitle}>{t('my_profile_title', 'My Profile')}</Text>
           <Text style={s.headerSubtitle}>{t('manage_account_info', 'Manage your account information')}</Text>
         </View>
-        <Pressable style={s.iconButton}>
-          <Ionicons name="settings-outline" size={ms(20)} color={isDark ? '#FFF' : '#111827'} />
+        <Pressable style={s.iconButton} onPress={() => {
+          Alert.alert(
+            t('update_profile_title', 'Update Profile'),
+            t('update_profile_message', 'If you want to update your profile information or phone number, please contact the support team.'),
+            [
+              { text: t('cancel', 'Cancel'), style: 'cancel' },
+              { text: t('call', 'Call'), onPress: () => Linking.openURL('tel:+919043522612') }
+            ]
+          );
+        }}>
+          <Ionicons name="create-outline" size={ms(20)} color={isDark ? '#FFF' : '#111827'} />
         </Pressable>
       </View>
 
@@ -909,14 +938,32 @@ export default function ProfileDetailsScreen() {
             });
 
             return docsToShow.map((docKey) => {
-              const docState = user?.documents?.[docKey];
-              const isVerified = docState?.status === 'verified' || docState?.status === 'UPLOADED' || docState?.status === 'PENDING' || docState?.status === 'pending';
+              const localDoc = user?.documents?.[docKey];
+              const docsArray = Array.isArray(user?.documents_data) ? user.documents_data : [];
+              
+              const backendTypeMap: any = {
+                'Profile_Selfie': 'profile_selfie',
+                'Driving_License': 'driving_license',
+                'Pan_Card': 'pan_card',
+                'Aadhaar_Card': 'aadhaar_card',
+                'Police_Verification': 'police_verification'
+              };
+              const backendType = backendTypeMap[docKey] || docKey.toLowerCase();
+              const apiDoc = docsArray.find((d: any) => d.document_type === backendType);
+              
+              let status = 'missing';
+              if (apiDoc) {
+                status = (apiDoc.status || apiDoc.license_status || apiDoc.licenseStatus || 'missing').toLowerCase();
+              } else if (localDoc?.status) {
+                status = localDoc.status.toLowerCase();
+              }
+
               const config = getDocConfig(docKey);
               return (
                 <DocCard 
                   key={docKey}
                   icon={config.icon} iconBg={config.iconBg}
-                  title={config.title} verified={isVerified} expiry="-" s={s}
+                  title={config.title} status={status} expiry="-" s={s}
                 />
               );
             });
