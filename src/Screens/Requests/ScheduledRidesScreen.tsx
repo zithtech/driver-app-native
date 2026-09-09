@@ -6,8 +6,6 @@ import {
   StyleSheet,
   Pressable,
   FlatList,
-  Alert,
-  Linking,
   TouchableOpacity,
   Animated,
   RefreshControl,
@@ -15,6 +13,7 @@ import {
   Image,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -24,8 +23,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-import { PickupMapScreen_Nav } from '../../Navigations/navigations';
+import { PickupMapScreen_Nav, ScheduledRideDetails_Nav } from '../../Navigations/navigations';
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { useAlert } from '../../context/AlertContext';
@@ -44,373 +44,14 @@ type SortOption = 'time' | 'price' | 'distance';
 type FilterType = 'all' | 'outstation_one_way' | 'one_way' | 'round_trip' | 'outstation_round_trip' | 'high_value';
 
 
+import { HeaderSection, TopTabs, DateSelectorSection, StatsRow, ScheduledRideCard } from './components/ScheduledRideComponents';
+import { getLanguageScaledSize } from '../../utils/languageSizings';
+
 const getRideTypeDisplayText = (rideType: string) => {
   let displayType = rideType || 'ONE_WAY';
   if (displayType === 'OUTSTATION_ROUND_TRIP') return 'OUTSTATION ROUND TRIP';
   if (displayType === 'OUTSTATION_ONE_WAY') return 'OUTSTATION ONE WAY';
   return displayType;
-};
-
-const SimpleRideCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, ms, vs, s, styles, onPress }: any) => {
-  const accepted = item.trip_status === 'ACCEPTED';
-  const isDimmed = !!acceptedRide && !accepted;
-  const { text: timeText } = getRemainingTime(item.startTime);
-  const cardBgColor = isDimmed ? (isDark ? theme.colors.background : '#F9FAFB') : theme.colors.card;
-
-  const formatTime = (time: string | number | Date) => new Date(time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
-  const formatDate = (time: string | number | Date) => new Date(time).toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short' });
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={() => onPress(item)}
-      style={[
-        styles.card,
-        {
-          backgroundColor: cardBgColor,
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-          opacity: isDimmed ? 0.7 : 1,
-        },
-        accepted && styles.acceptedCard,
-      ]}
-    >
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: vs(12) }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(6) }}>
-          <Ionicons name="calendar-outline" size={ms(14)} color={isDark ? '#93C5FD' : '#2563EB'} />
-          <Text style={{ fontSize: ms(13), fontWeight: '700', color: isDark ? '#93C5FD' : '#2563EB' }}>
-            {formatDate(item.startTime)} • {formatTime(item.startTime)}
-          </Text>
-        </View>
-        <Text style={{ fontSize: ms(16), fontWeight: '800', color: '#16A34A' }}>{t('currency_symbol')}{item.total_fare}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: vs(4) }}>
-        <Ionicons name="location-outline" size={ms(14)} color={theme.colors.textMuted} />
-        <Text style={{ fontSize: ms(13), color: theme.colors.text, marginLeft: s(6), flex: 1 }} numberOfLines={1}>{item.pickup_address}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: vs(4) }}>
-        <Ionicons name="navigate-outline" size={ms(14)} color={theme.colors.textMuted} />
-        <Text style={{ fontSize: ms(13), color: theme.colors.text, marginLeft: s(6), flex: 1 }} numberOfLines={1}>{item.drop_address}</Text>
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: vs(12) }}>
-        <View style={{ flexDirection: 'row', gap: ms(8) }}>
-          <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-            <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t(getRideTypeDisplayText(item.ride_type))}</Text>
-          </View>
-          {!accepted && (
-            <View style={[styles.remainingTag, { backgroundColor: '#FFF7ED' }]}>
-              <Ionicons name="time-outline" size={ms(10)} color="#F97316" />
-              <Text style={[styles.remainingTagText, { color: '#F97316' }]}>{timeText}</Text>
-            </View>
-          )}
-        </View>
-        {accepted && (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="checkmark-circle" size={ms(14)} color={theme.colors.primary} />
-            <Text style={{ fontSize: ms(12), fontWeight: '700', color: theme.colors.primary, marginLeft: s(4) }}>{t('accepted')}</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-const RideDetailsModalCard = ({ item, acceptedRide, getRemainingTime, theme, isDark, t, navigation, cancelRide, passRide, acceptRide, startHeadingToPickup, acceptingRideId, acceptedSuccessId, handlePressIn, handlePressOut, ms, vs, s, styles }: any) => {
-  const accepted = item.trip_status === 'ACCEPTED';
-  const isDimmed = !!acceptedRide && !accepted;
-  const { text: timeText } = getRemainingTime(item.startTime);
-
-  const acceptScale = useRef(new Animated.Value(1)).current;
-  const passScale = useRef(new Animated.Value(1)).current;
-
-  // Pulse animation for urgent rides inside the card
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [pulseAnim]);
-
-  // Use card color from theme for background
-  const cardBgColor = isDimmed
-    ? (isDark ? theme.colors.background : '#F9FAFB')
-    : theme.colors.card;
-
-  const formatDate = (time: string | number | Date) =>
-    new Date(time).toLocaleDateString(undefined, {
-      weekday: 'short',
-      day: '2-digit',
-      month: 'short',
-    });
-
-  const formatTime = (time: string | number | Date) =>
-    new Date(time).toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  const getInitials = (name: string) => {
-    if (!name || name === 'Customer') return 'CU';
-    const parts = name.split(' ');
-    if (parts.length >= 2 && parts[0][0] && parts[1][0]) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  const formatEstimatedDuration = (km: number) => {
-    const totalMinutes = Math.round(km * 2.5);
-    if (totalMinutes < 60) return `${totalMinutes}m`;
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    return `${hours}h ${mins}m`;
-  };
-
-  const initials = getInitials(item.passenger);
-
-  return (
-    <Animated.View
-      style={[
-        styles.card as any,
-        {
-          backgroundColor: cardBgColor,
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-          opacity: isDimmed ? 0.7 : 1,
-        },
-        accepted && styles.acceptedCard,
-      ]}
-    >
-      <View style={[styles.timeSubHeader, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : '#EFF6FF' }]}>
-        <Ionicons name="calendar-outline" size={ms(14)} color={isDark ? '#93C5FD' : '#2563EB'} />
-        <Text style={[styles.dateSubHeaderText, { color: isDark ? '#93C5FD' : '#2563EB' }]}>
-          {formatDate(item.startTime)}
-        </Text>
-        <View style={styles.statsDot} />
-        <Ionicons name="time-outline" size={ms(14)} color={isDark ? '#93C5FD' : '#2563EB'} />
-        <Text style={[styles.timeSubHeaderText, { color: isDark ? '#93C5FD' : '#2563EB' }]}>
-          {formatTime(item.startTime)}
-        </Text>
-      </View>
-
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.cardHeaderText, { color: theme.colors.paragraphText }]} numberOfLines={1} adjustsFontSizeToFit>
-            {accepted ? t('your_active_ride') : t('scheduled_ride_request')}
-          </Text>
-          <View style={styles.badgeRow}>
-            <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-              <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
-                {t(getRideTypeDisplayText(item.ride_type))}
-              </Text>
-            </View>
-            <View style={[styles.miniTag, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}>
-              <Text style={[styles.miniTagText, { color: isDark ? theme.colors.textMuted : '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>
-                {t(item.paymentType || 'cash')}
-              </Text>
-            </View>
-            {!accepted && (
-              <View style={[styles.remainingTag, { backgroundColor: '#FFF7ED' }]}>
-                <Ionicons name="time-outline" size={ms(10)} color="#F97316" />
-                <Text style={[styles.remainingTagText, { color: '#F97316' }]}>{timeText}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <Text style={[styles.priceBig, { color: '#16A34A' }]}>{t('currency_symbol')}{item.total_fare}</Text>
-      </View>
-
-      <View style={styles.locationContainer}>
-        <View style={styles.locationIndicator}>
-          <Ionicons
-            name="radio-button-on"
-            size={ms(18)}
-            color={isDimmed ? theme.colors.border : '#4ade80'}
-          />
-          <View style={[
-            styles.line,
-            {
-              backgroundColor: theme.colors.border,
-              flex: 1,
-            },
-          ]} />
-          <Ionicons
-            name="location"
-            size={ms(18)}
-            color={isDimmed ? theme.colors.border : '#f87171'}
-          />
-        </View>
-        <View style={styles.addresses}>
-          <View style={styles.addressBox}>
-            <Text style={[styles.addrLabel, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t('pickup')}</Text>
-            <Text style={[styles.addrText, { color: theme.colors.text }]}>{item.pickup_address}</Text>
-          </View>
-          <View style={[styles.addressBox, { marginTop: vs(12) }]}>
-            <Text style={[styles.addrLabel, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>{t('drop')}</Text>
-            <Text style={[styles.addrText, { color: theme.colors.text }]}>{item.drop_address}</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.rideStatsPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-        <View style={styles.statItemRow}>
-          <Ionicons name="shuffle-outline" size={ms(14)} color={isDark ? theme.colors.textMuted : '#64748B'} />
-          <Text style={[styles.rideStatsText, { color: isDark ? theme.colors.text : '#475569' }]}>{item.distance_km} km</Text>
-        </View>
-        <View style={styles.statsDot} />
-        <View style={styles.statItemRow}>
-          <Ionicons name="time-outline" size={ms(14)} color={isDark ? theme.colors.textMuted : '#64748B'} />
-          <Text style={[styles.rideStatsText, { color: isDark ? theme.colors.text : '#475569' }]}>
-            {t('eta')}: {formatEstimatedDuration(item.distance_km)}
-          </Text>
-        </View>
-        <View style={styles.statsDot} />
-        <View style={styles.ecoBadge}>
-          <Ionicons name="leaf-outline" size={ms(12)} color="#22C55E" />
-          <Text style={[styles.ecoBadgeText, { color: '#22C55E' }]}>{t('eco_friendly')}</Text>
-        </View>
-      </View>
-
-      <View style={styles.vehicleInfoContainer}>
-        <Text style={[styles.vehicleNameText, { color: theme.colors.text }]}>
-          {item.car_name}
-        </Text>
-        <View style={styles.vehicleBadgeRow}>
-          <View style={[styles.vehicleBadge, { backgroundColor: isDark ? 'rgba(96, 165, 250, 0.1)' : '#EFF6FF' }]}>
-            <Ionicons name="cog-outline" size={ms(12)} color={isDark ? '#93C5FD' : '#2563EB'} />
-            <Text style={[styles.vehicleBadgeText, { color: isDark ? '#93C5FD' : '#2563EB' }]}>
-              {item.transmission}
-            </Text>
-          </View>
-          <View style={[styles.vehicleBadge, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.1)' : '#F0FDF4' }]}>
-            <Ionicons name="flash-outline" size={ms(12)} color={isDark ? '#4ADE80' : '#16A34A'} />
-            <Text style={[styles.vehicleBadgeText, { color: isDark ? '#4ADE80' : '#16A34A' }]}>
-              {item.fuel_type}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {accepted && (
-        <View style={styles.passengerBox}>
-          <View style={styles.passengerMain}>
-            <View style={[styles.avatar, { backgroundColor: '#E0F2C1' }]}>
-              <Text style={[styles.avatarText, { color: theme.colors.primary }]}>{initials}</Text>
-            </View>
-            <View>
-              <Text style={[styles.psgrName, { color: '#111827' }]}>{item.passenger}</Text>
-              <View style={styles.psgrDetailRow}>
-                <Text style={[styles.psgrDetail, { color: '#16A34A' }]}>{t('verified_passenger')}</Text>
-                <View style={styles.ratingBadge}>
-                  <Ionicons name="star" size={ms(12)} color="#F59E0B" />
-                  <Text style={styles.ratingText}>{item.rating?.toFixed(1) || '5.0'}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.floatCallBtn} onPress={() => Linking.openURL(`tel:${item.phone}`)}>
-            <Ionicons name="call" size={ms(20)} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <View style={styles.footerActions}>
-        {accepted ? (
-          <View style={{ width: '100%' }}>
-            <TouchableOpacity
-              style={[styles.primaryBtnLarge, { width: '100%', backgroundColor: theme.colors.primary, marginBottom: vs(16) }]}
-              onPress={() => startHeadingToPickup(item)}
-            >
-              <Text style={styles.primaryBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('navigate_pickup')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{ alignSelf: 'center', paddingVertical: vs(8) }}
-              onPress={() => cancelRide(item)}
-            >
-              <Text style={[styles.textBtnRed, { fontSize: ms(13) }]} numberOfLines={1} adjustsFontSizeToFit>{t('cancel_ride')}</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          !acceptedRide && (
-            <View style={[styles.buttonGroupHorizontal, { flexWrap: 'wrap' }]}>
-              <Animated.View
-                style={{
-                  flex: 1,
-                  minWidth: '40%',
-                  transform: [{ scale: passScale }],
-                }}
-              >
-                <Pressable
-                  disabled={isDimmed || !!acceptingRideId || !!acceptedSuccessId}
-                  onPressIn={() => handlePressIn(passScale)}
-                  onPressOut={() => handlePressOut(passScale)}
-                  style={[
-                    styles.outlineBtnRounded,
-                    {
-                      borderColor: '#E5E7EB',
-                      opacity: (isDimmed || !!acceptingRideId || !!acceptedSuccessId) ? 0.5 : 1,
-                    },
-                  ]}
-                  onPress={() => passRide(item.trip_id)}
-                >
-                  <Text style={[styles.outlineBtnText, { color: '#64748B' }]} numberOfLines={1} adjustsFontSizeToFit>{t('pass')}</Text>
-                </Pressable>
-              </Animated.View>
-
-              <Animated.View
-                style={{
-                  flex: 1.5,
-                  minWidth: '45%',
-                  transform: [{ scale: acceptScale }],
-                }}
-              >
-                <Pressable
-                  disabled={isDimmed || !!acceptingRideId || !!acceptedSuccessId}
-                  onPressIn={() => handlePressIn(acceptScale)}
-                  onPressOut={() => handlePressOut(acceptScale)}
-                  style={[
-                    styles.primaryBtnRounded,
-                    {
-                      backgroundColor: acceptedSuccessId === item.trip_id ? '#166534' : theme.colors.primary,
-                      opacity: (isDimmed || (!!acceptingRideId && acceptingRideId !== item.trip_id) || (!!acceptedSuccessId && acceptedSuccessId !== item.trip_id)) ? 0.5 : 1,
-                    },
-                  ]}
-                  onPress={() => acceptRide(item)}
-                >
-                  {acceptedSuccessId === item.trip_id ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Ionicons name="checkmark-circle" size={ms(20)} color="#FFF" style={{ marginRight: s(8) }} />
-                      <Text style={[styles.primaryBtnText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('confirmed')}</Text>
-                    </View>
-                  ) : acceptingRideId === item.trip_id ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={[styles.primaryBtnText, { color: '#FFF', marginRight: s(8) }]} numberOfLines={1} adjustsFontSizeToFit>{t('accepting')}</Text>
-                      <Animated.View style={{ transform: [{ rotate: pulseAnim.interpolate({ inputRange: [1, 1.1], outputRange: ['0deg', '360deg'] }) }] }}>
-                        <Ionicons name="sync" size={ms(16)} color="#FFF" />
-                      </Animated.View>
-                    </View>
-                  ) : (
-                    <Text style={[styles.primaryBtnText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('accept_ride')}</Text>
-                  )}
-                </Pressable>
-              </Animated.View>
-            </View>
-          )
-        )}
-      </View>
-    </Animated.View>
-  );
 };
 
 const ScheduledRidesScreen = () => {
@@ -439,7 +80,8 @@ const ScheduledRidesScreen = () => {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'accepted' | 'today' | 'upcoming'>('today');
+  const [activeTab, setActiveTab] = useState<'live' | 'scheduled'>('scheduled');
+  const [selectedDate, setSelectedDate] = useState<string>('all');
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [sortBy, setSortBy] = useState<SortOption>('time');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -457,6 +99,7 @@ const ScheduledRidesScreen = () => {
   const [acceptingRideId, setAcceptingRideId] = useState<string | null>(null);
   const [acceptedSuccessId, setAcceptedSuccessId] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // 🛡️ Ref to always have the latest myAcceptedRideId inside socket callbacks (avoids stale closure)
   const myAcceptedRideIdRef = useRef<string | null>(myAcceptedRideId);
@@ -519,22 +162,15 @@ const ScheduledRidesScreen = () => {
 
   /* ================= HELPERS ================= */
 
-  const switchTab = useCallback((tab: 'accepted' | 'today' | 'upcoming') => {
+  const switchTab = useCallback((tab: 'live' | 'scheduled') => {
     setActiveTab(prevTab => {
       if (prevTab === tab) { return prevTab; }
-
       triggerHaptic(HapticFeedbackTypes.impactLight);
-
-      Animated.spring(tabAnim, {
-        toValue: tab === 'accepted' ? 0 : tab === 'today' ? 1 : 2,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 50,
-      }).start();
-
       return tab;
     });
-  }, [triggerHaptic, tabAnim]);
+    // Auto-refresh data when switching tabs
+    refetchTrips();
+  }, [triggerHaptic, navigation, refetchTrips]);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -544,9 +180,13 @@ const ScheduledRidesScreen = () => {
 
   useEffect(() => {
     if (myAcceptedRideId && !acceptedSuccessId) {
-      switchTab('accepted');
+      // Find the date of the accepted ride and switch to it
+      const myRide = rides.find(r => String(r.trip_id) === String(myAcceptedRideId));
+      if (myRide) {
+        setSelectedDate(moment(myRide.scheduled_start_time).format('YYYY-MM-DD'));
+      }
     }
-  }, [myAcceptedRideId, acceptedSuccessId, switchTab]);
+  }, [myAcceptedRideId, acceptedSuccessId, rides]);
 
   useEffect(() => {
     if (isTripsLoading && !rawTrips) {
@@ -581,7 +221,7 @@ const ScheduledRidesScreen = () => {
           scheduled_status: trip.scheduled_status,
           re_dispatch_count: trip.re_dispatch_count,
           car_name: trip.car_name || trip.vehicle_model || trip.vehicle_type || 'Standard Sedan',
-          transmission: trip.transmission || trip.transmission_type || 'Manual',
+          transmission: String(trip.transmission || trip.transmission_type || 'Manual').replace('_', ' '),
           fuel_type: trip.fuel_type || trip.engine_type || 'Petrol',
         };
       });
@@ -612,7 +252,7 @@ const ScheduledRidesScreen = () => {
           scheduled_status: currentRide.scheduled_status,
           re_dispatch_count: currentRide.re_dispatch_count,
           car_name: currentRide.car_name || currentRide.vehicle_model || currentRide.vehicle_type || 'Standard Sedan',
-          transmission: currentRide.transmission || currentRide.transmission_type || 'Manual',
+          transmission: String(currentRide.transmission || currentRide.transmission_type || 'Manual').replace('_', ' '),
           fuel_type: currentRide.fuel_type || currentRide.engine_type || 'Petrol',
         } as Ride);
       }
@@ -660,7 +300,8 @@ const ScheduledRidesScreen = () => {
       if (ride.booking_type !== 'SCHEDULED') { return false; }
 
       // ALWAYS allow my accepted ride to show in the accepted tab
-      if (String(ride.trip_id) === String(myAcceptedRideId)) return true;
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user.driverId || user.id);
+      if (isMine) return true;
 
       // 2. No new scheduled rides if it's a 'day' plan or no subscription
       if (billingCycle === 'day' || !billingCycle) {
@@ -675,46 +316,44 @@ const ScheduledRidesScreen = () => {
       const type = (ride.ride_type || ride.service_type || '').toLowerCase();
 
       if (isBasic) {
-        // Basic: only one_way
-        if (type !== 'one_way') return false;
-      } else if (isElite) {
-        // Elite: local, one_way, outstation (NO round_trip)
-        if (type === 'round_trip') return false;
+        // Basic: local, one_way, and round_trip ONLY (no outstation)
+        if (!['local', 'one_way', 'round_trip'].includes(type)) {
+          return false;
+        }
       }
-
-      // Premium allows all
+      
+      // Elite and Premium allow all
       return true;
     });
   }, [rides, myAcceptedRideId, subData, user]);
 
   const filteredRides = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
     let result = baseEligibleRides.filter((ride) => {
-
-      const rideDate = new Date(ride.scheduled_start_time);
-      const isToday = rideDate >= today && rideDate < tomorrow;
-      const isMine = String(ride.trip_id) === String(myAcceptedRideId);
-
-      let matchesTab = false;
-      if (activeTab === 'accepted') {
-        matchesTab = isMine;
-      } else if (activeTab === 'today') {
-        matchesTab = isToday && !isMine;
-      } else if (activeTab === 'upcoming') {
-        matchesTab = !isToday && !isMine;
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user.driverId || user.id);
+      const status = ride.trip_status;
+      
+      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
+        return false;
       }
 
-      if (!matchesTab) { return false; }
+      if (activeTab === 'live') {
+        if (!isMine || status === 'PENDING') return false;
+        // If it belongs to this driver and we are in the live tab, bypass date and category filters
+        return true;
+      } else {
+        // In the scheduled tab, hide rides that are active/accepted (they belong in live)
+        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return false;
+      }
+
+      if (selectedDate !== 'all') {
+        const rideDateStr = moment(ride.scheduled_start_time).format('YYYY-MM-DD');
+        if (rideDateStr !== selectedDate) return false;
+      }
 
       // Filter by Type (Categories)
       if (filterType !== 'all') {
         const type = (ride.ride_type || ride.service_type || '').toLowerCase();
 
-        // Local condition removed
         if (filterType === 'outstation_one_way') { if (type !== 'outstation_one_way') return false; }
         else if (filterType === 'outstation_round_trip') {
           if (type !== 'outstation_round_trip') return false;
@@ -723,20 +362,6 @@ const ScheduledRidesScreen = () => {
         else if (filterType === 'round_trip') { if (type !== 'round_trip') return false; }
         else if (filterType === 'high_value') {
           if (ride.total_fare < 300) return false;
-        }
-      }
-
-      // Filter by Status: Only show available requests OR my own active ride
-      // ALWAYS exclude COMPLETED, CANCELLED, or REJECTED
-      const status = ride.trip_status;
-      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
-        return false;
-      }
-
-      // If it's another driver's active/accepted ride, exclude it
-      if (!isMine) {
-        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
-          return false;
         }
       }
 
@@ -762,43 +387,33 @@ const ScheduledRidesScreen = () => {
     });
 
     return result;
-  }, [baseEligibleRides, activeTab, sortBy, filterType]);
+  }, [baseEligibleRides, selectedDate, sortBy, filterType, myAcceptedRideId]);
 
-  const counts = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+  const stats = useMemo(() => {
+    let totalRides = 0;
+    let totalTimeMins = 0;
+    let totalDistance = 0;
+    let estEarnings = 0;
 
-    // Only count rides that are strictly SCHEDULED and NOT completed/cancelled/rejected
-    const visibleRides = baseEligibleRides.filter(r => {
-      const status = r.trip_status;
-      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {
-        return false;
-      }
-
-      const isMine = String(r.trip_id) === String(myAcceptedRideId);
-      if (!isMine) {
-        // Exclude others' active/accepted rides
-        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
-          return false;
-        }
-      }
-      return true;
+    filteredRides.forEach(r => {
+      totalRides++;
+      // Rough estimation for time if not provided, assuming 1 min per km or similar
+      const dist = r.distance_km || 0;
+      totalDistance += dist;
+      totalTimeMins += (dist * 2); // basic estimate: 2 mins per km
+      estEarnings += r.total_fare || 0;
     });
 
-    const acceptedRides = visibleRides.filter(r => String(r.trip_id) === String(myAcceptedRideId));
-    const todayRides = visibleRides.filter(r => {
-      const d = new Date(r.scheduled_start_time);
-      return d >= today && d < tomorrow && String(r.trip_id) !== String(myAcceptedRideId);
-    });
-
+    const hours = Math.floor(totalTimeMins / 60);
+    const mins = Math.round(totalTimeMins % 60);
+    
     return {
-      accepted: acceptedRides.length,
-      today: todayRides.length,
-      upcoming: visibleRides.length - todayRides.length - acceptedRides.length,
+      totalRides,
+      totalTime: `${hours}h ${mins}m`,
+      totalDistance: Math.round(totalDistance),
+      estEarnings: Math.round(estEarnings)
     };
-  }, [baseEligibleRides, myAcceptedRideId]);
+  }, [filteredRides]);
 
   // 📊 Dynamic counts for each filter category in the current tab
   const filterCounts = useMemo(() => {
@@ -813,20 +428,23 @@ const ScheduledRidesScreen = () => {
         return false;
       }
 
-      const isMine = r.trip_id === myAcceptedRideId;
-      if (!isMine) {
-        // Exclude others' active/accepted rides
-        if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) {
-          return false;
+      const isMine = String(r.trip_id) === String(myAcceptedRideId);
+
+      if (activeTab === 'live') {
+        if (!isMine || status === 'PENDING') return false;
+      } else {
+        if (!isMine) {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return false;
+        } else {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return false;
         }
       }
 
-      const d = new Date(r.scheduled_start_time);
-      const isToday = d >= today && d < tomorrow;
-
-      if (activeTab === 'accepted') return isMine;
-      if (activeTab === 'today') return isToday && !isMine;
-      return !isToday && !isMine;
+      if (selectedDate !== 'all') {
+        const rideDateStr = moment(r.scheduled_start_time).format('YYYY-MM-DD');
+        return rideDateStr === selectedDate;
+      }
+      return true;
     });
 
     const getCount = (type: FilterType) => {
@@ -849,13 +467,28 @@ const ScheduledRidesScreen = () => {
     };
   }, [baseEligibleRides, activeTab, myAcceptedRideId]);
 
-  // Pulse count badge when numbers change
-  useEffect(() => {
-    Animated.sequence([
-      Animated.timing(countPulseAnim, { toValue: 1.4, duration: 200, useNativeDriver: true }),
-      Animated.spring(countPulseAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
-    ]).start();
-  }, [counts.today, counts.upcoming, countPulseAnim]);
+  // 📊 Compute available dates for the Date Selector dot indicators
+  const availableDates = useMemo(() => {
+    const dates = new Set<string>();
+    baseEligibleRides.forEach(r => {
+      const status = r.trip_status;
+      if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) return;
+      const isMine = String(r.trip_id) === String(myAcceptedRideId);
+      if (activeTab === 'live') {
+        if (!isMine || status === 'PENDING') return;
+      } else {
+        if (!isMine) {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return;
+        } else {
+          if (['ARRIVED', 'STARTED', 'ON_TRIP', 'ACCEPTED'].includes(status)) return;
+        }
+      }
+      dates.add(moment(r.scheduled_start_time).format('YYYY-MM-DD'));
+    });
+    return dates;
+  }, [baseEligibleRides, activeTab, myAcceptedRideId]);
+
+  // No pulse animation needed for new UI
 
 
 
@@ -978,6 +611,8 @@ const ScheduledRidesScreen = () => {
 
       // Delay to let the driver see the success state
       setTimeout(() => {
+        setSelectedDate(moment(rideToStore.scheduled_start_time).format('YYYY-MM-DD'));
+        switchTab('live');
         setAcceptedSuccessId(null);
         setSelectedRide(null);
         refetchTrips();
@@ -1382,161 +1017,73 @@ const ScheduledRidesScreen = () => {
       edges={['top']}
     >
       <AppStatusBar />
-      {/* OFFLINE BANNERS */}
-      {!isConnected ? (
-        <View style={[styles.offlineBanner, { backgroundColor: '#EF4444' }]}>
-          <Ionicons name="wifi-outline" size={ms(14)} color="#FFF" />
-          <Text style={styles.offlineText}>{t('no_internet')}</Text>
-        </View>
-      ) : !isOnline ? (
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('Dashboard')}
-          style={[styles.offlineBanner, { backgroundColor: '#F59E0B' }]}
-        >
-          <Ionicons name="eye-off-outline" size={ms(14)} color="#FFF" />
-          <Text style={styles.offlineText}>{t('go_online_start')}</Text>
-        </TouchableOpacity>
-      ) : null}
+      {/* Header Section */}
+      <HeaderSection 
+        isOnline={isOnline}
+        onToggleStatus={() => navigation.navigate('Dashboard')}
+        theme={theme}
+        isDark={isDark}
+        t={t}
+      />
 
-      {/* PREMIUM HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-          <Ionicons name="chevron-back" size={ms(24)} color={theme.colors.text} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          style={styles.headerTitleContainer}
-        >
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('ride_requests')}</Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.paragraphText }]}>{t('scheduled_rides_near_you')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => setShowSortModal(true)}>
-          <Ionicons name="filter" size={ms(20)} color={theme.colors.text} />
-        </TouchableOpacity>
-      </View>
+      <TopTabs 
+        activeTab={activeTab}
+        onTabChange={switchTab}
+        hasAcceptedRide={!!myAcceptedRideId}
+        theme={theme}
+        isDark={isDark}
+        t={t}
+      />
 
-      {/* GLASSMORPHISM TABS */}
-      <View style={[styles.tabOuterContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-        <View
-          style={styles.tabContainer}
-          onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-        >
-          {containerWidth > 0 && (
-            <Animated.View
-              style={[
-                styles.slidingPill,
-                {
-                  backgroundColor: theme.colors.card,
-                  width: containerWidth / 3,
-                  transform: [
-                    {
-                      translateX: tabAnim.interpolate({
-                        inputRange: [0, 1, 2],
-                        outputRange: [0, containerWidth / 3, (containerWidth / 3) * 2],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            />
-          )}
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => switchTab('accepted')}
-          >
-            <View style={styles.tabContent}>
-              <Text style={[
-                styles.tabText,
-                { color: activeTab === 'accepted' ? theme.colors.primary : '#64748B' },
-                activeTab === 'accepted' && styles.activeTabText,
-              ]} numberOfLines={1} adjustsFontSizeToFit>
-                {t('accepted')}
-              </Text>
-              <Animated.View
-                style={[
-                  styles.countBadge,
-                  {
-                    backgroundColor: activeTab === 'accepted' ? theme.colors.primary : '#64748B',
-                    transform: [{ scale: countPulseAnim }]
-                  }
-                ]}
-              >
-                <Text style={styles.countBadgeText}>{counts.accepted}</Text>
-              </Animated.View>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => switchTab('today')}
-          >
-            <View style={styles.tabContent}>
-              <Text style={[
-                styles.tabText,
-                { color: activeTab === 'today' ? theme.colors.primary : '#64748B' },
-                activeTab === 'today' && styles.activeTabText,
-              ]} numberOfLines={1} adjustsFontSizeToFit>
-                {t('today')}
-              </Text>
-              <Animated.View
-                style={[
-                  styles.countBadge,
-                  {
-                    backgroundColor: activeTab === 'today' ? theme.colors.primary : '#64748B',
-                    transform: [{ scale: countPulseAnim }]
-                  }
-                ]}
-              >
-                <Text style={styles.countBadgeText}>{counts.today}</Text>
-              </Animated.View>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => switchTab('upcoming')}
-          >
-            <View style={styles.tabContent}>
-              <Text style={[
-                styles.tabText,
-                { color: activeTab === 'upcoming' ? theme.colors.primary : '#64748B' },
-                activeTab === 'upcoming' && styles.activeTabText,
-              ]} numberOfLines={1} adjustsFontSizeToFit>
-                {t('upcoming')}
-              </Text>
-              <Animated.View
-                style={[
-                  styles.countBadge,
-                  {
-                    backgroundColor: activeTab === 'upcoming' ? theme.colors.primary : '#64748B',
-                    transform: [{ scale: countPulseAnim }]
-                  }
-                ]}
-              >
-                <Text style={styles.countBadgeText}>{counts.upcoming}</Text>
-              </Animated.View>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <DateSelectorSection 
+        selectedDate={selectedDate}
+        onDateSelect={setSelectedDate}
+        onFilterPress={() => setShowSortModal(true)}
+        onPickDatePress={() => setShowDatePicker(true)}
+        availableDates={availableDates}
+        theme={theme}
+        isDark={isDark}
+        t={t}
+      />
 
-      {/* FILTER CHIPS */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate && selectedDate !== 'all' ? moment(selectedDate).toDate() : new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            if (Platform.OS === 'android') {
+              setShowDatePicker(false);
+            }
+            if (event.type === 'set' || event.type === 'dismissed') {
+              setShowDatePicker(false);
+            }
+            if (date) {
+              setSelectedDate(moment(date).format('YYYY-MM-DD'));
+              setShowDatePicker(false);
+            }
+          }}
+        />
+      )}
+
+      <Text style={[styles.sectionTitle, { color: theme.colors.text, marginHorizontal: ms(16), marginTop: vs(8), marginBottom: vs(8) }]}>{t('select_ride_type', 'Select Ride Type')}</Text>
       <View style={styles.filterBar}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={['all', 'one_way', 'round_trip', 'outstation_one_way', 'outstation_round_trip', 'high_value'] as FilterType[]}
+          data={['all', 'one_way', 'round_trip', 'outstation_one_way', 'outstation_round_trip'] as FilterType[]}
           keyExtractor={(item) => item}
           contentContainerStyle={styles.filterList}
           renderItem={({ item }) => {
             const count = filterCounts[item];
             const getIcon = () => {
               switch (item) {
-                case 'all': return 'list-outline';
+                case 'all': return 'grid-outline';
                 // case 'local': return 'car-outline';
-                case 'outstation_one_way': return 'map-outline';
-                case 'one_way': return 'arrow-forward-outline';
-                case 'round_trip': return 'repeat-outline';
-                case 'outstation_round_trip': return 'repeat-outline';
+                case 'outstation_one_way': return 'navigate-outline';
+                case 'one_way': return 'arrow-forward-circle-outline';
+                case 'round_trip': return 'sync-outline';
+                case 'outstation_round_trip': return 'sync-circle-outline';
                 case 'high_value': return 'star-outline';
                 default: return 'filter-outline';
               }
@@ -1551,41 +1098,41 @@ const ScheduledRidesScreen = () => {
                 style={[
                   styles.filterChip,
                   {
-                    backgroundColor: filterType === item ? theme.colors.primary : (isDark ? theme.colors.card : '#FFF'),
-                    borderColor: filterType === item ? theme.colors.primary : (isDark ? theme.colors.border : '#E2E8F0'),
+                    backgroundColor: filterType === item ? '#2563EB' : 'transparent',
+                    borderColor: filterType === item ? '#2563EB' : (isDark ? theme.colors.border : '#E2E8F0'),
                   },
                 ]}
               >
-                <Ionicons
-                  name={getIcon()}
-                  size={ms(16)}
-                  color={filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B')}
-                  style={{ marginRight: ms(6) }}
-                />
+                {item !== 'all' && (
+                  <Ionicons
+                    name={getIcon()}
+                    size={ms(14)}
+                    color={filterType === item ? '#FFF' : '#3B82F6'}
+                    style={{ marginRight: ms(4) }}
+                  />
+                )}
+                {item === 'all' && (
+                  <Ionicons
+                    name="grid-outline"
+                    size={ms(14)}
+                    color={filterType === item ? '#FFF' : '#3B82F6'}
+                    style={{ marginRight: ms(4) }}
+                  />
+                )}
                 <Text style={[
                   styles.filterChipText,
-                  { color: filterType === item ? '#FFF' : (isDark ? theme.colors.text : '#64748B') },
-                ]} numberOfLines={1} adjustsFontSizeToFit>
-                  {t(item)}
+                  { color: filterType === item ? '#FFF' : (isDark ? theme.colors.text : '#374151') },
+                ]}>
+                  {item === 'outstation_one_way' ? t('outstation_one_way_multiline', 'Outstation\nOne-way') : item === 'outstation_round_trip' ? t('outstation_round_trip_multiline', 'Outstation\nRound-trip') : item === 'one_way' ? t('one_way_filter', 'One-way') : item === 'round_trip' ? t('round_trip_filter', 'Round-trip') : t('all_filter', 'All')}
                 </Text>
-                {count > 0 && (
-                  <View style={[
-                    styles.filterCountBadge,
-                    { backgroundColor: filterType === item ? 'rgba(255,255,255,0.2)' : (isDark ? theme.colors.border : '#E2E8F0') }
-                  ]}>
-                    <Text style={[
-                      styles.filterCountText,
-                      { color: filterType === item ? '#FFF' : (isDark ? theme.colors.textMuted : '#64748B') }
-                    ]}>
-                      {count}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                {/* No badges for the new design pills */}
+                </TouchableOpacity>
             );
           }}
         />
       </View>
+
+      <View style={{ height: 1, backgroundColor: isDark ? theme.colors.border : '#E2E8F0', marginHorizontal: ms(16), marginBottom: vs(12) }} />
 
       {loading ? (
         <FlatList
@@ -1599,44 +1146,24 @@ const ScheduledRidesScreen = () => {
           data={filteredRides}
           keyExtractor={(item) => item.trip_id}
           renderItem={({ item }) => {
-            if (activeTab === 'accepted') {
-              return (
-                <RideDetailsModalCard
-                  item={item}
-                  acceptedRide={acceptedRide}
-                  getRemainingTime={getRemainingTime}
-                  theme={theme}
-                  isDark={isDark}
-                  t={t}
-                  navigation={navigation}
-                  cancelRide={cancelRide}
-                  passRide={passRide}
-                  acceptRide={acceptRide}
-                  startHeadingToPickup={startHeadingToPickup}
-                  acceptingRideId={acceptingRideId}
-                  acceptedSuccessId={acceptedSuccessId}
-                  handlePressIn={handlePressIn}
-                  handlePressOut={handlePressOut}
-                  ms={ms}
-                  vs={vs}
-                  s={s}
-                  styles={styles}
-                />
-              );
-            }
             return (
-              <SimpleRideCard
+              <ScheduledRideCard
                 item={item}
-                acceptedRide={acceptedRide}
                 getRemainingTime={getRemainingTime}
                 theme={theme}
                 isDark={isDark}
                 t={t}
-                ms={ms}
-                vs={vs}
-                s={s}
-                styles={styles}
-                onPress={(ride: any) => setSelectedRide(ride)}
+                activeTab={activeTab}
+                onPress={(ride: any) => navigation.navigate(ScheduledRideDetails_Nav, { 
+                  ride, 
+                  onAccept: () => acceptRide(ride), 
+                  onStartNavigation: () => startHeadingToPickup(ride),
+                  onCancelPress: () => {
+                    navigation.goBack();
+                    setRideToCancel(ride);
+                    setShowCancelModal(true);
+                  }
+                })}
               />
             );
           }}
@@ -1655,71 +1182,30 @@ const ScheduledRidesScreen = () => {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="search-outline" size={ms(40)} color={isDark ? theme.colors.textMuted : '#CBD5E1'} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                {filterType === 'all' ? t('no_rides_found') : t('no_matching_rides')}
-              </Text>
+              <Image source={require('../../assets/images/noride.png')} style={styles.emptyImage} resizeMode="contain" />
+              <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>{t('no_scheduled_rides', 'No Scheduled Rides')}</Text>
               <Text style={[styles.emptySubtitle, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
-                {filterType === 'all' ? t('check_back_later') : t('try_clearing_filters')}
+                {t('no_scheduled_rides_desc', "You don't have any scheduled rides yet.\nNew bookings for later will appear here.")}
               </Text>
-              {filterType !== 'all' && (
-                <TouchableOpacity
-                  style={[styles.clearFilterBtn, { borderColor: theme.colors.primary }]}
-                  onPress={() => {
-                    setFilterType('all');
-                    triggerHaptic(HapticFeedbackTypes.impactLight);
-                  }}
-                >
-                  <Text style={[styles.clearFilterText, { color: theme.colors.primary }]}>{t('clear_all_filters')}</Text>
-                </TouchableOpacity>
-              )}
+              
+              <View style={[styles.emptyBanner, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? theme.colors.border : '#E2E8F0' }]}>
+                <View style={styles.emptyBannerIconBg}>
+                  <Ionicons name="calendar-outline" size={ms(20)} color="#2563EB" />
+                </View>
+                <View style={styles.emptyBannerTextContainer}>
+                  <Text style={[styles.emptyBannerTitle, { color: theme.colors.text }]}>{t('stay_ready_upcoming_bookings', 'Stay Ready for Upcoming Bookings')}</Text>
+                  <Text style={[styles.emptyBannerSubtitle, { color: isDark ? theme.colors.textMuted : '#64748B' }]}>
+                    {t('keep_availability_up_to_date', 'Keep your availability up to date to receive more scheduled ride requests.')}
+                  </Text>
+                </View>
+              </View>
             </View>
           }
         />
       )}
 
 
-      <Modal
-        visible={!!selectedRide}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedRide(null)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setSelectedRide(null)}>
-          <Pressable style={{ width: '100%', paddingHorizontal: s(16), paddingBottom: vs(24) }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: vs(12) }}>
-              <TouchableOpacity onPress={() => setSelectedRide(null)} style={{ backgroundColor: isDark ? '#333' : '#FFF', padding: ms(8), borderRadius: ms(20) }}>
-                <Ionicons name="close" size={ms(24)} color={theme.colors.text} />
-              </TouchableOpacity>
-            </View>
-            {selectedRide && (
-              <RideDetailsModalCard
-                item={selectedRide}
-                acceptedRide={acceptedRide}
-                getRemainingTime={getRemainingTime}
-                theme={theme}
-                isDark={isDark}
-                t={t}
-                navigation={navigation}
-                cancelRide={(item: any) => { setSelectedRide(null); cancelRide(item); }}
-                passRide={(id: string) => { setSelectedRide(null); passRide(id); }}
-                acceptRide={acceptRide}
-                startHeadingToPickup={(item: any) => { setSelectedRide(null); startHeadingToPickup(item); }}
-                acceptingRideId={acceptingRideId}
-                acceptedSuccessId={acceptedSuccessId}
-                handlePressIn={handlePressIn}
-                handlePressOut={handlePressOut}
-                ms={ms}
-                vs={vs}
-                s={s}
-                styles={styles}
-              />
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+      
 
       {renderSortModal()}
       {renderCancelModal()}
@@ -1733,6 +1219,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  sectionTitle: {
+    fontSize: getLanguageScaledSize(16),
+    fontWeight: '700',
+  },
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1743,7 +1233,7 @@ const styles = StyleSheet.create({
   },
   offlineText: {
     color: '#FFF',
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '600',
     flexShrink: 1,
     textAlign: 'center',
@@ -1757,7 +1247,7 @@ const styles = StyleSheet.create({
     paddingVertical: vs(8),
   },
   headerTitle: {
-    fontSize: ms(18),
+    fontSize: getLanguageScaledSize(18),
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -1767,7 +1257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: s(8),
   },
   headerSubtitle: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '500',
     marginTop: vs(2),
     textAlign: 'center',
@@ -1803,7 +1293,7 @@ const styles = StyleSheet.create({
 
   },
   tabText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '500',
   },
   activeTabText: {
@@ -1823,7 +1313,7 @@ const styles = StyleSheet.create({
   },
   countBadgeText: {
     color: '#FFF',
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '800',
   },
   listContent: {
@@ -1852,7 +1342,7 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   modalTitle: {
-    fontSize: ms(20),
+    fontSize: getLanguageScaledSize(20),
     fontWeight: '800',
     marginBottom: vs(24),
   },
@@ -1865,7 +1355,7 @@ const styles = StyleSheet.create({
     gap: ms(14),
   },
   sortOptionText: {
-    fontSize: ms(17),
+    fontSize: getLanguageScaledSize(17),
     fontWeight: '600',
   },
   footerActions: {
@@ -1879,13 +1369,13 @@ const styles = StyleSheet.create({
     gap: vs(10),
   },
   primaryBtnText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '700',
     letterSpacing: 0.5,
     color: '#FFF',
   },
   outlineBtnText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '600',
   },
   cardHeader: {
@@ -1905,16 +1395,16 @@ const styles = StyleSheet.create({
     gap: ms(6),
   },
   dateSubHeaderText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   timeSubHeaderText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '800',
   },
   cardHeaderText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -1942,17 +1432,17 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   metadataText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   timeBadgeText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
     marginLeft: ms(4),
   },
   priceBig: {
-    fontSize: ms(24),
+    fontSize: getLanguageScaledSize(24),
     fontWeight: '800',
   },
   miniTag: {
@@ -1963,7 +1453,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   miniTagText: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
     fontWeight: '700',
   },
   remainingTag: {
@@ -1975,7 +1465,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   remainingTagText: {
-    fontSize: ms(11),
+    fontSize: getLanguageScaledSize(11),
     fontWeight: '600',
   },
   locationContainer: {
@@ -2001,13 +1491,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addrLabel: {
-    fontSize: ms(13),
+    fontSize: getLanguageScaledSize(13),
     fontWeight: '700',
     textTransform: 'uppercase',
     marginBottom: vs(2),
   },
   addrText: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '500',
   },
   vehicleInfoContainer: {
@@ -2020,7 +1510,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(6),
   },
   vehicleNameText: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '900',
     letterSpacing: 0.5,
     marginBottom: vs(4),
@@ -2038,7 +1528,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   vehicleBadgeText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -2053,12 +1543,12 @@ const styles = StyleSheet.create({
     gap: ms(8),
   },
   rideStatsText: {
-    fontSize: ms(13),
+    fontSize: getLanguageScaledSize(13),
     fontWeight: '500',
   },
   rideStatsTextBold: {
     fontWeight: '800',
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
   },
   statItemRow: {
     flexDirection: 'row',
@@ -2071,7 +1561,7 @@ const styles = StyleSheet.create({
     gap: ms(4),
   },
   ecoBadgeText: {
-    fontSize: ms(6),
+    fontSize: getLanguageScaledSize(6),
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -2111,7 +1601,7 @@ const styles = StyleSheet.create({
   },
   textBtnRed: {
     color: '#EF4444',
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '600',
   },
   floatCallBtn: {
@@ -2146,11 +1636,11 @@ const styles = StyleSheet.create({
     marginRight: ms(12),
   },
   psgrName: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '800',
   },
   psgrDetail: {
-    fontSize: ms(12),
+    fontSize: getLanguageScaledSize(12),
   },
   psgrDetailRow: {
     flexDirection: 'row',
@@ -2164,12 +1654,12 @@ const styles = StyleSheet.create({
     gap: ms(3),
   },
   ratingText: {
-    fontSize: ms(11),
+    fontSize: getLanguageScaledSize(11),
     fontWeight: '800',
     color: '#92400E',
   },
   avatarText: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '800',
   },
   callBtn: {
@@ -2189,19 +1679,20 @@ const styles = StyleSheet.create({
   },
   filterList: {
     paddingHorizontal: s(16),
-    gap: ms(10),
+    gap: ms(6),
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: ms(16),
-    paddingVertical: vs(8),
-    borderRadius: ms(30),
+    paddingHorizontal: ms(8),
+    paddingVertical: vs(4),
+    borderRadius: ms(16),
     borderWidth: 1,
   },
   filterChipText: {
-    fontSize: ms(13),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '600',
+    lineHeight: vs(12),
   },
   cancelModalContainer: {
     borderTopLeftRadius: ms(24),
@@ -2216,7 +1707,7 @@ const styles = StyleSheet.create({
     marginBottom: vs(16),
   },
   modalSubtitle: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     marginBottom: vs(20),
   },
   reasonsList: {
@@ -2234,7 +1725,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   reasonText: {
-    fontSize: ms(15),
+    fontSize: getLanguageScaledSize(15),
     fontWeight: '500',
   },
   radioCircle: {
@@ -2257,7 +1748,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   confirmCancelBtnText: {
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
   otherReasonInput: {
@@ -2265,38 +1756,64 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: ms(8),
     padding: ms(12),
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     textAlignVertical: 'top',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: s(40),
-    marginTop: vs(60),
-    minHeight: vs(300),
+    paddingHorizontal: s(16),
+    marginTop: vs(30),
+    minHeight: vs(250),
   },
-  emptyIconCircle: {
-    width: s(80),
-    height: s(80),
-    borderRadius: ms(40),
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: vs(16),
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+  emptyImage: {
+    width: s(150),
+    height: s(110),
+    marginBottom: vs(12),
   },
   emptyTitle: {
-    fontSize: ms(18),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
-    marginBottom: vs(8),
+    marginBottom: vs(4),
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(12),
     textAlign: 'center',
-    marginBottom: vs(24),
+    marginBottom: vs(16),
+    lineHeight: vs(18),
+  },
+  emptyBanner: {
+    flexDirection: 'row',
+    marginTop: vs(8),
+    padding: ms(12),
+    borderWidth: 1,
+    borderRadius: ms(12),
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    gap: ms(10),
+    width: '100%',
+  },
+  emptyBannerIconBg: {
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(10),
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyBannerTextContainer: {
+    flex: 1,
+  },
+  emptyBannerTitle: {
+    fontSize: getLanguageScaledSize(12),
+    fontWeight: '700',
+    marginBottom: vs(2),
+  },
+  emptyBannerSubtitle: {
+    fontSize: getLanguageScaledSize(10),
+    lineHeight: vs(14),
   },
   clearFilterBtn: {
     paddingVertical: vs(12),
@@ -2305,7 +1822,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   clearFilterText: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     fontWeight: '700',
   },
   filterCountBadge: {
@@ -2318,7 +1835,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterCountText: {
-    fontSize: ms(10),
+    fontSize: getLanguageScaledSize(10),
     fontWeight: '800',
   },
   bottomSheet: {
@@ -2337,13 +1854,13 @@ const styles = StyleSheet.create({
     marginBottom: vs(16),
   },
   sheetTitle: {
-    fontSize: ms(20),
+    fontSize: getLanguageScaledSize(20),
     fontWeight: '700',
     marginBottom: vs(8),
     textAlign: 'center',
   },
   sheetSubtitle: {
-    fontSize: ms(14),
+    fontSize: getLanguageScaledSize(14),
     marginBottom: vs(24),
     lineHeight: vs(20),
   },
@@ -2362,7 +1879,7 @@ const styles = StyleSheet.create({
   },
   sheetCancelBtnText: {
     color: '#374151',
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
   sheetConfirmBtn: {
@@ -2373,7 +1890,7 @@ const styles = StyleSheet.create({
   },
   sheetConfirmBtnText: {
     color: '#FFFFFF',
-    fontSize: ms(16),
+    fontSize: getLanguageScaledSize(16),
     fontWeight: '700',
   },
 });

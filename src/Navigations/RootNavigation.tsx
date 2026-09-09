@@ -12,6 +12,7 @@ import {
   PickupMapScreen_Nav,
   DriverPerformance_Nav,
   HelpCenter_Nav,
+  FAQScreen_Nav,
   ContactSupport_Nav,
   AboutApp_Nav,
   EmergencySupport_Nav,
@@ -29,9 +30,19 @@ import {
   WaitingScreen_Nav,
   ReturnTripMapScreen_Nav,
   ChatScreen_Nav,
+  ChatbotScreen_Nav,
+  ChatHistoryScreen_Nav,
+  TicketChatScreen_Nav,
+  MapTrackingScreen,
+  MapSearchScreen,
   ScheduledRides_Nav,
+  ScheduledRideDetails_Nav,
+  Requests_Nav,
   Blocked_Nav,
   ReferEarn_Nav,
+  SubscriptionHistory_Nav,
+  SubscriptionDetail_Nav,
+  VerificationSuccessScreen_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -47,7 +58,9 @@ import Onboarding from '../Screens/Onboarding/Onboarding';
 import OnboardingSosScreen from '../Screens/Onboarding/OnboardingSosScreen';
 
 
+
 import ScheduledRidesScreen from '../Screens/Requests/ScheduledRidesScreen';
+import ScheduledRideDetailsScreen from '../Screens/Requests/ScheduledRideDetailsScreen';
 
 import ProfileDetailsScreen from '../Screens/Profile/ProfileDetailsScreen';
 import DriverPerformanceScreen from '../Screens/Profile/DriverPerformanceScreen';
@@ -55,16 +68,23 @@ import DriverPerformanceScreen from '../Screens/Profile/DriverPerformanceScreen'
 import EarningsScreen from '../Screens/Profile/EarningsScreen';
 import RideActivityScreen from '../Screens/Profile/RideActivityScreen';
 import RideDetailScreen from '../Screens/Profile/RideDetailScreen';
+import EarningsTransactionsScreen from '../Screens/Profile/EarningsTransactionsScreen';
 import ProfileDocumentsScreen from '../Screens/Profile/ProfileDocumentsScreen';
 import SosContactsScreen from '../Screens/Profile/SosContactsScreen';
 import ProfileSettingsScreen from '../Screens/Profile/ProfileSettingsScreen';
 import RechargePlanScreen from '../Screens/Profile/SubscriptionPlanScreen';
 
 import WalletScreen from '../Screens/Profile/WalletScreen';
+import AddMoneyScreen from '../Screens/Profile/AddMoneyScreen';
+import TransactionHistoryScreen from '../Screens/Profile/TransactionHistoryScreen';
+import TransactionDetailScreen from '../Screens/Profile/TransactionDetailScreen';
 import WalletSuccessScreen from '../Screens/Profile/WalletSuccessScreen';
 import WalletPinSetupScreen from '../Screens/Profile/WalletPinSetupScreen';
 import ReferEarnScreen from '../Screens/Profile/ReferEarnScreen';
 import SubscriptionSuccessScreen from '../Screens/Profile/SubscriptionSuccessScreen';
+import SubscriptionHistoryScreen from '../Screens/Profile/SubscriptionHistoryScreen';
+import SubscriptionDetailScreen from '../Screens/Profile/SubscriptionDetailScreen';
+import SubscriptionRequiredScreen from '../Screens/Profile/SubscriptionRequiredScreen';
 import PaymentFailedScreen from '../Screens/Profile/PaymentFailedScreen';
 
 import PickupMapScreen from '../Screens/Requests/PickupMapScreen';
@@ -75,6 +95,10 @@ import ReturnTripMapScreen from '../Screens/Requests/ReturnTripMapScreen';
 import PaymentCollectionScreen from '../Screens/Requests/PaymentCollectionScreen';
 
 import HelpCenterScreen from '../Screens/Profile/Support/HelpCenterScreen';
+import FAQScreen from "../Screens/Profile/Support/FAQScreen";
+import ChatbotScreen from '../Screens/Profile/Support/ChatbotScreen';
+import ChatHistoryScreen from '../Screens/Profile/Support/ChatHistoryScreen';
+import TicketChatScreen from '../Screens/Profile/Support/TicketChatScreen';
 import ContactSupportScreen from '../Screens/Profile/Support/ContactSupportScreen';
 import AboutAppScreen from '../Screens/Profile/Support/AboutAppScreen';
 import EmergencySupportScreen from '../Screens/Profile/Support/EmergencySupportScreen';
@@ -84,6 +108,7 @@ import DocumentUploadScreen from '../Screens/Auth/DocumentUploadScreen';
 import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
 import PersonalDetails from '../Screens/Auth/PersonalDetails';
 import AddressDetails from '../Screens/Auth/AddressDetails';
+import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
 import VehicleVerificationScreen from '../Screens/Requests/VehicleVerificationScreen';
 import NavigationScreen from '../Screens/Navigation/NavigationScreen';
 import ChatScreen from '../Screens/Chatscreen';
@@ -412,24 +437,28 @@ const RootNavigation = () => {
           <Stack.Screen name={DocumentScreen_Nav} component={DocumentScreen} />
           <Stack.Screen name={DocumentUploadScreen_Nav} component={DocumentUploadScreen} />
           <Stack.Screen name={SmartSelfieScreen_Nav} component={SmartSelfieScreen} options={{ headerShown: false, presentation: 'modal' }} />
+          <Stack.Screen name={VerificationSuccessScreen_Nav} component={VerificationSuccessScreen} options={{ headerShown: false }} />
 
           {/* -------- DASHBOARD -------- */}
           <Stack.Screen name={Dashboard_Nav} component={DriverTabs} />
 
           {/* -------- REQUEST -------- */}
           <Stack.Screen name={ScheduledRides_Nav} component={ScheduledRidesScreen} />
+          <Stack.Screen name={ScheduledRideDetails_Nav} component={ScheduledRideDetailsScreen} />
 
           {/* -------- PROFILE -------- */}
           <Stack.Screen name={ProfileDetails_Nav} component={ProfileDetailsScreen} />
           <Stack.Screen name={DriverPerformance_Nav} component={DriverPerformanceScreen} />
 
           <Stack.Screen name="EarningsScreen" component={EarningsScreen} />
+          <Stack.Screen name="EarningsTransactionsScreen" component={EarningsTransactionsScreen} />
           <Stack.Screen name="RideActivityScreen" component={RideActivityScreen} />
           <Stack.Screen name="RideDetailScreen" component={RideDetailScreen} />
           <Stack.Screen name={ProfileDocuments_Nav} component={ProfileDocumentsScreen} />
           <Stack.Screen name={SosContacts_Nav} component={SosContactsScreen} />
           <Stack.Screen name="ProfileSettingsScreen" component={ProfileSettingsScreen} />
           <Stack.Screen name={HelpCenter_Nav} component={HelpCenterScreen} />
+          <Stack.Screen name={FAQScreen_Nav} component={FAQScreen} />
           <Stack.Screen name={ContactSupport_Nav} component={ContactSupportScreen} />
           <Stack.Screen name={AboutApp_Nav} component={AboutAppScreen} />
           <Stack.Screen name={EmergencySupport_Nav} component={EmergencySupportScreen} />
@@ -438,10 +467,16 @@ const RootNavigation = () => {
 
           <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="WalletScreen" component={WalletScreen} />
+          <Stack.Screen name="AddMoneyScreen" component={AddMoneyScreen} />
+          <Stack.Screen name="TransactionHistoryScreen" component={TransactionHistoryScreen} />
+          <Stack.Screen name="TransactionDetailScreen" component={TransactionDetailScreen} />
           <Stack.Screen name="WalletPinSetupScreen" component={WalletPinSetupScreen} />
           <Stack.Screen name="WalletSuccessScreen" component={WalletSuccessScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="PaymentFailedScreen" component={PaymentFailedScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name={ReferEarn_Nav} component={ReferEarnScreen} />
+          <Stack.Screen name={SubscriptionHistory_Nav} component={SubscriptionHistoryScreen} />
+          <Stack.Screen name={SubscriptionDetail_Nav} component={SubscriptionDetailScreen} />
+          <Stack.Screen name="SubscriptionRequiredScreen" component={SubscriptionRequiredScreen} />
 
           {/* -------- TRIP FLOW -------- */}
           <Stack.Screen name={PickupMapScreen_Nav} component={PickupMapScreen} />
@@ -452,6 +487,9 @@ const RootNavigation = () => {
           <Stack.Screen name="PaymentCollectionScreen" component={PaymentCollectionScreen} />
           <Stack.Screen name="NavigationScreen" component={NavigationScreen} />
           <Stack.Screen name={ChatScreen_Nav} component={ChatScreen} />
+          <Stack.Screen name={ChatbotScreen_Nav} component={ChatbotScreen} />
+          <Stack.Screen name={ChatHistoryScreen_Nav} component={ChatHistoryScreen} />
+          <Stack.Screen name={TicketChatScreen_Nav} component={TicketChatScreen} />
 
           {/* -------- ACCOUNT STATUS -------- */}
           <Stack.Screen name={Blocked_Nav} component={BlockedScreen} options={{ gestureEnabled: false }} />

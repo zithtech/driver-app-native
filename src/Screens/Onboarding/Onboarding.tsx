@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, Animated, FlatList, Dimensions, TouchableOpacity, Platform, Modal, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
 import LinearGradient from 'react-native-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,9 +12,8 @@ import {
   Dashboard_Nav,
   DocumentScreen_Nav,
   OnboardingSos_Nav,
+  HelpCenter_Nav,
 } from '../../Navigations/navigations';
-
-import HelpCenterModal from './HelpCenterModal';
 import OnboardingBackground from './components/OnboardingBackground';
 import { useTranslation } from 'react-i18next';
 
@@ -56,9 +56,9 @@ const Onboarding = ({ navigation }: any) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const [index, setIndex] = useState(0);
-  const [helpVisible, setHelpVisible] = useState(false);
   const [showCongratsModal, setShowCongratsModal] = useState(false);
-  const { colors } = useTheme() as any;
+  const { isDark, theme } = useAppTheme();
+  const { colors } = theme;
   const { t } = useTranslation();
 
   // Pulse animation for brand text
@@ -80,7 +80,7 @@ const Onboarding = ({ navigation }: any) => {
   }));
 
   // Typewriter animation
-  const words = useMemo(() => ['VDrive', 'Partner', 'Future', 'Flexibility', 'Success', 'Reliability', 'Growth'], []);
+  const words = useMemo(() => ['T2drive', 'Partner', 'Future', 'Flexibility', 'Success', 'Reliability', 'Growth'], []);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -153,8 +153,8 @@ const Onboarding = ({ navigation }: any) => {
   }, [index]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-      <AppStatusBar forceDark />
+    <SafeAreaView style={[styles.safe, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]} edges={['top', 'bottom', 'left', 'right']}>
+      <AppStatusBar forceDark={false} />
       <OnboardingBackground>
         <View style={styles.container}>
           {/* HEADER */}
@@ -162,46 +162,42 @@ const Onboarding = ({ navigation }: any) => {
 
 
             <View style={styles.titleWrapper}>
-              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
-              <AnimatedReanimated.View
-                entering={BounceIn.duration(1000).delay(200)}
+              <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
+              <View
                 style={styles.brandWrapper}
               >
                 <AnimatedReanimated.View style={pulseStyle}>
-                  <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
+                  <Text style={[styles.brand, { color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
                 </AnimatedReanimated.View>
-              </AnimatedReanimated.View>
+              </View>
             </View>
 
-            <AnimatedReanimated.Text
-              entering={FadeInDown.duration(800).delay(300)}
-              style={styles.subtitle}
+            <Text
+              style={[styles.subtitle, { color: colors.text }]}
             >
-              VDrive Partner App
-            </AnimatedReanimated.Text>
+              T2drive Partner App
+            </Text>
 
-            <AnimatedReanimated.Text
-              entering={FadeInDown.duration(800).delay(500)}
-              style={styles.tagline}
+            <Text
+              style={[styles.tagline, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
               adjustsFontSizeToFit
               numberOfLines={2}
             >
               {t('onboarding_tagline', 'Your trusted platform to earn, drive, and grow with confidence.')}
-            </AnimatedReanimated.Text>
+            </Text>
 
-            <AnimatedReanimated.View
-              entering={FadeIn.duration(800).delay(800)}
+            <View
               style={{ alignSelf: 'flex-end' }}
             >
               <TouchableOpacity
-                style={styles.helpButton}
+                style={[styles.helpButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 0, 0, 0.1)' }]}
                 activeOpacity={0.8}
-                onPress={() => setHelpVisible(true)}
+                onPress={() => navigation.navigate(HelpCenter_Nav as never)}
               >
-                <Ionicons name="headset-outline" size={mS(12)} color="#4B5563" style={{ marginRight: hS(4) }} />
-                <Text style={styles.helpText} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
+                <Ionicons name="headset-outline" size={mS(12)} color={colors.text} style={{ marginRight: hS(4) }} />
+                <Text style={[styles.helpText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
               </TouchableOpacity>
-            </AnimatedReanimated.View>
+            </View>
           </View>
 
           {/* PAGES */}
@@ -237,7 +233,7 @@ const Onboarding = ({ navigation }: any) => {
                   styles.dot,
                   {
                     backgroundColor:
-                      i === index ? '#2563EB' : 'rgba(0, 0, 0, 0.15)',
+                      i === index ? colors.primary : (isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)'),
                   },
                 ]}
               />
@@ -258,10 +254,7 @@ const Onboarding = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
-          <HelpCenterModal
-            visible={helpVisible}
-            onClose={() => setHelpVisible(false)}
-          />
+
 
           {/* CONGRATS MODAL */}
           <Modal

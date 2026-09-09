@@ -10,9 +10,11 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const Page3 = () => {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
 
   return (
     <ScrollView
@@ -37,7 +39,7 @@ const Page3 = () => {
       <View style={styles.content}>
         <Animated.Text
           entering={FadeInDown.duration(600).delay(200)}
-          style={styles.title}
+          style={[styles.title, { color: theme.colors.text }]}
           adjustsFontSizeToFit
           numberOfLines={1}
         >
@@ -46,7 +48,7 @@ const Page3 = () => {
 
         <Animated.Text
           entering={FadeInDown.duration(600).delay(300)}
-          style={styles.desc}
+          style={[styles.desc, { color: isDark ? '#9CA3AF' : '#4B5563' }]}
           adjustsFontSizeToFit
           numberOfLines={3}
         >
@@ -57,39 +59,39 @@ const Page3 = () => {
           entering={FadeInDown.duration(600).delay(400)}
           style={styles.grid}
         >
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
             <MCIcon name="calendar-today" size={mS(20)} color="#64B5F6" />
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_daily_plans')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_flexible_options')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_daily_plans')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_flexible_options')}</Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
             <MCIcon name="shield-check" size={mS(20)} color="#64B5F6" />
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_no_hidden_fees')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_full_transparency')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_no_hidden_fees')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_full_transparency')}</Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
             <MCIcon
               name="credit-card-outline"
               size={mS(20)}
               color="#64B5F6"
             />
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_easy_payment')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_multiple_methods')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_easy_payment')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_multiple_methods')}</Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
             <MCIcon name="autorenew" size={mS(20)} color="#64B5F6" />
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardTitle}>{t('ob_auto_renewal')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.cardSub}>{t('ob_never_miss_day')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardTitle, { color: theme.colors.text }]}>{t('ob_auto_renewal')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.cardSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('ob_never_miss_day')}</Text>
           </View>
         </Animated.View>
 
         {/* FOOTER TEXT */}
         <Animated.Text
           entering={FadeInDown.duration(600).delay(500)}
-          style={styles.footerText}
+          style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
         >
           {t('recharge_footer')}
         </Animated.Text>

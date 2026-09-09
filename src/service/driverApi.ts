@@ -85,6 +85,13 @@ export const driverApi = createApi({
       }),
       invalidatesTags: ['Driver'],
     }),
+    updateDriverScore: builder.mutation<any, { id: string; score: number; timeframe: 'week' | 'month' }>({
+      query: ({ id, score, timeframe }) => ({
+        url: `/drivers/performance/${id}/percentile`,
+        method: 'POST',
+        body: { score, timeframe },
+      }),
+    }),
 
     /* ─────────── DRIVER DOCUMENTS (/drivers/documents) ─────────── */
 
@@ -435,6 +442,7 @@ export const {
   useGetDriverByIdQuery,
   useLazyGetDriverByIdQuery,
   useUpdateDriverMutation,
+  useUpdateDriverScoreMutation,
 
   // Documents
   useGetDriverDocumentsQuery,

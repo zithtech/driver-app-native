@@ -1,56 +1,107 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, StatusBar, BackHandler } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import ConfettiCannon from 'react-native-confetti-cannon';
+import moment from 'moment';
+import Share from 'react-native-share';
 import RNPrint from 'react-native-print';
-import AppStatusBar from '../../Components/AppStatusBar';
-import { useAppTheme } from '../../context/ThemeContext';
+import { SuccessIcon } from '../../assets/svg';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
 
-const { width } = Dimensions.get('window');
+const BG_COLOR = '#F9FAFB';
+const BLUE_PRIMARY = '#1D7AF2';
+const TEXT_DARK = '#0F172A';
+const TEXT_MUTED = '#64748B';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E2E8F0';
 
 const WalletSuccessScreen = ({ route, navigation }: any) => {
-  const { theme, isDark } = useAppTheme();
-  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   
   const { amount = 0, transactionId = '', orderId = '', date = new Date().toISOString() } = route.params || {};
 
-  const handleDownloadReceipt = async () => {
-    const html = `
-      <html>
+  const user = useSelector((state: RootState) => state.userSlice?.user);
+
+  const displayAmount = Number(amount).toFixed(2);
+  
+  // Animations
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 40,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  useEffect(() => {
+    const backAction = () => {
+      navigation.replace('WalletScreen');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [navigation]);
+
+  const handleShareReceipt = async () => {
+    try {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
           <style>
-            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #1e293b; background-color: #f8fafc; }
-            .receipt-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .logo-text { font-size: 28px; font-weight: 800; color: #1e3a8a; letter-spacing: -1px; }
-            .success-text { color: #10b981; font-size: 24px; font-weight: bold; margin-top: 10px; }
-            .amount { font-size: 48px; font-weight: bold; text-align: center; margin: 20px 0; color: #0f172a; }
-            .divider { border-top: 2px dashed #cbd5e1; margin: 30px 0; }
-            .row { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 16px; }
-            .label { color: #64748b; }
-            .value { font-weight: 600; color: #0f172a; }
-            .footer { text-align: center; margin-top: 40px; color: #94a3b8; font-size: 14px; }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
+            .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .logo { font-size: 36px; font-weight: 800; color: #1D7AF2; letter-spacing: -1px; }
+            .title { font-size: 16px; color: #64748B; margin-top: 10px; text-transform: uppercase; letter-spacing: 2px; }
+            .content { width: 100%; max-width: 600px; margin: 0 auto; }
+            .row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 18px 0; font-size: 16px; }
+            .label { font-weight: 500; color: #64748B; }
+            .value { font-weight: 700; color: #0F172A; text-align: right; }
+            .amount-row { font-size: 20px; border-bottom: 2px solid #333; margin-top: 20px; }
+            .amount-row .value { color: #1D7AF2; font-size: 28px; }
+            .footer { text-align: center; margin-top: 60px; color: #94A3B8; font-size: 14px; line-height: 1.6; }
+            .badge { background: #10B981; color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
           </style>
         </head>
         <body>
-          <div class="receipt-card">
+          <div class="content">
             <div class="header">
-              <div class="logo-text">T2drive</div>
-              <div class="success-text">Payment Successful</div>
-              <div style="color: #64748b; margin-top: 8px;">Your wallet has been topped up</div>
+              <div class="logo">T2drive</div>
+              <div class="title">Wallet Recharge Receipt</div>
             </div>
             
-            <div class="amount">₹${Number(amount).toLocaleString('en-IN')}</div>
-            
-            <div class="divider"></div>
-            
+            <div class="row" style="border: none; padding-bottom: 5px;">
+              <span class="label">Status</span>
+              <span class="value"><span class="badge">Recharge Successful</span></span>
+            </div>
+
             <div class="row">
-              <span class="label">Date & Time</span>
-              <span class="value">${new Date(date).toLocaleString()}</span>
+              <span class="label">Date</span>
+              <span class="value">${moment(date).format('MMM D, YYYY, h:mm A')}</span>
             </div>
             <div class="row">
               <span class="label">Transaction ID</span>
@@ -61,112 +112,118 @@ const WalletSuccessScreen = ({ route, navigation }: any) => {
               <span class="value">${orderId || 'N/A'}</span>
             </div>
             <div class="row">
+              <span class="label">Billed To</span>
+              <span class="value">${user?.full_name || 'Driver'}<br><span style="font-size:14px; color:#666; font-weight: 500;">${user?.phone_number || ''}</span></span>
+            </div>
+            <div class="row">
               <span class="label">Payment Method</span>
-              <span class="value">Online (Razorpay)</span>
+              <span class="value">Online</span>
+            </div>
+            
+            <div class="row amount-row">
+              <span class="label" style="color: #0F172A; align-self: center;">Amount Recharged</span>
+              <span class="value">₹${displayAmount}</span>
             </div>
             
             <div class="footer">
-              <p>Thank you for driving with T2drive!</p>
-              <p>If you have any questions, please contact our support.</p>
+              Thank you for recharging your T2drive wallet!<br>
+              This is a computer generated receipt and does not require a physical signature.<br><br>
+              <strong>Need help?</strong> Contact support in the T2drive app.
             </div>
           </div>
         </body>
-      </html>
-    `;
-
-    try {
+        </html>
+      `;
+      
       await RNPrint.print({
-        html,
-        jobName: `T2drive_Receipt_${transactionId}`
+        html: htmlContent,
+        jobName: `T2drive_Wallet_Receipt_${transactionId || 'Recharge'}`,
       });
     } catch (error) {
-      console.log('Error printing receipt', error);
+      console.log('Print dismissed or failed', error);
     }
   };
 
+  const handleGoToWallet = () => {
+    navigation.replace('WalletScreen');
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
-      <AppStatusBar />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      <ConfettiCannon
-        count={150}
-        origin={{ x: width / 2, y: -20 }}
-        autoStart={true}
-        fadeOut={true}
-        fallSpeed={2500}
-      />
+        <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        
+        {/* Animated Checkmark */}
+        <Animated.View style={[styles.animationContainer, { transform: [{ scale: scaleAnim }] }]}>
+          <SuccessIcon width={120} height={120} />
+        </Animated.View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>Success</Text>
-        </View>
+        {/* Header Texts */}
+        <Animated.View style={[styles.headerTexts, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Text style={styles.title}>Payment successful</Text>
+          <Text style={styles.subtitle}>
+            Your wallet has been topped up successfully and a receipt has been sent to your email.
+          </Text>
+        </Animated.View>
 
-        <View style={[styles.receiptCard, { backgroundColor: theme.colors.card, shadowColor: isDark ? '#000' : '#cbd5e1' }]}>
-          {/* Top Section */}
-          <View style={styles.cardTop}>
-            <View style={styles.successIconWrap}>
-              <Ionicons name="checkmark-sharp" size={40} color="#10B981" />
-            </View>
-            <Text style={[styles.successTitle, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>Topup Successful!</Text>
-            <Text style={[styles.successSubtitle, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Your wallet balance has been updated.</Text>
-            
-            <Text style={[styles.amountText, { color: isDark ? '#FFFFFF' : '#0f172a' }]}>
-              ₹{Number(amount).toLocaleString('en-IN')}
-            </Text>
+        {/* Details Card */}
+        <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          
+          <View style={styles.cardHeader}>
+            <Ionicons name="receipt-outline" size={18} color={TEXT_MUTED} />
+            <Text style={styles.cardHeaderTitle}>Transaction details</Text>
+          </View>
+          <View style={styles.divider} />
+
+          <View style={styles.amountSection}>
+            <Text style={styles.amountLabel}>Amount paid</Text>
+            <Text style={styles.amountValue}>₹{displayAmount}</Text>
           </View>
 
-          {/* Dashed Divider with Cutouts */}
-          <View style={styles.dividerContainer}>
-            <View style={[styles.cutout, styles.cutoutLeft, { backgroundColor: theme.colors.background }]} />
-            <View style={styles.dashedLine} />
-            <View style={[styles.cutout, styles.cutoutRight, { backgroundColor: theme.colors.background }]} />
-          </View>
-
-          {/* Bottom Section */}
-          <View style={styles.cardBottom}>
-            <Text style={[styles.detailsTitle, { color: isDark ? '#E5E7EB' : '#1e293b' }]}>Transaction Details</Text>
-            
+          <View style={styles.detailsList}>
             <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Date</Text>
-              <Text style={[styles.detailValue, { color: isDark ? '#F3F4F6' : '#0f172a' }]}>{new Date(date).toLocaleString()}</Text>
+              <Text style={styles.detailLabel}>Merchant</Text>
+              <Text style={styles.detailValue}>T2drive</Text>
             </View>
-            
             <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Transaction ID</Text>
-              <Text style={[styles.detailValue, { color: isDark ? '#F3F4F6' : '#0f172a' }]} selectable>{transactionId || 'N/A'}</Text>
+              <Text style={styles.detailLabel}>Transaction ID</Text>
+              <Text style={styles.detailValue} selectable>{transactionId || 'N/A'}</Text>
             </View>
-
             <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Order ID</Text>
-              <Text style={[styles.detailValue, { color: isDark ? '#F3F4F6' : '#0f172a' }]} selectable>{orderId || 'N/A'}</Text>
+              <Text style={styles.detailLabel}>Date & time</Text>
+              <Text style={styles.detailValue}>{moment(date).format('MMM D, YYYY, h:mm A')} UTC</Text>
             </View>
-
             <View style={styles.detailRow}>
-              <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#64748b' }]}>Status</Text>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>Completed</Text>
-              </View>
+              <Text style={styles.detailLabel}>Payment method</Text>
+              <Text style={styles.detailValue}>Online</Text>
             </View>
           </View>
-        </View>
 
-        <View style={styles.actionsContainer}>
-          <Pressable 
-            style={({ pressed }) => [styles.downloadBtn, isDark && { borderColor: '#4B5563' }, pressed && { opacity: 0.7 }]} 
-            onPress={handleDownloadReceipt}
-          >
-            <Ionicons name="download-outline" size={20} color={isDark ? '#FFFFFF' : '#1e3a8a'} style={{ marginRight: 8 }} />
-            <Text style={[styles.downloadBtnText, { color: isDark ? '#FFFFFF' : '#1e3a8a' }]}>Download Receipt</Text>
-          </Pressable>
+        </Animated.View>
 
+        {/* Action Buttons */}
+        <Animated.View style={[styles.actions, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          
           <Pressable 
             style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.8 }]} 
-            onPress={() => navigation.navigate('WalletScreen')}
+            onPress={handleGoToWallet}
           >
+            <Ionicons name="wallet-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
             <Text style={styles.primaryBtnText}>Back to Wallet</Text>
           </Pressable>
+          
+          <Pressable 
+            style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.7 }]} 
+            onPress={handleShareReceipt}
+          >
+            <Ionicons name="download-outline" size={20} color={TEXT_DARK} style={{ marginRight: 8 }} />
+            <Text style={styles.secondaryBtnText}>Download receipt</Text>
+          </Pressable>
+
+        </Animated.View>
+
         </View>
-      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -176,154 +233,119 @@ export default WalletSuccessScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BG_COLOR,
   },
-  header: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  scrollContent: {
+  content: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingTop: 16,
   },
-  receiptCard: {
-    borderRadius: 16,
-    marginTop: 20,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
-    overflow: 'hidden',
-  },
-  cardTop: {
-    padding: 32,
+  animationContainer: {
     alignItems: 'center',
+    marginBottom: 16,
   },
-  successIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    justifyContent: 'center',
+  headerTexts: {
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  successSubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
     marginBottom: 24,
   },
-  amountText: {
-    fontSize: 42,
-    fontWeight: '900',
-    letterSpacing: -1,
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: TEXT_DARK,
+    marginBottom: 8,
   },
-  dividerContainer: {
+  subtitle: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
+  },
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    marginBottom: 16,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardHeaderTitle: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: TEXT_MUTED,
+    fontWeight: '500',
+  },
+  divider: {
     height: 1,
-    marginVertical: 10,
-    position: 'relative',
-    overflow: 'visible',
+    backgroundColor: BORDER_COLOR,
+    marginBottom: 16,
   },
-  dashedLine: {
-    flex: 1,
-    height: 1,
-    borderTopWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#cbd5e1',
-    marginHorizontal: 16,
-    opacity: 0.5,
-  },
-  cutout: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    position: 'absolute',
-    top: -12,
-    zIndex: 10,
-  },
-  cutoutLeft: {
-    left: -12,
-  },
-  cutoutRight: {
-    right: -12,
-  },
-  cardBottom: {
-    padding: 32,
-    paddingTop: 24,
-  },
-  detailsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
+  amountSection: {
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  amountLabel: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  amountValue: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: TEXT_DARK,
+    letterSpacing: -1,
+  },
+  detailsList: {
+    gap: 12,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   detailLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    color: TEXT_MUTED,
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    color: TEXT_DARK,
+    fontWeight: '600',
   },
-  statusBadge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    color: '#16a34a',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  actionsContainer: {
-    marginTop: 40,
-    gap: 16,
-  },
-  downloadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#cbd5e1',
-    backgroundColor: 'transparent',
-  },
-  downloadBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
+  actions: {
+    gap: 12,
   },
   primaryBtn: {
+    flexDirection: 'row',
+    backgroundColor: BLUE_PRIMARY,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#2563eb',
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   primaryBtnText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#FFF',
+    fontSize: 15,
     fontWeight: '700',
   },
+  secondaryBtn: {
+    flexDirection: 'row',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    color: TEXT_DARK,
+    fontSize: 16,
+    fontWeight: '700',
+  }
 });

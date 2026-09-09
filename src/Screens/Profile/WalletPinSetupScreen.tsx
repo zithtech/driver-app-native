@@ -5,7 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  KeyboardAvoidingView,
+  ImageBackground,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,15 +17,16 @@ import { useSetupWalletPinMutation } from '../../service/userApi';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { setUser } from '../../redux/userSlice';
-import { useAlert } from '../../context/AlertContext';
+import { useToast } from '../../context/ToastContext';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
+import AppStatusBar from '../../Components/AppStatusBar';
 
 const WalletPinSetupScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
-  const { theme } = useAppTheme();
+  const { theme, isDark } = useAppTheme();
   const { triggerHaptic } = useHaptic();
-  const { showAlert } = useAlert();
+  const { showToast } = useToast();
   
   const user = useSelector((state: RootState) => state.userSlice.user);
   const dispatch = useDispatch();
@@ -60,7 +61,7 @@ const WalletPinSetupScreen = ({ navigation }: any) => {
 
   const handleSave = async () => {
     if (confirmPin !== pin) {
-      showAlert({ title: 'Error', message: 'PINs do not match.', singleButton: true, icon: 'close-circle-outline' });
+      showToast({ message: 'PINs do not match.', type: 'error' });
       setConfirmPin('');
       setStep(1);
       setPin('');
@@ -71,15 +72,13 @@ const WalletPinSetupScreen = ({ navigation }: any) => {
       await setupWalletPin({ id: user?.driverId || '', pin }).unwrap();
       dispatch(setUser({ has_wallet_pin: true }));
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-      showAlert({ 
-        title: 'Success', 
+      showToast({ 
         message: 'Wallet PIN setup successfully.', 
-        singleButton: true, 
-        icon: 'checkmark-circle-outline' 
+        type: 'success' 
       });
       navigation.goBack();
     } catch (err: any) {
-      showAlert({ title: 'Error', message: err.message || 'Failed to setup PIN', singleButton: true, icon: 'close-circle-outline' });
+      showToast({ message: err.message || 'Failed to setup PIN', type: 'error' });
     }
   };
 
@@ -87,77 +86,110 @@ const WalletPinSetupScreen = ({ navigation }: any) => {
   const isButtonDisabled = currentVal.length !== 4 || isLoading;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: theme.colors.text }]}>{t('Setup Wallet PIN')}</Text>
-        <View style={styles.backButtonPlaceholder} />
-      </View>
-
-      <View style={styles.content}>
-        <Ionicons name="lock-closed" size={ms(48)} color={theme.colors.primary} style={styles.icon} />
-        <Text style={[styles.instruction, { color: theme.colors.text }]}>
-          {step === 1 ? t('Enter a 4-digit PIN for your wallet') : t('Confirm your 4-digit PIN')}
-        </Text>
-        
-        <View style={styles.dotsContainer}>
-          {[0, 1, 2, 3].map((i) => (
-            <View
-              key={i}
-              style={[
-                styles.dot,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: currentVal.length > i ? theme.colors.primary : 'transparent',
-                },
-              ]}
-            />
-          ))}
+    <ImageBackground 
+      source={require('../../assets/images/walletback.png')} 
+      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#F8FAFC' }]}
+    >
+      <AppStatusBar backgroundColor="transparent" barStyle={isDark ? "light-content" : "dark-content"} translucent={true} />
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#0F172A'} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+            {user?.has_wallet_pin ? t('Update Wallet PIN') : t('Setup Wallet PIN')}
+          </Text>
+          <View style={styles.backButtonPlaceholder} />
         </View>
 
-        <View style={styles.keypad}>
-          {[[1, 2, 3], [4, 5, 6], [7, 8, 9]].map((row, i) => (
-            <View key={i} style={styles.keypadRow}>
-              {row.map((num) => (
-                <TouchableOpacity key={num} style={[styles.key, { backgroundColor: theme.colors.card }]} onPress={() => handleKeyPress(num.toString())}>
-                  <Text style={[styles.keyText, { color: theme.colors.text }]}>{num}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
-          <View style={styles.keypadRow}>
-            <View style={styles.keyPlaceholder} />
-            <TouchableOpacity style={[styles.key, { backgroundColor: theme.colors.card }]} onPress={() => handleKeyPress('0')}>
-              <Text style={[styles.keyText, { color: theme.colors.text }]}>0</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.key} onPress={handleBackspace}>
-              <Ionicons name="backspace-outline" size={28} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+        <View style={styles.content}>
+          <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#374151' : '#DCFCE7' }]}>
+             <Ionicons name="lock-closed" size={ms(32)} color="#16a34a" />
           </View>
-        </View>
+          <Text style={[styles.instruction, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+            {step === 1 ? t('Enter a 4-digit PIN for your wallet') : t('Confirm your 4-digit PIN')}
+          </Text>
+          
+          <View style={styles.dotsContainer}>
+            {[0, 1, 2, 3].map((i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    borderColor: isDark ? '#4B5563' : '#CBD5E1',
+                    backgroundColor: currentVal.length > i ? '#16a34a' : 'transparent',
+                    ...(currentVal.length > i ? { borderColor: '#16a34a' } : {})
+                  },
+                ]}
+              />
+            ))}
+          </View>
 
-        <TouchableOpacity 
-          style={[styles.saveButton, { backgroundColor: isButtonDisabled ? theme.colors.background : theme.colors.primary }]}
-          onPress={step === 1 ? handleNext : handleSave}
-          disabled={isButtonDisabled}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={[styles.saveButtonText, { color: isButtonDisabled ? theme.colors.textMuted : '#FFFFFF' }]}>
-              {step === 1 ? t('Next') : t('Save PIN')}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+          <View style={styles.keypad}>
+            {[[1, 2, 3], [4, 5, 6], [7, 8, 9]].map((row, i) => (
+              <View key={i} style={styles.keypadRow}>
+                {row.map((num) => (
+                  <TouchableOpacity 
+                    key={num} 
+                    style={[
+                      styles.key, 
+                      { 
+                        backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                        shadowColor: isDark ? '#000' : '#94A3B8'
+                      }
+                    ]} 
+                    onPress={() => handleKeyPress(num.toString())}
+                  >
+                    <Text style={[styles.keyText, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>{num}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+            <View style={styles.keypadRow}>
+              <View style={styles.keyPlaceholder} />
+              <TouchableOpacity 
+                style={[
+                  styles.key, 
+                  { 
+                    backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+                    shadowColor: isDark ? '#000' : '#94A3B8'
+                  }
+                ]} 
+                onPress={() => handleKeyPress('0')}
+              >
+                <Text style={[styles.keyText, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>0</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.key} onPress={handleBackspace}>
+                <Ionicons name="backspace-outline" size={28} color={isDark ? '#9CA3AF' : '#64748B'} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.saveButton, { backgroundColor: isButtonDisabled ? (isDark ? '#374151' : '#E2E8F0') : '#16a34a' }]}
+            onPress={step === 1 ? handleNext : handleSave}
+            disabled={isButtonDisabled}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={[styles.saveButtonText, { color: isButtonDisabled ? (isDark ? '#9CA3AF' : '#94A3B8') : '#FFFFFF' }]}>
+                {step === 1 ? t('Next') : t('Save PIN')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
   },
   header: {
@@ -184,7 +216,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: ms(20),
     paddingTop: vs(40),
   },
-  icon: {
+  iconWrapper: {
+    width: ms(64),
+    height: ms(64),
+    borderRadius: ms(32),
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: vs(24),
   },
   instruction: {
@@ -220,6 +257,10 @@ const styles = StyleSheet.create({
     borderRadius: ms(36),
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   keyPlaceholder: {
     width: ms(72),

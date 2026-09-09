@@ -13,6 +13,7 @@ export const DocumentScreen_Nav = 'DocumentScreen';
 export const DocumentUploadScreen_Nav = 'DocumentUploadScreen';
 export const CaptureSelfie_Nav = 'CaptureSelfie';
 export const SmartSelfieScreen_Nav = 'SmartSelfieScreen';
+export const VerificationSuccessScreen_Nav = 'VerificationSuccessScreen';
 /* ❌ REMOVED
 export const DocumentVerificationStatus_Nav = "DocumentVerificationStatus";
 */
@@ -23,6 +24,7 @@ export const MapTrackingScreen = 'MapTrackingScreen';
 export const MapSearchScreen = 'MapSearchScreen';
 
 export const ScheduledRides_Nav = 'ScheduledRides';
+export const ScheduledRideDetails_Nav = 'ScheduledRideDetailsScreen';
 export const Requests_Nav = 'Requests';
 
 export const DriverPerformance_Nav = 'DriverPerformanceScreen';
@@ -44,12 +46,18 @@ export const WaitingScreen_Nav = 'WaitingScreen';
 export const ReturnTripMapScreen_Nav = 'ReturnTripMapScreen';
 
 export const HelpCenter_Nav = 'HelpCenterScreen';
+export const FAQScreen_Nav = 'FAQScreen';
 export const ContactSupport_Nav = 'ContactSupportScreen';
 export const AboutApp_Nav = 'AboutAppScreen';
 export const EmergencySupport_Nav = 'EmergencySupportScreen';
 export const LegalAgreements_Nav = 'LegalAgreementsScreen';
 export const NavigationScreen_Nav = 'NavigationScreen'; 
 export const ChatScreen_Nav = 'ChatScreen'; 
+export const ChatbotScreen_Nav = 'ChatbotScreen';
+export const ChatHistoryScreen_Nav = 'ChatHistoryScreen';
+export const TicketChatScreen_Nav = 'TicketChatScreen';
 export const Blocked_Nav = 'BlockedScreen'; 
 export const ReferEarn_Nav = 'ReferEarnScreen';
+export const SubscriptionHistory_Nav = 'SubscriptionHistoryScreen';
+export const SubscriptionDetail_Nav = 'SubscriptionDetailScreen';
 

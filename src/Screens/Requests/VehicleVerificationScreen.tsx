@@ -201,7 +201,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
 
   useEffect(() => {
     if (!rideFromStore) {
-      navigation.dispatch(StackActions.replace('DashboardScreen'));
+      navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
     }
   }, [rideFromStore, navigation]);
 

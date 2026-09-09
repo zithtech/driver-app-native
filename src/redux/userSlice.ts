@@ -11,14 +11,19 @@ export interface DocumentState {
 /* ================= USER TYPE ================= */
 
 export interface UserState {
+  _id?: string;
+  id?: string;
   has_wallet_pin?: boolean;
   userId?: string;
   driverId?: string;
   device_id?: string;
+  today_earnings?: number | string;
+  total_earnings?: number | string;
 
   /* Phone — backend sends phone_number */
   phone_number?: string;
   alternate_contact?: string | null;
+  trusted_contact?: { name: string; number: string; relation_type: string };
   otp?: string;
 
   accessToken?: string;
@@ -44,6 +49,7 @@ export interface UserState {
   status_reason?: string;
   status_updated_at?: string;
   rating?: number;
+  total_reviews?: number;
   total_trips?: number;
 
   isApproved?: boolean;
@@ -75,6 +81,7 @@ export interface UserState {
 
   address?: {
     street?: string;
+    landmark?: string;
     city?: string;
     district?: string;
     state?: string;
@@ -116,6 +123,7 @@ export interface UserState {
   referred_by?: string;
   
   /* Credit / Wallet */
+  wallet_balance?: number;
   credit?: {
     limit: number;
     balance: number;

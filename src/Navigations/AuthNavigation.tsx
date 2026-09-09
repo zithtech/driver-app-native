@@ -9,6 +9,10 @@ import {
   DocumentScreen_Nav,
   DocumentUploadScreen_Nav,
   SmartSelfieScreen_Nav,
+  HelpCenter_Nav,
+  VerificationSuccessScreen_Nav,
+  FAQScreen_Nav,
+  ChatbotScreen_Nav,
 } from './navigations';
 
 import WelcomeScreen from '../Screens/Auth/WelcomeScreen';
@@ -18,6 +22,10 @@ import AddressDetails from '../Screens/Auth/AddressDetails';
 import DocumentScreen from '../Screens/Auth/DocumentScreen';
 import DocumentUploadScreen from '../Screens/Auth/DocumentUploadScreen';
 import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
+import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
+import HelpCenterScreen from '../Screens/Profile/Support/HelpCenterScreen';
+import FAQScreen from '../Screens/Profile/Support/FAQScreen';
+import ChatbotScreen from '../Screens/Profile/Support/ChatbotScreen';
 import { LeftArrow } from '../assets/svg';
 
 const Stack = createStackNavigator();
@@ -98,8 +106,33 @@ const AuthNavigation = () => {
         options={{ headerShown: false, presentation: 'modal' }}
       />
 
+      {/* VERIFICATION SUCCESS SCREEN */}
+      <Stack.Screen
+        name={VerificationSuccessScreen_Nav}
+        component={VerificationSuccessScreen}
+        options={headerNoBack}
+      />
 
+      {/* HELP CENTER SCREEN */}
+      <Stack.Screen
+        name={HelpCenter_Nav}
+        component={HelpCenterScreen}
+        options={headerNoBack}
+      />
 
+      {/* FAQ SCREEN */}
+      <Stack.Screen
+        name={FAQScreen_Nav}
+        component={FAQScreen}
+        options={headerNoBack}
+      />
+
+      {/* CHATBOT SCREEN */}
+      <Stack.Screen
+        name={ChatbotScreen_Nav}
+        component={ChatbotScreen}
+        options={headerNoBack}
+      />
 
     </Stack.Navigator>
   );

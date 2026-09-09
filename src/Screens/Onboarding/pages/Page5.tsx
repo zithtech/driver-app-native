@@ -11,9 +11,11 @@ import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { hS, vS, mS } from '../../../lib/scale';
 import { useTranslation } from 'react-i18next';
+import { useAppTheme } from '../../../context/ThemeContext';
 
 const Page5 = () => {
   const { t } = useTranslation();
+  const { isDark, theme } = useAppTheme();
 
   return (
     <ScrollView
@@ -37,7 +39,7 @@ const Page5 = () => {
       {/* TITLE */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(200)}
-        style={styles.title}
+        style={[styles.title, { color: theme.colors.text }]}
         adjustsFontSizeToFit
         numberOfLines={1}
       >
@@ -47,7 +49,7 @@ const Page5 = () => {
       {/* REGISTRATION DESCRIPTION / FOOTER */}
       <Animated.Text
         entering={FadeInDown.duration(600).delay(250)}
-        style={styles.footerText}
+        style={[styles.footerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}
       >
         {t('registration_footer')}
       </Animated.Text>
@@ -57,52 +59,52 @@ const Page5 = () => {
         entering={FadeInDown.duration(600).delay(300)}
         style={styles.list}
       >
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <View style={styles.circle}>
             <Text style={styles.circleText}>1</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_personal')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemTitle, { color: theme.colors.text }]}>{t('ob_step_personal')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
               {t('ob_step_personal_sub')}
             </Text>
           </View>
           <Icon name="user" size={mS(20)} color="#64B5F6" />
         </View>
 
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <View style={styles.circle}>
             <Text style={styles.circleText}>2</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_documents')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemTitle, { color: theme.colors.text }]}>{t('ob_step_documents')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
               {t('ob_step_documents_sub')}
             </Text>
           </View>
           <Icon name="file-text" size={mS(20)} color="#64B5F6" />
         </View>
 
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <View style={styles.circle}>
             <Text style={styles.circleText}>3</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_verify')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemTitle, { color: theme.colors.text }]}>{t('ob_step_verify')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
               {t('ob_step_verify_sub')}
             </Text>
           </View>
           <Icon name="check-circle" size={mS(20)} color="#64B5F6" />
         </View>
 
-        <View style={styles.item}>
+        <View style={[styles.item, { backgroundColor: theme.colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
           <View style={styles.circle}>
             <Text style={styles.circleText}>4</Text>
           </View>
           <View style={styles.itemContent}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemTitle}>{t('ob_step_accept')}</Text>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.itemSub}>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemTitle, { color: theme.colors.text }]}>{t('ob_step_accept')}</Text>
+            <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.itemSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
               {t('ob_step_accept_sub')}
             </Text>
           </View>

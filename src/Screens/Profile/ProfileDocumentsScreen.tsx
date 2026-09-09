@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSelector, useDispatch } from 'react-redux';
+import Svg, { Circle } from 'react-native-svg';
 
 import { useAppTheme } from '../../context/ThemeContext';
 import AppStatusBar from '../../Components/AppStatusBar';
@@ -51,7 +52,7 @@ const DOCUMENTS_CONFIG: DocumentItem[] = [
     backendType: 'profile_selfie',
     labelKey: 'profile_selfie',
     subtitleKey: 'photo_subtitle',
-    Logo: ({ width }: any) => <Ionicons name="person-add-outline" size={width || 28} color="#2563EB" />,
+    Logo: () => <Image source={require('../../assets/images/3.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />,
     side: ['front'],
     required: true,
   },
@@ -60,7 +61,7 @@ const DOCUMENTS_CONFIG: DocumentItem[] = [
     backendType: 'driving_license',
     labelKey: 'driving_license',
     subtitleKey: 'dl_subtitle',
-    Logo: DrivingLicence,
+    Logo: () => <Image source={require('../../assets/images/drivinglicense.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />,
     side: ['front', 'back'],
     required: true,
   },
@@ -69,7 +70,7 @@ const DOCUMENTS_CONFIG: DocumentItem[] = [
     backendType: 'pan_card',
     labelKey: 'pan_card',
     subtitleKey: 'pan_subtitle',
-    Logo: PanCard,
+    Logo: () => <Image source={require('../../assets/images/1.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />,
     side: ['front'],
     required: true,
   },
@@ -78,7 +79,7 @@ const DOCUMENTS_CONFIG: DocumentItem[] = [
     backendType: 'aadhaar_card',
     labelKey: 'aadhar_card',
     subtitleKey: 'aadhaar_subtitle',
-    Logo: AadharCard,
+    Logo: () => <Image source={require('../../assets/images/oo.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />,
     side: ['front', 'back'],
     required: true,
   },
@@ -87,7 +88,7 @@ const DOCUMENTS_CONFIG: DocumentItem[] = [
     backendType: 'police_verification',
     labelKey: 'police_verification',
     subtitleKey: 'police_subtitle',
-    Logo: PoliceVerification,
+    Logo: () => <Image source={require('../../assets/images/2.png')} style={{ width: '100%', height: '100%' }} resizeMode="cover" />,
     side: ['front'],
     required: false,
   },
@@ -101,72 +102,71 @@ const SUGGESTIONS = [
 
 /* ================= COMPONENTS ================= */
 
-const VerificationRoadmap = ({ status, t, isDark, theme }: { status: string | undefined; t: any; isDark: boolean; theme: any }) => {
-  const steps = [
-    { 
-      key: 'Submitted', 
-      icon: 'cloud-done', 
-      status: ['DOCS_SUBMITTED', 'DOCUMENTS_SUBMITTED', 'DOCUMENTS_APPROVED', 'DOCS_VERIFIED', 'VERIFIED', 'SUBSCRIPTION_ACTIVE', 'ACTIVE'] 
-    },
-    { 
-      key: 'Under Review', 
-      icon: 'time', 
-      status: ['DOCS_SUBMITTED', 'DOCUMENTS_SUBMITTED'] 
-    },
-    { 
-      key: 'Activated', 
-      icon: 'checkmark-circle', 
-      status: ['DOCUMENTS_APPROVED', 'DOCS_VERIFIED', 'VERIFIED', 'SUBSCRIPTION_ACTIVE', 'ACTIVE'] 
-    },
-  ];
+const OverallVerificationCard = ({ verifiedCount, totalCount, t, isDark, theme }: any) => {
+  const progress = totalCount > 0 ? verifiedCount / totalCount : 0;
+  const radius = 24;
+  const strokeWidth = 5;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - progress * circumference;
 
-  const currentStepIndex = useMemo(() => {
-    if (!status) return 0;
-    const normalizedStatus = status.toUpperCase();
-    for (let i = steps.length - 1; i >= 0; i--) {
-      if (steps[i].status.includes(normalizedStatus)) return i;
-    }
-    return 0;
-  }, [status]);
-  
   return (
-    <View style={styles.roadmapContainer}>
-      <Text style={[styles.sectionTitle, { color: isDark ? theme.colors.textMuted : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>
-        {t('verification_plan') || 'Verification Progress'}
-      </Text>
-      <View style={styles.roadmapRow}>
-        {steps.map((step, index) => {
-          const isActive = index <= currentStepIndex;
-          
-          return (
-            <React.Fragment key={step.key}>
-              <View style={styles.roadmapStep}>
-                <View style={[
-                  styles.roadmapIconCircle, 
-                  { backgroundColor: isActive ? '#10B981' : (isDark ? '#2C2C2E' : '#F3F4F6') }
-                ]}>
-                  <Ionicons 
-                    name={step.icon} 
-                    size={16} 
-                    color={isActive ? '#FFFFFF' : (isDark ? '#9CA3AF' : '#9CA3AF')} 
-                  />
-                </View>
-                <Text style={[
-                  styles.roadmapStepText, 
-                  { color: isActive ? (isDark ? '#34D399' : '#059669') : (isDark ? '#9CA3AF' : '#6B7280') }
-                ]}>
-                  {t(step.key.toLowerCase().replace(/ /g, '_')) || step.key}
-                </Text>
-              </View>
-              {index < steps.length - 1 && (
-                <View style={[
-                  styles.roadmapLine, 
-                  { backgroundColor: index < currentStepIndex ? '#10B981' : (isDark ? '#2C2C2E' : '#E5E7EB') }
-                ]} />
-              )}
-            </React.Fragment>
-          );
-        })}
+    <View style={[styles.overallCard, { backgroundColor: 'transparent', borderColor: isDark ? '#2C2C2E' : '#E5E7EB' }]}>
+      <View style={styles.overallLeftSection}>
+        <View style={styles.circularProgressContainer}>
+          <Svg width={(radius + strokeWidth) * 2} height={(radius + strokeWidth) * 2}>
+            <Circle
+              stroke={isDark ? '#374151' : '#EFF6FF'}
+              fill="none"
+              cx={radius + strokeWidth}
+              cy={radius + strokeWidth}
+              r={radius}
+              strokeWidth={strokeWidth}
+            />
+            <Circle
+              stroke="#2563EB"
+              fill="none"
+              cx={radius + strokeWidth}
+              cy={radius + strokeWidth}
+              r={radius}
+              strokeWidth={strokeWidth}
+              strokeDasharray={`${circumference} ${circumference}`}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              rotation="-90"
+              origin={`${radius + strokeWidth}, ${radius + strokeWidth}`}
+            />
+          </Svg>
+          <View style={styles.circularTextContainer}>
+            <Text style={[styles.progressText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              {verifiedCount}/{totalCount}
+            </Text>
+            <Text style={[styles.verifiedLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+              {t('verified') || 'Verified'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.cardDivider, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
+      </View>
+
+      <View style={styles.overallMiddleSection}>
+        <Text style={[styles.overallTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+          {t('overall_verification') || 'Overall Verification'}
+        </Text>
+        <Text style={[styles.overallSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          {t('almost_there_desc') || "You're almost there! Complete remaining documents to start getting ride requests."}
+        </Text>
+        <View style={[styles.horizontalProgressBarBg, { backgroundColor: isDark ? '#374151' : '#EFF6FF' }]}>
+          <View style={[styles.horizontalProgressBarFill, { width: `${progress * 100}%`, backgroundColor: '#2563EB' }]} />
+        </View>
+      </View>
+
+      <View style={styles.overallRightSection}>
+        <Image 
+          source={require('../../assets/images/file.png')} 
+          style={styles.fileIllustration} 
+          resizeMode="contain" 
+        />
       </View>
     </View>
   );
@@ -214,15 +214,27 @@ const DocumentRow = ({ doc, status, previews, reason, onUpload, onView, t, isDar
         ]}
       >
         <View style={styles.docRowLeft}>
-          <View style={styles.docIconBox}>
-            {imageUri && !loadError ? (
+          <View style={[styles.docIconBoxLarge, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }]}>
+            {doc.key === 'Profile_Selfie' ? (
+               <Image source={require('../../assets/images/3.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+            ) : doc.key === 'Aadhar_Card' ? (
+               <Image source={require('../../assets/images/oo.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+            ) : doc.key === 'Driving_License' ? (
+               <Image source={require('../../assets/images/drivinglicense.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+            ) : doc.key === 'Pan_Card' ? (
+               <Image source={require('../../assets/images/1.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+            ) : doc.key === 'Police_Verification' ? (
+               <Image source={require('../../assets/images/2.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+            ) : imageUri && !loadError ? (
               <Image 
                 source={{ uri: imageUri }} 
-                style={styles.thumbnail} 
+                style={styles.thumbnailLarge} 
                 onError={() => setLoadError(true)}
               />
             ) : (
-              <doc.Logo width={28} height={28} />
+              <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                 <doc.Logo width="100%" height="100%" preserveAspectRatio="xMidYMid slice" />
+              </View>
             )}
           </View>
 
@@ -264,11 +276,58 @@ const DocumentRow = ({ doc, status, previews, reason, onUpload, onView, t, isDar
   );
 };
 
+const InfoCard = ({ t, isDark }: any) => (
+  <View style={[styles.infoCard, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#EFF6FF' }]}>
+    <Ionicons name="information-circle" size={20} color="#2563EB" style={styles.infoIcon} />
+    <View style={styles.infoTextContainer}>
+      <Text style={[styles.infoTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1}>
+        {t('why_verification_important', 'Why document verification is important?')}
+      </Text>
+      <Text style={[styles.infoSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
+        {t('verification_reason', 'It helps us ensure your safety and build trust with riders.')}
+      </Text>
+    </View>
+    <Image 
+      source={require('../../assets/images/file.png')} 
+      style={styles.infoImage} 
+      resizeMode="contain" 
+    />
+  </View>
+);
+
+const SupportCard = ({ t, onPress }: any) => (
+  <Pressable style={styles.supportCard} onPress={onPress}>
+    <Ionicons name="headset" size={20} color="#FFFFFF" style={styles.supportIcon} />
+    <View style={styles.supportTextContainer}>
+      <Text style={styles.supportTitle}>
+        {t('need_help', 'Need Help?')}
+      </Text>
+      <Text style={styles.supportSubtitle}>
+        {t('contact_support_desc', 'Contact support for any document-related queries')}
+      </Text>
+    </View>
+    <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+  </Pressable>
+);
+
 /* ================= SCREEN ================= */
 
 const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
   const { theme, isDark } = useAppTheme();
-  const { t } = useTranslation();
+  const { t: originalT } = useTranslation();
+
+  const t = (key: string, fallback?: string) => {
+    if (!key) return '';
+    const translated = originalT(key);
+    if (translated === key) {
+      if (fallback) return fallback;
+      return key
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+    return translated;
+  };
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.userSlice.user);
   
@@ -316,42 +375,16 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
       );
     }
     
-    if (previews.length === 0 && backendType === 'profile_selfie') {
-      const profilePic = user?.profile_pic_url || user?.profile_picture;
-      if (profilePic) {
-        const resolvedProfilePic = resolveImageUrl(profilePic);
-        if (resolvedProfilePic) previews = [resolvedProfilePic];
-      }
-    }
-
-    if (!apiDoc && !localDoc && backendType === 'profile_selfie' && previews.length > 0) {
-      status = 'verified';
-    }
-
     const reason = apiDoc?.rejection_reason || apiDoc?.remarks || null;
     return { status, previews, preview: previews[0] || null, reason };
   };
 
-  const calculateDisplayStatus = () => {
-    const currentStatus = user?.onboarding_status || 'PENDING';
-    if (currentStatus === 'ACTIVE' || currentStatus === 'SUBSCRIPTION_ACTIVE') return currentStatus;
-
-    let allApproved = true;
-    let allSubmitted = true;
-    DOCUMENTS_CONFIG.forEach(doc => {
-      if (!doc.required) return;
-      const { status } = getDocStatusData(doc.backendType, doc.key);
-      const normalizedStatus = status.toLowerCase();
-      if (normalizedStatus !== 'verified' && normalizedStatus !== 'approved') allApproved = false;
-      if (normalizedStatus === 'missing' || normalizedStatus === 'rejected') allSubmitted = false;
-    });
-
-    if (allApproved) return 'DOCUMENTS_APPROVED';
-    if (allSubmitted) return 'DOCS_SUBMITTED';
-    return currentStatus;
-  };
-
-  const displayStatus = calculateDisplayStatus();
+  let verifiedCount = 0;
+  DOCUMENTS_CONFIG.forEach(doc => {
+    const { status } = getDocStatusData(doc.backendType, doc.key);
+    if (status === 'verified' || status === 'approved') verifiedCount++;
+  });
+  const totalCount = DOCUMENTS_CONFIG.length;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}>
@@ -370,9 +403,9 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={theme.colors.primary} />}
       >
-        <VerificationRoadmap status={displayStatus} t={t} isDark={isDark} theme={theme} />
+        <OverallVerificationCard verifiedCount={verifiedCount} totalCount={totalCount} t={t} isDark={isDark} theme={theme} />
         
-        <Section title={t('identity_documents') || 'Identity & Verification'} isDark={isDark} theme={theme}>
+        <Section title={t('identity_documents', 'Identity & Verification')} isDark={isDark} theme={theme}>
           {DOCUMENTS_CONFIG.map((doc, index) => {
             const { status, previews, reason } = getDocStatusData(doc.backendType, doc.key);
             const isLast = index === DOCUMENTS_CONFIG.length - 1;
@@ -399,10 +432,8 @@ const ProfileDocumentsScreen: React.FC = ({ navigation }: any) => {
           })}
         </Section>
 
-        <View style={styles.securityNote}>
-          <Ionicons name="shield-checkmark" size={16} color="#10B981" />
-          <Text style={[styles.securityNoteText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('docs_secure_note') || 'Your documents are encrypted and securely stored'}</Text>
-        </View>
+        <InfoCard t={t} isDark={isDark} />
+        <SupportCard t={t} onPress={() => {}} />
       </ScrollView>
 
       <ImageZoomModal
@@ -455,32 +486,80 @@ const styles = StyleSheet.create({
   tipsBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
   scrollContent: { padding: 16, paddingBottom: 40 },
   
-  // Roadmap Styles
-  roadmapContainer: {
-    marginBottom: 24,
-    paddingHorizontal: 8,
-  },
-  sectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 12, marginTop: 12, marginLeft: 8 },
-  roadmapRow: {
+  // Overall Verification Card Styles
+  overallCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 20,
+    marginTop: 4,
   },
-  roadmapStep: { alignItems: 'center', flex: 1 },
-  roadmapIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  overallLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  circularProgressContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
   },
-  roadmapStepText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  roadmapLine: { height: 2, flex: 1, marginBottom: 20 },
+  circularTextContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  verifiedLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    marginTop: 0,
+  },
+  cardDivider: {
+    width: 1,
+    height: 36,
+    marginHorizontal: 12,
+  },
+  overallMiddleSection: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 6,
+  },
+  overallTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  overallSubtitle: {
+    fontSize: 10,
+    lineHeight: 14,
+    marginBottom: 8,
+  },
+  horizontalProgressBarBg: {
+    height: 5,
+    borderRadius: 3,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  horizontalProgressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  overallRightSection: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  fileIllustration: {
+    width: 60,
+    height: 60,
+  },
+  sectionTitle: { fontSize: 12, fontWeight: '600', marginBottom: 8, marginTop: 8, marginLeft: 8 },
   
   // Section Styles
-  sectionContainer: { marginBottom: 24 },
+  sectionContainer: { marginBottom: 16 },
   sectionContent: {
     borderRadius: 12,
     borderWidth: 1,
@@ -491,33 +570,34 @@ const styles = StyleSheet.create({
   docRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   docRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  docIconBox: {
-    width: 40,
-    height: 40,
+  docIconBoxLarge: {
+    width: 52,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-    borderRadius: 8,
+    marginRight: 10,
+    borderRadius: 6,
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  thumbnail: { width: '100%', height: '100%', resizeMode: 'cover' },
+  thumbnailLarge: { width: '100%', height: '100%', resizeMode: 'cover' },
   docInfo: { flex: 1 },
-  docTitle: { fontSize: 15, fontWeight: '500', marginBottom: 2 },
+  docTitle: { fontSize: 14, fontWeight: '500', marginBottom: 1 },
   statusWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 12, fontWeight: '500', textTransform: 'capitalize' },
+  statusDot: { width: 5, height: 5, borderRadius: 2.5 },
+  statusText: { fontSize: 11, fontWeight: '500', textTransform: 'capitalize' },
   docRowRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -531,21 +611,66 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     padding: 12,
-    paddingLeft: 68,
+    paddingLeft: 92, // To align with docInfo
     paddingRight: 16,
     gap: 6,
   },
   rejectionReasonText: { fontSize: 12, color: '#EF4444', flex: 1, lineHeight: 18 },
   
-  // Misc
-  securityNote: {
+  // Bottom Cards
+  infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    gap: 6,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
   },
-  securityNoteText: { fontSize: 12, fontWeight: '500' },
+  infoIcon: {
+    marginRight: 10,
+  },
+  infoTextContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  infoTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  infoSubtitle: {
+    fontSize: 11,
+    lineHeight: 14,
+  },
+  infoImage: {
+    width: 40,
+    height: 40,
+  },
+  supportCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+  },
+  supportIcon: {
+    marginRight: 10,
+  },
+  supportTextContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  supportTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  supportSubtitle: {
+    fontSize: 11,
+    lineHeight: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
   
   // Modal Styles
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 },

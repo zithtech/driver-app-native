@@ -40,7 +40,7 @@ import {
   PoliceVerification,
 } from '../../assets/svg';
 
-import { DocumentUploadScreen_Nav, Dashboard_Nav } from '../../Navigations/navigations';
+import { DocumentUploadScreen_Nav, Dashboard_Nav, VerificationSuccessScreen_Nav } from '../../Navigations/navigations';
 import { useHaptic } from '../../hooks/useHaptic';
 import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
@@ -119,7 +119,7 @@ const AnimatedTips = ({ t, fonts }: { t: any; fonts: any }) => {
             ]}
           >
             <Ionicons name={tip.icon} size={16} color="#6B7280" />
-            <Text style={styles.tipText} numberOfLines={1} adjustsFontSizeToFit>{t(tip.key)}</Text>
+            <Text style={[styles.tipText, { color: fonts?.colors?.text || '#4B5563' }]} numberOfLines={1} adjustsFontSizeToFit>{t(tip.key)}</Text>
           </Animated.View>
         ))}
       </View>
@@ -284,7 +284,7 @@ const DocumentScreen = ({ navigation }: any) => {
       kycStatusStr === 'verified'
     ) {
       if (pollRef.current) clearInterval(pollRef.current);
-      navigation.replace(Dashboard_Nav, { showVerificationSuccess: true });
+      navigation.replace(VerificationSuccessScreen_Nav);
     }
   }, [user?.onboarding_status, user?.status, user?.kyc_status, navigation]);
 
@@ -443,23 +443,40 @@ const DocumentScreen = ({ navigation }: any) => {
       />
 
 
-      {/* PROGRESS HEADER */}
-      <View style={styles.progressHeader}>
-        <View style={styles.progressContainer}>
-          {requiredDocuments.map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.progressBar,
-                { backgroundColor: i < uploadedCount ? '#10B981' : (isDark ? '#374151' : '#E5E7EB') }
-              ]}
-            />
-          ))}
+      {/* PROGRESS BAR */}
+      <View style={styles.progressWrapper}>
+        <View style={styles.progressLineContainer}>
+           <View style={[styles.progressLine, { width: '100%', backgroundColor: colors.primary }]} />
         </View>
-        <View style={styles.progressLabelRow}>
-          <Text style={styles.progressText}>
-            {t('step_docs_label')} <Text style={styles.activeProgressText}>• {uploadedCount} {t('of')} {requiredDocuments.length} {t('completed')}</Text>
-          </Text>
+        <View style={styles.progressStepsRow}>
+          {/* Step 1 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              <Ionicons name="checkmark" size={16} color="#FFF" />
+            </View>
+            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Mobile{'\n'}Verification</Text>
+          </View>
+          {/* Step 2 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              <Ionicons name="checkmark" size={16} color="#FFF" />
+            </View>
+            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Personal{'\n'}Details</Text>
+          </View>
+          {/* Step 3 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              <Ionicons name="checkmark" size={16} color="#FFF" />
+            </View>
+            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Address{'\n'}Details</Text>
+          </View>
+          {/* Step 4 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              <Text style={[styles.stepNumber, { color: '#FFF' }]}>4</Text>
+            </View>
+            <Text style={[styles.stepText, { color: colors.primary }]}>Documents{'\n'}Upload</Text>
+          </View>
         </View>
       </View>
 
@@ -481,18 +498,28 @@ const DocumentScreen = ({ navigation }: any) => {
           </View>
         ) : (
           <>
-            <View style={{ marginBottom: 25, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flex: 1, paddingRight: 15 }}>
-                <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, { fontSize: 28, color: colors.text }]}>
-                  {t('docs_title')}
-                </Text>
-                <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 16, color: colors.text, opacity: 0.6, marginTop: 5 }}>
-                  {t('docs_subtitle')}
+            {/* HEADER SECTION */}
+            <View style={styles.headerSection}>
+              <View style={styles.headerTextContainer}>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('documents_upload_title', 'Documents Upload')}</Text>
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  Please upload clear and original documents.
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowTips(true)} style={{ padding: 10 }}>
-                 <Ionicons name="bulb" size={24} color="#F59E0B" />
-              </TouchableOpacity>
+              <Image 
+                source={require('../../assets/images/documents.png')} 
+                style={styles.headerImage} 
+              />
+            </View>
+
+            {/* INFO BANNER */}
+            <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : '#EFF6FF' }]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: colors.primary }]}>
+                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>i</Text>
+              </View>
+              <Text style={[styles.infoBannerText, { color: colors.text }]}>
+                All documents are secure and will be used only for verification purposes.
+              </Text>
             </View>
 
             {/* REJECTION BANNER */}
@@ -513,11 +540,24 @@ const DocumentScreen = ({ navigation }: any) => {
 
 
             {/* LIST */}
-            {otherDocs.map((doc) => {
+            {otherDocs.map((doc, index) => {
               const state = getDocState(doc);
               const currentStatus = (state.status || '').toLowerCase();
-              const isDone = currentStatus === 'uploaded' || currentStatus === 'pending' || currentStatus === 'verified';
+              const isDone = currentStatus === 'uploaded' || currentStatus === 'pending' || currentStatus === 'verified' || currentStatus === 'approved';
               const isRejected = currentStatus === 'rejected';
+
+              const isLast = index === otherDocs.length - 1;
+              const statusColors: any = {
+                verified: { dot: '#10B981', text: isDark ? '#34D399' : '#059669' },
+                approved: { dot: '#10B981', text: isDark ? '#34D399' : '#059669' },
+                pending: { dot: '#F59E0B', text: isDark ? '#FBBF24' : '#D97706' },
+                uploaded: { dot: '#F59E0B', text: isDark ? '#FBBF24' : '#D97706' },
+                rejected: { dot: '#EF4444', text: isDark ? '#F87171' : '#DC2626' },
+                missing: { dot: isDark ? '#4B5563' : '#D1D5DB', text: isDark ? '#9CA3AF' : '#6B7280' },
+              };
+              
+              const displayStatus = isDone ? currentStatus : (isRejected ? 'rejected' : 'missing');
+              const activeStatus = statusColors[displayStatus] || statusColors.missing;
 
               return (
                 <TouchableOpacity
@@ -527,74 +567,78 @@ const DocumentScreen = ({ navigation }: any) => {
                     navigation.navigate(DocumentUploadScreen_Nav, { doc });
                   }}
                   style={[
-                    styles.docItem,
-                    { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' },
-                    isDone && { borderLeftWidth: 4, borderLeftColor: '#10B981' },
-                    isRejected && { borderLeftWidth: 4, borderLeftColor: '#EF4444', backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FFF5F5' }
+                    styles.docRow,
+                    !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? '#2C2C2E' : '#E5E7EB' },
+                    isRejected && { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.05)' : 'rgba(239, 68, 68, 0.05)' }
                   ]}
                 >
-                  <View style={[styles.docIconBox, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.1)' : '#F3F7FF' }, doc.key === 'Profile_Selfie' && { borderRadius: 25, overflow: 'hidden' }]}>
-                    {doc.key === 'Profile_Selfie' && state.preview ? (
-                       <Image source={{ uri: resolveImageUrl(state.preview) }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                    ) : (
-                       <doc.Logo width={30} height={30} />
-                    )}
-                  </View>
-
-                  <View style={{ flex: 1, marginLeft: 15 }}>
-                    <Text adjustsFontSizeToFit numberOfLines={1} style={[fonts.bold, { fontSize: 16, color: colors.text }]}>
-                      {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
-                    </Text>
-                    <Text adjustsFontSizeToFit numberOfLines={1} style={{ fontSize: 12, color: colors.text, opacity: 0.5 }}>
-                      {t(doc.typeKey)} • {t(doc.hintKey)}
-                    </Text>
-
-                    {!isDone && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                        <Ionicons name="cloud-upload-outline" size={16} color="#10B981" />
-                        <Text style={{ color: '#10B981', fontSize: 13, marginLeft: 6, fontWeight: '600' }}>
-                          {t('tap_to_upload') || 'Tap to upload'}
+                  <View style={styles.docRowLeft}>
+                    <View style={[styles.docIconBoxLarge, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? theme.colors.card : '#F9FAFB' }]}>
+                      {doc.key === 'Profile_Selfie' ? (
+                         <Image source={require('../../assets/images/3.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+                      ) : doc.key === 'Aadhar_Card' ? (
+                         <Image source={require('../../assets/images/oo.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+                      ) : doc.key === 'Driving_License' ? (
+                         <Image source={require('../../assets/images/drivinglicense.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+                      ) : doc.key === 'Pan_Card' ? (
+                         <Image source={require('../../assets/images/1.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+                      ) : doc.key === 'Police_Verification' ? (
+                         <Image source={require('../../assets/images/2.png')} style={styles.thumbnailLarge} resizeMode="cover" />
+                      ) : state.preview ? (
+                        <Image 
+                          source={{ uri: resolveImageUrl(state.preview) }} 
+                          style={styles.thumbnailLarge} 
+                        />
+                      ) : (
+                        <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                           <doc.Logo width={30} height={30} preserveAspectRatio="xMidYMid slice" />
+                        </View>
+                      )}
+                    </View>
+          
+                    <View style={styles.docInfo}>
+                      <Text style={[styles.docTitle, { color: colors.text }]} numberOfLines={1}>
+                        {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
+                      </Text>
+                      
+                      <View style={styles.statusWrapper}>
+                        <View style={[styles.statusDot, { backgroundColor: activeStatus.dot }]} />
+                        <Text style={[styles.statusText, { color: activeStatus.text }]}>
+                          {t(displayStatus)}
                         </Text>
                       </View>
-                    )}
-
-                    {isDone && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 12 }}>
-
-                        <TouchableOpacity
-                          onPress={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
-                          style={[styles.actionBtn, { backgroundColor: isDark ? '#374151' : '#F3F4F6', borderColor: isDark ? '#4B5563' : '#E5E7EB' }]}
-                        >
-                          <Ionicons name="camera-outline" size={14} color={isDark ? '#D1D5DB' : '#6B7280'} />
-                          <Text style={[styles.actionText, { color: isDark ? '#D1D5DB' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
-                    {isRejected && state.rejection_reason && (
-                      <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '600' }}>
-                        {t('rejected')}: {state.rejection_reason}
-                      </Text>
-                    )}
+                      
+                      {!isDone && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                          <Ionicons name="cloud-upload-outline" size={14} color="#10B981" />
+                          <Text style={{ color: '#10B981', fontSize: 12, marginLeft: 4, fontWeight: '600' }}>
+                            {t('tap_to_upload') || 'Tap to upload'}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {isRejected && state.rejection_reason && (
+                        <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '600' }}>
+                          {t('rejected')}: {state.rejection_reason}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-
-                  <View style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: isRejected ? '#EF4444' : isDone ? '#10B981' : (isDark ? '#374151' : '#F3F4F6'),
-                      borderWidth: isDone || isRejected ? 0 : 1,
-                      borderColor: isDark ? '#4B5563' : '#E5E7EB'
-                    }
-                  ]}>
-                    <Ionicons
-                      name={isRejected ? 'close' : isDone ? 'checkmark' : 'chevron-forward'}
-                      size={isDone ? 20 : 18}
-                      color={isDone || isRejected ? '#FFFFFF' : '#9CA3AF'}
-                    />
-                  </View>
+                  
+                  {isDone && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
+                      style={[styles.actionBtn, { backgroundColor: isDark ? '#374151' : '#F3F4F6', borderColor: isDark ? '#4B5563' : '#E5E7EB' }]}
+                    >
+                      <Ionicons name="camera-outline" size={14} color={isDark ? '#D1D5DB' : '#6B7280'} />
+                      <Text style={[styles.actionText, { color: isDark ? '#D1D5DB' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <Ionicons name="chevron-forward" size={20} color={isDark ? '#4B5563' : '#9CA3AF'} style={{ marginLeft: 12 }} />
                 </TouchableOpacity>
               );
             })}
+
 
 
 
@@ -611,12 +655,19 @@ const DocumentScreen = ({ navigation }: any) => {
             handleSubmit();
           }}
           style={[
-            { height: 56, borderRadius: 16 },
+            { height: 48, borderRadius: 12 },
             allUploaded && !isSubmitting && { backgroundColor: '#10B981', borderColor: '#10B981' }
           ]}
         >
           {allUploaded && !isSubmitting ? t('ready_to_submit') : t('submit_for_verification')}
         </Button>
+        
+        <View style={styles.secureInfoContainer}>
+          <Ionicons name="lock-closed-outline" size={14} color="#6B7280" />
+          <Text style={[styles.secureInfoText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+            {t('safe_secure_info', 'Your information is safe and secure with us')}
+          </Text>
+        </View>
       </View>
 
       <ImageZoomModal
@@ -668,60 +719,155 @@ const DocumentScreen = ({ navigation }: any) => {
 export default DocumentScreen;
 
 const styles = StyleSheet.create({
-  progressHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+  /* Progress Bar */
+  progressWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 4,
+    position: 'relative',
   },
-  progressContainer: {
+  progressLineContainer: {
+    position: 'absolute',
+    top: 22,
+    left: 40,
+    right: 40,
+    height: 2,
     flexDirection: 'row',
-    gap: 6,
-    height: 4,
   },
-  progressBar: {
-    flex: 1,
+  progressLine: {
     height: '100%',
-    borderRadius: 2,
   },
-  progressLabelRow: {
+  progressStepsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  stepContainer: {
+    alignItems: 'center',
+    width: 60,
+  },
+  stepCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  stepNumber: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  stepText: {
+    fontSize: 9,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  /* Header Section */
+  headerSection: {
+    position: 'relative',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    minHeight: 60,
+  },
+  headerTextContainer: {
+    width: '65%',
+    justifyContent: 'center',
+    paddingRight: 10,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  headerImage: {
+    position: 'absolute',
+    right: -10,
+    top: -30,
+    width: 130,
+    height: 130,
+    resizeMode: 'contain',
+    zIndex: 1,
+  },
+
+  /* Info Banner */
+  infoBanner: {
+    backgroundColor: '#EFF6FF',
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#2563EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginRight: 10,
   },
-  progressText: {
+  infoBannerText: {
+    flex: 1,
     fontSize: 12,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: '#1F2937',
+    lineHeight: 16,
   },
-  activeProgressText: {
-    color: '#2563EB',
-  },
+  // Document Row Styles
   docItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 8,
+    padding: 12,
+    borderRadius: 12,
   },
   docIconBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 15,
-    backgroundColor: '#F3F7FF',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 8,
   },
-  statusBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
+  docRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 12,
   },
+  docRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  docIconBoxLarge: {
+    width: 52,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  thumbnailLarge: { width: '100%', height: '100%', resizeMode: 'cover' },
+  docInfo: { flex: 1 },
+  docTitle: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
+  statusWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusDot: { width: 5, height: 5, borderRadius: 2.5 },
+  statusText: { fontSize: 11, fontWeight: '500', textTransform: 'capitalize' },
   waitingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -740,10 +886,22 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingTop: 15,
+    paddingBottom: 25,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
+  },
+  secureInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    gap: 6,
+  },
+  secureInfoText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   /* --- NEW WAITING UI STYLES --- */
   waitingIconWrapper: {
@@ -941,35 +1099,49 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   tipsContainer: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 20,
+    flexDirection: 'row',
+    backgroundColor: '#F5F3FF',
+    borderRadius: 16,
     padding: 16,
-    marginTop: 10,
+    marginTop: 16,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
+    alignItems: 'flex-start',
+  },
+  tipsIconContainer: {
+    marginRight: 12,
+  },
+  tipsContent: {
+    flex: 1,
   },
   tipsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+    gap: 6,
+  },
+  tipsList: {
+    flexDirection: 'column',
+    gap: 8,
   },
   tipsTitle: {
     fontSize: 15,
-    color: '#92400E',
-    marginLeft: 8,
+    fontWeight: '700',
+    color: '#1F2937',
   },
-  tipsList: {
-    gap: 8,
+  tipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 12,
+    rowGap: 4,
   },
   tipItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   tipText: {
-    fontSize: 13,
-    color: '#4B5563',
-    marginLeft: 10,
-    lineHeight: 18,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
 });

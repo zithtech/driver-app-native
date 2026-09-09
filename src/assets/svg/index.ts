@@ -16,6 +16,7 @@ import Lock from './lock.svg';
 import RightArrow from './RightArrow.svg';
 import LockOpen from './LockOpen.svg';
 import Logo from './Logo.svg';
+import SuccessIcon from './success.svg';
 
 export {
   CarLogo,
@@ -36,4 +37,5 @@ export {
   Lock,
   LockOpen,
   Logo,
+  SuccessIcon,
 };

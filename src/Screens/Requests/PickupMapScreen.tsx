@@ -277,7 +277,7 @@ const PickupMapScreen = ({ route }: any) => {
       // No Alert here — RootNavigation handles the global UI alert.
       // This avoids the double-alert race condition in Fabric.
       isExitingRef.current = true;
-      navigation.dispatch(StackActions.replace('DashboardScreen'));
+      navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
     }
   }, [reduxCurrentRide, navigation, showSuccess]);
 
@@ -753,7 +753,7 @@ const PickupMapScreen = ({ route }: any) => {
       setTimeout(() => {
         hideAlert();
         dispatch(clearAcceptedRide());
-        navigation.dispatch(StackActions.replace('DashboardScreen'));
+        navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
     } catch (error: any) {
       console.error('Cancellation failed:', error);
@@ -775,7 +775,7 @@ const PickupMapScreen = ({ route }: any) => {
         icon: isAlreadyCancelled ? 'close-circle-outline' : 'alert-circle-outline',
         onConfirm: shouldAllowForceClear ? () => {
           dispatch(clearAcceptedRide());
-          navigation.dispatch(StackActions.replace('DashboardScreen'));
+          navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
       });
     }

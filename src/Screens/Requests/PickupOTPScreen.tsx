@@ -123,7 +123,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         hideAlert();
         onClose();
         dispatch(clearAcceptedRide());
-        navigation.replace('DashboardScreen');
+        navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
     } catch (error: any) {
       console.error('Cancellation failed:', error);
@@ -146,7 +146,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         onConfirm: shouldAllowForceClear ? () => {
           onClose(); // Close OTP modal
           dispatch(clearAcceptedRide());
-          navigation.dispatch(StackActions.replace('DashboardScreen'));
+          navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
       });
     }
@@ -349,6 +349,13 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
                   </View>
                 )}
               </View>
+            </View>
+
+            {/* DEVELOPMENT ONLY: Show OTP */}
+            <View style={{ backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginTop: 16, marginBottom: -10, borderWidth: 1, borderColor: '#F59E0B', borderStyle: 'dashed', alignSelf: 'center', width: '80%' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#D97706', textAlign: 'center' }}>
+                🚧 Dev Mode OTP: {ride?.otp || DEMO_OTP} 🚧
+              </Text>
             </View>
 
             {/* OTP SECTION */}

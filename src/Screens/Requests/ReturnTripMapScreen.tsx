@@ -225,7 +225,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
     if (!reduxCurrentRide) {
       console.log('[DropMapScreen] Active ride cleared from Redux, exiting...');
       isExitingRef.current = true;
-      navigation.dispatch(StackActions.replace('DashboardScreen'));
+      navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
     }
   }, [reduxCurrentRide, navigation]);
 
@@ -634,7 +634,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
       setTimeout(() => {
         hideAlert();
         dispatch(clearAcceptedRide());
-        navigation.dispatch(StackActions.replace('DashboardScreen'));
+        navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
     } catch (error: any) {
       console.error('Cancellation failed:', error);
@@ -645,7 +645,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
         icon: 'alert-circle-outline',
         onConfirm: error?.status === 500 ? () => {
           dispatch(clearAcceptedRide());
-          navigation.dispatch(StackActions.replace('DashboardScreen'));
+          navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
       });
     }
@@ -1011,7 +1011,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
                 <Ionicons name="location" size={ms(20)} color="#EF4444" />
               </View>
               <Text style={[styles.addressText, { color: theme.colors.text }]}>
-                {ride.drop_address || ride.drop || t('destination')}
+                {ride.pickup_address || ride.pickup || t('destination')}
               </Text>
             </View>
 

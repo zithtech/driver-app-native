@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
@@ -8,47 +7,30 @@ import {
   StyleSheet,
   FlatList,
   Pressable,
-  Alert,
-  Modal,
-  Platform,
   RefreshControl,
-  InteractionManager,
+  ScrollView,
+  Dimensions,
+  ImageBackground,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
-import { useGetEarningsSummaryQuery, useGetEarningsTransactionsQuery } from '../../service/driverApi';
-import colors from '../../constant/colors';
-
-interface Transaction {
-  id: string;
-  title: string;
-  date: string;
-  time?: string;
-  pickup?: string;
-  drop?: string;
-  amount: number;
-  distance?: string;
-  status: string;
-}
-
-
-
-
-import { useTranslation } from 'react-i18next';
-import { useTheme } from '@react-navigation/native';
-import { useAlert } from '../../context/AlertContext';
+import { useGetEarningsSummaryQuery, useGetEarningsTransactionsQuery, useGetWalletBalanceQuery } from '../../service/driverApi';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import RNPrint from 'react-native-print';
+import LinearGradient from 'react-native-linear-gradient';
 import { useAppTheme } from '../../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import AppStatusBar from '../../Components/AppStatusBar';
+import { startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 
-/* ================= SCREEN ================= */
+// We import these but if it fails we might need to mock
+import { LineChart, PieChart } from 'react-native-gifted-charts';
 
-const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
-  const { colors, fonts } = useTheme();
-  const { showAlert } = useAlert();
+const { width } = Dimensions.get('window');
+
+const EarningsScreen: React.FC<any> = ({ navigation }) => {
   const { t } = useTranslation();
   const { theme, isDark } = useAppTheme();
   const user = useSelector((state: RootState) => state.userSlice.user);
@@ -57,930 +39,589 @@ const EarningsScreen: React.FC<any> = ({ navigation, route }) => {
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
 
-  const [activeTab, setActiveTab] =
-    useState<'today' | 'week' | 'month'>('today'); 
-  const [selectedRange, setSelectedRange] = useState('Today');
+  const [filterType, setFilterType] = useState<'today' | 'week' | 'month' | 'lifetime'>('lifetime');
 
-  const [selectedPayout, setSelectedPayout] = useState<Transaction | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const dateRange = React.useMemo(() => {
+    const now = new Date();
+    switch (filterType) {
+      case 'today':
+        return { from: startOfDay(now).toISOString(), to: now.toISOString() };
+      case 'week':
+        return { from: startOfWeek(now, { weekStartsOn: 1 }).toISOString(), to: now.toISOString() };
+      case 'month':
+        return { from: startOfMonth(now).toISOString(), to: now.toISOString() };
+      case 'lifetime':
+      default:
+        return { from: undefined, to: undefined };
+    }
+  }, [filterType]);
 
   // API Hooks
   const {
     data: summaryResult,
     isLoading: isSummaryLoading,
     refetch: refetchSummary,
-    isFetching: isSummaryFetching,
-  } = useGetEarningsSummaryQuery(
-    { driverId },
-    { skip: !driverId }
-  );
+  } = useGetEarningsSummaryQuery({ driverId, from: dateRange.from, to: dateRange.to }, { skip: !driverId });
 
   const {
     data: transactionsResult,
     isLoading: isTransactionsLoading,
     refetch: refetchTransactions,
-    isFetching: isTransactionsFetching,
-  } = useGetEarningsTransactionsQuery(
-    { driverId },
-    { skip: !driverId }
-  );
+  } = useGetEarningsTransactionsQuery({ driverId, from: dateRange.from, to: dateRange.to, limit: 5 }, { skip: !driverId });
 
-  const summary = {
-    total: `₹${summaryResult?.data?.totalEarnings || 0}`,
-    stats: {
-      trips: summaryResult?.data?.tripsCompleted || 0,
-      hours: summaryResult?.data?.onlineHours !== undefined ? `${summaryResult.data.onlineHours}h 0m` : '0h 0m',
-      incentive: `₹${summaryResult?.data?.tips || 0}`,
-    },
+  const {
+    data: walletResult,
+    isLoading: isWalletLoading,
+    refetch: refetchWallet,
+  } = useGetWalletBalanceQuery(driverId, { skip: !driverId });
+
+  // Format decimal hours into "Xh Ym" string
+  const formatHours = (decimalHours: number): string => {
+    if (!decimalHours || decimalHours <= 0) return '0h 0m';
+    const h = Math.floor(decimalHours);
+    const m = Math.round((decimalHours - h) * 60);
+    return `${h}h ${m}m`;
   };
 
-  const transactions = transactionsResult?.data || [];
+  const summary = {
+    total: summaryResult?.data?.totalEarnings || 0,
+    trips: summaryResult?.data?.tripsCompleted || 0,
+    hours: formatHours(summaryResult?.data?.onlineHours || 0),
+    avgPerTrip: summaryResult?.data?.avgPerTrip || 0,
+    tips: summaryResult?.data?.tips || 0,
+    growthPercentage: summaryResult?.data?.growth?.earnings,
+    growth: summaryResult?.data?.growth || {},
+  };
 
-  const isLoading = isSummaryLoading || isTransactionsLoading;
+  // Renders a small growth badge (arrow + %) or nothing if no data
+  const renderGrowthBadge = (value?: number) => {
+    if (value === undefined || value === null || filterType === 'lifetime') return null;
+    const isPositive = value >= 0;
+    return (
+      <View style={styles.statGrowth}>
+        <Ionicons name={isPositive ? 'arrow-up' : 'arrow-down'} size={10} color={isPositive ? '#16A34A' : '#EF4444'} />
+        <Text style={[styles.statGrowthTextPos, !isPositive && { color: '#EF4444' }]}>{Math.abs(value).toFixed(1)}%</Text>
+      </View>
+    );
+  };
+
+  const walletBalance = walletResult?.data?.balance || 0;
+
+  const transactions = transactionsResult?.data?.length ? transactionsResult.data.slice(0, 5) : [];
+
+  const handleTransactionPress = (tx: any) => {
+    triggerHaptic(HapticFeedbackTypes.impactLight);
+    if (tx.source === 'ride' && tx.tripData) {
+      navigation.navigate('RideDetailScreen', { ride: tx.tripData });
+    } else if (tx.source === 'wallet' && tx.walletData) {
+      navigation.navigate('TransactionDetailScreen', { transaction: tx.walletData });
+    }
+  };
+
+  const isLoading = isSummaryLoading || isTransactionsLoading || isWalletLoading;
   const [isManualRefresh, setIsManualRefresh] = useState(false);
 
   const onRefresh = useCallback(async () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
     setIsManualRefresh(true);
-    await Promise.all([refetchSummary(), refetchTransactions()]);
+    await Promise.all([refetchSummary(), refetchTransactions(), refetchWallet()]);
     setIsManualRefresh(false);
-  }, [refetchSummary, refetchTransactions, triggerHaptic]);
-
-  // Sync data on focus removed to prevent layout glitches on back navigation
-
-  const handleTransactionPress = (item: Transaction) => {
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-    if (item.title === 'Ride Earnings') {
-      navigation.navigate('RideDetailScreen', { ride: item });
-    } else {
-      setSelectedPayout(item);
-      setIsModalVisible(true);
-    }
-  };
-
-  /* ================= MONTHLY STATEMENT ================= */
-  const downloadMonthlyStatement = async () => {
-    triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-    try {
-      const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-      
-      // Calculate additional metrics
-      const totalEarningsValue = summaryResult?.data?.totalEarnings || 0;
-      const tripsCount = summaryResult?.data?.tripsCompleted || 0;
-      const avgPerTrip = tripsCount > 0 ? (totalEarningsValue / tripsCount).toFixed(2) : '0.00';
-      const onlineHours = summaryResult?.data?.onlineHours || 0;
-      const tipsValue = summaryResult?.data?.tips || 0;
-
-      // Generate suggestions based on data
-      const suggestions = [];
-      if (tipsValue < totalEarningsValue * 0.05) {
-        suggestions.push("Focus on passenger comfort and small gestures to increase your tips (currently below 5% of total).");
-      }
-      if (onlineHours > 0 && tripsCount / onlineHours < 1) {
-        suggestions.push("Try moving to high-demand areas like the City Center or Airport during peak hours to increase trip frequency.");
-      }
-      if (tripsCount > 50) {
-        suggestions.push("Great job on completing over 50 trips this month! You're among our top-performing drivers.");
-      } else {
-        suggestions.push("Increase your activity during weekend nights (8 PM - 12 AM) to qualify for weekly bonuses.");
-      }
-      suggestions.push("Regularly check your vehicle's health to ensure smooth rides and higher ratings.");
-
-      const rows = transactions.map(
-        (t: Transaction) => `
-          <tr style="border-bottom: 1px solid #F3F4F6;">
-            <td style="padding: 12px; font-size: 13px; color: #374151;">${t.date} ${t.time || ''}</td>
-            <td style="padding: 12px; font-size: 13px; color: #374151;">${t.title}</td>
-            <td style="padding: 12px; font-size: 13px;"><span style="padding: 4px 8px; border-radius: 9999px; background-color: ${t.status === 'Completed' ? '#DEF7EC' : '#FDE8E8'}; color: ${t.status === 'Completed' ? '#03543F' : '#9B1C1C'}; font-weight: 500;">${t.status}</span></td>
-            <td style="padding: 12px; font-size: 13px; font-weight: 600; text-align: right; color: ${t.amount < 0 ? '#C81E1E' : '#057A55'};">₹${Math.abs(t.amount).toLocaleString('en-IN')}</td>
-          </tr>
-        `
-      ).join('');
-
-      const html = `
-        <html>
-          <head>
-            <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827; line-height: 1.5; padding: 40px; }
-              .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 2px solid ${colors.primary}; padding-bottom: 20px; }
-              .logo-text { font-size: 28px; font-weight: 800; color: ${colors.primary}; letter-spacing: -0.5px; }
-              .statement-info { text-align: right; }
-              .section-title { font-size: 18px; font-weight: 700; margin-top: 32px; margin-bottom: 16px; color: #1F2937; border-left: 4px solid ${colors.primary}; padding-left: 12px; }
-              
-              .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 32px; }
-              .stat-card { background-color: #F9FAFB; padding: 16px; border-radius: 12px; border: 1px solid #E5E7EB; }
-              .stat-label { font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-              .stat-value { font-size: 20px; font-weight: 700; color: #111827; margin-top: 4px; }
-              
-              table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
-              th { text-align: left; padding: 12px; background-color: #F3F4F6; font-size: 12px; color: #4B5563; text-transform: uppercase; font-weight: 600; }
-              
-              .suggestions-box { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 20px; margin-top: 40px; }
-              .suggestion-item { display: flex; align-items: center; margin-bottom: 10px; font-size: 14px; color: #1E40AF; }
-              .suggestion-bullet { width: 6px; height: 6px; background-color: #3B82F6; border-radius: 50%; margin-right: 12px; min-width: 6px; }
-              
-              .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB; padding-top: 20px; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div>
-                <div class="logo-text">DriverClient</div>
-                <p style="font-size: 14px; color: #6B7280; margin-top: 4px;">Premium Driver Partner Network</p>
-              </div>
-              <div class="statement-info">
-                <h2 style="margin: 0; color: #111827;">Monthly Statement</h2>
-                <p style="margin: 4px 0; color: #4B5563;"><b>Period:</b> ${currentMonth}</p>
-                <p style="margin: 0; color: #4B5563;"><b>Driver ID:</b> ${driverId}</p>
-              </div>
-            </div>
-
-            <div class="section-title">Earnings Performance</div>
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-label">Total Earnings</div>
-                <div class="stat-value" style="color: ${colors.primary}; font-size: 24px;">₹${totalEarningsValue.toLocaleString('en-IN')}</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Trips Completed</div>
-                <div class="stat-value">${tripsCount} Rides</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Avg. per Trip</div>
-                <div class="stat-value">₹${avgPerTrip}</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Incentives & Tips</div>
-                <div class="stat-value">₹${tipsValue.toLocaleString('en-IN')}</div>
-              </div>
-            </div>
-
-            <div class="section-title">Trip Details</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date & Time</th>
-                  <th>Description</th>
-                  <th>Status</th>
-                  <th style="text-align: right;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rows}
-              </tbody>
-            </table>
-
-            <div class="suggestions-box">
-              <div style="font-weight: 700; color: #1E40AF; margin-bottom: 12px; font-size: 16px;">Smart Insights & Suggestions</div>
-              ${suggestions.map(s => `
-                <div class="suggestion-item">
-                  <div class="suggestion-bullet"></div>
-                  <div>${s}</div>
-                </div>
-              `).join('')}
-            </div>
-
-            <div class="footer">
-              <p>This is a system-generated document. For any discrepancies, please contact partner support through the help center.</p>
-              <p>&copy; 2026 DriverClient. All rights reserved.</p>
-            </div>
-          </body>
-        </html>
-      `;
-
-      await RNPrint.print({ html });
-    } catch (error) {
-      console.error('Print error:', error);
-      showAlert({
-        title: 'Error',
-        message: 'Failed to generate statement. Please try again.',
-        singleButton: true,
-        icon: 'alert-circle-outline',
-      });
-    }
-  };
+  }, [refetchSummary, refetchTransactions, refetchWallet, triggerHaptic]);
 
   const handleBack = () => {
     triggerHaptic(HapticFeedbackTypes.impactLight);
     navigation.goBack();
   };
 
-  return (
-    <View style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
-      {isFocused && <AppStatusBar />}
-      {/* ================= HEADER ================= */}
-      <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
+  // Line Chart Data
+  const lineData = summaryResult?.data?.chartData && summaryResult.data.chartData.length > 0
+    ? summaryResult.data.chartData
+    : [{ value: 0, label: '' }, { value: 0, label: '' }]; // Safe fallback for empty chart
+
+  const breakdown = summaryResult?.data?.earningsBreakdown || { baseFare: 0, extraTiming: 0, incentives: 0, tips: 0 };
+
+  const calcPercent = (val: number, total: number) => {
+    if (total === 0) return '0.0';
+    return ((val / total) * 100).toFixed(1);
+  };
+
+  const hasBreakdownData = summary.total > 0;
+
+  const pieDataRaw = [
+    { value: breakdown.baseFare, color: '#3B82F6', focused: true }, // Blue (Base Fare)
+    { value: breakdown.extraTiming, color: '#10B981' }, // Green (Extra Timing)
+    { value: breakdown.incentives, color: '#F59E0B' }, // Orange (Incentives)
+    { value: breakdown.tips, color: '#8B5CF6' }, // Purple (Tips)
+  ].filter(item => item.value && item.value > 0);
+
+  const pieData = pieDataRaw.length > 0 
+    ? pieDataRaw 
+    : [{ value: 1, color: isDark ? '#374151' : '#E5E7EB' }]; // Empty state
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerLeft}>
         <Pressable onPress={handleBack}>
-          <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : '#000'} />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+        </Pressable>
+        <View style={{ marginLeft: 12 }}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('earnings_title', 'Earnings')}</Text>
+          <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('track_income_subtitle', 'Track your income and trips')}</Text>
+        </View>
+      </View>
+      <View style={styles.headerRight}>
+        <Pressable style={[styles.iconBtn, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? '#374151' : '#F1F5F9' }]} onPress={() => navigation.navigate('EarningsTransactionsScreen')}>
+          <Ionicons name="time-outline" size={22} color={theme.colors.text} />
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const renderHeroCard = () => (
+    <LinearGradient colors={['#184BE1', '#061D6E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.heroCard}>
+      <Image
+        source={require('../../assets/images/earningsbanner.png')}
+        style={styles.bannerImage}
+        resizeMode="contain"
+      />
+      <View style={styles.heroTopRow}>
+        <View style={styles.heroTopLeft}>
+          <View style={styles.heroTitleRow}>
+            <Text style={styles.heroTitle}>{t('total_earnings_label', 'Total Earnings')}</Text>
+          </View>
+
+          <Text style={styles.heroAmount}>₹ {summary.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+
+          {summary.growthPercentage !== undefined && filterType !== 'lifetime' ? (
+            <View style={styles.heroVsRow}>
+              <Text style={styles.heroSubText}>{filterType === 'today' ? t('vs_last_day', 'vs Last Day') : filterType === 'week' ? t('vs_last_week', 'vs Last Week') : t('vs_last_month', 'vs Last Month')}</Text>
+              <View style={[styles.percentBadge, { backgroundColor: summary.growthPercentage >= 0 ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.25)' }]}>
+                <Ionicons name={summary.growthPercentage >= 0 ? "arrow-up" : "arrow-down"} size={10} color={summary.growthPercentage >= 0 ? "#4ADE80" : "#F87171"} />
+                <Text style={[styles.percentText, { color: summary.growthPercentage >= 0 ? "#4ADE80" : "#F87171" }]}>{Math.abs(summary.growthPercentage).toFixed(2)}%</Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.heroVsRow}>
+              <Text style={styles.heroSubText}>{filterType === 'lifetime' ? t('lifetime_earnings', 'Lifetime Earnings') : filterType === 'today' ? t('today_filter', 'Today') : filterType === 'week' ? t('this_week_filter', 'This Week') : t('this_month_filter', 'This Month')}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.heroBottomRow}>
+        <Pressable style={styles.actionBox}>
+          <Ionicons name="wallet-outline" size={20} color="#FFF" />
+          <View style={styles.actionBoxTexts}>
+            <Text style={styles.actionBoxLabel}>{t('available_balance_label', 'Available Balance')}</Text>
+            <Text style={styles.actionBoxAmount}>₹ {walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#FFF" style={{ marginLeft: 8 }} />
         </Pressable>
 
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('earnings')}</Text>
+        <View style={styles.filterPillsRow}>
+          {(['lifetime', 'month', 'week', 'today'] as const).map(opt => (
+            <Pressable
+              key={opt}
+              onPress={() => setFilterType(opt)}
+              style={[styles.filterPill, filterType === opt && styles.filterPillActive]}
+            >
+              <Text style={[styles.filterPillText, filterType === opt && styles.filterPillTextActive]}>
+                {opt === 'lifetime' ? t('filter_all', 'All') : opt === 'month' ? t('filter_1m', '1M') : opt === 'week' ? t('filter_1w', '1W') : t('filter_1d', '1D')}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    </LinearGradient>
+  );
 
-        <Pressable onPress={() => {
-          triggerHaptic(HapticFeedbackTypes.impactLight);
-          navigation.navigate('HelpCenterScreen');
-        }}>
-          <Ionicons
-            name="help-circle-outline"
-            size={22}
-            color={isDark ? '#FFFFFF' : '#000'}
+  const renderStatsGrid = () => (
+    <View>
+      <View style={[styles.overviewCard, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
+        <View style={styles.overviewRow}>
+
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7' }]}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#16A34A' }}>₹</Text>
+            </View>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>Total Earnings</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+            {renderGrowthBadge(summary.growth.earnings)}
+          </View>
+
+          <View style={[styles.overviewDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
+
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#DBEAFE' }]}>
+              <Ionicons name="car-outline" size={14} color="#2563EB" />
+            </View>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('total_rides_label', 'Total Rides')}</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>{summary.trips}</Text>
+            {renderGrowthBadge(summary.growth.trips)}
+          </View>
+
+          <View style={[styles.overviewDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
+
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(147, 51, 234, 0.15)' : '#F3E8FF' }]}>
+              <Ionicons name="time-outline" size={14} color="#9333EA" />
+            </View>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('total_hours_label', 'Total Hours')}</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>{summary.hours}</Text>
+            {renderGrowthBadge(summary.growth.hours)}
+          </View>
+
+          <View style={[styles.overviewDivider, { backgroundColor: isDark ? '#374151' : '#F1F5F9' }]} />
+
+          <View style={styles.overviewItem}>
+            <View style={[styles.overviewIconBox, { backgroundColor: isDark ? 'rgba(234, 88, 12, 0.15)' : '#FFEDD5' }]}>
+              <Ionicons name="star-outline" size={14} color="#EA580C" />
+            </View>
+            <Text style={[styles.overviewLabel, { color: isDark ? '#9CA3AF' : '#64748B' }]} numberOfLines={2}>{t('avg_earnings_label', 'Avg Earnings')}</Text>
+            <Text style={[styles.overviewValue, { color: theme.colors.text }]}>₹{summary.avgPerTrip.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+            {renderGrowthBadge(summary.growth.avgPerTrip)}
+          </View>
+
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderLineChart = () => (
+    <View style={{ marginHorizontal: 16, marginTop: 24, marginBottom: 24 }}>
+      <View style={styles.cardHeaderRow}>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('earnings_trend_title', 'Earnings Trend')}</Text>
+        <Pressable style={[styles.dropdownButton, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
+          <Text style={[styles.dropdownText, { color: theme.colors.text }]}>
+            {filterType === 'today' ? t('today_filter', 'Today') : filterType === 'week' ? t('this_week_filter', 'This Week') : filterType === 'month' ? t('this_month_filter', 'This Month') : t('all_time_filter', 'All Time')}
+          </Text>
+        </Pressable>
+      </View>
+      <View style={{ marginTop: 16 }}>
+        <LineChart
+          areaChart
+          data={lineData}
+          width={width - 32}
+          height={80}
+          isAnimated
+          animationDuration={1200}
+          startFillColor="#3B82F6"
+          endFillColor="#3B82F6"
+          startOpacity={0.2}
+          endOpacity={0.0}
+          adjustToWidth={true}
+          color="#3B82F6"
+          thickness={3}
+          hideRules
+          hideYAxisText={false}
+          yAxisTextStyle={{ color: '#9CA3AF', fontSize: 8 }}
+          yAxisLabelWidth={26}
+          xAxisLabelTextStyle={{ color: '#9CA3AF', fontSize: 10, textAlign: 'center' }}
+          yAxisColor={isDark ? '#374151' : '#E5E7EB'}
+          xAxisColor={isDark ? '#374151' : '#E5E7EB'}
+          yAxisLabelTexts={filterType === 'lifetime' ? ['0', '10K', '20K', '30K', '40K'] : ['0', '5k', '10k', '15k', '20k']}
+          maxValue={filterType === 'lifetime' ? 40000 : 20000}
+          noOfSections={4}
+          dataPointsColor="#3B82F6"
+          dataPointsRadius={4}
+          pointerConfig={{
+            pointerStripHeight: 120,
+            pointerStripColor: isDark ? '#374151' : '#E5E7EB',
+            pointerStripWidth: 2,
+            pointerColor: '#3B82F6',
+            radius: 6,
+            pointerLabelWidth: 80,
+            pointerLabelHeight: 30,
+            activatePointersOnLongPress: true,
+            autoAdjustPointerLabelPosition: true,
+            pointerLabelComponent: (items: any) => {
+              return (
+                <View style={styles.tooltipBox}>
+                  <Text style={styles.tooltipText}>₹ {items[0].value.toLocaleString()}</Text>
+                </View>
+              );
+            },
+          }}
+        />
+      </View>
+    </View>
+  );
+
+  const renderDonutChart = () => (
+    <View style={[styles.card, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
+      <View style={styles.cardHeaderRow}>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('earnings_breakdown_title', 'Earnings Breakdown')}</Text>
+      </View>
+
+      <View style={styles.donutRow}>
+        <View style={styles.donutContainer}>
+          <PieChart
+            data={pieData}
+            donut
+            innerCircleColor={isDark ? theme.colors.background : '#FFF'}
+            radius={45}
+            innerRadius={30}
+            centerLabelComponent={() => {
+              return (
+                <View style={styles.donutCenter}>
+                  <Text style={[styles.donutCenterVal, { color: theme.colors.text }]}>₹{summary.total.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</Text>
+                  <Text style={[styles.donutCenterLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('total_label', 'Total')}</Text>
+                </View>
+              );
+            }}
           />
+        </View>
+
+        <View style={styles.legendContainer}>
+          <LegendItem color="#3B82F6" icon="car" title={t('base_fare_label', 'Base Fare')} amount={`₹ ${breakdown.baseFare.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.baseFare, summary.total)}%`} />
+          <LegendItem color="#10B981" icon="time" title={t('extra_timing_label', 'Extra Timing')} amount={`₹ ${breakdown.extraTiming.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.extraTiming, summary.total)}%`} />
+          <LegendItem color="#F59E0B" icon="gift" title={t('incentives_label', 'Incentives')} amount={`₹ ${breakdown.incentives.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.incentives, summary.total)}%`} />
+          <LegendItem color="#8B5CF6" icon="heart" title={t('tips_label', 'Tips')} amount={`₹ ${breakdown.tips.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} percent={`${calcPercent(breakdown.tips, summary.total)}%`} />
+        </View>
+      </View>
+    </View>
+  );
+
+  const getIconForTx = (tx: any) => {
+    if (tx.icon === 'car') return 'car-outline';
+    if (tx.icon === 'gift') return 'gift-outline';
+    if (tx.icon === 'heart') return 'heart-outline';
+    if (tx.icon === 'wallet') return 'wallet-outline';
+    if (tx.icon === 'card') return 'card-outline';
+    if (tx.icon === 'warning') return 'warning-outline';
+    if (tx.icon === 'refresh') return 'refresh-outline';
+    return 'cash-outline';
+  };
+
+  const getIconColor = (tx: any) => {
+    if (tx.type === 'Credit') return '#16A34A';
+    if (tx.badge === 'Subscription') return '#3B82F6';
+    if (tx.badge === 'Penalty') return '#EF4444';
+    return '#64748B';
+  };
+
+  const getBgColor = (tx: any) => {
+    if (tx.type === 'Credit') return isDark ? 'rgba(22, 163, 74, 0.15)' : '#DCFCE7';
+    if (tx.badge === 'Subscription') return isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF';
+    if (tx.badge === 'Penalty') return isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2';
+    if (tx.badge === 'Incentive') return isDark ? 'rgba(234, 88, 12, 0.15)' : '#FFEDD5';
+    return isDark ? 'rgba(100, 116, 139, 0.15)' : '#F1F5F9';
+  };
+
+  const renderTransactions = () => (
+    <View style={[styles.transactionsContainer, { borderColor: isDark ? '#374151' : '#E2E8F0' }]}>
+      <View style={styles.txHeaderRow}>
+        <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('recent_transactions_title', 'Recent Transactions')}</Text>
+        <Pressable onPress={() => navigation.navigate('EarningsTransactionsScreen')}>
+          <Text style={styles.viewAllText}>{t('view_all_link', 'View All')}</Text>
         </Pressable>
       </View>
 
-      <FlatList
-        data={isLoading ? [] : transactions}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={isManualRefresh}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          isLoading ? (
-            <View style={{ marginTop: 16 }}>
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="receipt-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.emptyText}>{t('no_transactions_found') || 'No transactions yet'}</Text>
-            </View>
-          )
-        }
-        ListHeaderComponent={
-          <>
-            {/* ================= SUMMARY ================= */}
-            <View style={[styles.summaryCard, { backgroundColor: theme.colors.card }]}>
-              <Text style={[styles.summaryLabel, isDark && { color: '#D1D5DB' }]}>{t('total_earnings')}</Text>
-              <Text style={[styles.summaryValue, isDark && { color: '#FFFFFF' }]}>
-                {summary.total}
-              </Text>
-
-              <View style={[styles.tabs, isDark && { backgroundColor: theme.colors.border }]}>
-                {['today', 'week', 'month'].map((tab: any) => (
-                  <Pressable
-                    key={tab}
-                    onPress={() => setActiveTab(tab)}
-                    style={[
-                      styles.tab,
-                      activeTab === tab && styles.activeTab,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.tabText,
-                        isDark && activeTab !== tab && { color: '#9CA3AF' },
-                        activeTab === tab &&
-                        styles.activeTabText,
-                      ]}
-                    >
-                      {t(tab).toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* ================= MONTHLY STATEMENT ACTION ================= */}
-            {activeTab === 'month' && (
-              <View style={[styles.statementCard, { backgroundColor: theme.colors.card }]}>
-                <Text style={[styles.statementTitle, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>
-                  {t('monthly_statement')}
-                </Text>
-
-                <Pressable
-                  style={[styles.statementBtn, isDark && { shadowOpacity: 0.1 }]}
-                  onPress={downloadMonthlyStatement}
-                >
-                  <Ionicons
-                    name="download-outline"
-                    size={18}
-                    color="#fff"
-                  />
-                  <Text style={[styles.statementBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {t('download_pdf')}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-
-            {/* ================= STATS ================= */}
-            <View style={styles.statsRow}>
-              <StatBox
-                icon="car-outline"
-                label={t('trips')}
-                value={summary.stats.trips}
-                isDark={isDark}
-                theme={theme}
-              />
-              <StatBox
-                icon="time-outline"
-                label={t('online_hours')}
-                value={summary.stats.hours}
-                isDark={isDark}
-                theme={theme}
-              />
-              <StatBox
-                icon="gift-outline"
-                label={t('incentives')}
-                value={summary.stats.incentive}
-                isDark={isDark}
-                theme={theme}
-              />
-            </View>
-
-
-
-            {/* ================= TRANSACTIONS ================= */}
-            <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('transactions')}</Text>
-          </>
-        }
-        renderItem={({ item }) => (
-          <Pressable
-            style={[styles.rideCard, { backgroundColor: theme.colors.card }]}
-            onPress={() => handleTransactionPress(item)}
-          >
-            <View style={styles.rideHeader}>
-              <Text style={[styles.rideDate, isDark && { color: '#9CA3AF' }]}>
-                {item.date} {item.time ? `• ${item.time}` : ''}
-              </Text>
-              <StatusBadge status={item.status} label={t(item.status.toLowerCase())} isDark={isDark} />
-            </View>
-
-            {item.pickup ? (
-              <>
-                <View style={styles.routeRow}>
-                  <Ionicons
-                    name="radio-button-on"
-                    size={12}
-                    color={isDark ? '#34D399' : '#16A34A'}
-                  />
-                  <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]}>{item.pickup}</Text>
-                </View>
-
-                <View style={styles.routeRow}>
-                  <Ionicons name="location" size={14} color="#DC2626" />
-                  <Text style={[styles.routeText, { color: isDark ? '#FFFFFF' : '#374151' }]}>{item.drop}</Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.txnDescriptionRow}>
-                <View style={[styles.txnIcon, isDark && { backgroundColor: 'rgba(21, 45, 94, 0.2)' }]}>
-                  <Ionicons
-                    name="cash-outline"
-                    size={18}
-                    color={isDark ? '#60A5FA' : colors.primary}
-                  />
-                </View>
-                <Text style={[styles.txnTitleText, { color: isDark ? '#FFFFFF' : '#111827' }]}>{item.title}</Text>
-              </View>
-            )}
-
-            <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
-
-            <View style={styles.footer}>
-              <View style={styles.footerItem}>
-                {item.distance && (
-                  <>
-                    <Ionicons
-                      name="car-outline"
-                      size={16}
-                      color={isDark ? '#60A5FA' : colors.primary}
-                    />
-                    <Text style={[styles.footerText, isDark && { color: '#9CA3AF' }]}>
-                      {item.distance}
-                    </Text>
-                  </>
-                )}
-              </View>
-
-              <Text
-                style={[
-                  styles.amountText,
-                  item.amount < 0 && styles.debitAmount,
-                  isDark && item.amount >= 0 && { color: '#34D399' }
-                ]}
-              >
-                {item.amount > 0 ? '+' : ''} ₹{Math.abs(item.amount)}
-              </Text>
-            </View>
-          </Pressable>
-        )}
-      />
-
-      {/* ================= PAYOUT DETAIL MODAL ================= */}
-      <Modal
-        visible={isModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
-            <View style={[styles.modalDragHandle, isDark && { backgroundColor: '#4B5563' }]} />
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={1} adjustsFontSizeToFit>{t('transaction_details')}</Text>
-
-            {selectedPayout && (
-              <View style={styles.detailContainer}>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('description')}</Text>
-                  <Text style={[styles.detailValue, isDark && { color: '#FFFFFF' }]}>{selectedPayout.title}</Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('date')}</Text>
-                  <Text style={[styles.detailValue, isDark && { color: '#FFFFFF' }]}>{selectedPayout.date} • {selectedPayout.time}</Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('amount')}</Text>
-                  <Text style={[styles.detailValue, { color: selectedPayout.amount < 0 ? '#DC2626' : (isDark ? '#34D399' : '#16A34A') }]}>
-                    {selectedPayout.amount > 0 ? '+' : ''} ₹{Math.abs(selectedPayout.amount)}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('payout_status')}</Text>
-                  <View style={[styles.miniBadge, styles.successBadge, isDark && { backgroundColor: 'rgba(22, 163, 74, 0.2)' }]}>
-                    <Text style={[styles.miniBadgeText, isDark && { color: '#34D399' }]}>{t(selectedPayout.status.toLowerCase())}</Text>
-                  </View>
-                </View>
-
-                <View style={[styles.divider, isDark && { backgroundColor: theme.colors.border }]} />
-
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('payment_method')}</Text>
-                  <View style={styles.paymentMethodLabel}>
-                    <Ionicons name="business-outline" size={16} color={isDark ? '#9CA3AF' : '#4B5563'} />
-                    <Text style={[styles.detailValue, isDark && { color: '#FFFFFF' }]}>{t('bank_transfer')}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailLabel, isDark && { color: '#D1D5DB' }]}>{t('reference_id')}</Text>
-                  <Text style={[styles.refText, isDark && { color: '#6B7280' }]}>TXN-{selectedPayout.id}82937492</Text>
-                </View>
-              </View>
-            )}
-
-            <Pressable
-              style={[styles.closeBtn, isDark && { backgroundColor: theme.colors.border }]}
-              onPress={() => setIsModalVisible(false)}
-            >
-              <Text style={[styles.closeBtnText, isDark && { color: '#FFFFFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('close')}</Text>
-            </Pressable>
-          </View>
+      {transactions.length === 0 && (
+        <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+          <Ionicons name="receipt-outline" size={32} color={isDark ? '#4B5563' : '#CBD5E1'} />
+          <Text style={{ color: '#94A3B8', fontSize: 13, marginTop: 8 }}>{t('no_transactions_msg', 'No transactions yet')}</Text>
         </View>
-      </Modal>
+      )}
+
+      {transactions.map((tx: any, index: number) => (
+        <Pressable key={tx.id} onPress={() => handleTransactionPress(tx)} style={[styles.txItem, index !== transactions.length - 1 && styles.txBorder, index !== transactions.length - 1 && { borderBottomColor: isDark ? '#374151' : '#F1F5F9' }]}>
+          <View style={styles.txLeftRow}>
+            <View style={[styles.txIconBox, { backgroundColor: getBgColor(tx) }]}>
+              <Ionicons name={getIconForTx(tx)} size={16} color={getIconColor(tx)} />
+            </View>
+            <View style={styles.txInfo}>
+              <Text style={[styles.txTitle, { color: theme.colors.text }]}>{tx.title}</Text>
+              <Text style={[styles.txDate, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{tx.date}, {tx.time}</Text>
+            </View>
+          </View>
+
+          <View style={styles.txRightContainer}>
+            <View style={styles.txRightCol}>
+              <Text style={[styles.txAmount, { color: tx.type === 'Credit' ? '#16A34A' : '#EF4444' }]}>
+                {tx.type === 'Credit' ? '+' : '-'} ₹{Math.abs(tx.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </Text>
+              <View style={[styles.txBadge, { backgroundColor: getBgColor(tx) }]}>
+                <Text style={[styles.txBadgeText, { color: getIconColor(tx) }]}>
+                  {tx.badge}
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={14} color={isDark ? '#4B5563' : '#94A3B8'} />
+          </View>
+        </Pressable>
+      ))}
     </View>
+  );
+
+  return (
+    <View style={[styles.safeArea, { paddingTop: insets.top, backgroundColor: isDark ? theme.colors.background : '#FFF' }]}>
+      {isFocused && <AppStatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? theme.colors.background : "#FFF"} />}
+      {renderHeader()}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isManualRefresh} onRefresh={onRefresh} colors={['#3B82F6']} />
+        }
+      >
+        {renderHeroCard()}
+        {renderStatsGrid()}
+        {renderLineChart()}
+        {renderDonutChart()}
+        {renderTransactions()}
+      </ScrollView>
+    </View>
+  );
+};
+
+// Subcomponent for Legend
+const LegendItem = ({ color, title, amount, percent }: any) => {
+  const { theme, isDark } = useAppTheme();
+  return (
+  <View style={styles.legendRow}>
+    <View style={styles.legendLeft}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={[styles.legendTitle, { color: theme.colors.text }]}>{title}</Text>
+    </View>
+    <View style={styles.legendRightRow}>
+      <Text style={[styles.legendAmount, { color: theme.colors.text }]}>{amount}</Text>
+      <Text style={[styles.legendPercent, { color: isDark ? '#9CA3AF' : '#64748B' }]}>{percent}</Text>
+    </View>
+  </View>
   );
 };
 
 export default EarningsScreen;
 
-/* ================= SUB COMPONENTS ================= */
-
-const StatBox = ({ icon, label, value, isDark, theme }: any) => (
-  <View style={[styles.statBox, { backgroundColor: theme.colors.card }]}>
-    <Ionicons name={icon} size={20} color={isDark ? '#60A5FA' : colors.primary} />
-    <Text style={[styles.statLabelValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>{value}</Text>
-    <Text style={[styles.statSubLabel, isDark && { color: '#9CA3AF' }]}>{label}</Text>
-  </View>
-);
-
-const StatusBadge = ({ status, label, isDark }: { status: string; label?: string; isDark?: boolean }) => (
-  <View
-    style={[
-      styles.badge,
-      status === 'Completed'
-        ? [styles.success, isDark && { backgroundColor: 'rgba(22, 163, 74, 0.2)' }]
-        : status === 'Transferred'
-          ? [styles.info, isDark && { backgroundColor: 'rgba(21, 45, 94, 0.2)' }]
-          : [styles.cancelled, isDark && { backgroundColor: 'rgba(220, 38, 38, 0.2)' }],
-    ]}
-  >
-    <Text style={[styles.badgeText, isDark && {
-      color: status === 'Completed' ? '#34D399' :
-        status === 'Transferred' ? '#60A5FA' : '#F87171'
-    }]}>{label || status}</Text>
-  </View>
-);
-
-const SkeletonCard = () => (
-  <View style={[styles.rideCard, { opacity: 0.5 }]}>
-    <View style={styles.rideHeader}>
-      <View style={styles.skeletonDate} />
-      <View style={styles.skeletonBadge} />
-    </View>
-    <View style={styles.skeletonRoute} />
-    <View style={styles.divider} />
-    <View style={styles.footer}>
-      <View style={styles.skeletonFooterIcon} />
-      <View style={styles.skeletonAmount} />
-    </View>
-  </View>
-);
-
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
+  safeArea: { flex: 1, backgroundColor: '#FFF' },
+  scrollContent: { paddingBottom: 100 },
 
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#fff',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-
-  summaryCard: {
-    backgroundColor: '#fff',
-    margin: 16,
-    padding: 16,
-    borderRadius: 16,
-    
-  },
-
-  summaryLabel: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-
-  summaryValue: {
-    fontSize: 32,
-    fontWeight: '800',
-    marginVertical: 8,
-    color: '#111827',
-  },
-
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 12,
-  },
-
-  activeTab: {
-    backgroundColor: '#152D5E',
-  },
-
-  tabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-
-  activeTabText: {
-    color: '#fff',
-  },
-
-  statementCard: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 12,
-  },
-
-  statementTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-
-  statementBtn: {
-    flexDirection: 'row',
-    gap: 8,
-    backgroundColor: colors.primary,
-    padding: 14,
-    borderRadius: 12,
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#111827' },
+  headerSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  headerRight: { flexDirection: 'row', gap: 12 },
+  iconBtn: {
+    width: 40, height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1, borderColor: '#F1F5F9'
   },
-
-  statementBtnText: {
-    color: '#fff',
-    fontWeight: '600',
+  badgeContainer: {
+    position: 'absolute', top: -2, right: -2,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    width: 16, height: 16,
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 1,
   },
+  badgeText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
 
-  statsRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-
-  statBox: {
-    flex: 1,
-    backgroundColor: '#fff',
-    marginHorizontal: 4,
+  // Hero Card
+  heroCard: {
+    margin: 16, borderRadius: 16,
     padding: 12,
-    borderRadius: 14,
-    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
   },
+  bannerImage: {
+    position: 'absolute',
+    right: -45,
+    top: -40,
+    width: 260,
+    height: 190,
+    zIndex: 1,
+  },
+  heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', zIndex: 2 },
+  heroTopLeft: { flex: 1 },
+  heroTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  heroTitle: { color: '#FFF', fontSize: 11, fontWeight: '500' },
+  heroAmount: { color: '#FFF', fontSize: 22, fontWeight: '700', marginTop: 0, marginBottom: 2 },
+  heroVsRow: { flexDirection: 'row', alignItems: 'center' },
+  heroSubText: { color: '#E0E7FF', fontSize: 11, marginRight: 8 },
+  percentBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.25)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  percentText: { color: '#4ADE80', fontSize: 10, fontWeight: '700', marginLeft: 2 },
 
-  statLabelValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 6,
-    color: '#111827',
-  },
+  heroTopRight: { width: 100, height: 80, justifyContent: 'center', alignItems: 'center' },
 
-  statSubLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
+  heroBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, zIndex: 2 },
+  actionBox: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8, paddingRight: 10 },
+  actionBoxTexts: { marginLeft: 8 },
+  actionBoxLabel: { color: '#E0E7FF', fontSize: 10 },
+  actionBoxAmount: { color: '#FFF', fontSize: 12, fontWeight: '700', marginTop: 0 },
 
-  payoutCard: {
-    backgroundColor: '#fff',
-    margin: 16,
-    marginTop: 0,
-    padding: 16,
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  filterPillsRow: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, padding: 2 },
+  filterPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16 },
+  filterPillActive: { backgroundColor: '#FFF' },
+  filterPillText: { fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  filterPillTextActive: { color: '#184BE1' },
 
-  payoutTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
 
-  payoutDate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
 
-  payoutBtn: {
-    backgroundColor: 'rgba(21, 45, 94, 0.08)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
+  // Earnings Overview
+  overviewCard: { backgroundColor: 'transparent', marginHorizontal: 16, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 4, borderWidth: 1, borderColor: '#E2E8F0' },
+  overviewRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  overviewItem: { flex: 1, alignItems: 'center', paddingHorizontal: 2 },
+  overviewIconBox: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+  overviewLabel: { fontSize: 9, color: '#64748B', marginBottom: 2, textAlign: 'center', lineHeight: 12 },
+  overviewValue: { fontSize: 13, fontWeight: '700', color: '#1E1E2D', marginBottom: 2 },
+  overviewDivider: { width: 1, height: 50, backgroundColor: '#F1F5F9', marginHorizontal: 2, marginTop: 8 },
 
-  payoutBtnText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  statGrowth: { flexDirection: 'row', alignItems: 'center' },
+  statGrowthTextPos: { fontSize: 9, fontWeight: '600', color: '#16A34A', marginLeft: 2 },
 
-  sectionTitle: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 12,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
+  // Cards General
+  card: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#E2E8F0', marginHorizontal: 16, marginBottom: 16, borderRadius: 16, padding: 12 },
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
 
-  rideCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 14,
-  },
+  // Line Chart Header
+  dropdownButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, gap: 4 },
+  dropdownText: { fontSize: 11, color: '#1E293B', fontWeight: '600' },
+  tooltipBox: { backgroundColor: '#3B82F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  tooltipText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
 
-  rideHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
+  // Donut Chart
+  viewDetailsText: { fontSize: 13, color: '#3B82F6', fontWeight: '500' },
+  donutRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
+  donutContainer: { width: 90, height: 90, justifyContent: 'center', alignItems: 'center' },
+  donutCenter: { alignItems: 'center', justifyContent: 'center' },
+  donutCenterVal: { fontSize: 10, fontWeight: '700', color: '#111827' },
+  donutCenterLabel: { fontSize: 9, color: '#6B7280' },
+  legendContainer: { flex: 1, paddingLeft: 24, gap: 12 },
+  legendRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  legendLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, width: 100 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendTitle: { fontSize: 12, color: '#1E293B', fontWeight: '500' },
+  legendRightRow: { flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'space-between' },
+  legendAmount: { fontSize: 12, fontWeight: '600', color: '#111827' },
+  legendPercent: { fontSize: 12, color: '#64748B', width: 45, textAlign: 'right' },
 
-  rideDate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-
-  success: { backgroundColor: '#DCFCE7' },
-  cancelled: { backgroundColor: '#FEE2E2' },
-  info: { backgroundColor: '#E0E7FF' },
-
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#111827',
-  },
-
-  routeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
-    alignItems: 'center',
-  },
-
-  routeText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-
-  txnDescriptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
-  },
-
-  txnIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(21, 45, 94, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  txnTitleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 12,
-  },
-
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  footerItem: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-  },
-
-  footerText: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-
-  amountText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#16A34A',
-  },
-
-  debitAmount: {
-    color: '#DC2626',
-  },
-
-  /* Modal Styles */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: 40,
-  },
-  modalDragHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 24,
-  },
-  detailContainer: {
-    gap: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '700',
-  },
-  miniBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  successBadge: {
-    backgroundColor: '#DCFCE7',
-  },
-  miniBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#16A34A',
-    textTransform: 'capitalize',
-  },
-  paymentMethodLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  refText: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  closeBtn: {
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 32,
-  },
-  closeBtnText: {
-    color: '#374151',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  emptyContainer: {
-    padding: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94A3B8',
-    fontWeight: '600',
-  },
-  skeletonDate: {
-    width: 120,
-    height: 12,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 6,
-  },
-  skeletonBadge: {
-    width: 70,
-    height: 18,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 9,
-  },
-  skeletonRoute: {
-    width: '100%',
-    height: 40,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  skeletonFooterIcon: {
-    width: 60,
-    height: 16,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 8,
-  },
-  skeletonAmount: {
-    width: 50,
-    height: 20,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 10,
-  },
+  // Transactions
+  transactionsContainer: { marginHorizontal: 16, marginBottom: 16, backgroundColor: 'transparent', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  txHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  viewAllText: { fontSize: 12, color: '#3B82F6', fontWeight: '600' },
+  txItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  txBorder: { borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  txLeftRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  txIconBox: { width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  txInfo: { gap: 2 },
+  txTitle: { fontSize: 12, fontWeight: '600', color: '#111827' },
+  txDate: { fontSize: 10, color: '#6B7280' },
+  txRightContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  txRightCol: { alignItems: 'flex-end', gap: 2 },
+  txAmount: { fontSize: 12, fontWeight: '700' },
+  txBadge: { paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 },
+  txBadgeText: { fontSize: 8, fontWeight: '700' }
 });

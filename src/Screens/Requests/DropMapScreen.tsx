@@ -226,7 +226,7 @@ const DropMapScreen = ({ route }: any) => {
     if (!reduxCurrentRide) {
       console.log('[DropMapScreen] Active ride cleared from Redux, exiting...');
       isExitingRef.current = true;
-      navigation.dispatch(StackActions.replace('DashboardScreen'));
+      navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
     }
   }, [reduxCurrentRide, navigation]);
 
@@ -641,7 +641,7 @@ const DropMapScreen = ({ route }: any) => {
       setTimeout(() => {
         hideAlert();
         dispatch(clearAcceptedRide());
-        navigation.dispatch(StackActions.replace('DashboardScreen'));
+        navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
     } catch (error: any) {
       console.error('Cancellation failed:', error);
@@ -652,7 +652,7 @@ const DropMapScreen = ({ route }: any) => {
         icon: 'alert-circle-outline',
         onConfirm: error?.status === 500 ? () => {
           dispatch(clearAcceptedRide());
-          navigation.dispatch(StackActions.replace('DashboardScreen'));
+          navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
       });
     }

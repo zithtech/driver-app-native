@@ -44,7 +44,7 @@ const CATEGORY_OPTIONS = [
   { key: 'general', label: '❓ Other', icon: 'help-circle-outline' },
 ];
 
-const INITIAL_BOT_MESSAGE = "Hi there! 👋 I'm your VDrive Assistant. How can I help you today?";
+const INITIAL_BOT_MESSAGE = "Hi there! 👋 I'm your T2drive Assistant. How can I help you today?";
 const AGENT_TIMEOUT_MS = 30000; // 30 seconds
 
 const QUICK_REPLIES = [
@@ -123,7 +123,7 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
       setMessages([
         {
           id: Date.now().toString(),
-          text: `Hi${greetingName}! 👋 I'm your VDrive Assistant. How can I help you today?`,
+          text: `Hi${greetingName}! 👋 I'm your T2drive Assistant. How can I help you today?`,
           sender: 'bot',
           timestamp: Date.now(),
         },
@@ -506,7 +506,7 @@ const FaqChatbotModal = ({ visible, onClose }: any) => {
           
           <View style={styles.headerTitleContainer}>
             <Text style={[styles.headerTitle, { color: colors.text, ...fonts.bold }]}>
-              {isLiveMode ? 'Live Support' : 'VDrive Assistant'}
+              {isLiveMode ? 'Live Support' : 'T2drive Assistant'}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: vS(4) }}>
               <View style={[styles.onlineDot, { backgroundColor: isLiveMode ? '#10B981' : colors.primary }]} />

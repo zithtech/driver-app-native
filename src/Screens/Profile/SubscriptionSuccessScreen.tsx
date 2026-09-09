@@ -1,44 +1,52 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Animated, StatusBar, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, StatusBar, ScrollView } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNPrint from 'react-native-print';
-import { useAppTheme } from '../../context/ThemeContext';
 import { useGetMySubscriptionQuery } from '../../service/userApi';
 import moment from 'moment';
 import { useAlert } from '../../context/AlertContext';
-import AppStatusBar from '../../Components/AppStatusBar';
 import { Dashboard_Nav } from '../../Navigations/navigations';
+import Share from 'react-native-share';
+import { SuccessIcon } from '../../assets/svg';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
+
+const BG_COLOR = '#F9FAFB';
+const BLUE_PRIMARY = '#1D7AF2';
+const TEXT_DARK = '#0F172A';
+const TEXT_MUTED = '#64748B';
+const CARD_BG = '#FFFFFF';
+const BORDER_COLOR = '#E2E8F0';
 
 const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
-  const { colors } = useTheme();
-  const { isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const insets = useSafeAreaInsets();
-  
-  const { planName, planColor, amountPaid, duration, transactionId, isUpgrade, isDowngrade, proratedCredit } = route.params || {};
 
-  const { data: subscriptionData, isLoading } = useGetMySubscriptionQuery();
+  const { planName, amountPaid, duration, transactionId } = route.params || {};
+
+  const { data: subscriptionData } = useGetMySubscriptionQuery();
   const subscription = subscriptionData?.data?.subscription;
+  const user = useSelector((state: RootState) => state.userSlice?.user);
 
   const displayAmount = (Number(amountPaid) / 100).toFixed(2);
-  
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  // Animations
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 40,
-        friction: 6,
+        friction: 5,
         useNativeDriver: true,
       }),
-      Animated.timing(opacityAnim, {
+      Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
@@ -49,42 +57,82 @@ const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
     ]).start();
   }, []);
 
-  const handleDownloadInvoice = async () => {
+  const handleShareReceipt = async () => {
     try {
       const htmlContent = `
+        <!DOCTYPE html>
         <html>
-          <body style="font-family: Arial, sans-serif; padding: 40px; color: #111827;">
-            <div style="text-align: center; margin-bottom: 40px;">
-              <h1 style="color: #2563EB;">T2drive</h1>
-              <h2>Payment Receipt</h2>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
+            .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+            .logo { font-size: 36px; font-weight: 800; color: #1D7AF2; letter-spacing: -1px; }
+            .title { font-size: 16px; color: #64748B; margin-top: 10px; text-transform: uppercase; letter-spacing: 2px; }
+            .content { width: 100%; max-width: 600px; margin: 0 auto; }
+            .row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 18px 0; font-size: 16px; }
+            .label { font-weight: 500; color: #64748B; }
+            .value { font-weight: 700; color: #0F172A; text-align: right; }
+            .amount-row { font-size: 20px; border-bottom: 2px solid #333; margin-top: 20px; }
+            .amount-row .value { color: #1D7AF2; font-size: 28px; }
+            .footer { text-align: center; margin-top: 60px; color: #94A3B8; font-size: 14px; line-height: 1.6; }
+            .badge { background: #10B981; color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+          </style>
+        </head>
+        <body>
+          <div class="content">
+            <div class="header">
+              <div class="logo">T2drive</div>
+              <div class="title">Payment Receipt</div>
             </div>
-            <div style="margin-bottom: 30px;">
-              <p><strong>Transaction ID:</strong> ${transactionId}</p>
-              <p><strong>Date:</strong> ${moment().format('DD MMM YYYY, hh:mm A')}</p>
-              <p><strong>Plan:</strong> ${planName || subscription?.plan?.plan_name || 'Premium'} (${formatDuration(duration || subscription?.billing_cycle)})</p>
+            
+            <div class="row" style="border: none; padding-bottom: 5px;">
+              <span class="label">Status</span>
+              <span class="value"><span class="badge">Paid Successfully</span></span>
             </div>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-              <tr style="border-bottom: 2px solid #E5E7EB; text-align: left;">
-                <th style="padding: 12px 0;">Description</th>
-                <th style="padding: 12px 0; text-align: right;">Amount</th>
-              </tr>
-              <tr style="border-bottom: 1px solid #E5E7EB;">
-                <td style="padding: 12px 0;">${planName || subscription?.plan?.plan_name || 'Premium'} Subscription</td>
-                <td style="padding: 12px 0; text-align: right;">₹${displayAmount}</td>
-              </tr>
-            </table>
-            <div style="text-align: right; font-size: 24px; font-weight: bold;">
-              Total Paid: ₹${displayAmount}
+
+            <div class="row">
+              <span class="label">Date</span>
+              <span class="value">${moment().format('MMM D, YYYY, h:mm A')}</span>
             </div>
-            <div style="margin-top: 60px; text-align: center; color: #6B7280; font-size: 14px;">
-              Thank you for choosing T2drive!
+            <div class="row">
+              <span class="label">Transaction ID</span>
+              <span class="value">${transactionId || 'N/A'}</span>
             </div>
-          </body>
+            <div class="row">
+              <span class="label">Billed To</span>
+              <span class="value">${user?.full_name || 'Driver'}<br><span style="font-size:14px; color:#666; font-weight: 500;">${user?.phone_number || ''}</span></span>
+            </div>
+            <div class="row">
+              <span class="label">Plan Name</span>
+              <span class="value">${planName || subscription?.plan?.plan_name || 'Premium'}</span>
+            </div>
+            <div class="row">
+              <span class="label">Payment Method</span>
+              <span class="value">Online</span>
+            </div>
+            
+            <div class="row amount-row">
+              <span class="label" style="color: #0F172A; align-self: center;">Total Amount Paid</span>
+              <span class="value">₹${displayAmount}</span>
+            </div>
+            
+            <div class="footer">
+              Thank you for subscribing to T2drive!<br>
+              This is a computer generated receipt and does not require a physical signature.<br><br>
+              <strong>Need help?</strong> Contact support in the T2drive app.
+            </div>
+          </div>
+        </body>
         </html>
       `;
-      await RNPrint.print({ html: htmlContent });
+
+      await RNPrint.print({
+        html: htmlContent,
+        jobName: `T2drive_Receipt_${transactionId || 'Payment'}`,
+      });
     } catch (error) {
-      showAlert({ title: 'Error', message: 'Failed to generate receipt.', singleButton: true, icon: 'close-circle-outline' });
+      console.log('Print dismissed or failed', error);
     }
   };
 
@@ -95,218 +143,205 @@ const SubscriptionSuccessScreen = ({ navigation, route }: any) => {
     });
   };
 
-  const formatDuration = (dur: string) => {
-    if (dur === 'daily' || dur === 'day') return 'Daily';
-    if (dur === 'weekly' || dur === 'week') return 'Weekly';
-    if (dur === 'monthly' || dur === 'month') return 'Monthly';
-    return dur;
-  };
-
   return (
-    <ImageBackground 
-        source={require('../../assets/images/paysuccess.png')} 
-        style={styles.container}
-        resizeMode="cover"
-    >
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.75)' }]} />
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
-      
-      <Animated.View style={[styles.content, { opacity: opacityAnim, transform: [{ translateY: slideAnim }], paddingTop: insets.top }]}>
-        
-        {/* Sleek Header */}
-        <View style={styles.headerArea}>
-          <Animated.View style={[styles.iconWrapper, { transform: [{ scale: scaleAnim }] }]}>
-            <Ionicons name="checkmark-circle" size={80} color={isDark ? '#34D399' : '#10B981'} />
-          </Animated.View>
-          <Text style={[styles.successTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Payment Successful</Text>
-          <Text style={[styles.successSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-            Your {formatDuration(duration || subscription?.billing_cycle)} plan is active.
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      <View style={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+
+        {/* Animated Checkmark */}
+        <Animated.View style={[styles.animationContainer, { transform: [{ scale: scaleAnim }] }]}>
+          <SuccessIcon width={120} height={120} />
+        </Animated.View>
+
+        {/* Header Texts */}
+        <Animated.View style={[styles.headerTexts, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Text style={styles.title}>Payment successful</Text>
+          <Text style={styles.subtitle}>
+            Your transaction has been completed and a receipt has been sent to your email.
           </Text>
-        </View>
+        </Animated.View>
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+        {/* Details Card */}
+        <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+
+          <View style={styles.cardHeader}>
+            <Ionicons name="receipt-outline" size={18} color={TEXT_MUTED} />
+            <Text style={styles.cardHeaderTitle}>Transaction details</Text>
           </View>
-        ) : (
-          <View style={[styles.receiptCard, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
-            <Text style={[styles.amountText, { color: isDark ? '#FFFFFF' : '#111827' }]}>₹{displayAmount}</Text>
-            
-            {(isUpgrade || isDowngrade) && (
-              <View style={[styles.badge, { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.1)' : '#ECFDF5' }]}>
-                <Text style={[styles.badgeText, { color: isDark ? '#34D399' : '#059669' }]}>
-                  {isUpgrade ? 'Upgraded' : 'Downgraded'} (₹{proratedCredit} credit)
-                </Text>
-              </View>
-            )}
+          <View style={styles.divider} />
 
-            <View style={styles.dashedLineWrapper}>
-              <View style={[styles.dashedLine, { borderColor: isDark ? '#374151' : '#E5E7EB' }]} />
-            </View>
-
-            <View style={styles.listRow}>
-              <Text style={[styles.listLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Transaction ID</Text>
-              <Text style={[styles.listValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>{transactionId}</Text>
-            </View>
-
-            <View style={styles.listRow}>
-              <Text style={[styles.listLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Plan Tier</Text>
-              <Text style={[styles.listValue, { color: planColor || (isDark ? '#F3F4F6' : '#111827') }]}>{planName || subscription?.plan?.plan_name || 'Premium'}</Text>
-            </View>
-            
-            <View style={styles.listRow}>
-              <Text style={[styles.listLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Start Date</Text>
-              <Text style={[styles.listValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>
-                {subscription?.start_date ? moment(subscription.start_date).format('DD MMM YYYY') : moment().format('DD MMM YYYY')}
-              </Text>
-            </View>
-
-            {subscription?.expiry_date && (
-              <View style={[styles.listRow, { marginBottom: 0 }]}>
-                <Text style={[styles.listLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>End Date</Text>
-                <Text style={[styles.listValue, { color: isDark ? '#F3F4F6' : '#111827' }]}>
-                  {moment(subscription.expiry_date).format('DD MMM YYYY')}
-                </Text>
-              </View>
-            )}
+          <View style={styles.amountSection}>
+            <Text style={styles.amountLabel}>Amount paid</Text>
+            <Text style={styles.amountValue}>₹{displayAmount}</Text>
           </View>
-        )}
-      </Animated.View>
 
-      <Animated.View style={[styles.footer, { opacity: opacityAnim, paddingBottom: Math.max(insets.bottom, 24) }]}>
-        <Pressable 
-          style={({ pressed }) => [styles.downloadBtn, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6', opacity: pressed ? 0.7 : 1 }]} 
-          onPress={handleDownloadInvoice}
-        >
-          <Ionicons name="receipt-outline" size={18} color={isDark ? '#F9FAFB' : '#111827'} style={{ marginRight: 8 }} />
-          <Text style={[styles.downloadBtnText, { color: isDark ? '#F9FAFB' : '#111827' }]}>Get Receipt</Text>
-        </Pressable>
-        
-        <Pressable 
-          style={({ pressed }) => [styles.dashboardBtn, { backgroundColor: isDark ? '#FFFFFF' : '#111827', opacity: pressed ? 0.8 : 1 }]} 
-          onPress={handleGoToDashboard}
-        >
-          <Text style={[styles.dashboardBtnText, { color: isDark ? '#111827' : '#FFFFFF' }]}>Done</Text>
-        </Pressable>
-      </Animated.View>
-    </ImageBackground>
+          <View style={styles.detailsList}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Merchant</Text>
+              <Text style={styles.detailValue}>T2drive</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Transaction ID</Text>
+              <Text style={styles.detailValue} selectable>{transactionId || 'N/A'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Date & time</Text>
+              <Text style={styles.detailValue}>{moment().format('MMM D, YYYY, h:mm A')} UTC</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Payment method</Text>
+              <Text style={styles.detailValue}>Online</Text>
+            </View>
+          </View>
+
+        </Animated.View>
+
+        {/* Action Buttons */}
+        <Animated.View style={[styles.actions, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, pressed && { opacity: 0.8 }]}
+            onPress={handleGoToDashboard}
+          >
+            <Ionicons name="home-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={styles.primaryBtnText}>Back to home</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.secondaryBtn, pressed && { opacity: 0.7 }]}
+            onPress={handleShareReceipt}
+          >
+            <Ionicons name="download-outline" size={20} color={TEXT_DARK} style={{ marginRight: 8 }} />
+            <Text style={styles.secondaryBtnText}>Download receipt</Text>
+          </Pressable>
+
+        </Animated.View>
+
+      </View>
+    </SafeAreaView>
   );
 };
+
+export default SubscriptionSuccessScreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BG_COLOR,
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
-  headerArea: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  iconWrapper: {
-    marginBottom: 20,
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 6,
-    letterSpacing: -0.5,
-  },
-  successSubtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  receiptCard: {
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  amountText: {
-    fontSize: 42,
-    fontWeight: '700',
-    letterSpacing: -1,
-    textAlign: 'center',
-  },
-  badge: {
-    marginTop: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    alignSelf: 'center',
-  },
-  badgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  dashedLineWrapper: {
-    width: '100%',
-    height: 1,
-    overflow: 'hidden',
-    marginVertical: 24,
-  },
-  dashedLine: {
-    width: '100%',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-  },
-  listRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  animationContainer: {
     alignItems: 'center',
     marginBottom: 16,
   },
-  listLabel: {
-    fontSize: 14,
-    fontWeight: '400',
+
+  headerTexts: {
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  listValue: {
-    fontSize: 14,
-    fontWeight: '600',
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: TEXT_DARK,
+    marginBottom: 8,
   },
-  footer: {
-    paddingHorizontal: 24,
-    gap: 12,
+  subtitle: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
   },
-  downloadBtn: {
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    marginBottom: 16,
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
+    marginBottom: 16,
   },
-  downloadBtnText: {
-    fontSize: 15,
+  cardHeaderTitle: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: TEXT_MUTED,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: BORDER_COLOR,
+    marginBottom: 16,
+  },
+  amountSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  amountLabel: {
+    fontSize: 13,
+    color: TEXT_MUTED,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  amountValue: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: TEXT_DARK,
+    letterSpacing: -1,
+  },
+  detailsList: {
+    gap: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: TEXT_MUTED,
+  },
+  detailValue: {
+    fontSize: 13,
+    color: TEXT_DARK,
     fontWeight: '600',
   },
-  dashboardBtn: {
+  actions: {
+    gap: 12,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    backgroundColor: BLUE_PRIMARY,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
   },
-  dashboardBtnText: {
+  primaryBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: BORDER_COLOR,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    color: TEXT_DARK,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   }
 });
-
-export default SubscriptionSuccessScreen;

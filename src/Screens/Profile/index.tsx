@@ -124,20 +124,22 @@ const ProfileScreen = ({ navigation }: any) => {
       {isFocused && <AppStatusBar />}
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         {/* ================= HEADER ================= */}
-        <View style={[styles.header, { paddingTop: insets.top + 10, backgroundColor: theme.colors.background }]}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-          </Pressable>
+        <View style={{ paddingTop: insets.top + 10, backgroundColor: theme.colors.background }}>
+          <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
+            <Pressable style={{ zIndex: 1, padding: 4 }} onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
+            </Pressable>
 
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_profile')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_profile')}</Text>
 
-          <Pressable
-            style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-            onPress={() => navigation.navigate(HelpCenter_Nav)}
-          >
-            <Ionicons name="headset-outline" size={18} color={theme.colors.text} />
-            <Text style={[styles.helpText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
-          </Pressable>
+            <Pressable
+              style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, { zIndex: 1 }]}
+              onPress={() => navigation.navigate(HelpCenter_Nav)}
+            >
+              <Ionicons name="headset-outline" size={18} color={theme.colors.text} />
+              <Text style={[styles.helpText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
+            </Pressable>
+          </View>
         </View>
 
         {/* ================= BANNER ================= */}
@@ -341,10 +343,10 @@ const MenuItem = ({ icon, title, onPress, isDark }: any) => {
   return (
     <Pressable style={styles.menuItem} onPress={onPress}>
       <View style={styles.menuLeft}>
-        <Ionicons name={icon} size={20} color={theme.colors.text} />
+        <Ionicons name={icon} size={18} color={theme.colors.text} />
         <Text style={[styles.menuText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={isDark ? theme.colors.textMuted : '#9CA3AF'} />
+      <Ionicons name="chevron-forward" size={18} color={isDark ? theme.colors.textMuted : '#9CA3AF'} />
     </Pressable>
   );
 };
@@ -354,7 +356,7 @@ const MenuItem = ({ icon, title, onPress, isDark }: any) => {
 const StatCard = ({ icon, iconColor, value, label, isDark, theme }: any) => (
   <View style={[styles.statCard, { backgroundColor: theme.colors.card }]}>
     <View style={[styles.statIcon, { backgroundColor: iconColor + (isDark ? '30' : '20') }]}>
-      <Ionicons name={icon} size={18} color={iconColor} />
+      <Ionicons name={icon} size={16} color={iconColor} />
     </View>
 
     <View style={styles.statTextWrap}>
@@ -387,11 +389,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
   },
 
   headerTitle: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
@@ -417,7 +423,7 @@ const styles = StyleSheet.create({
 
   /* ---------- BANNER ---------- */
   banner: {
-    height: 110,
+    height: 120,
     backgroundColor: '#E5E7EB',
   },
 
@@ -438,44 +444,44 @@ const styles = StyleSheet.create({
 
   avatarWrapper: {
     alignSelf: 'center',
-    marginTop: -35,
+    marginTop: -40,
     backgroundColor: 'transparent',
-    padding: 3,
+    padding: 4,
     borderRadius: 60,
   },
 
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
 
   avatarPlaceholder: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '700',
     color: '#111827',
   },
 
   /* ---------- USER INFO ---------- */
   name: {
-    marginTop: 10,
-    fontSize: 20,
+    marginTop: 6,
+    fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
     color: '#111827',
   },
 
   phone: {
-    marginTop: 2,
-    fontSize: 14,
+    marginTop: 0,
+    fontSize: 13,
     textAlign: 'center',
     color: '#6B7280',
   },
@@ -485,7 +491,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 6,
   },
 
   statCard: {
@@ -494,15 +500,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     marginHorizontal: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
     borderRadius: 12,
   },
 
   statIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 14,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -512,14 +518,14 @@ const styles = StyleSheet.create({
   },
 
   statValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#111827',
     lineHeight: 18,
   },
 
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 1,
   },
@@ -527,8 +533,8 @@ const styles = StyleSheet.create({
   menuCard: {
     flex: 1,
     marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 6,
+    marginBottom: 8,
     borderRadius: 7,
     elevation: 0,
     overflow: 'hidden',
@@ -539,17 +545,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 11,
+    paddingVertical: 8,
   },
 
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
 
   menuText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '500',
     color: '#111827',
   },

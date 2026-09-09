@@ -113,7 +113,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     });
                     
                     if (navigationRef.isReady()) {
-                        navigationRef.dispatch(StackActions.replace('DashboardScreen'));
+                        navigationRef.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
                     }
                 }
             }

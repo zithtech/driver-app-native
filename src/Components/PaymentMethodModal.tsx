@@ -3,28 +3,28 @@ import {
     View,
     Text,
     StyleSheet,
-    Modal,
     TouchableOpacity,
     Dimensions,
     Platform,
     ActivityIndicator,
     TextInput,
     Alert,
-    ImageBackground,
     StatusBar,
     KeyboardAvoidingView,
     TouchableWithoutFeedback,
-    Keyboard
+    Keyboard,
+    ScrollView,
+    ToastAndroid
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import LinearGradient from 'react-native-linear-gradient';
-import Animated, { FadeIn, FadeOut, ZoomIn, ZoomOut, SlideInRight, SlideOutLeft, SlideInLeft, SlideOutRight } from 'react-native-reanimated';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useTranslation } from 'react-i18next';
-import { useAppTheme } from '../context/ThemeContext';
 import { useHaptic } from '../hooks/useHaptic';
 import { ms, vs } from '../lib/scale';
+import { useValidatePromoMutation, useGetAvailablePromosQuery } from '../service/userApi';
 
 const { width } = Dimensions.get('window');
 
@@ -34,11 +34,14 @@ interface PaymentMethodModalProps {
     amountToPay: number;
     walletBalance: number;
     hasWalletPin: boolean;
-    onSelectWallet: (pin: string) => void;
-    onSelectRazorpay: () => void;
+    onSelectWallet: (pin: string, promoCode?: string) => void;
+    onSelectRazorpay: (promoCode?: string) => void;
     onSetupPin: () => void;
     isProcessing?: boolean;
 }
+
+const PRIMARY_GREEN = '#008362';
+const BG_COLOR = '#F3F5F7';
 
 const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
     isVisible,
@@ -52,17 +55,30 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
     isProcessing = false,
 }) => {
     const { t } = useTranslation();
-    const { theme, isDark } = useAppTheme();
     const { triggerHaptic } = useHaptic();
     const [step, setStep] = useState<'selection' | 'pin'>('selection');
     const [pin, setPin] = useState('');
     const [isPinVisible, setIsPinVisible] = useState(false);
+
+    const [couponCode, setCouponCode] = useState('');
+    const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number; description: string } | null>(null);
+    const [promoError, setPromoError] = useState('');
+    const [validatePromo, { isLoading: isValidatingPromo }] = useValidatePromoMutation();
+    const { data: promosRes } = useGetAvailablePromosQuery();
+
+    const [selectedMethod, setSelectedMethod] = useState<'wallet' | 'online'>('wallet');
+
+    const availablePromos = promosRes?.data || [];
 
     useEffect(() => {
         if (!isVisible) {
             setStep('selection');
             setPin('');
             setIsPinVisible(false);
+            setCouponCode('');
+            setAppliedPromo(null);
+            setPromoError('');
+            setSelectedMethod('wallet');
         }
     }, [isVisible]);
 
@@ -72,37 +88,65 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
         }
     }, [isVisible, triggerHaptic]);
 
-    const handleWalletSelect = () => {
-        triggerHaptic(HapticFeedbackTypes.selection);
-        if (!hasWalletPin) {
-            Alert.alert(
-                t('Setup Wallet PIN'),
-                t('You need to set up a 4-digit Wallet PIN to securely authorize payments. Would you like to set it up now?'),
-                [
-                    { text: t('Cancel'), style: 'cancel' },
-                    {
-                        text: t('Setup PIN'),
-                        onPress: () => {
-                            onClose();
-                            onSetupPin();
-                        }
-                    }
-                ]
-            );
-            return;
+    const handleApplyPromo = async (codeToApply?: string) => {
+        const code = codeToApply || couponCode.trim();
+        if (!code) return;
+        setPromoError('');
+        try {
+            const res = await validatePromo({ code: code, amount: amountToPay }).unwrap();
+            if (res?.data?.isValid) {
+                setAppliedPromo({
+                    code: code,
+                    discount: res.data.discountAmount || res.data.discount_amount || 0,
+                    description: res.data.message || res.message || 'Promo code applied successfully!',
+                });
+                Keyboard.dismiss();
+            } else {
+                setAppliedPromo(null);
+                setPromoError(res?.data?.message || res?.message || 'Invalid or expired promo code');
+            }
+        } catch (error: any) {
+            setAppliedPromo(null);
+            setPromoError(error?.data?.message || error?.message || 'Invalid or expired promo code');
         }
-        setStep('pin');
+    };
+
+    const handleRemovePromo = () => {
+        setAppliedPromo(null);
+        setCouponCode('');
+        setPromoError('');
+    };
+
+    const handlePay = () => {
+        triggerHaptic(HapticFeedbackTypes.selection);
+        if (selectedMethod === 'wallet') {
+            if (!hasWalletPin) {
+                Alert.alert(
+                    t('Setup Wallet PIN'),
+                    t('You need to set up a 4-digit Wallet PIN to securely authorize payments. Would you like to set it up now?'),
+                    [
+                        { text: t('Cancel'), style: 'cancel' },
+                        {
+                            text: t('Setup PIN'),
+                            onPress: () => {
+                                onClose();
+                                onSetupPin();
+                            }
+                        }
+                    ]
+                );
+                return;
+            }
+            setStep('pin');
+        } else {
+            onSelectRazorpay(appliedPromo?.code);
+        }
     };
 
     const handleConfirmWallet = () => {
         if (pin.length !== 4) return;
         triggerHaptic(HapticFeedbackTypes.notificationSuccess);
-        onSelectWallet(pin);
-    };
-
-    const handleRazorpaySelect = () => {
-        triggerHaptic(HapticFeedbackTypes.selection);
-        onSelectRazorpay();
+        onSelectWallet(pin, appliedPromo?.code);
     };
 
     const handleBack = () => {
@@ -112,245 +156,604 @@ const PaymentMethodModal: React.FC<PaymentMethodModalProps> = ({
     };
 
     const insets = useSafeAreaInsets();
-    const hasEnoughBalance = walletBalance >= amountToPay && amountToPay > 0;
+    const finalAmountToPay = appliedPromo ? Math.max(0, amountToPay - appliedPromo.discount) : amountToPay;
+    const hasEnoughBalance = walletBalance >= finalAmountToPay && finalAmountToPay > 0;
+
+    // Default to online if wallet balance is not enough, only once
+    useEffect(() => {
+        if (isVisible && step === 'selection') {
+            if (!hasEnoughBalance && selectedMethod === 'wallet') {
+                setSelectedMethod('online');
+            }
+        }
+    }, [isVisible, hasEnoughBalance]);
 
     if (!isVisible) return null;
 
     return (
-        <Animated.View
-            style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999 }]}
-        >
-            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
-            <ImageBackground
-                source={require('../assets/images/pay.png')}
-                style={styles.background}
-                resizeMode="cover"
-            >
-                {/* Overlay for better readability over the image */}
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.7)' }]} />
-
-                <KeyboardAvoidingView
-                    style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom || ms(20) }]}>
-
-                            {/* Header */}
-                            <View style={styles.header}>
-                                {step === 'pin' ? (
-                                    <TouchableOpacity onPress={handleBack} style={styles.iconButton} disabled={isProcessing}>
-                                        <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity onPress={onClose} style={styles.iconButton} disabled={isProcessing}>
-                                        <Ionicons name="close" size={28} color={theme.colors.text} />
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-
-                            <View style={styles.content}>
-                                <Text style={[styles.title, { color: theme.colors.text }]}>
-                                    {step === 'selection' ? t('Select Payment Method') : t('Authorize Payment')}
-                                </Text>
-
-                                <View style={styles.amountContainer}>
-                                    <Text style={[styles.amountLabel, { color: theme.colors.textMuted }]}>{t('Amount to pay')}</Text>
-                                    <Text style={[styles.amountValue, { color: theme.colors.primary }]}>₹{amountToPay.toFixed(2)}</Text>
+        <Animated.View style={[StyleSheet.absoluteFill, { zIndex: 9999, elevation: 9999, backgroundColor: BG_COLOR }]}>
+            <StatusBar barStyle="light-content" backgroundColor={PRIMARY_GREEN} translucent={true} />
+            
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={{ flex: 1, paddingBottom: step === 'selection' ? vs(80) : 0 }}>
+                        {step === 'selection' ? (
+                            <>
+                                {/* Top Header Background */}
+                                <View style={[styles.topHeaderBackground, { paddingTop: insets.top || vs(20) }]}>
+                                    <View style={styles.headerRow}>
+                                        <TouchableOpacity onPress={onClose} style={styles.backButton}>
+                                            <Ionicons name="arrow-back" size={24} color="#FFF" />
+                                        </TouchableOpacity>
+                                        <Text style={styles.headerTitle}>{t('Select payment method')}</Text>
+                                        <MaterialCommunityIcons name="shield-check-outline" size={24} color="#FFF" />
+                                    </View>
+                                    <View style={styles.amountSection}>
+                                        <Text style={styles.amountToPayLabel}>{t('AMOUNT TO PAY')}</Text>
+                                        <Text style={styles.amountToPayValue}>₹{finalAmountToPay.toFixed(0)}</Text>
+                                    </View>
                                 </View>
 
-                                {step === 'selection' && (
-                                    <Animated.View style={styles.optionsContainer}>
-                                        <TouchableOpacity
-                                            style={[styles.minimalOptionCard, { borderColor: isDark ? '#4B5563' : '#E5E7EB', backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}
-                                            onPress={handleWalletSelect}
-                                            disabled={!hasEnoughBalance || isProcessing}
-                                        >
-                                            <View style={styles.minimalOptionContent}>
-                                                <Ionicons name="wallet-outline" size={26} color={theme.colors.text} style={styles.minimalIcon} />
-                                                <View style={styles.optionTexts}>
-                                                    <Text style={[styles.minimalOptionTitle, { color: theme.colors.text }]}>{t('Pay via Wallet')}</Text>
-                                                    <Text style={[styles.minimalOptionSubtitle, { color: hasEnoughBalance ? theme.colors.textMuted : theme.colors.error }]}>
-                                                        {t('Balance')}: ₹{walletBalance.toFixed(2)}
-                                                    </Text>
-                                                </View>
-                                                <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-                                            </View>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={[styles.minimalOptionCard, { borderColor: isDark ? '#4B5563' : '#E5E7EB', backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}
-                                            onPress={handleRazorpaySelect}
-                                            disabled={isProcessing}
-                                        >
-                                            <View style={styles.minimalOptionContent}>
-                                                <Ionicons name="card-outline" size={26} color={theme.colors.text} style={styles.minimalIcon} />
-                                                <View style={styles.optionTexts}>
-                                                    <Text style={[styles.minimalOptionTitle, { color: theme.colors.text }]}>{t('Pay Online')}</Text>
-                                                    <Text style={[styles.minimalOptionSubtitle, { color: theme.colors.textMuted }]}>{t('UPI, Cards, Netbanking')}</Text>
-                                                </View>
-                                                <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-                                            </View>
-                                        </TouchableOpacity>
-                                    </Animated.View>
-                                )}
-
-                                {step === 'pin' && (
-                                    <Animated.View entering={SlideInRight.duration(300)} exiting={SlideOutRight.duration(200)} style={styles.pinContainer}>
-                                        <Text style={[styles.pinInstruction, { color: theme.colors.textMuted }]}>
-                                            {t('Enter your 4-digit Wallet PIN to authorize this deduction.')}
-                                        </Text>
-
-                                        <View style={styles.pinInputContainer}>
-                                            <TextInput
-                                                style={[styles.pinInput, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: isDark ? '#1F2937' : '#FFFFFF' }]}
-                                                keyboardType="numeric"
-                                                secureTextEntry={!isPinVisible}
-                                                maxLength={4}
-                                                value={pin}
-                                                onChangeText={setPin}
-                                                placeholder="••••"
-                                                placeholderTextColor={theme.colors.textMuted}
-                                                autoFocus
-                                            />
-                                            <TouchableOpacity 
-                                                style={styles.eyeIcon} 
-                                                onPress={() => setIsPinVisible(!isPinVisible)}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Ionicons 
-                                                    name={isPinVisible ? "eye-off-outline" : "eye-outline"} 
-                                                    size={24} 
-                                                    color={theme.colors.textMuted} 
-                                                />
-                                            </TouchableOpacity>
+                                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                                    {/* Coupon Section */}
+                                    <View style={styles.card}>
+                                        <View style={styles.sectionTitleRow}>
+                                            <MaterialCommunityIcons name="ticket-confirmation-outline" size={20} color={PRIMARY_GREEN} />
+                                            <Text style={styles.sectionTitle}>{t('Have a coupon?')}</Text>
                                         </View>
+                                        
+                                        {!appliedPromo ? (
+                                            <>
+                                                <View style={styles.couponInputRow}>
+                                                    <View style={styles.couponInputWrapper}>
+                                                        <TextInput
+                                                            style={styles.couponInput}
+                                                            placeholder={t("Enter coupon code")}
+                                                            placeholderTextColor="#9CA3AF"
+                                                            value={couponCode}
+                                                            onChangeText={(text) => { setCouponCode(text); setPromoError(''); }}
+                                                            autoCapitalize="characters"
+                                                        />
+                                                    </View>
+                                                    <TouchableOpacity 
+                                                        style={[styles.applyBtn, { backgroundColor: couponCode.trim() ? '#98BEB5' : '#D1D5DB' }]}
+                                                        onPress={() => handleApplyPromo()}
+                                                        disabled={!couponCode.trim() || isValidatingPromo}
+                                                    >
+                                                        {isValidatingPromo ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.applyBtnText}>{t("Apply")}</Text>}
+                                                    </TouchableOpacity>
+                                                </View>
+                                                {promoError ? <Text style={styles.promoError}>{promoError}</Text> : null}
+                                            </>
+                                        ) : (
+                                            <View style={styles.appliedPromoBox}>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={styles.appliedPromoTitle}>{appliedPromo.code} {t("Applied!")}</Text>
+                                                    <Text style={styles.appliedPromoDesc}>{appliedPromo.description}</Text>
+                                                </View>
+                                                <TouchableOpacity onPress={handleRemovePromo} style={{ padding: ms(4) }}>
+                                                    <Ionicons name="close-circle" size={20} color="#EF4444" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+                                    </View>
 
-                                        <TouchableOpacity
-                                            style={[styles.confirmButton, { backgroundColor: pin.length === 4 ? theme.colors.primary : (isDark ? '#374151' : '#E5E7EB') }]}
-                                            onPress={handleConfirmWallet}
-                                            disabled={pin.length !== 4 || isProcessing}
-                                        >
-                                            {isProcessing ? (
-                                                <ActivityIndicator color="#FFFFFF" />
-                                            ) : (
-                                                <Text style={[styles.confirmButtonText, { color: pin.length === 4 ? '#FFFFFF' : theme.colors.textMuted }]}>
-                                                    {t('Confirm Payment')}
+                                    {/* Available Offers */}
+                                    {step === 'selection' && !appliedPromo && (
+                                        <>
+                                            <View style={[styles.sectionTitleRow, { marginTop: vs(8) }]}>
+                                                <MaterialCommunityIcons name="brightness-percent" size={20} color={PRIMARY_GREEN} />
+                                                <Text style={[styles.sectionTitle, { marginLeft: ms(6) }]}>{t('Available offers')}</Text>
+                                            </View>
+                                            
+                                            {availablePromos.map((promo: any, index: number) => (
+                                                <View style={styles.card} key={promo.code || index}>
+                                                    <View style={styles.offerItem}>
+                                                        <View style={styles.offerIconBox}>
+                                                            <Text style={styles.offerIconText}>%</Text>
+                                                        </View>
+                                                        <View style={styles.offerContent}>
+                                                            <Text style={styles.offerTitle}>{promo.title || 'Special Offer'}</Text>
+                                                            <Text style={styles.offerDesc}>{promo.description || promo.title}</Text>
+                                                            <View style={styles.offerCodePill}>
+                                                                <Text style={styles.offerCodeText}>{promo.code}</Text>
+                                                            </View>
+                                                        </View>
+                                                        <TouchableOpacity onPress={() => { setCouponCode(promo.code); handleApplyPromo(promo.code); }} style={{ paddingLeft: ms(12) }}>
+                                                            <Text style={styles.offerApplyText}>{t('APPLY')}</Text>
+                                                        </TouchableOpacity>
+                                                    </View>
+                                                </View>
+                                            ))}
+                                        </>
+                                    )}
+
+                                    {/* Pay Using */}
+                                    <Text style={styles.payUsingTitle}>{t('Pay using')}</Text>
+                                    
+                                    <TouchableOpacity 
+                                        style={[styles.paymentMethodCard, selectedMethod === 'wallet' && styles.paymentMethodCardSelected, !hasEnoughBalance && { opacity: 0.6 }]}
+                                        onPress={() => hasEnoughBalance && setSelectedMethod('wallet')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <View style={styles.paymentIconBox}>
+                                            <MaterialCommunityIcons name="wallet-outline" size={22} color="#FFF" />
+                                        </View>
+                                        <View style={styles.paymentContent}>
+                                            <View style={styles.paymentTitleRow}>
+                                                <Text style={styles.paymentTitle}>{t('Pay via Wallet')}</Text>
+                                                <View style={styles.cashbackPill}>
+                                                    <Text style={styles.cashbackPillText}>{t('5% cashback')}</Text>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.paymentDesc}>
+                                                {t('Balance')} ₹{walletBalance.toFixed(0)} • {t('Instant')}
+                                            </Text>
+                                        </View>
+                                        <View style={[styles.radioCircle, selectedMethod === 'wallet' && styles.radioCircleSelected]}>
+                                            {selectedMethod === 'wallet' && <View style={styles.radioInner} />}
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={[styles.paymentMethodCard, selectedMethod === 'online' && styles.paymentMethodCardSelected]}
+                                        onPress={() => setSelectedMethod('online')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <View style={[styles.paymentIconBox, styles.paymentIconBoxOutline]}>
+                                            <MaterialCommunityIcons name="credit-card-outline" size={22} color="#6B7280" />
+                                        </View>
+                                        <View style={styles.paymentContent}>
+                                            <Text style={styles.paymentTitle}>{t('Pay Online')}</Text>
+                                            <Text style={[styles.paymentDesc, { marginTop: vs(2) }]}>{t('UPI, Cards, Net Banking')}</Text>
+                                        </View>
+                                        <View style={[styles.radioCircle, selectedMethod === 'online' && styles.radioCircleSelected]}>
+                                            {selectedMethod === 'online' && <View style={styles.radioInner} />}
+                                        </View>
+                                    </TouchableOpacity>
+
+                                    <View style={styles.secureTextRow}>
+                                        <MaterialCommunityIcons name="shield-check" size={16} color="#10B981" />
+                                        <Text style={styles.secureText}>{t('100% secure & encrypted payment')}</Text>
+                                    </View>
+                                </ScrollView>
+
+                                {/* Bottom Fixed Bar */}
+                                <View style={[styles.bottomBar, { paddingBottom: insets.bottom || vs(16) }]}>
+                                    <View>
+                                        <Text style={styles.totalPayableLabel}>{t('Total payable')}</Text>
+                                        <Text style={styles.totalPayableValue}>₹{finalAmountToPay.toFixed(0)}</Text>
+                                    </View>
+                                    <TouchableOpacity 
+                                        style={styles.payButton} 
+                                        onPress={handlePay} 
+                                        disabled={isProcessing}
+                                    >
+                                        {isProcessing ? <ActivityIndicator color="#FFF" /> : (
+                                            <>
+                                                <Text style={styles.payButtonText}>
+                                                    {selectedMethod === 'wallet' ? t('Pay with Wallet') : t('Pay Online')}
                                                 </Text>
-                                            )}
+                                                <Ionicons name="chevron-forward" size={18} color="#FFF" />
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        ) : (
+                            /* PIN STEP */
+                            <View style={[styles.container, { paddingTop: insets.top || vs(20) }]}>
+                                <View style={styles.headerRowPin}>
+                                    <TouchableOpacity onPress={handleBack} style={styles.backButtonPin}>
+                                        <Ionicons name="chevron-back" size={28} color="#111" />
+                                    </TouchableOpacity>
+                                    <Text style={styles.headerTitlePin}>{t('Authorize Payment')}</Text>
+                                    <View style={{ width: 40 }} />
+                                </View>
+                                
+                                <Animated.View entering={SlideInRight.duration(300)} exiting={SlideOutRight.duration(200)} style={styles.pinContainer}>
+                                    <Text style={styles.pinInstruction}>
+                                        {t('Enter your 4-digit Wallet PIN to authorize this deduction.')}
+                                    </Text>
+
+                                    <View style={styles.pinInputContainer}>
+                                        <TextInput
+                                            style={styles.pinInput}
+                                            keyboardType="numeric"
+                                            secureTextEntry={!isPinVisible}
+                                            maxLength={4}
+                                            value={pin}
+                                            onChangeText={setPin}
+                                            placeholder="••••"
+                                            placeholderTextColor="#9CA3AF"
+                                            autoFocus
+                                        />
+                                        <TouchableOpacity 
+                                            style={styles.eyeIcon} 
+                                            onPress={() => setIsPinVisible(!isPinVisible)}
+                                        >
+                                            <Ionicons 
+                                                name={isPinVisible ? "eye-off-outline" : "eye-outline"} 
+                                                size={24} 
+                                                color="#6B7280" 
+                                            />
                                         </TouchableOpacity>
-                                    </Animated.View>
-                                )}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[styles.confirmButton, { backgroundColor: pin.length === 4 ? PRIMARY_GREEN : '#D1D5DB' }]}
+                                        onPress={handleConfirmWallet}
+                                        disabled={pin.length !== 4 || isProcessing}
+                                    >
+                                        {isProcessing ? (
+                                            <ActivityIndicator color="#FFFFFF" />
+                                        ) : (
+                                            <Text style={[styles.confirmButtonText, { color: pin.length === 4 ? '#FFFFFF' : '#6B7280' }]}>
+                                                {t('Confirm Payment')}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </Animated.View>
                             </View>
-                        </View>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
-            </ImageBackground>
+                        )}
+                    </View>
+                </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
         </Animated.View>
     );
 };
 
 const styles = StyleSheet.create({
-    background: {
-        flex: 1,
-        width: '100%',
-        height: '100%',
-    },
     container: {
         flex: 1,
-        paddingHorizontal: ms(24),
+        backgroundColor: BG_COLOR,
     },
-    header: {
+    topHeaderBackground: {
+        backgroundColor: PRIMARY_GREEN,
+        borderBottomLeftRadius: ms(30),
+        borderBottomRightRadius: ms(30),
+        paddingHorizontal: ms(20),
+        paddingBottom: vs(30),
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: vs(10),
+    },
+    backButton: {
+        width: ms(40),
+        height: ms(40),
+        borderRadius: ms(20),
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerTitle: {
+        color: '#FFF',
+        fontSize: ms(18),
+        fontFamily: 'Inter-Bold',
+    },
+    amountSection: {
+        alignItems: 'center',
+        marginTop: vs(24),
+    },
+    amountToPayLabel: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: ms(12),
+        fontFamily: 'Inter-Medium',
+        letterSpacing: 1,
+        marginBottom: vs(4),
+    },
+    amountToPayValue: {
+        color: '#FFF',
+        fontSize: ms(48),
+        fontFamily: 'Inter-Bold',
+    },
+    scrollContent: {
+        paddingHorizontal: ms(16),
+        paddingTop: vs(24),
+        paddingBottom: vs(24),
+    },
+    card: {
+        backgroundColor: '#FFF',
+        borderRadius: ms(16),
+        padding: ms(16),
+        marginBottom: vs(16),
+    },
+    sectionTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: vs(12),
+    },
+    sectionTitle: {
+        fontSize: ms(15),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
+        marginLeft: ms(8),
+    },
+    couponInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    couponInputWrapper: {
+        flex: 1,
+        height: vs(44),
+        backgroundColor: '#F9FAFB',
+        borderRadius: ms(12),
+        paddingHorizontal: ms(12),
+        justifyContent: 'center',
+        marginRight: ms(12),
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderStyle: 'dashed',
+    },
+    couponInput: {
+        flex: 1,
+        fontFamily: 'Inter-Medium',
+        fontSize: ms(14),
+        color: '#333',
+    },
+    applyBtn: {
+        height: vs(44),
+        paddingHorizontal: ms(20),
+        borderRadius: ms(12),
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    applyBtnText: {
+        color: '#FFF',
+        fontFamily: 'Inter-Bold',
+        fontSize: ms(14),
+    },
+    promoError: {
+        color: '#EF4444',
+        fontSize: ms(12),
+        fontFamily: 'Inter-Regular',
+        marginTop: vs(4),
+        marginLeft: ms(4),
+    },
+    appliedPromoBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: ms(8),
+        padding: ms(12),
+        backgroundColor: '#ECFDF5',
+        borderColor: '#10B981',
+    },
+    appliedPromoTitle: {
+        color: '#10B981',
+        fontFamily: 'Inter-Bold',
+        fontSize: ms(14),
+        marginBottom: vs(2),
+    },
+    appliedPromoDesc: {
+        color: '#10B981',
+        fontFamily: 'Inter-Medium',
+        fontSize: ms(12),
+    },
+    offerItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: vs(12),
     },
-    iconButton: {
-        padding: ms(8),
+    offerIconBox: {
+        width: ms(40),
+        height: ms(40),
         borderRadius: ms(20),
-        backgroundColor: 'rgba(0,0,0,0.05)',
-    },
-    content: {
-        flex: 1,
+        backgroundColor: '#E6F3EE',
+        alignItems: 'center',
         justifyContent: 'center',
-        paddingBottom: vs(40),
+        marginRight: ms(12),
     },
-    title: {
-        fontSize: ms(28),
-        fontWeight: '700',
+    offerIconText: {
+        color: PRIMARY_GREEN,
         fontFamily: 'Inter-Bold',
-        marginBottom: vs(8),
-        textAlign: 'center',
-    },
-    amountContainer: {
-        alignItems: 'center',
-        marginVertical: vs(24),
-    },
-    amountLabel: {
         fontSize: ms(16),
-        fontFamily: 'Inter-Medium',
-        marginBottom: vs(8),
     },
-    amountValue: {
-        fontSize: ms(48),
-        fontFamily: 'Inter-Bold',
-        fontWeight: '800',
-    },
-    optionsContainer: {
-        marginTop: vs(24),
-    },
-    minimalOptionCard: {
-        borderWidth: 1,
-        borderRadius: ms(12),
-        paddingVertical: vs(16),
-        paddingHorizontal: ms(12),
-        marginBottom: vs(16),
-    },
-    minimalOptionContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    minimalIcon: {
-        marginRight: ms(16),
-    },
-    optionTexts: {
+    offerContent: {
         flex: 1,
     },
-    minimalOptionTitle: {
-        fontSize: ms(16),
-        fontFamily: 'Inter-Medium',
+    offerTitle: {
+        fontSize: ms(15),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
         marginBottom: vs(2),
     },
-    minimalOptionSubtitle: {
-        fontSize: ms(13),
+    offerDesc: {
+        fontSize: ms(12),
         fontFamily: 'Inter-Regular',
+        color: '#6B7280',
+        marginBottom: vs(8),
     },
-    badge: {
-        position: 'absolute',
-        top: ms(16),
-        right: ms(16),
-        backgroundColor: '#FF3B30',
-        paddingHorizontal: ms(10),
+    offerCodePill: {
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderStyle: 'dashed',
+        borderRadius: ms(8),
+        paddingHorizontal: ms(8),
         paddingVertical: vs(4),
+        alignSelf: 'flex-start',
+    },
+    offerCodeText: {
+        fontSize: ms(11),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
+        letterSpacing: 0.5,
+    },
+    offerApplyText: {
+        color: PRIMARY_GREEN,
+        fontFamily: 'Inter-Bold',
+        fontSize: ms(13),
+    },
+    payUsingTitle: {
+        fontSize: ms(15),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
+        marginBottom: vs(12),
+        marginTop: vs(8),
+    },
+    paymentMethodCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF',
+        borderRadius: ms(16),
+        padding: ms(16),
+        marginBottom: vs(12),
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    paymentMethodCardSelected: {
+        backgroundColor: '#EAF4F1',
+        borderColor: PRIMARY_GREEN,
+    },
+    paymentIconBox: {
+        width: ms(40),
+        height: ms(40),
+        borderRadius: ms(12),
+        backgroundColor: PRIMARY_GREEN,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: ms(12),
+    },
+    paymentIconBoxOutline: {
+        backgroundColor: '#F3F5F7',
+    },
+    paymentContent: {
+        flex: 1,
+    },
+    paymentTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: vs(2),
+    },
+    paymentTitle: {
+        fontSize: ms(15),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
+    },
+    cashbackPill: {
+        backgroundColor: '#D1EAE1',
+        paddingHorizontal: ms(6),
+        paddingVertical: vs(2),
+        borderRadius: ms(6),
+        marginLeft: ms(8),
+    },
+    cashbackPillText: {
+        color: PRIMARY_GREEN,
+        fontSize: ms(10),
+        fontFamily: 'Inter-Bold',
+    },
+    paymentDesc: {
+        fontSize: ms(12),
+        fontFamily: 'Inter-Regular',
+        color: '#6B7280',
+    },
+    radioCircle: {
+        width: ms(20),
+        height: ms(20),
+        borderRadius: ms(10),
+        borderWidth: 2,
+        borderColor: '#D1D5DB',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    radioCircleSelected: {
+        borderColor: PRIMARY_GREEN,
+        backgroundColor: PRIMARY_GREEN,
+    },
+    radioInner: {
+        width: ms(10),
+        height: ms(10),
+        borderRadius: ms(5),
+        backgroundColor: '#FFF',
+    },
+    secureTextRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: vs(8),
+        marginBottom: vs(24),
+    },
+    secureText: {
+        color: '#6B7280',
+        fontSize: ms(12),
+        fontFamily: 'Inter-Medium',
+        marginLeft: ms(6),
+    },
+    bottomBar: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#FFF',
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: ms(20),
+        paddingVertical: vs(16),
+    },
+    totalPayableLabel: {
+        fontSize: ms(12),
+        fontFamily: 'Inter-Medium',
+        color: '#6B7280',
+        marginBottom: vs(2),
+    },
+    totalPayableValue: {
+        fontSize: ms(22),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
+    },
+    payButton: {
+        backgroundColor: PRIMARY_GREEN,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: ms(24),
+        paddingVertical: vs(12),
         borderRadius: ms(12),
     },
-    badgeText: {
+    payButtonText: {
         color: '#FFF',
-        fontSize: ms(12),
+        fontSize: ms(15),
         fontFamily: 'Inter-Bold',
-        fontWeight: '700',
+        marginRight: ms(8),
+    },
+    
+    // PIN Step styles
+    headerRowPin: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: ms(20),
+        paddingVertical: vs(12),
+    },
+    backButtonPin: {
+        width: ms(40),
+        height: ms(40),
+        borderRadius: ms(20),
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerTitlePin: {
+        fontSize: ms(18),
+        fontFamily: 'Inter-Bold',
+        color: '#111',
     },
     pinContainer: {
-        marginTop: vs(24),
+        marginTop: vs(40),
         alignItems: 'center',
+        paddingHorizontal: ms(24),
     },
     pinInstruction: {
         fontSize: ms(16),
         fontFamily: 'Inter-Medium',
         textAlign: 'center',
         marginBottom: vs(32),
-        paddingHorizontal: ms(16),
+        color: '#4B5563',
         lineHeight: ms(24),
     },
     pinInputContainer: {
@@ -360,6 +763,7 @@ const styles = StyleSheet.create({
     },
     pinInput: {
         borderWidth: 1,
+        borderColor: '#D1D5DB',
         borderRadius: ms(16),
         fontSize: ms(32),
         fontFamily: 'Inter-Bold',
@@ -368,6 +772,8 @@ const styles = StyleSheet.create({
         paddingVertical: vs(10),
         letterSpacing: ms(12),
         paddingRight: ms(40),
+        backgroundColor: '#FFF',
+        color: '#111',
     },
     eyeIcon: {
         position: 'absolute',
@@ -375,8 +781,7 @@ const styles = StyleSheet.create({
         padding: ms(8),
     },
     confirmButton: {
-        width: '80%',
-        alignSelf: 'center',
+        width: '100%',
         paddingVertical: vs(14),
         borderRadius: ms(16),
         alignItems: 'center',
@@ -388,9 +793,8 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     confirmButtonText: {
-        fontSize: ms(18),
+        fontSize: ms(16),
         fontFamily: 'Inter-Bold',
-        fontWeight: '700',
     },
 });
 

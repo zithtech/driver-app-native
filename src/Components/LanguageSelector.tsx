@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
   StyleSheet,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
@@ -25,17 +24,16 @@ interface LanguageSelectorProps {
 
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'light' }) => {
   const { colors, fonts } = useTheme() as any;
-  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { triggerHaptic } = useHaptic();
 
   const savedLanguage = useSelector((state: RootState) => state.userSlice.user?.language);
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const handleLanguageSelect = (lang: string) => {
     i18n.changeLanguage(lang);
     dispatch(setUser({ language: lang }));
-    setShowLanguageModal(false);
+    setShowDropdown(false);
     triggerHaptic(HapticFeedbackTypes.impactMedium);
   };
 
@@ -43,30 +41,30 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'light' }
   const isDark = variant === 'dark';
 
   return (
-    <>
+    <View style={{ position: 'relative', zIndex: 1000 }}>
       <TouchableOpacity
         style={[
           styles.languageBtn,
-          { 
+          {
             backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#FFFFFF',
             borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
-            elevation: isDark ? 0 : 2,
+            elevation: isDark ? 0 : 0.5,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 3,
           }
         ]}
         onPress={() => {
           triggerHaptic(HapticFeedbackTypes.impactLight);
-          setShowLanguageModal(true);
+          setShowDropdown(!showDropdown);
         }}
       >
-        <Ionicons 
-          name="globe-outline" 
-          size={18} 
-          color={colors.primary} 
-          style={{ marginRight: 6 }} 
+        <Ionicons
+          name="globe-outline"
+          size={18}
+          color={colors.primary}
+          style={{ marginRight: 6 }}
         />
         <Text style={[fonts.bold, { color: isDark ? '#FFFFFF' : colors.text, fontSize: 13, marginRight: 4 }]}>
           {currentLangObj.nativeName}
@@ -78,84 +76,43 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ variant = 'light' }
         />
       </TouchableOpacity>
 
-      <Modal
-        visible={showLanguageModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowLanguageModal(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowLanguageModal(false)}
-        >
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            {/* GRABBER */}
-            <View style={[styles.grabber, { backgroundColor: colors.text + '20' }]} />
-
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={[fonts.bold, { fontSize: 20, color: colors.text }]}>
-                  {t('choose_language')}
-                </Text>
-                <Text style={{ color: colors.text, opacity: 0.5, fontSize: 13, marginTop: 2 }}>
-                  {t('select_preferred_language')}
-                </Text>
-              </View>
-              <TouchableOpacity 
-                style={[styles.closeBtn, { backgroundColor: colors.text + '10' }]} 
-                onPress={() => setShowLanguageModal(false)}
+      {showDropdown && (
+        <View style={[styles.dropdownContainer, {
+          backgroundColor: colors.card,
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+        }]}>
+          {languagesList.map((item, index) => {
+            const isSelected = (savedLanguage || i18n.language) === item.value;
+            return (
+              <TouchableOpacity
+                key={item.value}
+                style={[
+                  styles.dropdownItem,
+                  index !== languagesList.length - 1 && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+                  }
+                ]}
+                onPress={() => handleLanguageSelect(item.value)}
               >
-                <Ionicons name="close" size={20} color={colors.text} />
+                <Text style={[
+                  fonts.medium,
+                  {
+                    color: isSelected ? colors.primary : colors.text,
+                    fontSize: 14
+                  }
+                ]}>
+                  {item.nativeName}
+                </Text>
+                {isSelected && (
+                  <Ionicons name="checkmark" size={16} color={colors.primary} />
+                )}
               </TouchableOpacity>
-            </View>
-
-            <View style={{ marginTop: 8 }}>
-              {languagesList.map((item) => {
-                const isSelected = (savedLanguage || i18n.language) === item.value;
-                return (
-                  <TouchableOpacity
-                    key={item.value}
-                    style={[
-                      styles.languageItem,
-                      {
-                        backgroundColor: isSelected ? colors.primary + '10' : colors.text + '05',
-                        borderColor: isSelected ? colors.primary : 'transparent',
-                        borderWidth: 1.5,
-                      }
-                    ]}
-                    onPress={() => handleLanguageSelect(item.value)}
-                  >
-                    <View style={styles.langItemLeft}>
-                      <View style={[styles.iconWrapper, { backgroundColor: isSelected ? '#FFFFFF' : colors.text + '10' }]}>
-                        <Text style={{ fontSize: 22 }}>{item.icon}</Text>
-                      </View>
-                      <View style={{ marginLeft: 14 }}>
-                        <Text style={[fonts.bold, { color: isSelected ? colors.primary : colors.text, fontSize: 16 }]}>
-                          {item.nativeName}
-                        </Text>
-                        <Text style={{ color: colors.text, opacity: 0.5, fontSize: 12 }}>
-                          {item.label}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={[
-                      styles.radioCircle, 
-                      { borderColor: isSelected ? colors.primary : colors.text + '30' }
-                    ]}>
-                      {isSelected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            
-            {/* BOTTOM SPACING FOR SAFE AREA */}
-            <View style={{ height: 20 }} />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </>
+            );
+          })}
+        </View>
+      )}
+    </View>
   );
 };
 
@@ -170,76 +127,25 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    width: '100%',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 20,
-  },
-  grabber: {
-    width: 40,
-    height: 5,
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  languageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 20,
-    marginBottom: 12,
-  },
-  langItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+  dropdownContainer: {
+    position: 'absolute',
+    top: 45,
+    left: 0,
+    width: 140,
+    borderRadius: 12,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 6,
+    elevation: 3,
+    paddingVertical: 4,
   },
-  radioCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    justifyContent: 'center',
+  dropdownItem: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  }
 });

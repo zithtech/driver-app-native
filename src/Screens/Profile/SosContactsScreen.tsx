@@ -21,11 +21,10 @@ import axiosInstance from '../../api/axiosInstance';
 import { selectContactPhone } from 'react-native-select-contact';
 import {
   PremiumInfoBanner,
-  PremiumSosContactCard,
   ConfirmationModal
 } from '../../Components';
 import { ms, vs, s } from '../../lib/scale';
-import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInUp, FadeInDown, FadeInRight, Layout } from 'react-native-reanimated';
 
 const RELATIONSHIPS = [
   { key: 'Family', icon: 'home-outline' },
@@ -64,8 +63,8 @@ const SosContactsScreen = ({ navigation }: any) => {
     setModalData({
       title: options.title || '',
       message: options.message || '',
-      confirmText: options.confirmText || t('ok'),
-      cancelText: options.cancelText || t('cancel'),
+      confirmText: options.confirmText || t('ok', 'OK'),
+      cancelText: options.cancelText || t('cancel', 'Cancel'),
       icon: options.icon || 'shield-checkmark',
       isDestructive: options.isDestructive || false,
       onConfirm: options.onConfirm || (() => setModalVisible(false)),
@@ -149,11 +148,11 @@ const SosContactsScreen = ({ navigation }: any) => {
 
   const handleDeleteContact = (id: number) => {
     showConfirm({
-      title: t('remove_contact'),
-      message: t('remove_contact_confirm'),
+      title: t('remove_contact', 'Remove Contact'),
+      message: t('remove_contact_confirm', 'Are you sure you want to remove this contact?'),
       icon: 'trash',
       isDestructive: true,
-      confirmText: t('remove'),
+      confirmText: t('remove', 'Remove'),
       onConfirm: async () => {
         try {
           setModalVisible(false);
@@ -171,30 +170,23 @@ const SosContactsScreen = ({ navigation }: any) => {
   const textMuted = isDark ? '#6B7280' : '#9CA3AF';
   const cardBg = isDark ? '#1F2937' : '#FFFFFF';
   const inputBg = isDark ? '#1F2937' : '#FFFFFF';
-  const inputBorder = isDark ? '#374151' : '#E5E7EB';
+  const inputBorder = isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6';
   const dividerColor = isDark ? '#374151' : '#F3F4F6';
   const isFormValid = name.trim().length > 0 && phone.trim().length > 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#111827' : '#F9FAFB' }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]} edges={['top', 'bottom']}>
       <AppStatusBar />
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: cardBg, borderBottomColor: dividerColor }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('trusted_contacts')}</Text>
+        <Text style={[styles.headerTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('emergency_contacts', 'Emergency Contacts')}</Text>
         <View style={styles.headerRight} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-        {/* INFO BANNER */}
-        <Animated.View entering={FadeInUp.duration(600)}>
-          <PremiumInfoBanner
-            description={t('trusted_contacts_desc')}
-          />
-        </Animated.View>
 
         {/* ── ADD CONTACT CARD ── */}
         <Animated.View
@@ -207,7 +199,7 @@ const SosContactsScreen = ({ navigation }: any) => {
               <Ionicons name="person-add-outline" size={22} color={textPrimary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.addCardTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('add_new_contact')}</Text>
+              <Text style={[styles.addCardTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('add_new_contact', 'Add New Contact')}</Text>
             </View>
           </View>
 
@@ -239,7 +231,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Name Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_name')}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('contact_name', 'Contact Name')}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: name ? colors.primary : inputBorder }]}>
               <Ionicons name="person-outline" size={18} color={name ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -259,7 +251,7 @@ const SosContactsScreen = ({ navigation }: any) => {
 
           {/* Phone Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('phone_number')}</Text>
+            <Text style={[styles.inputLabel, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>{t('phone_number', 'Phone Number')}</Text>
             <View style={[styles.inputRow, { backgroundColor: inputBg, borderColor: phone ? colors.primary : inputBorder }]}>
               <Ionicons name="call-outline" size={18} color={phone ? colors.primary : textMuted} style={styles.inputIcon} />
               <TextInput
@@ -348,7 +340,7 @@ const SosContactsScreen = ({ navigation }: any) => {
         {/* ── CONTACTS LIST ── */}
         <View style={styles.contactsList}>
           <View style={styles.listHeaderRow}>
-            <Text style={[styles.listTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_trusted_contacts')}</Text>
+            <Text style={[styles.listTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_trusted_contacts', 'My Trusted Contacts')}</Text>
             <Text style={[styles.countText, { color: textSecondary }]}>{contacts.length} / 5</Text>
           </View>
 
@@ -357,14 +349,14 @@ const SosContactsScreen = ({ navigation }: any) => {
           ) : contacts.length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: 'transparent' }]}>
               <Ionicons name="people-outline" size={48} color={textMuted} style={{ marginBottom: 16 }} />
-              <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('no_contacts_added')}</Text>
+              <Text style={[styles.emptyTitle, { color: textPrimary }]}>{t('no_contacts_added', 'No Contacts Added')}</Text>
               <Text style={[styles.emptySubText, { color: textSecondary }]}>
                 {t('add_contact_hint') || 'Add a trusted contact using the form above'}
               </Text>
             </View>
           ) : (
             contacts.map((contact, index) => (
-              <PremiumSosContactCard
+              <SosContactCard
                 key={contact.id}
                 name={contact.name}
                 phone={contact.phone}
@@ -375,6 +367,23 @@ const SosContactsScreen = ({ navigation }: any) => {
             ))
           )}
         </View>
+
+        {/* SECURE BANNER */}
+        <Animated.View entering={FadeInUp.delay(300).duration(600)}>
+          <View style={[styles.secureBannerContainer, { backgroundColor: isDark ? '#1E3A8A' : '#EFF6FF', borderColor: isDark ? '#1E40AF' : '#DBEAFE' }]}>
+            <View style={[styles.secureBannerIconLeft, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#DBEAFE' }]}>
+              <Ionicons name="shield-checkmark" size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
+            </View>
+            <View style={styles.secureBannerTextContainer}>
+              <Text style={[styles.secureBannerTitle, { color: isDark ? '#60A5FA' : '#2563EB' }]} numberOfLines={1}>
+                {t('your_info_secure', 'Your information is secure')}
+              </Text>
+              <Text style={[styles.secureBannerDesc, { color: isDark ? '#DBEAFE' : '#1E3A8A' }]} numberOfLines={1}>
+                {t('info_secure_desc_short', 'Used only for emergencies and kept confidential.')}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
       </ScrollView>
 
       {/* STANDARDIZED MODAL */}
@@ -402,7 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
     borderBottomWidth: 1,
   },
   backBtn: {
@@ -416,15 +425,15 @@ const styles = StyleSheet.create({
     width: 24,
   },
   content: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: 12,
+    paddingBottom: 24,
   },
 
   // ── Add Contact Card ──
   addCard: {
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    padding: 12,
+    marginBottom: 16,
     borderWidth: 1,
   },
   addCardHeader: {
@@ -443,11 +452,11 @@ const styles = StyleSheet.create({
   importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 8,
   },
   importIconBox: {
     marginRight: 12,
@@ -461,7 +470,7 @@ const styles = StyleSheet.create({
   orDividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 10,
   },
   orDividerLine: {
     flex: 1,
@@ -470,19 +479,19 @@ const styles = StyleSheet.create({
 
   // ── Inputs ──
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 4,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 48,
+    height: 40,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
@@ -505,8 +514,8 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 24, // Pill shape
     borderWidth: 1,
   },
@@ -520,7 +529,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 50,
+    height: 44,
     borderRadius: 12,
   },
   saveBtnText: {
@@ -559,6 +568,188 @@ const styles = StyleSheet.create({
   emptySubText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+
+  // ── Secure Banner ──
+  secureBannerContainer: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  secureBannerIconLeft: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  secureBannerTextContainer: {
+    flex: 1,
+  },
+  secureBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  secureBannerDesc: {
+    fontSize: 11,
+  },
+});
+
+// ── Inline Contact Card Component ──
+const AVATAR_COLORS = [
+  { bg: '#DBEAFE', text: '#1E40AF' },
+  { bg: '#E0E7FF', text: '#3730A3' },
+  { bg: '#FEF3C7', text: '#92400E' },
+  { bg: '#DCFCE7', text: '#166534' },
+  { bg: '#FCE7F3', text: '#9D174D' },
+];
+
+const SosContactCard = ({ name, phone, relationship, status = 'verified', onDelete, index }: any) => {
+  const { t } = useTranslation();
+  const { isDark } = useAppTheme();
+  const avatarStyle = AVATAR_COLORS[index % AVATAR_COLORS.length];
+
+  return (
+    <Animated.View 
+      entering={FadeInRight.delay(index * 100)}
+      layout={Layout.springify()}
+      style={[
+        cardStyles.container,
+        { 
+          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
+          borderColor: isDark ? '#374151' : '#E5E7EB',
+        }
+      ]}
+    >
+      <View style={[cardStyles.avatar, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : avatarStyle.bg }]}>
+        <Text style={[cardStyles.avatarText, { color: isDark ? '#9CA3AF' : avatarStyle.text }]}>
+          {name.charAt(0).toUpperCase()}
+        </Text>
+      </View>
+      
+      <View style={cardStyles.info}>
+        <View style={cardStyles.nameRow}>
+          <Text style={[cardStyles.name, { color: isDark ? '#F3F4F6' : '#111827' }]} numberOfLines={1}>
+            {name}
+          </Text>
+        </View>
+        
+        <View style={cardStyles.phoneStatusRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={[cardStyles.phone, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{phone}</Text>
+            {relationship && (
+              <View style={[cardStyles.tag, { borderColor: isDark ? '#374151' : '#E5E7EB', marginLeft: 8 }]}>
+                <Text style={[cardStyles.tagText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  {relationship}
+                </Text>
+              </View>
+            )}
+          </View>
+          
+          <View style={cardStyles.statusRow}>
+            <Ionicons 
+              name={status === 'verified' ? "shield-checkmark-outline" : "time-outline"} 
+              size={12} 
+              color={status === 'verified' ? '#10B981' : '#F59E0B'} 
+            />
+            <Text style={[cardStyles.statusText, { color: status === 'verified' ? '#10B981' : '#F59E0B' }]}>
+              {status === 'verified' ? t('status_verified', 'Verified') : t('status_pending', 'Pending')}
+            </Text>
+          </View>
+        </View>
+      </View>
+      
+      {onDelete && (
+        <Pressable 
+          onPress={onDelete} 
+          style={({ pressed }) => [
+            cardStyles.deleteBtn,
+            pressed && { opacity: 0.5 }
+          ]}
+        >
+          <Ionicons name="trash-outline" size={ms(20)} color={isDark ? '#EF4444' : '#DC2626'} />
+        </Pressable>
+      )}
+    </Animated.View>
+  );
+};
+
+const cardStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: ms(12),
+    borderRadius: ms(12),
+    marginBottom: vs(10),
+    borderWidth: 1,
+  },
+  avatar: {
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: ms(12),
+  },
+  avatarText: {
+    fontSize: ms(16),
+    fontWeight: '700',
+  },
+  info: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: vs(2),
+    flexWrap: 'wrap',
+  },
+  name: {
+    fontSize: ms(15),
+    fontWeight: '700',
+    marginRight: ms(8),
+  },
+  tag: {
+    paddingHorizontal: ms(6),
+    paddingVertical: vs(2),
+    borderRadius: ms(8),
+    borderWidth: 1,
+  },
+  tagText: {
+    fontSize: ms(9),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  phoneStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  phone: {
+    fontSize: ms(13),
+    fontWeight: '500',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: ms(10),
+    fontWeight: '600',
+    marginLeft: ms(2),
+  },
+  deleteBtn: {
+    width: ms(36),
+    height: ms(36),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: ms(12),
   },
 });
 
