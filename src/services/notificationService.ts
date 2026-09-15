@@ -278,6 +278,20 @@ export function setupBackgroundHandler(): void {
             console.log(`📩 [Background] Valid ride notification (${type}) — showing system notification.`);
         }
 
+        // For CHAT_MESSAGE, we also increment unread count in Redux
+        if (type === 'CHAT_MESSAGE') {
+            try {
+                const { store } = require('../redux/store');
+                const { incrementUnreadCount } = require('../redux/chatSlice');
+                const rideId = remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || remoteMessage.data?.rideId;
+                if (rideId) {
+                    store.dispatch(incrementUnreadCount(String(rideId)));
+                }
+            } catch (err) {
+                console.warn('Failed to increment unread count from background handler', err);
+            }
+        }
+
         const isLiveRideRequest = type === 'NEW_RIDE_REQUEST' || type === 'RIDE_REQUEST';
         const isScheduledAlert = type === 'SCHEDULED_REMINDER' || type === 'SCHEDULED_RIDE_STARTED';
         const isBroadcast = isLiveRideRequest; // Live ride requests auto-expire
@@ -355,7 +369,7 @@ getInitialNotification(getMessaging())
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
         // Emit after a short delay to ensure app navigation and listeners are ready
-        if (isValidRideNotification(remoteMessage.data as Record<string, string>) || type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER') {
+        if (isValidRideNotification(remoteMessage.data as Record<string, string>) || type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER' || type === 'CHAT_MESSAGE') {
             setTimeout(() => {
                 // 🛡️ Prevent duplicate processing: Only emit if it hasn't been consumed directly by a hook
                 if (cachedInitialNotification) {
@@ -385,6 +399,11 @@ export function setupNotificationOpenedHandler(
             navigate('RechargePlanScreen');
         } else if (type === 'SUPPORT_REPLY') {
             navigate('HelpCenter_Nav', { openChat: true });
+        } else if (type === 'CHAT_MESSAGE') {
+            const rideId = data.trip_id || data.id || data.tripId || data.rideId;
+            if (rideId) {
+                navigate('ChatScreen', { rideId });
+            }
         }
     };
 
@@ -398,7 +417,7 @@ export function setupNotificationOpenedHandler(
     const unsubscribeEmitter = globalEmitter.on(EVENTS.NOTIFICATION_OPENED, (data) => {
         const type = getNotificationType(data as Record<string, string>);
         // Only handle non-ride notifications here to avoid conflict with useRideFeed
-        if (type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER') {
+        if (type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER' || type === 'CHAT_MESSAGE') {
             console.log('✅ [Emitter] Handling cold-start navigation for:', type);
             handleNotificationAction(data);
         }

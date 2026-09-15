@@ -38,6 +38,13 @@ export interface Ride {
         rating: number;
         feedback?: string;
     } | null;
+    user?: {
+        name?: string;
+        firstName?: string;
+        phone?: string;
+        image?: string;
+        profile_image?: string;
+    };
 }
 
 interface RideSliceState {

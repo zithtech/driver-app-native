@@ -49,6 +49,17 @@
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>Location is needed to get your current place.</string>
 
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>t2drive needs your location in the background to send you nearby ride requests and track your trips while the app is minimized.</string>
+
+    <!-- Background Modes -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+        <string>remote-notification</string>
+        <string>fetch</string>
+    </array>
+
     <!-- App Transport Security -->
     <key>NSAppTransportSecurity</key>
     <dict>

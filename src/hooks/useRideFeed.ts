@@ -4,7 +4,7 @@ import socketService from '../service/socketService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
 import { TripStatus } from '../types/trip';
-import { useLazyGetTripByIdQuery, useLazyGetIncomingTripsQuery } from '../service/driverApi';
+import { useLazyGetTripByIdQuery, useLazyGetIncomingTripsQuery, useSkipTripMutation } from '../service/driverApi';
 import { useAlert } from '../context/AlertContext';
 import { useTranslation } from 'react-i18next';
 import { globalEmitter, EVENTS } from '../utils/EventEmitter';
@@ -57,8 +57,12 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
     const { showAlert } = useAlert();
     const { t } = useTranslation();
     const [triggerGetIncoming] = useLazyGetIncomingTripsQuery();
+    const [skipTrip] = useSkipTripMutation();
     const navigation = useNavigation<any>();
     const appStateRef = useRef(AppState.currentState);
+
+    // Track rejected ride IDs so reconnect sync / re-emits don't re-add them
+    const rejectedTripIdsRef = useRef<Set<string>>(new Set());
 
     const isBlockingLiveRequests = useMemo(() => {
         if (!currentRide || currentRide.booking_type !== 'SCHEDULED') return false;
@@ -83,6 +87,12 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         const tripId = String(data?.trip_id || data?.tripId || data?.bookingId || data?.id || "");
         if (!tripId) {
             console.warn('Ignoring ride request with no valid ID');
+            return;
+        }
+
+        // Skip rides that the driver already rejected in this session
+        if (rejectedTripIdsRef.current.has(tripId)) {
+            console.log(`[useRideFeed] Ignoring rejected ride ${tripId} (already skipped).`);
             return;
         }
         
@@ -423,8 +433,24 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         return () => clearInterval(timer);
     }, []);
 
-    const rejectRide = (id: number | string) => {
-        setRideQueue(prev => prev.filter(r => r.id !== id));
+    const rejectRide = (id: number | string, isManualDecline: boolean = false) => {
+        const tripId = String(id);
+
+        // 1. Remove from local queue immediately
+        setRideQueue(prev => prev.filter(r => String(r.id) !== tripId));
+
+        // 2. Track as rejected so reconnect sync won't re-add it (ONLY on manual decline)
+        if (isManualDecline) {
+            rejectedTripIdsRef.current.add(tripId);
+            
+            // 3. Notify backend so the server stops sending this ride
+            skipTrip(tripId)
+                .unwrap()
+                .then(() => console.log(`[useRideFeed] Successfully skipped trip ${tripId} on backend (Manual Decline).`))
+                .catch((err) => console.warn(`[useRideFeed] Failed to skip trip ${tripId} on backend:`, err));
+        } else {
+            console.log(`[useRideFeed] Ride ${tripId} auto-expired locally. Waiting for next radius broadcast.`);
+        }
     };
 
     const acceptRide = (id: number | string) => {
@@ -485,7 +511,12 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                     const result = await triggerGetIncoming(undefined).unwrap();
                     const trips = result?.data || result || [];
                     if (Array.isArray(trips)) {
-                        trips.forEach(trip => handleIncomingRide({ ...trip, noVibrate: true }));
+                        trips
+                            .filter((trip: any) => {
+                                const tid = String(trip.trip_id || trip.id || '');
+                                return !rejectedTripIdsRef.current.has(tid);
+                            })
+                            .forEach(trip => handleIncomingRide({ ...trip, noVibrate: true }));
                     }
                 } catch (e) { console.error('Failed to sync rides on reconnect:', e); }
             }

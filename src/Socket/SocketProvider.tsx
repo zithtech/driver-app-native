@@ -72,15 +72,24 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
         socketService.addConnectionListener(connectionListener);
 
         socketService.on("receiveChatMessage", (data: any) => {
-            const { rideId } = data;
+            const rideId = data.rideId || data.trip_id || data.tripId || data.id;
             
             // Check if user is currently looking at this specific chat
             const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
             const isOnChatScreen = currentRoute?.name === 'ChatScreen';
-            const lookingAtSameRide = currentRoute?.params && (currentRoute.params as any).rideId === rideId;
+            const lookingAtSameRide = currentRoute?.params && String((currentRoute.params as any).rideId) === String(rideId);
 
             if (!(isOnChatScreen && lookingAtSameRide)) {
-                dispatch(incrementUnreadCount(rideId));
+                if (rideId) {
+                    dispatch(incrementUnreadCount(String(rideId)));
+                }
+                
+                audioService.speak('New message received');
+                showToast({
+                    message: data.text || 'New chat message received',
+                    type: 'info',
+                    duration: 4000
+                });
             }
         });
 

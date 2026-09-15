@@ -794,7 +794,7 @@ const DriverDashboard = () => {
                       key={item.id || `ride-${index}`}
                       item={item}
                       onAccept={onAccept}
-                      onReject={() => rejectRide(item.id)}
+                      onReject={() => rejectRide(item.id, true)}
                     />
                   );
                 }
@@ -804,7 +804,7 @@ const DriverDashboard = () => {
                     key={item.id || `ride-${index}`}
                     item={item}
                     onAccept={onAccept}
-                    onReject={() => rejectRide(item.id)}
+                    onReject={(isManual: boolean) => rejectRide(item.id, isManual)}
                   />
                 );
               })}

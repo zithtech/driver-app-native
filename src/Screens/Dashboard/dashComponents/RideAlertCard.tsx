@@ -46,7 +46,7 @@ export type RideItem = {
 type Props = {
   item: RideItem;
   onAccept: () => void;
-  onReject: () => void;
+  onReject: (isManual: boolean) => void;
 };
 
 /* ================= COMPONENT ================= */
@@ -115,17 +115,17 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
     onAccept();
   }, [onAccept, triggerHaptic]);
 
-  const handleReject = useCallback(() => {
+  const handleReject = useCallback((isManual: boolean = false) => {
     SoundPlayer.stop();
     Vibration.cancel();
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-    onReject();
+    if (isManual) triggerHaptic(HapticFeedbackTypes.impactLight);
+    onReject(isManual);
   }, [onReject, triggerHaptic]);
 
   /* ---------- AUTO EXPIRE ---------- */
   useEffect(() => {
     if (remaining <= 0) {
-      handleReject();
+      handleReject(false);
     }
   }, [remaining, handleReject]);
 
@@ -255,7 +255,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
         {/* ACTIONS */}
         <View style={styles.actionsContainer}>
-          <Pressable style={[styles.declineBtn, isDark && { backgroundColor: theme.colors.background }]} onPress={handleReject}>
+          <Pressable style={[styles.declineBtn, isDark && { backgroundColor: theme.colors.background }]} onPress={() => handleReject(true)}>
             <View style={[styles.iconCircleOutline, isDark && { borderColor: theme.colors.text }]}>
               <Ionicons name="close" size={ms(16)} color={isDark ? theme.colors.text : "#0F172A"} />
             </View>

@@ -46,6 +46,7 @@ const WaitingScreen = ({ route }: any) => {
 
   const rideFromStore = useSelector((state: RootState) => state.ride.currentRide);
   const ride = rideFromStore || route?.params?.ride || {};
+  const unreadCount = useSelector((state: RootState) => state.chat?.unreadCounts[(ride.trip_id || ride.id)?.toString()] || 0);
 
   const handleCopyTripCode = useCallback(() => {
     const code = ride?.trip_code || ride?.booking_code;
@@ -398,6 +399,11 @@ const WaitingScreen = ({ route }: any) => {
                       </TouchableOpacity>
                       <TouchableOpacity onPress={handleChatPress} style={styles.compactBtn}>
                         <Ionicons name="chatbubble-ellipses" size={ms(20)} color={theme.colors.primary} />
+                        {unreadCount > 0 && (
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1452,6 +1458,25 @@ const styles = StyleSheet.create({
     fontSize: ms(13),
     fontWeight: '600',
     marginTop: vs(2),
+  },
+  badge: {
+    position: 'absolute',
+    top: -ms(5),
+    right: -ms(5),
+    backgroundColor: '#B91C1C',
+    borderRadius: ms(10),
+    minWidth: ms(18),
+    height: ms(18),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+    paddingHorizontal: ms(2),
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: ms(10),
+    fontWeight: 'bold',
   },
 });
 

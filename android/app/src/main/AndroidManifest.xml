@@ -24,7 +24,7 @@
     <!-- LOCATION -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- FOREGROUND SERVICE (for persistent location tracking when app is minimized) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
