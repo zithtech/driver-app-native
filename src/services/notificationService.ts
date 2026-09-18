@@ -357,7 +357,7 @@ export function onTokenRefresh(
 
 // 2. App was completely killed, user taps notification
 // Capture this as early as possible (at file load) to avoid missing it due to race conditions
-getInitialNotification(getMessaging())
+(() => { try { return getInitialNotification(getMessaging()); } catch(e) { return Promise.resolve(null); } })()
     .then(remoteMessage => {
         if (!remoteMessage) return;
 

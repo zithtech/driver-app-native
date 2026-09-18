@@ -10,6 +10,7 @@ import {
   Modal,
   RefreshControl,
   ScrollView,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -383,7 +384,7 @@ const DocumentScreen = ({ navigation }: any) => {
     return { otherDocs: DOCUMENTS };
   }, [DOCUMENTS]);
 
-  const allUploaded = uploadedCount === requiredDocuments.length;
+  const allUploaded = Platform.OS === 'ios' ? true : uploadedCount === requiredDocuments.length;
 
   const rejectedDocs = useMemo(() => {
     return otherDocs.filter(doc => getDocState(doc).status?.toLowerCase() === 'rejected');
@@ -397,6 +398,20 @@ const DocumentScreen = ({ navigation }: any) => {
     if (!user?.driverId) { return; }
 
     try {
+      if (Platform.OS === 'ios') {
+        // Temporarily skip document submission for iOS
+        triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+        showToast({
+          type: 'success',
+          message: 'Documents skipped for iOS.',
+          duration: 3000,
+        });
+        setTimeout(() => {
+          dispatch(setUser({ onboarding_status: 'DOCUMENTS_VERIFIED' }));
+        }, 1500);
+        return;
+      }
+
       await submitDocuments(user.driverId).unwrap();
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
       

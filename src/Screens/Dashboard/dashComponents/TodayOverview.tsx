@@ -130,21 +130,25 @@ export default TodayOverview;
 
 const styles = StyleSheet.create({
     container: {
-        marginHorizontal: s(12),
+        marginHorizontal: ms(16), // Match Quick Actions
         marginTop: vs(8),
         marginBottom: vs(4),
         borderRadius: ms(16),
         padding: ms(12),
+        overflow: 'hidden',
     },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: vs(12),
+        flexWrap: 'wrap',
     },
     titleWrap: {
         flexDirection: 'row',
         alignItems: 'center',
+        flexShrink: 1,
+        marginRight: s(8),
     },
     titleText: {
         color: '#FFFFFF',

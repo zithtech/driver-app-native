@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Dimensions } from 'react-native';
 import { Camera, useCameraDevice, useFrameProcessor } from 'react-native-vision-camera';
-import { useFaceDetector, FrameFaceDetectionOptions } from 'react-native-vision-camera-face-detector';
+// import { useFaceDetector, FrameFaceDetectionOptions } from 'react-native-vision-camera-face-detector';
 import { Worklets } from 'react-native-worklets-core';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Text } from '../../Components';
@@ -34,14 +34,14 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
     })();
   }, []);
 
-  const faceDetectorOptions: FrameFaceDetectionOptions = {
-    performanceMode: 'fast',
-    contourMode: 'none',
-    landmarkMode: 'none',
-    classificationMode: 'all',
-  };
+  // const faceDetectorOptions: FrameFaceDetectionOptions = {
+  //   performanceMode: 'fast',
+  //   contourMode: 'none',
+  //   landmarkMode: 'none',
+  //   classificationMode: 'all',
+  // };
 
-  const { detectFaces } = useFaceDetector(faceDetectorOptions);
+  // const { detectFaces } = useFaceDetector(faceDetectorOptions);
 
   const isCapturingRef = useRef(isCapturing);
   const capturedPhotoRef = useRef(capturedPhoto);
@@ -97,9 +97,10 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
 
   const frameProcessor = useFrameProcessor((frame) => {
     'worklet';
-    const faces = detectFaces(frame);
-    handleDetectedFace(faces);
-  }, [detectFaces, handleDetectedFace]);
+    // TEMPORARY: Face detection disabled for simulator
+    // const faces = detectFaces(frame);
+    // handleDetectedFace(faces);
+  }, [handleDetectedFace]);
 
   const confirmPhoto = () => {
     if (capturedPhoto) {
@@ -155,6 +156,14 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
               {isCapturing && <ActivityIndicator size="small" color="#FFF" style={{ marginTop: 10 }} />}
             </View>
           </View>
+          
+          {/* TEMPORARY: Simulate capture for simulator testing */}
+          <TouchableOpacity 
+            style={{position: 'absolute', bottom: 180, backgroundColor: '#10B981', padding: 15, borderRadius: 25, alignSelf: 'center'}} 
+            onPress={takePhoto}
+          >
+            <Text style={{color: 'white', fontWeight: 'bold'}}>Simulate Face Match</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={28} color="#FFF" />

@@ -17,8 +17,8 @@ class AudioService {
     try {
       await Tts.getInitStatus();
       this.initialized = true;
-      Tts.setDefaultRate(0.5); // Slightly slower for better clarity
-      Tts.setDefaultPitch(1.0);
+      // Tts.setDefaultRate(0.5, true); // Slightly slower for better clarity
+      // Tts.setDefaultPitch(1.0);
       
       // On some Android devices, we need to request voices
       if (Platform.OS === 'android') {
