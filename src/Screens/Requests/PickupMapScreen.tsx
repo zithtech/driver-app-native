@@ -89,6 +89,7 @@ const PickupMapScreen = ({ route }: any) => {
   const isSimulatingRef = useRef(false);
   const isArrivedRef = useRef(false);
   const isExitingRef = useRef(false);
+  const hasNotifiedArrival = useRef(false);
   const simInterval = useRef<any>(null);
 
   // Normalize coordinates
@@ -833,15 +834,22 @@ const PickupMapScreen = ({ route }: any) => {
       setEta(calculatedEta);
 
       // Real-World Proximity Logic: Auto-expand bottom sheet at 100m (0.1km)
-      if (dist <= 0.1 && dist > 0 && !isArrived) {
-        bottomSheetRef.current?.snapToIndex(1); // Expand to 65%
+      if (dist <= 0.1 && !isArrived) {
+        bottomSheetRef.current?.snapToIndex(1); // Expand to 65% (top)
+        if (!hasNotifiedArrival.current) {
+          showToast({
+            message: t('pickup.reached_at_pickup') || "Pickup point reached",
+            type: 'success',
+          });
+          hasNotifiedArrival.current = true;
+        }
       }
     } else if (!routeCoords || routeCoords.length === 0) {
       // Fallback to ride data if route not ready
       if (ride.distance_km) setDistance(parseFloat(ride.distance_km));
       if (ride.trip_duration_minutes) setEta(Math.ceil(parseFloat(ride.trip_duration_minutes)));
     }
-  }, [routeCoords, currentWaypointIndex, isArrived, ride.distance_km, ride.trip_duration_minutes]);
+  }, [routeCoords, currentWaypointIndex, isArrived, ride.distance_km, ride.trip_duration_minutes, showToast, t]);
 
   const swipeTitle = useMemo(() => {
     if (distance <= 0.1) return t('pickup.reached_at_pickup') || "Reached at Pickup";

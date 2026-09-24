@@ -41,6 +41,11 @@ export type RideItem = {
   trip_status?: string;
   otp?: string;
   noVibrate?: boolean;
+  trip_distance?: number | string;
+  trip_time?: number | string;
+  distance_to_pickup?: string;
+  eta_to_pickup?: string;
+  package_hours?: number | string;
 };
 
 type Props = {
@@ -135,6 +140,16 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const isRoundTrip = item.ride_type === 'ROUND_TRIP' || item.ride_type === 'OUTSTATION_ROUND_TRIP';
+  const tripDistanceNum = parseFloat(item.trip_distance?.toString() || '0');
+  const displayDistance = isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : (tripDistanceNum ? tripDistanceNum.toFixed(1) : '--');
+  
+  const tripTimeNum = parseFloat(item.trip_time?.toString() || '0');
+  const displayTime = isRoundTrip ? (tripTimeNum * 2).toFixed(0) : (tripTimeNum ? tripTimeNum.toFixed(0) : '--');
+  
+  const tripDistanceStr = displayDistance !== '--' ? `${displayDistance} km` : '--';
+  const tripTimeStr = displayTime !== '--' ? `${displayTime} min` : '';
+
   return (
     <RNAnimated.View
       style={[
@@ -208,7 +223,13 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <Text style={styles.fareLabel}>Estimated Fare</Text>
               <View style={[styles.rideTypeBadge, isDark && { backgroundColor: theme.colors.card }]}>
                 <Ionicons name="car-outline" size={ms(12)} color={isDark ? theme.colors.text : "#0F172A"} />
-                <Text style={[styles.rideTypeText, isDark && { color: theme.colors.text }]}>{item.ride_type || 'One-way'}</Text>
+                <Text style={[styles.rideTypeText, isDark && { color: theme.colors.text }]}>
+                  {item.ride_type === 'ROUND_TRIP' ? 'Round Trip' : 
+                   item.ride_type === 'OUTSTATION_ROUND_TRIP' ? 'Outstation Round Trip' :
+                   item.ride_type === 'OUTSTATION_ONE_WAY' ? 'Outstation One Way' :
+                   item.ride_type === 'ONE_WAY' ? 'One Way' : (item.ride_type || 'One-way')}
+                  {item.package_hours ? ` • ${item.package_hours} Hrs` : ''}
+                </Text>
               </View>
             </View>
           </View>
@@ -221,7 +242,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <MaterialCommunityIcons name="map-marker-distance" size={ms(18)} color="#4F46E5" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.distance || '2.4 km'}</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.distance_to_pickup || item.distance || '--'}</Text>
               <Text style={styles.infoLabel} numberOfLines={1}>Distance to pickup</Text>
             </View>
           </View>
@@ -231,7 +252,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <Ionicons name="time-outline" size={ms(18)} color="#059669" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.eta || '6 min'}</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.eta_to_pickup || item.eta || '--'}</Text>
               <Text style={styles.infoLabel} numberOfLines={1}>Est. time to pickup</Text>
             </View>
           </View>
@@ -241,8 +262,10 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <MaterialCommunityIcons name="source-commit" size={ms(18)} color="#EA580C" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>8.7 km</Text>
-              <Text style={styles.infoLabel} numberOfLines={1}>Total trip distance</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }, { fontSize: ms(11) }]} numberOfLines={2}>
+                {tripDistanceStr}{tripTimeStr ? ` | ${tripTimeStr}` : ''}
+              </Text>
+              <Text style={styles.infoLabel} numberOfLines={1}>Est. Trip Total</Text>
             </View>
           </View>
         </View>
