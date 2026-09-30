@@ -31,6 +31,7 @@ import moment from 'moment';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAlert } from '../../context/AlertContext';
 import { checkCameraPermission, checkPhotoLibraryPermission, goToSettings } from '../../utils/permissionUtils';
+import { resolveImageUrl } from '../../utils/imageUtils';
 
 
 export const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -71,7 +72,8 @@ const ChatScreen = ({ route, navigation }: any) => {
     // Fallback to currentRide data if opened from notification without full params
     const userName = params.userName || currentRide?.user?.name || currentRide?.user?.firstName || 'Rider';
     const userPhone = params.userPhone || currentRide?.user?.phone;
-    const userImage = params.userImage || currentRide?.user?.image || currentRide?.user?.profile_image;
+    const rawUserImage = params.userImage || currentRide?.user?.image || currentRide?.user?.profile_image || currentRide?.passenger_details?.image || currentRide?.passenger_details?.profile_picture || currentRide?.user_details?.profile_url || currentRide?.user_details?.profile_picture || currentRide?.riderImage || currentRide?.customer?.profile_url || currentRide?.customer?.profile_picture || currentRide?.customer?.image;
+    const userImage = resolveImageUrl(rawUserImage);
     const insets = useSafeAreaInsets();
     const { getCurrentLocation } = useLocation();
 

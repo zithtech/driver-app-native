@@ -216,7 +216,7 @@ const ScheduledRidesScreen = () => {
           startTime: new Date(timeVal).getTime(), // Added for RideCard display & timer logic
           passenger: trip.passenger || trip.passenger_details?.name || trip.user_details?.full_name || trip.user_details?.first_name || trip.passenger_name || trip.customer?.name || 'Customer',
           phone: trip.phone || trip.passenger_details?.phone || trip.user_details?.phone_number || trip.customer?.phone || trip.passenger_phone || '',
-          rating: typeof trip.rating === 'number' ? trip.rating : (typeof trip.passenger_details?.rating === 'number' ? trip.passenger_details.rating : (typeof trip.user_details?.rating === 'number' ? trip.user_details.rating : (typeof trip.customer?.rating === 'number' ? trip.customer.rating : 5.0))),
+          rating: typeof trip.rating === 'number' ? trip.rating : (typeof trip.passenger_details?.rating === 'number' ? trip.passenger_details.rating : (typeof trip.user_details?.rating === 'number' ? trip.user_details.rating : (typeof trip.customer?.rating === 'number' ? trip.customer.rating : 0.0))),
           paymentType: trip.paymentType || trip.payment_method || trip.paymentType || 'CASH',
           scheduled_status: trip.scheduled_status,
           re_dispatch_count: trip.re_dispatch_count,
@@ -247,7 +247,7 @@ const ScheduledRidesScreen = () => {
           startTime: new Date(timeVal).getTime(),
           passenger: currentRide.passenger || currentRide.passenger_details?.name || currentRide.user_details?.full_name || currentRide.user_details?.first_name || (currentRide as any).passenger_name || (currentRide as any).customer?.name || 'Customer',
           phone: currentRide.phone || currentRide.passenger_details?.phone || currentRide.user_details?.phone_number || (currentRide as any).customer?.phone || (currentRide as any).passenger_phone || '',
-          rating: typeof currentRide.rating === 'number' ? currentRide.rating : (typeof currentRide.passenger_details?.rating === 'number' ? currentRide.passenger_details.rating : (typeof currentRide.user_details?.rating === 'number' ? currentRide.user_details.rating : (typeof (currentRide as any).customer?.rating === 'number' ? (currentRide as any).customer.rating : 5.0))),
+          rating: typeof currentRide.rating === 'number' ? currentRide.rating : (typeof currentRide.passenger_details?.rating === 'number' ? currentRide.passenger_details.rating : (typeof currentRide.user_details?.rating === 'number' ? currentRide.user_details.rating : (typeof (currentRide as any).customer?.rating === 'number' ? (currentRide as any).customer.rating : 0.0))),
           paymentType: currentRide.paymentType || currentRide.payment_method || 'CASH',
           scheduled_status: currentRide.scheduled_status,
           re_dispatch_count: currentRide.re_dispatch_count,
@@ -738,13 +738,15 @@ const ScheduledRidesScreen = () => {
           const { setDriverStatus } = require('../../redux/userSlice');
           dispatch(setDriverStatus('ON_TRIP'));
           dispatch(setMyAcceptedRideId(ride.trip_id));
-          dispatch(setCurrentRide(ride));
+          
+          const rideWithArrivingStatus = { ...ride, trip_status: 'ARRIVING', status: 'ARRIVING' };
+          dispatch(setCurrentRide(rideWithArrivingStatus as any));
 
           // 3. Notify rider via socket (Redundant but good for legacy / real-time)
           socketService.emitEnRoute(ride.trip_id, user.driverId || user.id);
 
           // 4. Navigate
-          navigation.navigate(PickupMapScreen_Nav, { ride });
+          navigation.navigate(PickupMapScreen_Nav, { ride: rideWithArrivingStatus });
         } catch (error) {
           console.error('Failed to transition to arriving status:', error);
           showToast({

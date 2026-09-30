@@ -343,14 +343,14 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
   };
 
   const handleCallCustomer = () => {
-    const phone = ride.customer?.phone;
+    const phone = ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone || ride?.customer?.phone || ride?.customer?.phone_number || ride?.riderPhone || ride?.user_phone;
     if (phone) {
       Linking.openURL(`tel:${phone}`);
     }
   };
 
   const handleMessageCustomer = () => {
-    const phone = ride.customer?.phone;
+    const phone = ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone || ride?.customer?.phone || ride?.customer?.phone_number || ride?.riderPhone || ride?.user_phone;
     if (phone) {
       Linking.openURL(`sms:${phone}`);
     }

@@ -176,6 +176,21 @@ export function setupForegroundHandler(): () => void {
 
             const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
+            // 0. Handle FORCE_LOGOUT
+            if (type === 'FORCE_LOGOUT') {
+                const { Alert } = require('react-native');
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                
+                Alert.alert(
+                    'Session Ended',
+                    'Your account was accessed from another device.',
+                    [{ text: 'OK', onPress: () => logoutUser(store.dispatch) }],
+                    { cancelable: false }
+                );
+                return;
+            }
+
             // 1. Handle cancellations — emit event for dashboard to react
             if (CANCELLATION_TYPES.has(type)) {
                 try {
@@ -271,6 +286,18 @@ export function setupBackgroundHandler(): void {
         console.log('📩 Background message:', JSON.stringify(remoteMessage.data));
 
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
+
+        // 0. Handle FORCE_LOGOUT
+        if (type === 'FORCE_LOGOUT') {
+            try {
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                await logoutUser(store.dispatch);
+            } catch (err) {
+                console.warn('Failed to handle FORCE_LOGOUT in background', err);
+            }
+            return;
+        }
 
         // 🛡️ All valid ride notifications (NEW_RIDE_REQUEST, ASSIGNED_RIDE, etc) 
         // will show a high priority notification. For broadcast requests, we add a timeout.
@@ -368,6 +395,17 @@ export function onTokenRefresh(
 
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
+        if (type === 'FORCE_LOGOUT') {
+            try {
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                logoutUser(store.dispatch);
+            } catch (err) {
+                console.warn('Failed to handle FORCE_LOGOUT on launch', err);
+            }
+            return;
+        }
+
         // Emit after a short delay to ensure app navigation and listeners are ready
         if (isValidRideNotification(remoteMessage.data as Record<string, string>) || type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER' || type === 'CHAT_MESSAGE') {
             setTimeout(() => {
@@ -389,6 +427,16 @@ export function setupNotificationOpenedHandler(
     const handleNotificationAction = (data: any) => {
         const type = getNotificationType(data as Record<string, string>);
         console.log('🔔 Handling notification action for type:', type);
+
+        if (type === 'FORCE_LOGOUT') {
+            // Already logged out by background handler or launch handler, but just in case
+            try {
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                logoutUser(store.dispatch);
+            } catch (e) {}
+            return;
+        }
 
         if (isValidRideNotification(data as Record<string, string>)) {
             // Emit so useRideFeed can verify the trip and show the card

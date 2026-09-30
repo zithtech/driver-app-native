@@ -50,17 +50,23 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     if (res?.data?.data) {
                         dispatch(setCurrentRide(res.data.data));
                     } else {
-                        // 🛡️ PRODUCTION FIX: Don't wipe currentRide if it's a persisted scheduled ride.
-                        // Scheduled rides in ACCEPTED status are returned by getActiveTrip,
-                        // but during brief network blips or reconnects we may get null.
-                        // Only wipe if the current ride is NOT a scheduled ride.
+                        // 🛡️ PRODUCTION FIX: Don't wipe currentRide if it's a persisted scheduled ride or an active live ride.
                         const existing = currentRideRef.current;
                         const isScheduled = existing?.booking_type === 'SCHEDULED' || (existing as any)?.is_scheduled;
-                        if (existing && !isScheduled) {
+                        
+                        const ACTIVE_STATUSES = [
+                            'ACCEPTED', 'ARRIVING', 'ARRIVED',
+                            'VERIFICATION_PENDING', 'LIVE', 'STARTED', 'ON_TRIP',
+                            'WAITING', 'DAY_HALT', 'RETURN_STARTED',
+                            'DESTINATION_REACHED', 'RETURN_REACHED',
+                        ];
+                        const isRecentlyAcceptedLive = existing && ACTIVE_STATUSES.includes((existing.trip_status || (existing as any).status || '').toUpperCase());
+
+                        if (existing && !isScheduled && !isRecentlyAcceptedLive) {
                             console.log('[SocketProvider] getActiveTrip returned null on connect, clearing non-scheduled ride');
                             dispatch(setCurrentRide(null));
-                        } else if (isScheduled) {
-                            console.log('[SocketProvider] getActiveTrip returned null on connect, preserving scheduled ride:', existing?.trip_id);
+                        } else if (isScheduled || isRecentlyAcceptedLive) {
+                            console.log('[SocketProvider] getActiveTrip returned null on connect, preserving ride:', existing?.trip_id || existing?.id);
                         }
                     }
                 } catch (e) {
@@ -136,14 +142,23 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     if (res?.data?.data) {
                         dispatch(setCurrentRide(res.data.data));
                     } else {
-                        // 🛡️ Same guard as connectionListener — don't wipe scheduled rides on null
+                        // 🛡️ Same guard as connectionListener — don't wipe active rides on null
                         const existing = currentRideRef.current;
                         const isScheduled = existing?.booking_type === 'SCHEDULED' || (existing as any)?.is_scheduled;
-                        if (existing && !isScheduled) {
+                        
+                        const ACTIVE_STATUSES = [
+                            'ACCEPTED', 'ARRIVING', 'ARRIVED',
+                            'VERIFICATION_PENDING', 'LIVE', 'STARTED', 'ON_TRIP',
+                            'WAITING', 'DAY_HALT', 'RETURN_STARTED',
+                            'DESTINATION_REACHED', 'RETURN_REACHED',
+                        ];
+                        const isRecentlyAcceptedLive = existing && ACTIVE_STATUSES.includes((existing.trip_status || (existing as any).status || '').toUpperCase());
+
+                        if (existing && !isScheduled && !isRecentlyAcceptedLive) {
                             console.log('[SocketProvider] getActiveTrip returned null on trip_updated, clearing non-scheduled ride');
                             dispatch(setCurrentRide(null));
-                        } else if (isScheduled) {
-                            console.log('[SocketProvider] getActiveTrip returned null on trip_updated, preserving scheduled ride:', existing?.trip_id);
+                        } else if (isScheduled || isRecentlyAcceptedLive) {
+                            console.log('[SocketProvider] getActiveTrip returned null on trip_updated, preserving ride:', existing?.trip_id || existing?.id);
                         }
                     }
                 } catch (e) {

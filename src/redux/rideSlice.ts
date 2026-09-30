@@ -45,6 +45,10 @@ export interface Ride {
         image?: string;
         profile_image?: string;
     };
+    passenger_details?: any;
+    user_details?: any;
+    riderImage?: string;
+    customer?: any;
 }
 
 interface RideSliceState {

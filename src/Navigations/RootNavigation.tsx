@@ -281,6 +281,16 @@ const RootNavigation = () => {
   // This handles the race condition where initialRouteName was consumed before
   // the trip data arrived from the API.
   const hasRedirectedRef = useRef(false);
+  const prevRideIdRef = useRef<string | null>(null);
+
+  // Reset redirect flag when the ride changes (e.g. new trip accepted)
+  useEffect(() => {
+    const rideId = currentRide?.trip_id || (currentRide as any)?.id || null;
+    if (rideId !== prevRideIdRef.current) {
+      prevRideIdRef.current = rideId;
+      hasRedirectedRef.current = false;
+    }
+  }, [currentRide]);
 
   useEffect(() => {
     // Only run after bootstrap is complete and we have a valid ride
@@ -311,19 +321,44 @@ const RootNavigation = () => {
 
     if (!expectedScreen) return;
 
-    // Small delay to ensure navigator is fully ready and mounted
-    const timer = setTimeout(() => {
-      if (!navigationRef.isReady()) return;
-      const currentRoute = navigationRef.getCurrentRoute()?.name;
+    // All known trip screen names — if we're already on one, don't redirect
+    const TRIP_SCREENS = [
+      PickupMapScreen_Nav, PickupOTPScreen_Nav, 'VehicleVerificationScreen',
+      DropMapScreen_Nav, WaitingScreen_Nav, ReturnTripMapScreen_Nav,
+      'PaymentCollectionScreen', 'NavigationScreen',
+    ];
 
-      // Only redirect if we're on Dashboard but should be on a trip screen
-      if (currentRoute === Dashboard_Nav && expectedScreen) {
+    // Retry mechanism: navigator might not be ready immediately after bootstrap
+    let attempts = 0;
+    const maxAttempts = 5;
+    const tryRedirect = () => {
+      attempts++;
+      if (!navigationRef.isReady() || hasRedirectedRef.current) {
+        if (attempts < maxAttempts) {
+          setTimeout(tryRedirect, 300);
+        }
+        return;
+      }
+
+      const currentRoute = navigationRef.getCurrentRoute()?.name;
+      console.log(`[RootNavigation] 🔍 Trip Recovery Check (attempt ${attempts}): currentRoute=${currentRoute}, expectedScreen=${expectedScreen}, status=${rawStatus}`);
+
+      // If we're already on a trip screen, don't redirect
+      if (currentRoute && TRIP_SCREENS.includes(currentRoute)) {
+        console.log(`[RootNavigation] ✅ Already on trip screen: ${currentRoute}`);
+        hasRedirectedRef.current = true;
+        return;
+      }
+
+      // If we're on any non-trip screen (Dashboard, Home, tabs, etc.), redirect
+      if (currentRoute && expectedScreen) {
         console.log(`[RootNavigation] 🔄 Trip Recovery Redirect: ${currentRoute} → ${expectedScreen} (status: ${rawStatus})`);
         hasRedirectedRef.current = true;
         navigationRef.dispatch(StackActions.replace(expectedScreen, { ride: currentRide }));
       }
-    }, 300);
+    };
 
+    const timer = setTimeout(tryRedirect, 500);
     return () => clearTimeout(timer);
   }, [isBootstrapping, currentRide]);
 
@@ -382,6 +417,9 @@ const RootNavigation = () => {
       // If a route was determined by recovery, we can skip standard onboarding checks
       if (initialRoute !== Auth_Nav) {
         if (__DEV__) { console.log('[RootNav] 🚖 Trip Recovery Active | Status:', rawStatus, '| Target:', initialRoute); }
+      } else {
+        // Trip exists but status didn't match any recovery condition
+        if (__DEV__) { console.warn('[RootNav] ⚠️ Trip exists but no recovery route matched | Status:', rawStatus, '| isScheduled:', isScheduled, '| trip_id:', currentRide.trip_id || (currentRide as any)?.id); }
       }
     }
 
@@ -480,6 +518,7 @@ const RootNavigation = () => {
 
           {/* -------- TRIP FLOW -------- */}
           <Stack.Screen name={PickupMapScreen_Nav} component={PickupMapScreen} />
+          <Stack.Screen name={PickupOTPScreen_Nav} component={PickupOTPScreen} />
           <Stack.Screen name="VehicleVerificationScreen" component={VehicleVerificationScreen} />
           <Stack.Screen name={DropMapScreen_Nav} component={DropMapScreen} />
           <Stack.Screen name={WaitingScreen_Nav} component={WaitingScreen} />

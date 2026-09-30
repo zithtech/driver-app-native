@@ -127,12 +127,13 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         const isDirectAssignment = isAssigned || isAcceptedOrActive;
 
         // 🕒 [Time Sync] Calculate true remaining time
-        let calculatedRemaining = isDirectAssignment ? 99999 : 20;
+        const defaultRemaining = data?.remaining ? Number(data.remaining) : 15;
+        let calculatedRemaining = isDirectAssignment ? 99999 : defaultRemaining;
         if (!isDirectAssignment && data?.createdAt) {
             const createdAt = new Date(data.createdAt).getTime();
             const now = Date.now();
             const elapsed = Math.floor((now - createdAt) / 1000);
-            calculatedRemaining = Math.min(20, Math.max(0, 20 - elapsed));
+            calculatedRemaining = Math.min(defaultRemaining, Math.max(0, defaultRemaining - elapsed));
             
             console.log(`[useRideFeed] Timer Sync: CreatedAt: ${data.createdAt}, Now: ${new Date().toISOString()}, Elapsed: ${elapsed}s, Calculated: ${calculatedRemaining}s`);
             

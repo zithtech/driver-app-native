@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Image, Alert } from 'react-native';
 import moment from 'moment';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { resolveImageUrl } from '../../utils/imageUtils';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -19,7 +20,7 @@ const ScheduledRideDetailsScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { ride, onAccept, onStartNavigation, onCancelPress } = route.params || {};
+  const { ride, onAccept, onStartNavigation, onCancelPress, isLiveRide } = route.params || {};
   const { t } = useTranslation();
   const user = useSelector((state: RootState) => state.userSlice.user);
   const myAcceptedRideId = useSelector((state: any) => state.ride?.myAcceptedRideId);
@@ -118,7 +119,7 @@ const ScheduledRideDetailsScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: ms(8) }}>
           <Ionicons name="arrow-back" size={ms(22)} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Scheduled Ride Details</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{isLiveRide ? 'Live Ride Details' : 'Scheduled Ride Details'}</Text>
         <View style={{ width: ms(38) }} />
       </View>
 
@@ -276,6 +277,18 @@ const ScheduledRideDetailsScreen = () => {
         <View style={[styles.card, { backgroundColor: 'transparent', borderColor: isDark ? theme.colors.border : '#E2E8F0', elevation: 0, shadowOpacity: 0, padding: ms(16) }]}>
           <Text style={{ fontSize: ms(15), fontWeight: '700', color: theme.colors.text, marginBottom: vs(12) }}>Trip Details</Text>
 
+          <View style={styles.tripDetailRow}>
+            <Text style={styles.tripDetailLbl}>Trip ID</Text>
+            <Text style={[styles.tripDetailVal, { color: theme.colors.text }]}>#{ride?.trip_id || ride?.id || 'N/A'}</Text>
+          </View>
+
+          {(ride?.trip_code || ride?.booking_code) ? (
+            <View style={styles.tripDetailRow}>
+              <Text style={styles.tripDetailLbl}>Trip Code</Text>
+              <Text style={[styles.tripDetailVal, { color: theme.colors.primary, fontWeight: '800' }]}>{ride?.trip_code || ride?.booking_code}</Text>
+            </View>
+          ) : null}
+
           {!!ride.driver_allowance && ride.driver_allowance > 0 && (
             <View style={styles.tripDetailRow}>
               <Text style={styles.tripDetailLbl}>Driver Allowance</Text>
@@ -332,8 +345,8 @@ const ScheduledRideDetailsScreen = () => {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {/* Profile Image */}
               <View style={{ width: ms(36), height: ms(36), borderRadius: ms(18), backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-                {(ride?.passenger_details?.image || ride?.user_details?.profile_url || ride?.riderImage) ? (
-                  <Image source={{ uri: ride?.passenger_details?.image || ride?.user_details?.profile_url || ride?.riderImage }} style={{ width: '100%', height: '100%' }} />
+                {(resolveImageUrl(ride?.passenger_details?.image || ride?.passenger_details?.profile_picture || ride?.user_details?.profile_url || ride?.user_details?.profile_picture || ride?.riderImage || ride?.customer?.profile_url || ride?.customer?.profile_picture || ride?.customer?.image)) ? (
+                  <Image source={{ uri: resolveImageUrl(ride?.passenger_details?.image || ride?.passenger_details?.profile_picture || ride?.user_details?.profile_url || ride?.user_details?.profile_picture || ride?.riderImage || ride?.customer?.profile_url || ride?.customer?.profile_picture || ride?.customer?.image) }} style={{ width: '100%', height: '100%' }} />
                 ) : (
                   <Text style={{ fontSize: ms(14), fontWeight: '600', color: '#64748B' }}>
                     {String(ride?.passenger_details?.name || ride?.user_details?.full_name || ride?.user_details?.first_name || ride?.passenger || ride?.passenger_name || 'P').charAt(0).toUpperCase()}
@@ -349,7 +362,7 @@ const ScheduledRideDetailsScreen = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: vs(2) }}>
                   <Ionicons name="star" size={ms(11)} color="#F59E0B" />
                   <Text style={{ fontSize: ms(11), color: '#64748B', marginLeft: s(4) }}>
-                    {ride?.passenger_details?.rating ?? ride?.user_details?.rating ?? ride?.passenger_rating ?? ride?.rating ?? ride?.customer?.rating ?? '5.0'}
+                    {Number(ride?.passenger_details?.rating ?? ride?.user_details?.rating ?? ride?.passenger_rating ?? ride?.rating ?? ride?.customer?.rating ?? 0).toFixed(1)}
                   </Text>
                 </View>
               </View>
@@ -358,7 +371,7 @@ const ScheduledRideDetailsScreen = () => {
               <TouchableOpacity 
                 style={{ width: ms(32), height: ms(32), borderRadius: ms(16), backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' }}
                 onPress={() => {
-                  const phone = ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone;
+                  const phone = ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone || ride?.customer?.phone || ride?.customer?.phone_number || ride?.riderPhone || ride?.user_phone;
                   if (phone) Linking.openURL(`tel:${phone}`);
                 }}
               >
@@ -372,60 +385,62 @@ const ScheduledRideDetailsScreen = () => {
       </ScrollView>
 
       {/* BOTTOM ACTION BAR */}
-      <View style={[styles.bottomActionBar, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderTopColor: isDark ? theme.colors.border : '#F1F5F9', paddingBottom: Math.max(insets.bottom, vs(16)) }]}>
+      {!isLiveRide && (
+        <View style={[styles.bottomActionBar, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderTopColor: isDark ? theme.colors.border : '#F1F5F9', paddingBottom: Math.max(insets.bottom, vs(16)) }]}>
 
-        {isAccepted ? (
-          <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(12) }}>
-              <TouchableOpacity style={[styles.startNavBtn, { flex: 1 }]} onPress={() => {
-                if (onStartNavigation) onStartNavigation();
-              }}>
-                <View style={styles.startNavIconBox}>
-                  <Ionicons name="navigate" size={ms(16)} color="#2563EB" />
-                </View>
-                <View style={{ marginLeft: s(8) }}>
-                  <Text style={styles.startNavTitle}>Start Navigation</Text>
-                  <Text style={styles.startNavSub}>Navigate to pickup</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={ms(20)} color="#FFF" style={{ marginLeft: 'auto' }} />
+          {isAccepted ? (
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(12) }}>
+                <TouchableOpacity style={[styles.startNavBtn, { flex: 1 }]} onPress={() => {
+                  if (onStartNavigation) onStartNavigation();
+                }}>
+                  <View style={styles.startNavIconBox}>
+                    <Ionicons name="navigate" size={ms(16)} color="#2563EB" />
+                  </View>
+                  <View style={{ marginLeft: s(8) }}>
+                    <Text style={styles.startNavTitle}>Start Navigation</Text>
+                    <Text style={styles.startNavSub}>Navigate to pickup</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={ms(20)} color="#FFF" style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.acceptedActionsCard, { backgroundColor: isDark ? theme.colors.background : '#FFF', borderColor: isDark ? theme.colors.border : '#F1F5F9' }]}>
+
+                <TouchableOpacity style={styles.secondaryActionBtn} onPress={() => {
+                  if (onCancelPress) {
+                    onCancelPress();
+                  }
+                }}>
+                  <Ionicons name="close-circle-outline" size={ms(20)} color="#DC2626" />
+                  <Text style={[styles.secondaryActionText, { color: theme.colors.text }]}>Cancel Ride</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryActionBtn}>
+                  <Ionicons name="share-social-outline" size={ms(20)} color={theme.colors.textMuted} />
+                  <Text style={[styles.secondaryActionText, { color: theme.colors.text }]}>Share Trip</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.secondaryActionBtn}>
+                  <Ionicons name="calendar-outline" size={ms(20)} color={theme.colors.textMuted} />
+                  <Text style={[styles.secondaryActionText, { color: theme.colors.text }]}>Add to Calendar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <TouchableOpacity style={styles.declineBtn}>
+                <Text style={styles.declineBtnText}>Decline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.acceptBtn} onPress={handleAccept}>
+                <Text style={styles.acceptBtnText}>Accept Ride</Text>
+                <Ionicons name="chevron-forward" size={ms(16)} color="#FFF" style={{ marginLeft: s(8) }} />
               </TouchableOpacity>
             </View>
+          )}
 
-            <View style={[styles.acceptedActionsCard, { backgroundColor: isDark ? theme.colors.background : '#FFF', borderColor: isDark ? theme.colors.border : '#F1F5F9' }]}>
-
-              <TouchableOpacity style={styles.secondaryActionBtn} onPress={() => {
-                if (onCancelPress) {
-                  onCancelPress();
-                }
-              }}>
-                <Ionicons name="close-circle-outline" size={ms(20)} color="#DC2626" />
-                <Text style={[styles.secondaryActionText, { color: theme.colors.text }]}>Cancel Ride</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.secondaryActionBtn}>
-                <Ionicons name="share-social-outline" size={ms(20)} color={theme.colors.textMuted} />
-                <Text style={[styles.secondaryActionText, { color: theme.colors.text }]}>Share Trip</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.secondaryActionBtn}>
-                <Ionicons name="calendar-outline" size={ms(20)} color={theme.colors.textMuted} />
-                <Text style={[styles.secondaryActionText, { color: theme.colors.text }]}>Add to Calendar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <TouchableOpacity style={styles.declineBtn}>
-              <Text style={styles.declineBtnText}>Decline</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.acceptBtn} onPress={handleAccept}>
-              <Text style={styles.acceptBtnText}>Accept Ride</Text>
-              <Ionicons name="chevron-forward" size={ms(16)} color="#FFF" style={{ marginLeft: s(8) }} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-      </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };

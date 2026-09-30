@@ -50,14 +50,16 @@ export type RideItem = {
 
 type Props = {
   item: RideItem;
-  onAccept: () => void;
+  onAccept: () => void | Promise<void>;
   onReject: (isManual: boolean) => void;
+  isMultiple?: boolean;
 };
 
 /* ================= COMPONENT ================= */
 const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
   const { theme, isDark } = useAppTheme();
-  const slideAnim = useRef(new RNAnimated.Value(SCREEN_HEIGHT)).current; // Start from bottom
+  const slideAnim = useRef(new RNAnimated.Value(300)).current; // Start slightly below
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current; // Fade in
   const { triggerHaptic } = useHaptic();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
@@ -80,12 +82,19 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
   /* ---------- ENTRANCE ---------- */
   useEffect(() => {
-    RNAnimated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      damping: 22,
-      stiffness: 110,
-    }).start();
+    RNAnimated.parallel([
+      RNAnimated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 22,
+        stiffness: 110,
+      }),
+      RNAnimated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      })
+    ]).start();
 
     triggerHaptic(HapticFeedbackTypes.notificationSuccess);
   }, [slideAnim, triggerHaptic]);
@@ -108,7 +117,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
       try {
         SoundPlayer.stop();
         Vibration.cancel();
-      } catch (e) {}
+      } catch (e) { }
     };
   }, [item.noVibrate]);
 
@@ -143,10 +152,10 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
   const isRoundTrip = item.ride_type === 'ROUND_TRIP' || item.ride_type === 'OUTSTATION_ROUND_TRIP';
   const tripDistanceNum = parseFloat(item.trip_distance?.toString() || '0');
   const displayDistance = isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : (tripDistanceNum ? tripDistanceNum.toFixed(1) : '--');
-  
+
   const tripTimeNum = parseFloat(item.trip_time?.toString() || '0');
   const displayTime = isRoundTrip ? (tripTimeNum * 2).toFixed(0) : (tripTimeNum ? tripTimeNum.toFixed(0) : '--');
-  
+
   const tripDistanceStr = displayDistance !== '--' ? `${displayDistance} km` : '--';
   const tripTimeStr = displayTime !== '--' ? `${displayTime} min` : '';
 
@@ -155,12 +164,13 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
       style={[
         styles.cardWrapper,
         {
+          opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
         },
       ]}
     >
       <View style={[styles.card, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-        
+
         {/* DRAG HANDLE */}
         <View style={styles.dragHandleContainer}>
           <View style={styles.dragHandle} />
@@ -185,7 +195,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
         {/* INNER CONTENT BOX */}
         <View style={[styles.innerBox, isDark && { borderColor: theme.colors.border }]}>
           <View style={styles.innerBoxRow}>
-            
+
             {/* LOCATIONS */}
             <View style={styles.locationsContainer}>
               <View style={styles.locationItem}>
@@ -224,10 +234,10 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <View style={[styles.rideTypeBadge, isDark && { backgroundColor: theme.colors.card }]}>
                 <Ionicons name="car-outline" size={ms(12)} color={isDark ? theme.colors.text : "#0F172A"} />
                 <Text style={[styles.rideTypeText, isDark && { color: theme.colors.text }]}>
-                  {item.ride_type === 'ROUND_TRIP' ? 'Round Trip' : 
-                   item.ride_type === 'OUTSTATION_ROUND_TRIP' ? 'Outstation Round Trip' :
-                   item.ride_type === 'OUTSTATION_ONE_WAY' ? 'Outstation One Way' :
-                   item.ride_type === 'ONE_WAY' ? 'One Way' : (item.ride_type || 'One-way')}
+                  {item.ride_type === 'ROUND_TRIP' ? 'Round Trip' :
+                    item.ride_type === 'OUTSTATION_ROUND_TRIP' ? 'Outstation Round Trip' :
+                      item.ride_type === 'OUTSTATION_ONE_WAY' ? 'Outstation One Way' :
+                        item.ride_type === 'ONE_WAY' ? 'One Way' : (item.ride_type || 'One-way')}
                   {item.package_hours ? ` • ${item.package_hours} Hrs` : ''}
                 </Text>
               </View>

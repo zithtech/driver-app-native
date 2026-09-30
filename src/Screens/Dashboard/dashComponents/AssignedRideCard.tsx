@@ -217,7 +217,7 @@ const AssignedRideCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <Text style={[styles.passengerName, { color: theme.colors.text }]}>{item.passenger || 'Passenger'}</Text>
               <View style={styles.ratingRow}>
                 <Ionicons name="star" size={ms(12)} color="#FBBF24" />
-                <Text style={[styles.ratingText, isDark && { color: theme.colors.textMuted }]}>{item.rating || '5.0'}</Text>
+                <Text style={[styles.ratingText, isDark && { color: theme.colors.textMuted }]}>{Number(item.rating || 0).toFixed(1)}</Text>
               </View>
             </View>
             <View style={styles.confirmedBadge}>

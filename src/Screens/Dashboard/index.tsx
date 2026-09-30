@@ -61,12 +61,14 @@ import QuickActions from './dashComponents/QuickActions';
 import RechargeCard from './dashComponents/SubscriptionCard';
 import SettingsModal from './dashComponents/SettingsModal';
 import RideAlertCard from './dashComponents/RideAlertCard';
+import CompactRideAlertCard from './dashComponents/CompactRideAlertCard';
 import AssignedRideCard from './dashComponents/AssignedRideCard';
 import { TripStatus } from '../../types/trip';
 import DashboardSkeleton from './dashComponents/DashboardSkeleton';
 import DashboardActionCards from './dashComponents/DashboardActionCards';
 import RecentActivity from './dashComponents/RecentActivity';
 import UpcomingAcceptedRide from './dashComponents/UpcomingAcceptedRide';
+import ActiveRideBanner from './dashComponents/ActiveRideBanner';
 import BatteryOptimizationModal from './dashComponents/BatteryOptimizationModal';
 import VerificationSuccessModal from './dashComponents/VerificationSuccessModal';
 import ConfirmationModal from '../../Components/ConfirmationModal';
@@ -106,9 +108,9 @@ const DriverDashboard = () => {
     const kycStatus = user?.kyc_status;
     const kycStatusStr = typeof kycStatus === 'object' ? kycStatus?.overallStatus : kycStatus;
 
-    const isApproved = 
-      (status && APPROVED_STATUSES.includes(status)) || 
-      accountStatus === 'active' || 
+    const isApproved =
+      (status && APPROVED_STATUSES.includes(status)) ||
+      accountStatus === 'active' ||
       kycStatusStr === 'verified';
 
     if (user && !isApproved) {
@@ -141,7 +143,7 @@ const DriverDashboard = () => {
   const earningsSummary = earningsResult;
 
   const { data: walletBalanceResult, refetch: refetchWallet } = useGetWalletBalanceQuery(user?.driverId || '', { skip: !user?.driverId });
-  
+
   const { data: walletTransactionsData, refetch: refetchWalletTrans } = useGetWalletTransactionsQuery(
     { driverId: user?.driverId || '', limit: 5 },
     { skip: !user?.driverId }
@@ -596,8 +598,8 @@ const DriverDashboard = () => {
   const displayTotalTrips = useMemo(() => {
     if (allHistoryResult?.data) {
       const rides = extractArray(allHistoryResult.data);
-      const completedRides = rides.filter((ride: any) => 
-        ride.status?.toUpperCase() === 'COMPLETED' || 
+      const completedRides = rides.filter((ride: any) =>
+        ride.status?.toUpperCase() === 'COMPLETED' ||
         ride.trip_status?.toUpperCase() === 'COMPLETED'
       );
       if (completedRides.length > 0) return completedRides.length;
@@ -607,7 +609,7 @@ const DriverDashboard = () => {
 
   const combinedActivity = useMemo(() => {
     let combined: any[] = [];
-    
+
     if (recentActivityData?.data && Array.isArray(recentActivityData.data)) {
       combined = [...combined, ...recentActivityData.data.map((t: any) => ({
         id: `ride-${t.trip_id || t.id}`,
@@ -730,9 +732,9 @@ const DriverDashboard = () => {
         />
 
         {/* ── UPCOMING ACCEPTED RIDE ── */}
-        <UpcomingAcceptedRide 
-          trip={nextScheduledRide} 
-          onViewAllPress={() => navigation.navigate('ScheduledRides')} 
+        <UpcomingAcceptedRide
+          trip={nextScheduledRide}
+          onViewAllPress={() => navigation.navigate('ScheduledRides')}
           onNavigatePress={() => {
             showAlert(
               t('start_navigation', 'Start Navigation'),
@@ -754,6 +756,9 @@ const DriverDashboard = () => {
 
         {/* ── SUBSCRIPTION CARD ── */}
         <RechargeCard subscription={subData?.data?.subscription} />
+
+        {/* ── ACTIVE RIDE BANNER ── */}
+        <ActiveRideBanner />
 
         {/* ── RECENT ACTIVITY ── */}
         <RecentActivity items={combinedActivity} />
@@ -786,8 +791,6 @@ const DriverDashboard = () => {
                   item.trip_status?.toString().toUpperCase() === 'TRIP_ASSIGNED' ||
                   item.trip_status?.toString().toUpperCase() === 'ASSIGNED_RIDE';
 
-                console.log(`[Dashboard] Rendering Ride: ${item.id} | Status: ${item.trip_status} | isAssigned: ${isAssigned}`);
-
                 if (isAssigned) {
                   return (
                     <AssignedRideCard
@@ -799,10 +802,14 @@ const DriverDashboard = () => {
                   );
                 }
 
+                const isMultiple = rideQueue.length > 1;
+                const AlertCardComponent = isMultiple ? CompactRideAlertCard : RideAlertCard;
+
                 return (
-                  <RideAlertCard
+                  <AlertCardComponent
                     key={item.id || `ride-${index}`}
                     item={item}
+                    isMultiple={isMultiple}
                     onAccept={onAccept}
                     onReject={(isManual: boolean) => rejectRide(item.id, isManual)}
                   />
@@ -862,7 +869,7 @@ const DriverDashboard = () => {
         <Pressable style={styles.modalOverlay} onPress={() => setShowConfirmModal(false)}>
           <Pressable style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', paddingHorizontal: ms(24), paddingBottom: vs(32), paddingTop: vs(16), borderTopLeftRadius: ms(32), borderTopRightRadius: ms(32) }]} onPress={(e) => e.stopPropagation()}>
             <View style={[styles.dragHandle, { backgroundColor: isDark ? '#333' : '#E2E8F0', width: ms(48), marginBottom: vs(28) }]} />
-            
+
             <View style={{
               width: ms(68),
               height: ms(68),
@@ -883,8 +890,8 @@ const DriverDashboard = () => {
             </Text>
 
             <View style={{ width: '100%', gap: vs(16) }}>
-              <TouchableOpacity 
-                style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary, width: '100%', paddingVertical: vs(16), borderRadius: ms(16), opacity: isNavigating ? 0.7 : 1 }]} 
+              <TouchableOpacity
+                style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary, width: '100%', paddingVertical: vs(16), borderRadius: ms(16), opacity: isNavigating ? 0.7 : 1 }]}
                 onPress={async () => {
                   if (!isOnline) {
                     showAlert(t('error'), t('go_online_start'), { icon: 'alert-circle-outline', isDestructive: true });
@@ -895,10 +902,13 @@ const DriverDashboard = () => {
                     if (acceptedRide) {
                       setIsNavigating(true);
                       await arrivingTrip(acceptedRide.trip_id).unwrap();
-                      dispatch(setCurrentRide(acceptedRide as any));
+
+                      const rideWithArrivingStatus = { ...acceptedRide, trip_status: 'ARRIVING', status: 'ARRIVING' };
+                      dispatch(setCurrentRide(rideWithArrivingStatus as any));
+
                       setTimeout(() => {
                         setShowConfirmModal(false);
-                        navigation.navigate('PickupMapScreen', { ride: acceptedRide });
+                        navigation.navigate('PickupMapScreen', { ride: rideWithArrivingStatus });
                         setIsNavigating(false);
                       }, 500);
                     }
@@ -920,8 +930,8 @@ const DriverDashboard = () => {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={{ width: '100%', paddingVertical: vs(12), alignItems: 'center' }} 
+              <TouchableOpacity
+                style={{ width: '100%', paddingVertical: vs(12), alignItems: 'center' }}
                 onPress={() => setShowConfirmModal(false)}
                 activeOpacity={0.6}
               >
@@ -957,12 +967,12 @@ const DriverDashboard = () => {
           dispatch(setLastTripRating(null));
         }}
       />
-      <BatteryOptimizationModal 
-        visible={showBatteryModal} 
-        onClose={() => setShowBatteryModal(false)} 
+      <BatteryOptimizationModal
+        visible={showBatteryModal}
+        onClose={() => setShowBatteryModal(false)}
         onFix={() => {
           setShowBatteryModal(false);
-        }} 
+        }}
       />
     </SafeAreaView>
   );

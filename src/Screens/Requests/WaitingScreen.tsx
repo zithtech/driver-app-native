@@ -16,8 +16,10 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { resolveImageUrl } from '../../utils/imageUtils';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useFocusEffect, StackActions } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -182,15 +184,52 @@ const WaitingScreen = ({ route }: any) => {
   );
 
   useEffect(() => {
-    // Start local timer
-    timerRef.current = setInterval(() => {
-      setWaitingSeconds((prev) => prev + 1);
-    }, 1000);
+    const initTimer = async () => {
+      try {
+        if (!trip_id) return;
+
+        // 1. Prefer actual server-side start time if provided by backend
+        let serverStartTime = (ride as any)?.wait_started_at || (ride as any)?.waiting_started_at || (ride as any)?.waiting_start_time || (ride as any)?.actual_drop_time;
+        let finalStartTimeMs: number;
+
+        if (serverStartTime) {
+          finalStartTimeMs = new Date(serverStartTime).getTime();
+        } else {
+          // 2. Fallback to local persistent storage so it survives app closures
+          const storageKey = `@waiting_start_${trip_id}`;
+          const localStartTimeStr = await AsyncStorage.getItem(storageKey);
+          
+          if (localStartTimeStr) {
+            finalStartTimeMs = parseInt(localStartTimeStr, 10);
+          } else {
+            // First time landing on this screen for this trip
+            finalStartTimeMs = Date.now();
+            await AsyncStorage.setItem(storageKey, finalStartTimeMs.toString());
+          }
+        }
+
+        const updateTimer = () => {
+          const now = Date.now();
+          const elapsed = Math.floor((now - finalStartTimeMs) / 1000);
+          // If there is existing waiting_time_minutes from previous halts, we can optionally add it, 
+          // but elapsed from actual_drop_time covers total waiting.
+          setWaitingSeconds(Math.max(0, elapsed));
+        };
+
+        updateTimer();
+        timerRef.current = setInterval(updateTimer, 1000);
+
+      } catch (err) {
+        console.error("Failed to initialize waiting timer", err);
+      }
+    };
+
+    initTimer();
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [trip_id, (ride as any)?.wait_started_at, (ride as any)?.waiting_started_at, (ride as any)?.waiting_start_time, (ride as any)?.actual_drop_time]);
 
   const formatTime = (totalSeconds: number) => {
     const hrs = Math.floor(totalSeconds / 3600);
@@ -706,8 +745,8 @@ const WaitingScreen = ({ route }: any) => {
 
                     <View style={styles.passengerBox}>
                       <View style={styles.passengerMain}>
-                        {ride?.passenger_details?.image || ride?.user_details?.profile_url || ride?.riderImage ? (
-                          <Image source={{ uri: ride?.passenger_details?.image || ride?.user_details?.profile_url || ride?.riderImage }} style={styles.avatar} />
+                        {resolveImageUrl(ride?.passenger_details?.image || ride?.passenger_details?.profile_picture || ride?.user_details?.profile_url || ride?.user_details?.profile_picture || ride?.riderImage || ride?.customer?.profile_url || ride?.customer?.profile_picture || ride?.customer?.image) ? (
+                          <Image source={{ uri: resolveImageUrl(ride?.passenger_details?.image || ride?.passenger_details?.profile_picture || ride?.user_details?.profile_url || ride?.user_details?.profile_picture || ride?.riderImage || ride?.customer?.profile_url || ride?.customer?.profile_picture || ride?.customer?.image) }} style={styles.avatar} />
                         ) : (
                           <View style={[styles.avatar, { backgroundColor: '#E0F2C1' }]}>
                             <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
@@ -721,12 +760,12 @@ const WaitingScreen = ({ route }: any) => {
                             <Text style={[styles.psgrDetail, { color: '#16A34A' }]}>{t('verified_passenger', 'Verified Passenger')}</Text>
                             <View style={styles.ratingBadge}>
                               <Ionicons name="star" size={ms(12)} color="#F59E0B" />
-                              <Text style={styles.ratingText}>{ride?.passenger_details?.rating ?? ride?.user_details?.rating ?? ride?.passenger_rating ?? ride?.rating ?? ride?.customer?.rating ?? '5.0'}</Text>
+                              <Text style={styles.ratingText}>{Number(ride?.passenger_details?.rating ?? ride?.user_details?.rating ?? ride?.passenger_rating ?? ride?.rating ?? ride?.customer?.rating ?? 0).toFixed(1)}</Text>
                             </View>
                           </View>
                         </View>
                       </View>
-                      <TouchableOpacity style={styles.floatCallBtn} onPress={() => Linking.openURL(`tel:${ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone}`)}>
+                      <TouchableOpacity style={styles.floatCallBtn} onPress={() => Linking.openURL(`tel:${ride?.phone || ride?.passenger_phone || ride?.user_details?.phone_number || ride?.passenger_details?.phone || ride?.customer?.phone || ride?.customer?.phone_number || ride?.riderPhone || ride?.user_phone || '112'}`)}>
                         <Ionicons name="call" size={ms(20)} color="#FFF" />
                       </TouchableOpacity>
                     </View>

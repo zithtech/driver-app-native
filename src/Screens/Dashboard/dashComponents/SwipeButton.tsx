@@ -24,7 +24,7 @@ type Props = {
 };
 
 
-const THUMB_SIZE = 56;
+const THUMB_SIZE = 48;
 
 const SwipeButton: React.FC<Props> = ({
   onSwipeSuccess,
@@ -137,10 +137,10 @@ const SwipeButton: React.FC<Props> = ({
     >
       <View
         style={{
-          height: 65,
+          height: 56,
           width: '100%',
           backgroundColor: isDark ? theme.colors.card : activeColor,
-          borderRadius: 32,
+          borderRadius: 28,
           justifyContent: 'center',
           padding: 4,
           overflow: 'hidden',
@@ -172,7 +172,7 @@ const SwipeButton: React.FC<Props> = ({
             width: THUMB_SIZE,
             height: THUMB_SIZE,
             backgroundColor: isDark ? activeColor : '#FFF',
-            borderRadius: 28,
+            borderRadius: 24,
             alignItems: 'center',
             justifyContent: 'center',
             transform: [{ translateX: pan }],
@@ -181,7 +181,7 @@ const SwipeButton: React.FC<Props> = ({
         >
           <MaterialCommunityIcons
             name={thumbIcon}
-            size={26}
+            size={24}
             color={isDark ? '#FFF' : activeColor}
           />
         </Animated.View>

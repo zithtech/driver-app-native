@@ -120,28 +120,9 @@ const ProfileScreen = ({ navigation }: any) => {
 
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: theme.colors.background }]}>
+    <View style={[styles.safeArea, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
       {isFocused && <AppStatusBar />}
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        {/* ================= HEADER ================= */}
-        <View style={{ paddingTop: insets.top + 10, backgroundColor: theme.colors.background }}>
-          <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
-            <Pressable style={{ zIndex: 1, padding: 4 }} onPress={() => navigation.goBack()}>
-              <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-            </Pressable>
-
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('my_profile')}</Text>
-
-            <Pressable
-              style={[styles.helpBtn, isDark && { backgroundColor: theme.colors.card, borderColor: theme.colors.border }, { zIndex: 1 }]}
-              onPress={() => navigation.navigate(HelpCenter_Nav)}
-            >
-              <Ionicons name="headset-outline" size={18} color={theme.colors.text} />
-              <Text style={[styles.helpText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help')}</Text>
-            </Pressable>
-          </View>
-        </View>
-
         {/* ================= BANNER ================= */}
         <Pressable
           style={styles.banner}
@@ -149,46 +130,64 @@ const ProfileScreen = ({ navigation }: any) => {
         >
           <Image source={BANNERS[bannerIndex]} style={styles.bannerImage} />
 
-          <View style={styles.editIcon}>
-            <Ionicons name="camera-outline" size={18} color="#fff" />
+          {/* BACK ARROW */}
+          <Pressable style={[styles.backBtnOnBanner, { top: 12 }]} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={20} color="#111827" />
+          </Pressable>
+
+          <View style={[styles.editIcon, { top: 12, right: 12, bottom: undefined }]}>
+            <Ionicons name="pencil" size={14} color="#fff" />
           </View>
         </Pressable>
 
         {/* ================= PROFILE IMAGE ================= */}
-        <Pressable
-          style={styles.avatarWrapper}
-          onPress={() => {
-            if (user?.profile_picture && !imgError) {
-              setShowProfileImage(true);
-            }
-          }}
-        >
-          <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? theme.colors.card : '#F1F5F9' }]}>
-            <Text style={[styles.avatarText, { color: theme.colors.text }]}>
-              {(() => {
-                if (!user) return 'UN';
-                const first = user.full_name ? user.full_name.charAt(0).toUpperCase() : '';
-                const last = user.last_name ? user.last_name.charAt(0).toUpperCase() : '';
-                return first || 'UN';
-              })()}
-            </Text>
+        <View style={styles.avatarContainer}>
+          <Pressable
+            style={[styles.avatarWrapper, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }]}
+            onPress={() => {
+              if (user?.profile_picture && !imgError) {
+                setShowProfileImage(true);
+              }
+            }}
+          >
+            <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? theme.colors.card : '#1E293B' }]}>
+              <Text style={[styles.avatarText, { color: '#FFF' }]}>
+                {(() => {
+                  if (!user) return 'UN';
+                  const first = user.full_name ? user.full_name.charAt(0).toUpperCase() : '';
+                  const last = user.last_name ? user.last_name.charAt(0).toUpperCase() : '';
+                  return first || 'UN';
+                })()}
+              </Text>
 
-            {user?.profile_picture && !imgError && (
-              <Image
-                source={{
-                  uri: resolveImageUrl(user.profile_picture),
-                }}
-                style={[styles.avatar, { position: 'absolute', top: 0, left: 0 }]}
-                fadeDuration={0}
-                onError={() => setImgError(true)}
-              />
-            )}
-          </View>
-        </Pressable>
+              {user?.profile_picture && !imgError && (
+                <Image
+                  source={{
+                    uri: resolveImageUrl(user.profile_picture),
+                  }}
+                  style={[styles.avatar, { position: 'absolute', top: 0, left: 0 }]}
+                  fadeDuration={0}
+                  onError={() => setImgError(true)}
+                />
+              )}
+            </View>
+          </Pressable>
+          <Pressable style={[styles.avatarCameraBadge, { borderColor: isDark ? theme.colors.background : '#FFFFFF' }]}>
+            <Ionicons name="camera" size={14} color="#FFF" />
+          </Pressable>
+        </View>
 
         {/* ================= NAME ================= */}
         <Text style={[styles.name, { color: theme.colors.text }]}>{name}</Text>
-        <Text style={[styles.phone, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>{phone}</Text>
+        
+        {/* ================= PHONE & ID ================= */}
+        <View style={styles.phoneEditContainer}>
+          <Text style={[styles.phone, { color: isDark ? theme.colors.textMuted : '#6B7280' }]}>{phone}</Text>
+          <Text style={styles.phoneEditSeparator}>|</Text>
+          <Text style={styles.driverIdText}>
+            ID: {user?.t2d_id || 'N/A'}
+          </Text>
+        </View>
 
         {/* ================= STATS ================= */}
         <View style={styles.statsContainer}>
@@ -196,7 +195,7 @@ const ProfileScreen = ({ navigation }: any) => {
             icon="star"
             iconColor="#F59E0B"
             value={displayRating}
-            label={t('rating')}
+            label={t('driver_rating', 'Driver Rating')}
             isDark={isDark}
             theme={theme}
           />
@@ -204,7 +203,7 @@ const ProfileScreen = ({ navigation }: any) => {
             icon="car-outline"
             iconColor="#2563EB"
             value={displayTotalTrips}
-            label={t('rides_label')}
+            label={t('total_rides', 'Total Rides')}
             isDark={isDark}
             theme={theme}
           />
@@ -212,7 +211,7 @@ const ProfileScreen = ({ navigation }: any) => {
             icon="calendar"
             iconColor="#16A34A"
             value={experienceYears}
-            label={t('years_label')}
+            label={t('working_period', 'Working Period')}
             isDark={isDark}
             theme={theme}
           />
@@ -223,6 +222,7 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="speedometer-outline"
             title={t('performance')}
+            subtitle="View your ratings & feedback"
             onPress={() => navigation.navigate('DriverPerformanceScreen')}
             isDark={isDark}
           />
@@ -230,6 +230,7 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="person-outline"
             title={t('profile_info')}
+            subtitle="Personal details"
             onPress={() => navigation.navigate('ProfileDetailsScreen')}
             isDark={isDark}
           />
@@ -237,6 +238,7 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="people-outline"
             title={t('trusted_contacts') || 'Trusted Contacts'}
+            subtitle="Emergency contacts"
             onPress={() => navigation.navigate(SosContacts_Nav)}
             isDark={isDark}
           />
@@ -244,13 +246,15 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="pricetag-outline"
             title={t('subscription_plan')}
+            subtitle="Manage your plan"
             onPress={() => navigation.navigate('RechargePlanScreen')}
             isDark={isDark}
           />
 
           <MenuItem
             icon="wallet-outline"
-            title={t('wallet')}
+            title={t('wallet') || 'My Wallet'}
+            subtitle="Balance & Transactions"
             onPress={() => navigation.navigate('WalletScreen')}
             isDark={isDark}
           />
@@ -258,20 +262,23 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="cash-outline"
             title={t('earnings')}
+            subtitle="Weekly payouts & history"
             onPress={() => navigation.navigate('EarningsScreen')}
             isDark={isDark}
           />
 
           <MenuItem
             icon="gift-outline"
-            title={t('refer_earn') || 'Refer & Earn'}
+            title={t('refer_earn') || 'Refer and Earn'}
+            subtitle="Invite friends & earn rewards"
             onPress={() => navigation.navigate(ReferEarn_Nav)}
             isDark={isDark}
           />
 
           <MenuItem
             icon="time-outline"
-            title={t('ride_activity')}
+            title={t('ride_activity') || 'Activity'}
+            subtitle="Rides & History"
             onPress={() => navigation.navigate('RideActivityScreen')}
             isDark={isDark}
           />
@@ -279,6 +286,7 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="document-text-outline"
             title={t('documents_menu')}
+            subtitle="Vehicle & personal docs"
             onPress={() => navigation.navigate('ProfileDocumentsScreen')}
             isDark={isDark}
           />
@@ -286,7 +294,16 @@ const ProfileScreen = ({ navigation }: any) => {
           <MenuItem
             icon="settings-outline"
             title={t('settings')}
+            subtitle="App preferences"
             onPress={() => navigation.navigate('ProfileSettingsScreen')}
+            isDark={isDark}
+          />
+
+          <MenuItem
+            icon="headset-outline"
+            title={t('help') || 'Help & Support'}
+            subtitle="FAQs & Contact Us"
+            onPress={() => navigation.navigate(HelpCenter_Nav)}
             isDark={isDark}
           />
 
@@ -338,13 +355,18 @@ export default ProfileScreen;
 
 /* ================= SUB COMPONENTS ================= */
 
-const MenuItem = ({ icon, title, onPress, isDark }: any) => {
+const MenuItem = ({ icon, title, subtitle, onPress, isDark }: any) => {
   const { theme } = useAppTheme();
   return (
-    <Pressable style={styles.menuItem} onPress={onPress}>
+    <Pressable style={[styles.menuItem, { borderBottomColor: isDark ? theme.colors.border : '#F1F5F9' }]} onPress={onPress}>
       <View style={styles.menuLeft}>
-        <Ionicons name={icon} size={18} color={theme.colors.text} />
-        <Text style={[styles.menuText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+        <Ionicons name={icon} size={22} color={theme.colors.text} />
+        <View style={styles.menuTextContainer}>
+          <Text style={[styles.menuText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
+          {subtitle && (
+            <Text style={[styles.menuSubtitle, { color: isDark ? theme.colors.textMuted : '#6B7280' }]} numberOfLines={1}>{subtitle}</Text>
+          )}
+        </View>
       </View>
       <Ionicons name="chevron-forward" size={18} color={isDark ? theme.colors.textMuted : '#9CA3AF'} />
     </Pressable>
@@ -354,15 +376,14 @@ const MenuItem = ({ icon, title, onPress, isDark }: any) => {
 
 
 const StatCard = ({ icon, iconColor, value, label, isDark, theme }: any) => (
-  <View style={[styles.statCard, { backgroundColor: theme.colors.card }]}>
-    <View style={[styles.statIcon, { backgroundColor: iconColor + (isDark ? '30' : '20') }]}>
-      <Ionicons name={icon} size={16} color={iconColor} />
-    </View>
-
-    <View style={styles.statTextWrap}>
+  <View style={[styles.statCard, { backgroundColor: isDark ? theme.colors.card : '#F5F8FF' }]}>
+    <View style={styles.statTopRow}>
+      <View style={[styles.statIcon, { backgroundColor: iconColor + (isDark ? '30' : '20') }]}>
+        <Ionicons name={icon} size={14} color={iconColor} />
+      </View>
       <Text style={[styles.statValue, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={[styles.statLabel, { color: isDark ? theme.colors.textMuted : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
     </View>
+    <Text style={[styles.statLabel, { color: isDark ? theme.colors.textMuted : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
   </View>
 );
 
@@ -433,6 +454,23 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
 
+  backBtnOnBanner: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 10,
+    backgroundColor: '#FFFFFF', // From the user image, it has a white circular background
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+
   editIcon: {
     position: 'absolute',
     right: 12,
@@ -442,10 +480,14 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  avatarWrapper: {
+  avatarContainer: {
     alignSelf: 'center',
-    marginTop: -40,
-    backgroundColor: 'transparent',
+    position: 'relative',
+    marginTop: -50,
+  },
+
+  avatarWrapper: {
+    backgroundColor: '#FFFFFF', // To act as border
     padding: 4,
     borderRadius: 60,
   },
@@ -470,20 +512,64 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
 
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: '#1E293B', // dark color from image
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF', // to give spacing
+  },
+
   /* ---------- USER INFO ---------- */
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  namePlaceholder: {
+    flex: 1, // balances the right side button to keep name centered
+  },
   name: {
-    marginTop: 6,
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
     color: '#111827',
   },
+  helpBtnContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+
+  phoneEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
 
   phone: {
-    marginTop: 0,
-    fontSize: 13,
-    textAlign: 'center',
+    fontSize: 14,
     color: '#6B7280',
+  },
+
+  phoneEditSeparator: {
+    fontSize: 14,
+    color: '#D1D5DB', // light gray
+    marginHorizontal: 8,
+  },
+
+  driverIdText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280', // dark gray, similar to phone
   },
 
   /* ---------- STATS ---------- */
@@ -496,38 +582,41 @@ const styles = StyleSheet.create({
 
   statCard: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
     marginHorizontal: 4,
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderRadius: 12,
   },
 
-  statIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
+  statTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 4,
   },
 
-  statTextWrap: {
-    marginLeft: 8,
+  statIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
   },
 
   statValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#111827',
-    lineHeight: 18,
   },
 
   statLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#6B7280',
-    marginTop: 1,
+    textAlign: 'center',
   },
 
   menuCard: {
@@ -545,19 +634,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
 
   menuLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
+  },
+
+  menuTextContainer: {
+    flexDirection: 'column',
   },
 
   menuText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#111827',
+  },
+
+  menuSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
 
   /* ---------- LOGOUT ---------- */
