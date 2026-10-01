@@ -38,7 +38,7 @@ import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import { useLocation } from '../../hooks/useLocation';
 import { useArrivedTripMutation, useCancelTripMutation, useTriggerSosMutation, useGetTripByIdQuery } from '../../service/driverApi';
-import { clearAcceptedRide } from '../../redux/rideSlice';
+import { clearAcceptedRide, setCurrentRide } from '../../redux/rideSlice';
 import { CancellationModal, MapConnectionStatus } from '../../Components';
 // UserLocationMarker removed
 import { useLocationTracker } from '../../hooks/useLocationTracker';
@@ -214,13 +214,8 @@ const PickupMapScreen = ({ route }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        showAlert({
-          title: t('active_trip'),
-          message: t('active_trip_cancel_msg'),
-          singleButton: true,
-          icon: 'car-outline',
-        });
-        return true; // Prevent default behavior
+        navigation.navigate('DashboardScreen');
+        return true;
       };
 
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -261,8 +256,12 @@ const PickupMapScreen = ({ route }: any) => {
   }, [trip_id]);
 
   // 🛡️ Guard: Exit screen if ride is cleared from Redux (e.g. by global cancellation)
+  // Uses hadRideRef to avoid false triggers during Redux rehydration on app restart
+  const hadRideRef = useRef(!!reduxCurrentRide);
   useEffect(() => {
-    if (!reduxCurrentRide && !showSuccess) {
+    if (reduxCurrentRide) {
+      hadRideRef.current = true;
+    } else if (hadRideRef.current && !reduxCurrentRide && !showSuccess) {
       console.log('[PickupMapScreen] Active ride cleared from Redux, exiting...');
       // No Alert here — RootNavigation handles the global UI alert.
       // This avoids the double-alert race condition in Fabric.
@@ -692,7 +691,14 @@ const PickupMapScreen = ({ route }: any) => {
             console.log('Failed to check OTP status:', e);
           }
         }
-        navigation.navigate(PickupOTPScreen_Nav, { ride });
+
+        // Show success animation before navigating
+        setShowSuccess(true);
+        successScale.value = withSpring(1, { damping: 10, stiffness: 100 });
+        setTimeout(() => {
+          setShowSuccess(false);
+          navigation.navigate(PickupOTPScreen_Nav, { ride });
+        }, 2000);
       }
     };
     checkOTPStatus();
@@ -748,6 +754,7 @@ const PickupMapScreen = ({ route }: any) => {
       setTimeout(() => {
         hideAlert();
         dispatch(clearAcceptedRide());
+        dispatch(setCurrentRide(null));
         navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
     } catch (error: any) {
@@ -770,6 +777,7 @@ const PickupMapScreen = ({ route }: any) => {
         icon: isAlreadyCancelled ? 'close-circle-outline' : 'alert-circle-outline',
         onConfirm: shouldAllowForceClear ? () => {
           dispatch(clearAcceptedRide());
+          dispatch(setCurrentRide(null));
           navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
       });
@@ -782,7 +790,7 @@ const PickupMapScreen = ({ route }: any) => {
       const vehicle = `${ride?.car_name || ride?.vehicle_model || 'Vehicle'}${ride?.vehicle_type ? ` (${ride.vehicle_type})` : ''}`.trim();
       const carNumber = ride?.vehicle_number || ride?.car_number || '';
       const tripCode = ride?.trip_code || ride?.booking_code || ride?.trip_id || ride?.id || '';
-      
+
       const shareMessage = `🚗 Track my T2Drive Trip!\n\n` +
         (tripCode ? `🆔 Trip Code: ${tripCode}\n` : '') +
         `👤 Passenger: ${passengerName}\n` +
@@ -813,6 +821,7 @@ const PickupMapScreen = ({ route }: any) => {
     setShowArriveConfirmModal(false);
     try {
       await arrivedTripApi(ride?.trip_id).unwrap();
+      dispatch(setCurrentRide({ ...ride, trip_status: 'ARRIVED' }));
       setIsArrived(true);
       setShowSuccess(true);
       successScale.value = withSpring(1, { damping: 10, stiffness: 100 });
@@ -912,7 +921,7 @@ const PickupMapScreen = ({ route }: any) => {
       <Pressable style={styles.modalOverlay} onPress={() => setShowArriveConfirmModal(false)}>
         <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
           <View style={styles.dragHandle} />
-          
+
           <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
             {t('far_from_pickup') || 'Wait!'}
           </Text>
@@ -921,15 +930,15 @@ const PickupMapScreen = ({ route }: any) => {
           </Text>
 
           <View style={styles.sheetButtonsRow}>
-            <TouchableOpacity 
-              style={styles.sheetCancelBtn} 
+            <TouchableOpacity
+              style={styles.sheetCancelBtn}
               onPress={() => setShowArriveConfirmModal(false)}
             >
               <Text style={styles.sheetCancelBtnText}>{t('common.cancel') || 'Cancel'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
+            <TouchableOpacity
+              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]}
               onPress={confirmArriveComplete}
             >
               <Text style={styles.sheetConfirmBtnText}>{t('confirm') || 'Confirm'}</Text>
@@ -1059,7 +1068,7 @@ const PickupMapScreen = ({ route }: any) => {
 
       {/* Top Banner (Full Width) */}
       <View style={[styles.topHeaderBanner, { paddingTop: insets.top + vs(10), paddingBottom: vs(10), paddingHorizontal: ms(16), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'transparent' }]}>
-        
+
         {/* Left: Menu Dropdown */}
         <View style={{ position: 'relative', zIndex: 100 }}>
           <TouchableOpacity
@@ -1100,14 +1109,14 @@ const PickupMapScreen = ({ route }: any) => {
 
         {/* Right: Help */}
         <View style={{ position: 'relative', zIndex: 100 }}>
-          <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? theme.colors.card : '#FFF', paddingHorizontal: ms(12), height: ms(44), borderRadius: ms(12), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#F1F5F9' }} 
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? theme.colors.card : '#FFF', paddingHorizontal: ms(12), height: ms(44), borderRadius: ms(12), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#F1F5F9' }}
             onPress={() => setShowHelpDropdown(!showHelpDropdown)}
           >
-            <Ionicons name="headset-outline" size={ms(18)} color={theme.colors.text} style={{marginRight: ms(6)}}/>
+            <Ionicons name="headset-outline" size={ms(18)} color={theme.colors.text} style={{ marginRight: ms(6) }} />
             <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.text }}>Help</Text>
           </TouchableOpacity>
-          
+
           {showHelpDropdown && (
             <View style={[styles.helpDropdown, { right: 0, top: ms(50) }, isDark && { backgroundColor: theme.colors.card, borderColor: 'rgba(255,255,255,0.1)' }]}>
               <TouchableOpacity style={styles.helpDropdownItem} onPress={() => { setShowHelpDropdown(false); }}>
@@ -1117,7 +1126,7 @@ const PickupMapScreen = ({ route }: any) => {
               <View style={styles.dropdownDivider} />
               <TouchableOpacity style={styles.helpDropdownItem} onPress={() => { setShowHelpDropdown(false); handleSosPress(); }}>
                 <Ionicons name="warning-outline" size={ms(18)} color="#EF4444" style={{ marginRight: ms(8) }} />
-                <Text style={[styles.helpDropdownText, {color: '#EF4444'}]}>SOS</Text>
+                <Text style={[styles.helpDropdownText, { color: '#EF4444' }]}>SOS</Text>
               </TouchableOpacity>
               <View style={styles.dropdownDivider} />
               <TouchableOpacity style={styles.helpDropdownItem} onPress={() => { setShowHelpDropdown(false); setShowCancelModal(true); }}>
@@ -1234,7 +1243,7 @@ const PickupMapScreen = ({ route }: any) => {
                   </Text>
                 </View>
               </View>
-              
+
               <View style={styles.riderActions}>
                 <View style={styles.actionBtnContainer}>
                   <TouchableOpacity
@@ -1279,7 +1288,7 @@ const PickupMapScreen = ({ route }: any) => {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC', marginHorizontal: ms(20), marginTop: vs(14), marginBottom: vs(8), padding: ms(10), borderRadius: ms(12), borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }}
               onPress={openExternalGoogleMap}
             >

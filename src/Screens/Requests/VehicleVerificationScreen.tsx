@@ -14,10 +14,11 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '../../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useFocusEffect, StackActions } from '@react-navigation/native';
 import ImagePicker from 'react-native-image-crop-picker';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Animated, {
   FadeInDown,
   ZoomIn,
@@ -31,12 +32,14 @@ import Button from '../../Components/Button';
 import { useAlert } from '../../context/AlertContext';
 import { vS as vs, mS as ms } from '../../lib/scale';
 import { RootState } from '../../redux/store';
-import { useGetDocUploadUrlMutation, useSubmitTripPhotosMutation, useGetTripVerificationStatusQuery } from '../../service/driverApi';
+import { setCurrentRide } from '../../redux/rideSlice';
+import { useGetDocUploadUrlMutation, useSubmitTripPhotosMutation, useGetTripVerificationStatusQuery, useStartTripMutation } from '../../service/driverApi';
 import { documentApi } from '../../api/documentApi';
 import socketService from '../../service/socketService';
 import { checkCameraPermission, goToSettings } from '../../utils/permissionUtils';
 import { resolveImageUrl } from '../../utils/imageUtils';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { useLocationTracker } from '../../hooks/useLocationTracker';
 
 type Status = 'COLLECTING' | 'VERIFYING' | 'APPROVED' | 'REJECTED';
 
@@ -197,10 +200,26 @@ const VehicleVerificationScreen = ({ route }: any) => {
   const { isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const { triggerHaptic } = useHaptic();
+  const { showToast } = useToast();
   const user = useSelector((state: RootState) => state.userSlice.user);
+  const dispatch = useDispatch();
 
+  // 📍 Keep foreground location service alive on this screen
+  const trip_id = ride?.trip_id || ride?.id;
+  useLocationTracker({
+    driverId: user?.driverId,
+    isTracking: !!trip_id,
+    tripId: trip_id,
+    mode: 'moving',
+    suppressEmission: false,
+  });
+
+  // 🛡️ Guard: Only exit if ride was present and then genuinely cleared (not during rehydration)
+  const hadRideRef = useRef(!!rideFromStore);
   useEffect(() => {
-    if (!rideFromStore) {
+    if (rideFromStore) {
+      hadRideRef.current = true;
+    } else if (hadRideRef.current && !rideFromStore) {
       navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
     }
   }, [rideFromStore, navigation]);
@@ -222,6 +241,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
 
   const [getUploadUrl] = useGetDocUploadUrlMutation();
   const [submitTripPhotos, { isLoading: isSubmitting }] = useSubmitTripPhotosMutation();
+  const [startTripApi] = useStartTripMutation();
 
   const bgColor = isDark ? '#121212' : '#FFFFFF';
   const cardBg = isDark ? '#1E1E1E' : '#FFF';
@@ -277,12 +297,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        showAlert({
-          title: t('verification_required'),
-          message: t('verification_required_msg'),
-          singleButton: true,
-          icon: 'information-circle-outline',
-        });
+        showToast({ message: 'Complete verification to proceed.', type: 'error' });
         return true;
       };
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -426,8 +441,22 @@ const VehicleVerificationScreen = ({ route }: any) => {
   };
 
   const startTripAction = async () => {
-    navigation.replace('DropMapScreen', { ride });
+    try {
+      await startTripApi(ride?.trip_id || ride?.id).unwrap();
+      dispatch(setCurrentRide({ ...ride, trip_status: 'STARTED' }));
+      navigation.replace('DropMapScreen', { ride });
+    } catch (e) {
+      showToast({ message: t('failed_to_start_trip') || 'Failed to start trip. Please try again.', type: 'error' });
+    }
   };
+
+  const hasStartedTripRef = useRef(false);
+  useEffect(() => {
+    if (status === 'APPROVED' && !hasStartedTripRef.current) {
+      hasStartedTripRef.current = true;
+      startTripAction();
+    }
+  }, [status]);
 
   if (isStatusLoading) {
     return (
@@ -462,11 +491,8 @@ const VehicleVerificationScreen = ({ route }: any) => {
           </View>
         </Animated.View>
         <Text style={[styles.verifyMainTitle, { color: textPrimary }]}>{t('youve_been_verified')}</Text>
-        <Text style={[styles.verifySubText, { color: textSecondary }]}>{t('verified_ready_subtext')}</Text>
-        <TouchableOpacity onPress={startTripAction} style={styles.startTripBtn}>
-          <Text style={styles.startTripBtnText}>{t('start_trip')}</Text>
-          <Ionicons name="arrow-forward" size={ms(20)} color="#FFF" />
-        </TouchableOpacity>
+        <Text style={[styles.verifySubText, { color: textSecondary, marginBottom: vs(32) }]}>{t('verified_ready_subtext')}</Text>
+        <ActivityIndicator size="large" color={SCREENSHOT_GREEN} />
       </View>
     );
   }

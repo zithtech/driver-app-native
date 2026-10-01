@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../../redux/store';
 import { useAppTheme } from '../../../context/ThemeContext';
 import { hS as s, vS as vs, mS as ms } from '../../../lib/scale';
-import { PickupMapScreen_Nav, DropMapScreen_Nav, WaitingScreen_Nav, ReturnTripMapScreen_Nav } from '../../../Navigations/navigations';
+import { PickupMapScreen_Nav, PickupOTPScreen_Nav, DropMapScreen_Nav, WaitingScreen_Nav, ReturnTripMapScreen_Nav } from '../../../Navigations/navigations';
 
 const ActiveRideBanner = () => {
     const { theme, isDark } = useAppTheme();
@@ -35,10 +35,14 @@ const ActiveRideBanner = () => {
     let borderColor = isDark ? 'rgba(59, 130, 246, 0.3)' : '#BFDBFE';
     let textColor = isDark ? '#60A5FA' : '#1D4ED8';
 
-    if (['ARRIVING', 'ARRIVED'].includes(rawStatus) || (rawStatus === 'ACCEPTED' && !isScheduled)) {
+    if (['ARRIVING'].includes(rawStatus) || (rawStatus === 'ACCEPTED' && !isScheduled)) {
         targetScreen = PickupMapScreen_Nav;
         label = t('active_ride_pickup', 'En route to Pickup');
         iconName = 'navigate-circle-outline';
+    } else if (rawStatus === 'ARRIVED') {
+        targetScreen = PickupOTPScreen_Nav;
+        label = t('active_ride_arrived', 'Arrived at Pickup');
+        iconName = 'checkmark-circle-outline';
     } else if (rawStatus === 'VERIFICATION_PENDING') {
         targetScreen = 'VehicleVerificationScreen';
         label = t('active_ride_verify', 'Verification Pending');

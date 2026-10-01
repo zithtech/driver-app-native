@@ -39,6 +39,7 @@ const RIDE_NOTIFICATION_TYPES = new Set([
     'NEW_RIDE_REQUEST',
     'ASSIGNED_RIDE',
     'TRIP_ASSIGNED',
+    'ACTIVE_TRIP_WAKEUP',
 ]);
 
 /** Notification types that represent trip cancellations */
@@ -279,6 +280,7 @@ const ASSIGNMENT_TYPES = new Set([
     'ASSIGNED_RIDE',
     'RIDE_ASSIGNED',
     'TRIP_ASSIGNED',
+    'ACTIVE_TRIP_WAKEUP',
 ]);
 
 export function setupBackgroundHandler(): void {
@@ -321,6 +323,7 @@ export function setupBackgroundHandler(): void {
 
         const isLiveRideRequest = type === 'NEW_RIDE_REQUEST' || type === 'RIDE_REQUEST';
         const isScheduledAlert = type === 'SCHEDULED_REMINDER' || type === 'SCHEDULED_RIDE_STARTED';
+        const isWakeUp = type === 'ACTIVE_TRIP_WAKEUP';
         const isBroadcast = isLiveRideRequest; // Live ride requests auto-expire
         const isCancellation = CANCELLATION_TYPES.has(type);
 
@@ -352,12 +355,12 @@ export function setupBackgroundHandler(): void {
                 importance: AndroidImportance.HIGH,
                 smallIcon: 'ic_launcher',
                 pressAction: { id: 'default' },
-                sound: isScheduledAlert ? 'sound_3' : 'default',
+                sound: isScheduledAlert || isWakeUp ? 'sound_3' : 'default',
                 ...(isBroadcast ? { timeoutAfter: 20000 } : {}),
-                ...(isLiveRideRequest ? { fullScreenAction: { id: 'default' } } : {}),
+                ...(isLiveRideRequest || isWakeUp ? { fullScreenAction: { id: 'default' } } : {}),
             },
             ios: {
-                sound: isScheduledAlert ? 'sound_3.mp3' : 'default',
+                sound: isScheduledAlert || isWakeUp ? 'sound_3.mp3' : 'default',
             },
             data: remoteMessage.data,
         });

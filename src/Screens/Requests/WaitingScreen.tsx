@@ -166,12 +166,7 @@ const WaitingScreen = ({ route }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        showAlert({
-          title: t('waiting'),
-          message: t('cannot_go_back_waiting', 'You cannot go back while waiting for the round trip.'),
-          singleButton: true,
-          icon: 'information-circle-outline',
-        });
+        navigation.navigate('DashboardScreen');
         return true;
       };
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);

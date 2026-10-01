@@ -168,7 +168,7 @@ const DropMapScreen = ({ route }: any) => {
     return { icon: 'car' as const, label: type || t('standard_service'), color: '#64748B' };
   }, [t]);
 
-  const vehicleInfo = useMemo(() => 
+  const vehicleInfo = useMemo(() =>
     getVehicleInfo(ride.car_name || ride.vehicle_model || ride.ride_type || ride.service_type),
     [ride.car_name, ride.vehicle_model, ride.ride_type, ride.service_type, getVehicleInfo]
   );
@@ -199,10 +199,7 @@ const DropMapScreen = ({ route }: any) => {
   useFocusEffect(
     useCallback(() => {
       const onBackPress = () => {
-        showToast({
-          message: t('active_trip_cancel_msg') || 'You cannot go back during an active trip',
-          type: 'info',
-        });
+        navigation.navigate('DashboardScreen');
         return true;
       };
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -216,8 +213,12 @@ const DropMapScreen = ({ route }: any) => {
   );
 
   // 🛡️ Guard: Exit screen if ride is cleared from Redux (e.g. by global cancellation)
+  // Uses hadRideRef to avoid false triggers during Redux rehydration on app restart
+  const hadRideRef = useRef(!!reduxCurrentRide);
   useEffect(() => {
-    if (!reduxCurrentRide) {
+    if (reduxCurrentRide) {
+      hadRideRef.current = true;
+    } else if (hadRideRef.current && !reduxCurrentRide) {
       console.log('[DropMapScreen] Active ride cleared from Redux, exiting...');
       isExitingRef.current = true;
       navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
@@ -606,9 +607,9 @@ const DropMapScreen = ({ route }: any) => {
     setShowEndTripConfirmModal(false);
     try {
       const startTimeStr = ride?.started_at || ride?.actual_pickup_time;
-      const calculatedDuration = startTimeStr 
-          ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
-          : (initialEta.current || 15);
+      const calculatedDuration = startTimeStr
+        ? Math.max(1, Math.round((Date.now() - new Date(startTimeStr).getTime()) / 60000))
+        : (initialEta.current || 15);
 
       if (ride?.ride_type === 'ROUND_TRIP' || ride?.ride_type === 'OUTSTATION_ROUND_TRIP') {
         await waitingTripApi(trip_id.toString()).unwrap();
@@ -617,7 +618,7 @@ const DropMapScreen = ({ route }: any) => {
       } else {
         await destinationReachedApi(trip_id.toString()).unwrap();
         triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
-        navigation.replace('PaymentCollectionScreen', { 
+        navigation.replace('PaymentCollectionScreen', {
           ride,
           actualDistance: distance,
           actualDuration: calculatedDuration
@@ -693,7 +694,7 @@ const DropMapScreen = ({ route }: any) => {
       const vehicle = `${ride?.car_name || ride?.vehicle_model || 'Vehicle'}${ride?.vehicle_type ? ` (${ride.vehicle_type})` : ''}`.trim();
       const carNumber = ride?.vehicle_number || ride?.car_number || '';
       const tripCode = ride?.trip_code || ride?.booking_code || ride?.trip_id || ride?.id || '';
-      
+
       const shareMessage = `🚗 Track my T2Drive Trip!\n\n` +
         (tripCode ? `🆔 Trip Code: ${tripCode}\n` : '') +
         `👤 Passenger: ${passengerName}\n` +
@@ -768,7 +769,7 @@ const DropMapScreen = ({ route }: any) => {
       <Pressable style={styles.modalOverlay} onPress={() => setShowEndTripConfirmModal(false)}>
         <View style={[styles.bottomSheet, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
           <View style={styles.dragHandle} />
-          
+
           <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>
             {t('far_from_destination') || 'Wait!'}
           </Text>
@@ -777,15 +778,15 @@ const DropMapScreen = ({ route }: any) => {
           </Text>
 
           <View style={styles.sheetButtonsRow}>
-            <TouchableOpacity 
-              style={styles.sheetCancelBtn} 
+            <TouchableOpacity
+              style={styles.sheetCancelBtn}
               onPress={() => setShowEndTripConfirmModal(false)}
             >
               <Text style={styles.sheetCancelBtnText}>{t('common.cancel') || 'Cancel'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]} 
+            <TouchableOpacity
+              style={[styles.sheetConfirmBtn, { backgroundColor: theme.colors.primary }]}
               onPress={confirmEndTripComplete}
             >
               <Text style={styles.sheetConfirmBtnText}>{t('confirm') || 'Confirm'}</Text>
@@ -910,7 +911,7 @@ const DropMapScreen = ({ route }: any) => {
 
       {/* Top Banner (Full Width) */}
       <View style={[styles.topHeaderBanner, { paddingTop: insets.top + vs(10), paddingBottom: vs(10), paddingHorizontal: ms(16), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'transparent' }]}>
-        
+
         {/* Left: Menu Dropdown */}
         <View style={{ position: 'relative', zIndex: 100 }}>
           <TouchableOpacity
@@ -951,14 +952,14 @@ const DropMapScreen = ({ route }: any) => {
 
         {/* Right: Help */}
         <View style={{ position: 'relative', zIndex: 100 }}>
-          <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? theme.colors.card : '#FFF', paddingHorizontal: ms(12), height: ms(44), borderRadius: ms(12), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#F1F5F9' }} 
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? theme.colors.card : '#FFF', paddingHorizontal: ms(12), height: ms(44), borderRadius: ms(12), shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#F1F5F9' }}
             onPress={() => setShowHelpDropdown(!showHelpDropdown)}
           >
-            <Ionicons name="headset-outline" size={ms(18)} color={theme.colors.text} style={{marginRight: ms(6)}}/>
+            <Ionicons name="headset-outline" size={ms(18)} color={theme.colors.text} style={{ marginRight: ms(6) }} />
             <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.text }}>Help</Text>
           </TouchableOpacity>
-          
+
           {showHelpDropdown && (
             <View style={[styles.helpDropdown, { right: 0, top: ms(50) }, isDark && { backgroundColor: theme.colors.card, borderColor: 'rgba(255,255,255,0.1)' }]}>
               <TouchableOpacity style={styles.helpDropdownItem} onPress={() => { setShowHelpDropdown(false); }}>
@@ -968,7 +969,7 @@ const DropMapScreen = ({ route }: any) => {
               <View style={styles.dropdownDivider} />
               <TouchableOpacity style={styles.helpDropdownItem} onPress={() => { setShowHelpDropdown(false); handleSOS(); }}>
                 <Ionicons name="warning-outline" size={ms(18)} color="#EF4444" style={{ marginRight: ms(8) }} />
-                <Text style={[styles.helpDropdownText, {color: '#EF4444'}]}>SOS</Text>
+                <Text style={[styles.helpDropdownText, { color: '#EF4444' }]}>SOS</Text>
               </TouchableOpacity>
               <View style={styles.dropdownDivider} />
               <TouchableOpacity style={styles.helpDropdownItem} onPress={() => { setShowHelpDropdown(false); setShowCancelModal(true); }}>
@@ -1083,7 +1084,7 @@ const DropMapScreen = ({ route }: any) => {
                   </Text>
                 </View>
               </View>
-              
+
               <View style={styles.riderActions}>
                 <View style={styles.actionBtnContainer}>
                   <TouchableOpacity
@@ -1128,7 +1129,7 @@ const DropMapScreen = ({ route }: any) => {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC', marginHorizontal: ms(20), marginTop: vs(14), marginBottom: vs(8), padding: ms(10), borderRadius: ms(12), borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0' }}
               onPress={openExternalGoogleMap}
             >

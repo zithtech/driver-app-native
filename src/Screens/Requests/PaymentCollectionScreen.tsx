@@ -35,6 +35,7 @@ import { RootState } from '../../redux/store';
 import { clearAcceptedRide } from '../../redux/rideSlice';
 import { checkPhotoLibraryPermission, goToSettings } from '../../utils/permissionUtils';
 import { mS as ms, vS as vs } from '../../lib/scale';
+import { useLocationTracker } from '../../hooks/useLocationTracker';
 
 const { width } = Dimensions.get('window');
 
@@ -67,16 +68,21 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
     const { triggerHaptic } = useHaptic();
     const [completeTripMutation] = useCompleteTripMutation();
     const dispatch = useDispatch();
+    const user = useSelector((state: RootState) => state.userSlice?.user);
+
+    // 📍 Keep foreground location service alive on this screen
+    useLocationTracker({
+        driverId: user?.driverId,
+        isTracking: !!tripId,
+        tripId: tripId,
+        mode: 'moving',
+        suppressEmission: false,
+    });
 
     useFocusEffect(
         React.useCallback(() => {
             const onBackPress = () => {
-                showAlert({
-                    title: t('payment_collection_title'),
-                    message: t('payment_back_restriction'),
-                    singleButton: true,
-                    icon: 'information-circle-outline',
-                });
+                navigation.navigate('DashboardScreen');
                 return true;
             };
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);

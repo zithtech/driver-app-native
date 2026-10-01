@@ -1,12 +1,16 @@
 /**
  * backgroundLocationService.ts
  *
- * Wraps react-native-background-actions to run a persistent foreground
- * service on Android. This keeps location tracking alive even when the
- * driver minimises the app.
+ * Production-ready foreground service for Android that keeps
+ * location tracking alive when the app is minimised.
  *
- * On Android, a persistent notification is shown:
- *   "vDrive is tracking your location"
+ * Features:
+ * - Persistent notification: "Trip in progress" during active trips,
+ *   "Stay online to receive ride requests" when idle
+ * - Updates notification when trip state changes (start/end)
+ * - Restarts with new tripId when a new trip begins
+ * - Heartbeat to keep the service alive and re-send location
+ * - Only emits from background (foreground handled by useLocationTracker)
  */
 import BackgroundService from 'react-native-background-actions';
 import Geolocation from 'react-native-geolocation-service';
@@ -14,6 +18,11 @@ import { AppState } from 'react-native';
 import socketService from './socketService';
 
 const BACKGROUND_INTERVAL_MS = 10_000; // 10 seconds
+
+/** Track current service state to detect when updates are needed */
+let currentServiceTripId: string | undefined;
+let currentServiceDriverId: string | undefined;
+let currentServiceMode: 'idle' | 'trip' = 'idle';
 
 interface BackgroundLocationOptions {
   driverId: string;
@@ -99,7 +108,7 @@ const locationTask = async (params: {
         if (tripId) {
           socketService.emitLocationUpdate(tripId, lastLat, lastLng, lastHeading);
         }
-        console.log(`💓 [BG] Heartbeat sent (${highAccuracy ? 'Moving' : 'Idle'})`);
+        console.log(`💓 [BG] Heartbeat sent (${highAccuracy ? 'Trip' : 'Idle'})`);
       }
     }, highAccuracy ? 20_000 : 30_000); // Dynamic heartbeat: 20s for active trip, 30s for idle
   });
@@ -107,16 +116,19 @@ const locationTask = async (params: {
 
 /**
  * Notification options for the persistent Android notification.
+ * Shows different text for idle vs active trip.
  */
-const getNotificationConfig = () => ({
+const getNotificationConfig = (tripId?: string) => ({
   taskName: 'vDriveLocationTracking',
-  taskTitle: 'vDrive Online',
-  taskDesc: 'Stay online to receive ride requests',
+  taskTitle: tripId ? '🚗 Trip in Progress' : 'vDrive Online',
+  taskDesc: tripId
+    ? 'Your trip is active. Location is being shared with the rider.'
+    : 'Stay online to receive ride requests',
   taskIcon: {
     name: 'ic_launcher',
     type: 'mipmap',
   },
-  color: '#6C63FF',
+  color: tripId ? '#10B981' : '#6C63FF', // Green for trip, purple for idle
   linkingURI: 'vdrive://',
   foregroundServiceType: ['location'],
   parameters: {},
@@ -124,19 +136,35 @@ const getNotificationConfig = () => ({
 
 /**
  * Start the background location service.
- * Call this when the driver goes ONLINE.
+ * Call this when the driver goes ONLINE or starts a trip.
  */
 export const startBackgroundLocation = async (
   options: BackgroundLocationOptions,
 ) => {
-  if (BackgroundService.isRunning()) {
-    console.log('📍 [BG] Already running, skipping start');
+  const isRunning = BackgroundService.isRunning();
+  const tripChanged = currentServiceTripId !== options.tripId;
+  const driverChanged = currentServiceDriverId !== options.driverId;
+  const modeChanged = (options.tripId ? 'trip' : 'idle') !== currentServiceMode;
+
+  // If already running with same params, skip
+  if (isRunning && !tripChanged && !driverChanged && !modeChanged) {
+    console.log('📍 [BG] Already running with same config, skipping');
     return;
+  }
+
+  // If running but params changed (e.g. new trip started), restart
+  if (isRunning && (tripChanged || driverChanged || modeChanged)) {
+    console.log(`📍 [BG] Config changed (trip: ${currentServiceTripId} → ${options.tripId}), restarting...`);
+    try {
+      await BackgroundService.stop();
+    } catch (e) {
+      console.warn('📍 [BG] Error stopping before restart:', e);
+    }
   }
 
   socketService.connect();
 
-  const config = getNotificationConfig();
+  const config = getNotificationConfig(options.tripId);
 
   try {
     await BackgroundService.start(
@@ -151,15 +179,42 @@ export const startBackgroundLocation = async (
         },
       } as any
     );
-    console.log('✅ [BG] Background location service started');
+
+    // Track current state
+    currentServiceTripId = options.tripId;
+    currentServiceDriverId = options.driverId;
+    currentServiceMode = options.tripId ? 'trip' : 'idle';
+
+    console.log(`✅ [BG] Background location service started (${currentServiceMode}, trip: ${options.tripId || 'none'})`);
   } catch (error) {
     console.error('❌ [BG] Failed to start background service:', error);
   }
 };
 
 /**
+ * Update the foreground notification text without restarting the service.
+ * Use this for quick notification updates (e.g. status change within same trip).
+ */
+export const updateBackgroundNotification = async (tripId?: string) => {
+  if (!BackgroundService.isRunning()) return;
+
+  try {
+    const config = getNotificationConfig(tripId);
+    await BackgroundService.updateNotification({
+      taskTitle: config.taskTitle,
+      taskDesc: config.taskDesc,
+    });
+    currentServiceTripId = tripId;
+    currentServiceMode = tripId ? 'trip' : 'idle';
+    console.log(`📝 [BG] Notification updated (${currentServiceMode})`);
+  } catch (error) {
+    console.warn('📍 [BG] Failed to update notification:', error);
+  }
+};
+
+/**
  * Stop the background location service.
- * Call this when the driver goes OFFLINE.
+ * Call this when the driver goes OFFLINE or trip completes.
  */
 export const stopBackgroundLocation = async () => {
   if (!BackgroundService.isRunning()) {
@@ -168,6 +223,9 @@ export const stopBackgroundLocation = async () => {
 
   try {
     await BackgroundService.stop();
+    currentServiceTripId = undefined;
+    currentServiceDriverId = undefined;
+    currentServiceMode = 'idle';
     console.log('🛑 [BG] Background location service stopped');
   } catch (error) {
     console.error('❌ [BG] Failed to stop background service:', error);
@@ -180,3 +238,13 @@ export const stopBackgroundLocation = async () => {
 export const isBackgroundLocationRunning = (): boolean => {
   return BackgroundService.isRunning();
 };
+
+/**
+ * Get the current service state (for debugging).
+ */
+export const getBackgroundServiceState = () => ({
+  isRunning: BackgroundService.isRunning(),
+  tripId: currentServiceTripId,
+  driverId: currentServiceDriverId,
+  mode: currentServiceMode,
+});
