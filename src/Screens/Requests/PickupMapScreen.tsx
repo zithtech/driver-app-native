@@ -595,12 +595,6 @@ const PickupMapScreen = ({ route }: any) => {
         const factor = initialDistance.current > 0 ? (initialEta.current / initialDistance.current) : 4;
         const currentEta = Math.max(1, Math.round(remainKm * factor));
 
-        // Voice Alert (50 meters)
-        if (remainKm <= 0.05 && !hasNotifiedArrivalVoiceRef.current && !isArrivedRef.current) {
-          hasNotifiedArrivalVoiceRef.current = true;
-          audioService.speak(t('reached_pickup_voice', 'You have reached the pickup location'));
-        }
-
         // Update local state for UI (renders after this loop ends)
         setDistance(currentDistance);
         setEta(currentEta);
@@ -859,12 +853,15 @@ const PickupMapScreen = ({ route }: any) => {
       setDistance(parseFloat(remainKm.toFixed(1)));
       setEta(calculatedEta);
 
-      // Real-World Proximity Logic: Auto-expand bottom sheet at 10m (0.01km)
-      if (dist <= 0.01 && !isArrived) {
-        bottomSheetRef.current?.snapToIndex(1); // Expand to 45% (top)
+      // Proximity Logic: Auto-expand bottom sheet and trigger voice at 50m (0.05km)
+      if (dist <= 0.05 && !isArrived) {
         if (!hasNotifiedArrival.current) {
-
           hasNotifiedArrival.current = true;
+          bottomSheetRef.current?.snapToIndex(1); // Expand to 45% (top)
+        }
+        if (!hasNotifiedArrivalVoiceRef.current) {
+          hasNotifiedArrivalVoiceRef.current = true;
+          audioService.speak(t('reached_pickup_voice', 'You have reached the pickup location'));
         }
       }
     } else if (!routeCoords || routeCoords.length === 0) {

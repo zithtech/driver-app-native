@@ -120,10 +120,10 @@ const locationTask = async (params: {
  */
 const getNotificationConfig = (tripId?: string) => ({
   taskName: 'vDriveLocationTracking',
-  taskTitle: tripId ? '🚗 Trip in Progress' : 'vDrive Online',
+  taskTitle: tripId ? '🚗 Trip in Progress' : '🚀 Ready to Earn!',
   taskDesc: tripId
     ? 'Your trip is active. Location is being shared with the rider.'
-    : 'Stay online to receive ride requests',
+    : 'Stay active and catch your next ride! 💸',
   taskIcon: {
     name: 'ic_launcher',
     type: 'mipmap',

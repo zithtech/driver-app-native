@@ -88,6 +88,32 @@ function isValidRideNotification(data?: Record<string, string>): boolean {
     return hasType && hasId;
 }
 
+/** 🎨 Format notification text for better UX (add emojis, fix raw string reasons) */
+function formatNotificationText(title: string, body: string, type: string): { title: string; body: string } {
+    let formattedTitle = title;
+    let formattedBody = body;
+
+    // Handle Cancellations: Make raw strings like "PERSONAL_EMERGENCY" readable
+    if (CANCELLATION_TYPES.has(type) || title.toLowerCase().includes('cancelled')) {
+        if (formattedBody.includes('Reason:')) {
+            formattedBody = formattedBody.replace(/Reason:\s*([A-Z_]+)/g, (match, p1) => {
+                const readableReason = p1.replace(/_/g, ' ').toLowerCase();
+                return `Reason: ${readableReason.charAt(0).toUpperCase() + readableReason.slice(1)}`;
+            });
+        }
+    }
+
+    // Handle Ride Completion: Add emojis and motivating words
+    if (type === 'RIDE_COMPLETED' || title.toLowerCase().includes('ride completed')) {
+        formattedTitle = '🎉 Ride Completed! 🎊';
+        if (!formattedBody.includes('Awesome job')) {
+            formattedBody = `Awesome job! 🌟 ${formattedBody} 💸`;
+        }
+    }
+
+    return { title: formattedTitle, body: formattedBody };
+}
+
 /* ================================================================
    CHANNEL — Android requires a notification channel (8.0+)
    ================================================================ */
@@ -216,8 +242,12 @@ export function setupForegroundHandler(): () => void {
             }
 
             // For data-only messages, read title/body from data field
-            const title = remoteMessage.notification?.title ?? (remoteMessage.data as any)?.title ?? 'New Notification';
-            const body = remoteMessage.notification?.body ?? (remoteMessage.data as any)?.body ?? '';
+            let title = remoteMessage.notification?.title ?? (remoteMessage.data as any)?.title ?? 'New Notification';
+            let body = remoteMessage.notification?.body ?? (remoteMessage.data as any)?.body ?? '';
+
+            const formatted = formatNotificationText(title, body, type);
+            title = formatted.title;
+            body = formatted.body;
 
             // 3. Display all other notifications in the system tray
             const { store } = require('../redux/store');
@@ -337,8 +367,12 @@ export function setupBackgroundHandler(): void {
         }
 
         // For data-only messages, read title/body from data field
-        const title = String(remoteMessage.notification?.title ?? remoteMessage.data?.title ?? 'New Notification');
-        const body = String(remoteMessage.notification?.body ?? remoteMessage.data?.body ?? '');
+        let title = String(remoteMessage.notification?.title ?? remoteMessage.data?.title ?? 'New Notification');
+        let body = String(remoteMessage.notification?.body ?? remoteMessage.data?.body ?? '');
+
+        const formatted = formatNotificationText(title, body, type);
+        title = formatted.title;
+        body = formatted.body;
         const notificationId = String(remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now());
 
         // If it's a cancellation, cancel any existing ringing notification first

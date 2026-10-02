@@ -346,21 +346,27 @@ export const useAuthBootstrap = () => {
         }
 
         if (isActiveTripSuccess && validTripData) {
-            console.log('[AuthBootstrap] 🚖 Active trip found:', validTripData.trip_id || validTripData.id);
+            console.log('[AuthBootstrap] 🚖 Active trip found on server:', validTripData.trip_id || validTripData.id);
             dispatch(setCurrentRide(validTripData));
             setTripProcessed(true);
         } else if (isActiveTripError || (isActiveTripSuccess && !validTripData)) {
-            // 🛡️ RECOVERY FIX: Only clear currentRide if it's NOT a scheduled ride AND it's not a recently accepted live ride.
-            // When a driver accepts a ride, there is a race condition where activeTripData might poll and return null
-            // before the backend has fully registered the trip as active.
             const currentRideObj = currentRideRef.current as any;
+            
+            // 🛡️ OFFLINE FIRST: If there is a network error, ALWAYS trust local state. 
+            // Never wipe the trip if the backend is unreachable.
+            const isNetworkError = activeTripData === undefined && isActiveTripError;
+            
+            if (isNetworkError && currentRideObj) {
+                console.log('[AuthBootstrap] 📡 Network error / Server unreachable. Trusting local persisted ride state.');
+                setTripProcessed(true);
+                return;
+            }
+
+            // 🛡️ RECOVERY FIX: Only clear currentRide if it's NOT a scheduled ride AND it's not a recently accepted live ride.
             const isPersistedScheduled = 
                 currentRideObj?.booking_type === 'SCHEDULED' || 
                 currentRideObj?.is_scheduled;
             
-            // If the local Redux state already has an active trip in ANY non-terminal state,
-            // preserve it. The backend /trips/active endpoint might not return the trip in some
-            // edge cases, but the ride is still valid. Genuine cancellations arrive via socket events.
             const ACTIVE_STATUSES = [
                 'ACCEPTED', 'ARRIVING', 'ARRIVED',
                 'VERIFICATION_PENDING', 'LIVE', 'STARTED', 'ON_TRIP',
@@ -370,18 +376,9 @@ export const useAuthBootstrap = () => {
             const isRecentlyAcceptedLive = 
                 currentRideObj && 
                 ACTIVE_STATUSES.includes((currentRideObj.trip_status || currentRideObj.status || '').toUpperCase());
-
-            console.log('[AuthBootstrap] 🔍 Trip recovery decision:', {
-                hasApiData: !!validTripData,
-                isApiError: isActiveTripError,
-                persistedStatus: currentRideObj?.trip_status || currentRideObj?.status || 'NONE',
-                persistedTripId: currentRideObj?.trip_id || currentRideObj?.id || 'NONE',
-                isPersistedScheduled,
-                isRecentlyAcceptedLive,
-            });
             
             if (!validTripData && !isPersistedScheduled && !isRecentlyAcceptedLive) {
-                console.log('[AuthBootstrap] No active trip found on backend, clearing non-scheduled currentRide');
+                console.log('[AuthBootstrap] No active trip found on backend and not active locally, clearing currentRide');
                 dispatch(setCurrentRide(null));
             } else if (isPersistedScheduled) {
                 console.log('[AuthBootstrap] Preserving scheduled ride state... verifying with backend.');

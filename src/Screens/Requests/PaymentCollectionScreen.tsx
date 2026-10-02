@@ -20,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Dashboard_Nav } from '../../Navigations/navigations';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Animated from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
 
@@ -68,18 +69,27 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
         }
     }, [tripId, isFinished, navigation]);
 
+    const handleCloseSuccess = React.useCallback(() => {
+        dispatch(clearAcceptedRide());
+        navigation.reset({
+            index: 0,
+            routes: [{ name: Dashboard_Nav }],
+        });
+    }, [dispatch, navigation]);
+
     React.useEffect(() => {
         if (isFinished) {
             const randomQuote = MOTIVATION_QUOTES[Math.floor(Math.random() * MOTIVATION_QUOTES.length)];
             setMotivationText(randomQuote);
-
-            const timeout = setTimeout(() => {
-                dispatch(clearAcceptedRide());
-                navigation.navigate(Dashboard_Nav);
-            }, 3000);
-            return () => clearTimeout(timeout);
+            
+            // Production-ready auto-redirect after 5 seconds
+            const timer = setTimeout(() => {
+                handleCloseSuccess();
+            }, 5000);
+            
+            return () => clearTimeout(timer);
         }
-    }, [isFinished, navigation, dispatch]);
+    }, [isFinished, handleCloseSuccess]);
 
     // 📍 Keep foreground location service alive on this screen
     useLocationTracker({
@@ -242,44 +252,19 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
             <View style={[styles.successContainer, { backgroundColor: '#F9FCFA' }]}>
                 <AppStatusBar forceDark={false} />
 
-                <View style={styles.cityBgContainer}>
-                    <View style={styles.treeLeft}>
-                        <View style={styles.treeTop} />
-                        <View style={styles.treeTrunk} />
-                    </View>
-                    <View style={styles.buildingLeft1} />
-                    <View style={styles.buildingLeft2} />
-                    <View style={styles.buildingLeft3} />
-                    <View style={styles.buildingRight1} />
-                    <View style={styles.buildingRight2} />
-                    <View style={styles.treeRight}>
-                        <View style={styles.treeTop} />
-                        <View style={styles.treeTrunk} />
-                    </View>
-                    <View style={styles.ground} />
-                </View>
-
                 <Animated.View style={styles.successContent}>
-                    <View style={styles.outerCircle}>
-                        <View style={[styles.diamond, { top: -ms(10), left: ms(20) }]} />
-                        <View style={[styles.diamondGreen, { top: ms(60), left: -ms(20) }]} />
-                        <Ionicons name="sunny-outline" size={ms(24)} color="#47B872" style={{ position: 'absolute', top: -ms(10), right: ms(25) }} />
-                        <View style={[styles.diamond, { top: ms(40), right: -ms(30) }]} />
-                        <Ionicons name="sunny-outline" size={ms(18)} color="#47B872" style={{ position: 'absolute', bottom: ms(30), left: -ms(25) }} />
-                        <View style={[styles.diamondGreen, { bottom: ms(20), right: -ms(10) }]} />
-
-                        <View style={styles.middleCircle}>
-                            <View style={styles.innerCircle}>
-                                <Ionicons name="checkmark" size={ms(56)} color="#FFFFFF" />
+                    <View style={{ width: ms(180), height: ms(180), borderRadius: ms(90), backgroundColor: 'rgba(92, 184, 92, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: vs(24) }}>
+                        <View style={{ width: ms(150), height: ms(150), borderRadius: ms(75), backgroundColor: 'rgba(92, 184, 92, 0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                            <View style={{ width: ms(120), height: ms(120), borderRadius: ms(60), backgroundColor: '#5CB85C', justifyContent: 'center', alignItems: 'center', shadowColor: '#5CB85C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }}>
+                                <Ionicons name="checkmark" size={ms(80)} color="#FFFFFF" />
                             </View>
                         </View>
                     </View>
-                    <Text style={styles.successTitleText}>{t('trip_completed', 'Trip Completed!')}</Text>
+                    <Text style={styles.successTitleText}>{t('trip_completed', 'Trip Completed!')} 🎉</Text>
                     <Text style={styles.successSubtitleText}>
                         {motivationText || t('thank_you_trip', 'Thank you for completing the trip')}
                     </Text>
                 </Animated.View>
-
 
             </View>
         );
@@ -299,38 +284,35 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
         <View style={[styles.container, { backgroundColor: isDark ? '#121212' : '#F9FCFA' }]}>
             <AppStatusBar forceDark={false} />
 
-            {/* City Background */}
-            <View style={styles.cityBgContainer}>
-                <View style={styles.treeLeft}>
-                    <View style={styles.treeTop} />
-                    <View style={styles.treeTrunk} />
-                </View>
-                <View style={styles.buildingLeft1} />
-                <View style={styles.buildingLeft2} />
-                <View style={styles.buildingLeft3} />
-                <View style={styles.buildingRight1} />
-                <View style={styles.buildingRight2} />
-                <View style={styles.treeRight}>
-                    <View style={styles.treeTop} />
-                    <View style={styles.treeTrunk} />
-                </View>
-                <View style={styles.ground} />
-            </View>
-
             <SafeAreaView style={styles.safeArea} edges={['top']}>
-                <View style={{ alignItems: 'center', paddingTop: vs(12) }}>
-                    <Image
-                        source={require('../../assets/images/tripc.png')}
-                        style={{ width: width, height: vs(200), resizeMode: 'contain', marginBottom: vs(8) }}
-                    />
-                </View>
-
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-
+                    {/* Top Success Icon & Text */}
+                    <View style={{ alignItems: 'center', marginTop: vs(8), marginBottom: vs(8) }}>
+                        <View style={{ width: ms(80), height: ms(80), borderRadius: ms(40), backgroundColor: 'rgba(92, 184, 92, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: vs(4) }}>
+                            <View style={{ width: ms(65), height: ms(65), borderRadius: ms(32.5), backgroundColor: 'rgba(92, 184, 92, 0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                                <View style={{ width: ms(50), height: ms(50), borderRadius: ms(25), backgroundColor: '#5CB85C', justifyContent: 'center', alignItems: 'center', shadowColor: '#5CB85C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }}>
+                                    <Ionicons name="checkmark" size={ms(32)} color="#FFFFFF" />
+                                </View>
+                            </View>
+                        </View>
+                        <Text style={[styles.successTitleText, { fontSize: ms(20), color: PRIMARY_COLOR, marginTop: 0 }]}>
+                            {t('trip_completed', 'Trip Completed!')} 🎉
+                        </Text>
+                        <Text style={[styles.successSubtitleText, { fontSize: ms(13), marginTop: vs(2), color: textSecondary }]}>
+                            {t('collect_payment_desc', 'Please collect the payment from the customer')}
+                        </Text>
+                    </View>
 
                     {/* Fare Details */}
-                    <Animated.View style={{ marginTop: vs(16) }}>
+                    <Animated.View style={{ 
+                        marginTop: vs(8), 
+                        backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', 
+                        padding: ms(16), 
+                        borderRadius: ms(16),
+                        borderWidth: 1,
+                        borderColor: borderColorTheme
+                    }}>
                         <View style={styles.fareRow}>
                             <Text style={[styles.fareLabel, { color: textSecondary }]}>{t('base_fare', 'Base Fare')}</Text>
                             <Text style={[styles.fareValue, { color: textPrimary }]}>₹{Math.round((ride?.base_fare || 0) + (ride?.distance_fare || 0) + (ride?.time_fare || 0) || (ride?.fare || ride?.price || 0))}</Text>
@@ -357,7 +339,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                             </View>
                         )}
 
-                        <View style={[styles.fareRow, { borderTopWidth: 1, borderTopColor: borderColorTheme, paddingTop: vs(12), marginTop: vs(4) }]}>
+                        <View style={[styles.fareRow, { borderTopWidth: 1, borderTopColor: borderColorTheme, paddingTop: vs(8), marginTop: vs(2), marginBottom: vs(8) }]}>
                             <Text style={[styles.fareLabel, { color: textPrimary, fontWeight: '700', fontSize: ms(16) }]}>{t('total_fare', 'Total Fare')}</Text>
                             <Text style={[styles.fareValue, { color: PRIMARY_COLOR, fontWeight: '800', fontSize: ms(16) }]}>{price}</Text>
                         </View>
@@ -369,9 +351,9 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     </Animated.View>
 
                     {/* Payment Method List Items */}
-                    <Animated.View style={{ marginTop: vs(32) }}>
+                    <Animated.View style={{ marginTop: vs(16) }}>
                         <Text style={[styles.sectionHeading, { color: textPrimary }]}>{t('select_received_method', 'Select Payment Method')}</Text>
-                        <Text style={[styles.sectionSubheading, { color: textSecondary, marginBottom: vs(16), fontSize: ms(14) }]}>{t('choose_how_customer_paid', 'Choose how the customer has paid for this trip')}</Text>
+                        <Text style={[styles.sectionSubheading, { color: textSecondary, marginBottom: vs(8), fontSize: ms(14) }]}>{t('choose_how_customer_paid', 'Choose how the customer has paid for this trip')}</Text>
 
                         <TouchableOpacity
                             activeOpacity={0.8}
@@ -426,17 +408,40 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                                 )}
                             </View>
                         </TouchableOpacity>
+
+                        {/* Contextual Action (UPI QR) */}
+                        {paymentMode === 'UPI' && (
+                            <Animated.View style={{ marginTop: vs(4), marginBottom: vs(8) }}>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onPress={handleOpenGallery}
+                                    style={[styles.upiShareBtn, { backgroundColor: isDark ? '#1E1E1E' : '#F9FAFB', borderColor: borderColorTheme, padding: ms(12), borderRadius: ms(12) }]}
+                                >
+                                    <Ionicons name="qr-code-outline" size={ms(22)} color={PRIMARY_COLOR} />
+                                    <View style={{ marginLeft: ms(12) }}>
+                                        <Text style={[styles.upiShareTitle, { color: textPrimary, fontSize: ms(14) }]}>{t('share_qr') || 'Share QR Code'}</Text>
+                                        <Text style={[styles.upiShareSub, { color: textSecondary, fontSize: ms(12) }]}>{t('pick_from_gallery', 'Pick from gallery')}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={ms(20)} color={textSecondary} style={{ marginLeft: 'auto' }} />
+                                </TouchableOpacity>
+                            </Animated.View>
+                        )}
                     </Animated.View>
 
                     {/* Trip Summary */}
-                    <Animated.View style={{ marginTop: vs(32) }}>
+                    <Animated.View style={{ marginTop: vs(16) }}>
                         <View style={[styles.accordionHeader, { backgroundColor: 'transparent' }]}>
                             <Text style={[styles.accordionTitle, { color: textPrimary, fontSize: ms(18), fontWeight: '800' }]}>{t('trip_summary', 'Trip Summary')}</Text>
+                            <TouchableOpacity onPress={() => setShowTripSummary(!showTripSummary)}>
+                                <Text style={{ color: PRIMARY_COLOR, fontSize: ms(14), fontWeight: '600' }}>
+                                    {showTripSummary ? t('view_less', 'View Less') : t('view_all', 'View All')}
+                                </Text>
+                            </TouchableOpacity>
                         </View>
 
                         <Animated.View style={[styles.accordionContent, { backgroundColor: 'transparent' }]}>
                             {/* Trip ID */}
-                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(12), marginBottom: vs(12) }]}>
+                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(8), marginBottom: vs(8) }]}>
                                 <View style={styles.summaryLabelWrap}>
                                     <Ionicons name="git-branch-outline" size={ms(18)} color="#10B981" />
                                     <Text style={[styles.summaryLabel, { color: textSecondary }]}>{t('trip_id_label', 'Trip ID')}</Text>
@@ -445,7 +450,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                             </View>
 
                             {/* Customer */}
-                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(12), marginBottom: vs(12) }]}>
+                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(8), marginBottom: vs(8) }]}>
                                 <View style={styles.summaryLabelWrap}>
                                     <Ionicons name="person-outline" size={ms(18)} color="#10B981" />
                                     <Text style={[styles.summaryLabel, { color: textSecondary }]}>{t('customer', 'Customer')}</Text>
@@ -454,7 +459,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                             </View>
 
                             {/* Pickup */}
-                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(12), marginBottom: vs(12) }]}>
+                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(8), marginBottom: vs(8) }]}>
                                 <View style={[styles.summaryLabelWrap, { minWidth: ms(100) }]}>
                                     <Ionicons name="location-outline" size={ms(18)} color="#10B981" />
                                     <Text style={[styles.summaryLabel, { color: textSecondary }]}>{t('pickup', 'Pickup')}</Text>
@@ -469,7 +474,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                             </View>
 
                             {/* Drop */}
-                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(12), marginBottom: vs(12) }]}>
+                            <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(8), marginBottom: vs(8) }]}>
                                 <View style={[styles.summaryLabelWrap, { minWidth: ms(100) }]}>
                                     <Ionicons name="location" size={ms(18)} color="#EF4444" />
                                     <Text style={[styles.summaryLabel, { color: textSecondary }]}>{t('drop', 'Drop')}</Text>
@@ -483,6 +488,8 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                                 </View>
                             </View>
 
+                            {showTripSummary && (
+                                <>
                             {/* Duration */}
                             <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(12), marginBottom: vs(12) }]}>
                                 <View style={styles.summaryLabelWrap}>
@@ -511,31 +518,21 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                                 </View>
                                 <Text style={[styles.summaryValue, { color: '#16A34A', fontWeight: '800' }]}>{price}</Text>
                             </View>
+                                </>
+                            )}
                         </Animated.View>
                     </Animated.View>
-                    {/* Contextual Action (UPI QR) */}
-                    {paymentMode === 'UPI' && (
-                        <Animated.View style={{ marginTop: vs(16) }}>
-                            <TouchableOpacity
-                                activeOpacity={0.8}
-                                onPress={handleOpenGallery}
-                                style={[styles.upiShareBtn, { backgroundColor: cardBg, borderColor: borderColorTheme }]}
-                            >
-                                <Ionicons name="qr-code-outline" size={ms(24)} color={PRIMARY_COLOR} />
-                                <View style={{ marginLeft: ms(12) }}>
-                                    <Text style={[styles.upiShareTitle, { color: textPrimary }]}>{t('share_qr') || 'Share QR Code'}</Text>
-                                    <Text style={[styles.upiShareSub, { color: textSecondary }]}>{t('pick_from_gallery', 'Pick from gallery')}</Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={ms(20)} color={textSecondary} style={{ marginLeft: 'auto' }} />
-                            </TouchableOpacity>
-                        </Animated.View>
-                    )}
-
-                    {/* Divider */}
-                    <View style={{ height: 1, backgroundColor: borderColorTheme, marginTop: vs(24), marginBottom: vs(8) }} />
 
                     {/* Rating UI */}
-                    <Animated.View style={styles.ratingCard}>
+                    <Animated.View style={[styles.ratingCard, { 
+                        backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF', 
+                        padding: ms(16), 
+                        borderRadius: ms(16),
+                        borderWidth: 1,
+                        borderColor: borderColorTheme,
+                        marginTop: vs(16),
+                        marginBottom: vs(16)
+                    }]}>
                         <Text style={[styles.ratingMainTitle, { color: isDark ? '#F9FAFB' : '#1E293B' }]}>{t('how_was_trip', 'How was your trip?')}</Text>
                         <Text style={[styles.ratingSubTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('rate_experience', 'Rate your experience')}</Text>
                         <View style={styles.starsRow}>
@@ -550,19 +547,21 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                                 >
                                     <Ionicons
                                         name={rating >= star ? 'star' : 'star-outline'}
-                                        size={ms(38)}
+                                        size={ms(32)}
                                         color={rating >= star ? '#FBBF24' : (isDark ? '#4B5563' : '#E5E7EB')}
                                     />
                                 </Pressable>
                             ))}
                         </View>
-                        <Text style={[styles.ratingFeedback, { color: getRatingText(rating).color }]}>{getRatingText(rating).text}</Text>
+                        {rating > 0 && (
+                            <Text style={[styles.ratingFeedback, { color: getRatingText(rating).color }]}>{getRatingText(rating).text}</Text>
+                        )}
                     </Animated.View>
 
                 </ScrollView>
 
                 {/* Footer */}
-                <View style={[styles.footer, { backgroundColor: bgColor, borderTopColor: borderColorTheme }]}>
+                <View style={[styles.footer, { backgroundColor: bgColor }]}>
                     <TouchableOpacity
                         activeOpacity={0.85}
                         style={[
@@ -614,15 +613,15 @@ const styles = StyleSheet.create({
     summaryLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: ms(12) },
     summaryLabel: { fontSize: ms(15) },
     summaryValue: { fontSize: ms(15), fontWeight: '500' },
-    fareRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(12) },
+    fareRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(8) },
     fareLabel: { fontSize: ms(14) },
     fareValue: { fontSize: ms(14), fontWeight: '600' },
-    zeroCommBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#10B98115', alignSelf: 'center', paddingHorizontal: ms(12), paddingVertical: vs(6), borderRadius: ms(12), gap: ms(6), marginTop: vs(8) },
+    zeroCommBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#10B98115', alignSelf: 'center', paddingHorizontal: ms(12), paddingVertical: vs(4), borderRadius: ms(12), gap: ms(6), marginTop: vs(4) },
     zeroCommText: { color: '#10B981', fontSize: ms(12), fontWeight: '700' },
 
-    sectionHeading: { fontSize: ms(18), fontWeight: '800', marginBottom: vs(4) },
-    sectionSubheading: { fontSize: ms(14), fontWeight: '400', marginBottom: vs(12) },
-    paymentListItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: vs(12), paddingHorizontal: ms(16), borderRadius: ms(12), borderWidth: 1, marginBottom: vs(12) },
+    sectionHeading: { fontSize: ms(18), fontWeight: '800', marginBottom: vs(2) },
+    sectionSubheading: { fontSize: ms(14), fontWeight: '400', marginBottom: vs(8) },
+    paymentListItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: vs(8), paddingHorizontal: ms(16), borderRadius: ms(12), borderWidth: 1, marginBottom: vs(8) },
     paymentIconBg: { width: ms(40), height: ms(40), borderRadius: ms(20), justifyContent: 'center', alignItems: 'center' },
     paymentListTitle: { fontSize: ms(16), fontWeight: '700' },
     paymentListSub: { fontSize: ms(13), fontWeight: '500' },
@@ -635,11 +634,11 @@ const styles = StyleSheet.create({
     upiShareTitle: { fontSize: ms(16), fontWeight: '700' },
     upiShareSub: { fontSize: ms(13), marginTop: vs(2) },
 
-    footer: { paddingHorizontal: ms(20), paddingBottom: vs(32), paddingTop: vs(16), borderTopWidth: 1 },
-    ratingCard: { alignItems: 'center', marginTop: vs(16), paddingVertical: vs(12) },
-    ratingMainTitle: { fontSize: ms(18), fontWeight: '700', marginBottom: vs(4) },
-    ratingSubTitle: { fontSize: ms(14), fontWeight: '400', marginBottom: vs(16) },
-    ratingFeedback: { fontSize: ms(16), fontWeight: '600', marginTop: vs(12) },
+    footer: { paddingHorizontal: ms(20), paddingBottom: vs(32), paddingTop: vs(8) },
+    ratingCard: { alignItems: 'center' },
+    ratingMainTitle: { fontSize: ms(16), fontWeight: '700', marginBottom: vs(2) },
+    ratingSubTitle: { fontSize: ms(13), fontWeight: '400', marginBottom: vs(8) },
+    ratingFeedback: { fontSize: ms(14), fontWeight: '600', marginTop: vs(8) },
     starsRow: { flexDirection: 'row', gap: ms(8) },
     starBtn: { padding: ms(4) },
     endTripBtn: { height: vs(56), borderRadius: ms(16), justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
