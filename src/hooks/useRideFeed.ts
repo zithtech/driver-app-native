@@ -4,12 +4,13 @@ import socketService from '../service/socketService';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
 import { TripStatus } from '../types/trip';
-import { useLazyGetTripByIdQuery, useLazyGetIncomingTripsQuery } from '../service/driverApi';
+import { useLazyGetTripByIdQuery, useLazyGetIncomingTripsQuery, useSkipTripMutation } from '../service/driverApi';
 import { useAlert } from '../context/AlertContext';
 import { useTranslation } from 'react-i18next';
 import { globalEmitter, EVENTS } from '../utils/EventEmitter';
 import { useNavigation } from '@react-navigation/native';
 import { ScheduledRides_Nav } from '../Navigations/navigations';
+
 
 
 
@@ -39,8 +40,13 @@ export type RideItem = {
     tripType?: string;
     paymentMethod?: string;
     noVibrate?: boolean;
-    isAssigned?: boolean;
-    [key: string]: any;
+  isAssigned?: boolean;
+  package_hours?: number;
+  trip_distance?: number | string;
+  trip_time?: number | string;
+  distance_to_pickup?: string;
+  eta_to_pickup?: string;
+  [key: string]: any;
 };
 
 interface UseRideFeedProps {
@@ -57,8 +63,15 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
     const { showAlert } = useAlert();
     const { t } = useTranslation();
     const [triggerGetIncoming] = useLazyGetIncomingTripsQuery();
+    const [skipTrip] = useSkipTripMutation();
     const navigation = useNavigation<any>();
     const appStateRef = useRef(AppState.currentState);
+
+    // Track rejected ride IDs so reconnect sync / re-emits don't re-add them
+    const rejectedTripIdsRef = useRef<Set<string>>(new Set());
+
+    // 🛡️ Track cancelled trip IDs so stale re-broadcasts cannot re-add them
+    const cancelledTripIdsRef = useRef<Set<string>>(new Set());
 
     const isBlockingLiveRequests = useMemo(() => {
         if (!currentRide || currentRide.booking_type !== 'SCHEDULED') return false;
@@ -85,6 +98,18 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             console.warn('Ignoring ride request with no valid ID');
             return;
         }
+
+        // Skip rides that the driver already rejected in this session
+        if (rejectedTripIdsRef.current.has(tripId)) {
+            console.log(`[useRideFeed] Ignoring rejected ride ${tripId} (already skipped).`);
+            return;
+        }
+
+        // 🛡️ Skip rides that have been cancelled (prevents stale re-broadcasts from re-adding the card)
+        if (cancelledTripIdsRef.current.has(tripId)) {
+            console.log(`[useRideFeed] Ignoring cancelled ride ${tripId} (already removed).`);
+            return;
+        }
         
         const standardizedStatus = (data?.trip_status || data?.status || "").toString().toUpperCase();
         
@@ -103,12 +128,13 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         const isDirectAssignment = isAssigned || isAcceptedOrActive;
 
         // 🕒 [Time Sync] Calculate true remaining time
-        let calculatedRemaining = isDirectAssignment ? 99999 : 20;
+        const defaultRemaining = data?.remaining ? Number(data.remaining) : 15;
+        let calculatedRemaining = isDirectAssignment ? 99999 : defaultRemaining;
         if (!isDirectAssignment && data?.createdAt) {
             const createdAt = new Date(data.createdAt).getTime();
             const now = Date.now();
             const elapsed = Math.floor((now - createdAt) / 1000);
-            calculatedRemaining = Math.min(20, Math.max(0, 20 - elapsed));
+            calculatedRemaining = Math.min(defaultRemaining, Math.max(0, defaultRemaining - elapsed));
             
             console.log(`[useRideFeed] Timer Sync: CreatedAt: ${data.createdAt}, Now: ${new Date().toISOString()}, Elapsed: ${elapsed}s, Calculated: ${calculatedRemaining}s`);
             
@@ -124,6 +150,40 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             console.log(`[useRideFeed] Ride ${tripId} is cancelled/completed/deleted (Status: ${standardizedStatus}), removing from queue.`);
             setRideQueue(prev => prev.filter(r => String(r.id) !== String(tripId) && String(r.trip_id) !== String(tripId)));
             return;
+        }
+
+        // 🛡️ Trip Settings Filter (Only for Live Broadcasts, not Direct Assignments)
+        if (!isDirectAssignment) {
+            const tripPrefs = user?.tripPreferences || {
+                local: true,
+                outstation: true,
+                roundTrip: true,
+                oneWay: true,
+            };
+            const rideTypeStr = (data?.ride_type || 'ONE_WAY').toUpperCase();
+            
+            // Local trips (which don't have 'OUTSTATION' in their ride type) should always be allowed
+            const isOutstation = rideTypeStr.includes('OUTSTATION');
+            
+            if (isOutstation) {
+                // If the driver has disabled outstation completely
+                if (tripPrefs.outstation === false) {
+                    console.log(`[useRideFeed] Filtering out OUTSTATION request ${tripId} due to preferences.`);
+                    return;
+                }
+                
+                // If it's specifically an outstation round trip
+                if (rideTypeStr === 'OUTSTATION_ROUND_TRIP' && tripPrefs.roundTrip === false) {
+                    console.log(`[useRideFeed] Filtering out OUTSTATION_ROUND_TRIP request ${tripId} due to preferences.`);
+                    return;
+                }
+                
+                // If it's specifically an outstation one way
+                if (rideTypeStr === 'OUTSTATION_ONE_WAY' && tripPrefs.oneWay === false) {
+                    console.log(`[useRideFeed] Filtering out OUTSTATION_ONE_WAY request ${tripId} due to preferences.`);
+                    return;
+                }
+            }
         }
 
         const newRide: RideItem = {
@@ -142,6 +202,11 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             eta: data?.trip_duration_minutes 
                 ? (data.trip_duration_minutes.toString().includes('min') ? data.trip_duration_minutes : `${data.trip_duration_minutes} min`)
                 : data?.eta ? (data.eta.toString().includes('min') ? data.eta : `${data.eta} min`) : '--',
+            package_hours: data?.package_hours ? parseFloat(data.package_hours.toString()) : undefined,
+            trip_distance: data?.distance_km,
+            trip_time: data?.trip_duration_minutes,
+            distance_to_pickup: data?.distanceToUser ? (data.distanceToUser > 1000 ? `${(data.distanceToUser/1000).toFixed(1)} km` : `${data.distanceToUser} m`) : '--',
+            eta_to_pickup: data?.eta ? (data.eta.toString().includes('min') ? data.eta : `${data.eta} min`) : '--',
             passenger: data?.user_details?.full_name || data?.user_details?.first_name || data?.passenger_details?.name || data?.passenger || data?.passengerName || data?.passenger_name || data?.customer?.name || 'Passenger',
             rating: data?.rating ? parseFloat(data.rating) : undefined,
             ride_type: data?.ride_type || 'ONE_WAY',
@@ -159,14 +224,18 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             isAssigned: isAssigned,
         };
 
+        // [STRICT SEPARATION] Dashboard handles LIVE rides and UNACCEPTED Assigned rides.
+        // UNACCEPTED Scheduled requests are filtered out and managed via the Scheduled Rides screen.
+        // Notification is handled by SocketProvider's NEW_SCHEDULED_RIDE listener.
+        const isScheduledRequest = newRide.booking_type === 'SCHEDULED' && !isAssigned;
+        if (isScheduledRequest) {
+            console.log(`[useRideFeed] Ignoring SCHEDULED request ${newRide.id} for dashboard queue.`);
+            // Refetch scheduled rides in the background to update RTK Query cache
+            triggerGetIncoming('SCHEDULED');
+            return; // Don't add to dashboard queue
+        }
+
         setRideQueue(prev => {
-            // [STRICT SEPARATION] Dashboard handles LIVE rides and UNACCEPTED Assigned rides.
-            // UNACCEPTED Scheduled requests are filtered out and managed via the Scheduled Rides screen.
-            const isScheduledRequest = newRide.booking_type === 'SCHEDULED' && !isAssigned;
-            if (isScheduledRequest) {
-                console.log(`[useRideFeed] Ignoring SCHEDULED request ${newRide.id} for dashboard queue.`);
-                return prev;
-            }
             
             // ACCEPTED Scheduled rides should NOT be in the floating dashboard queue.
             // They are handled by the native 'nextScheduledRide' widget on the dashboard.
@@ -281,7 +350,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                                 console.log(`[useRideFeed] Cold-start Ride ${tripId} is no longer available.`);
                             }
                         } catch (err) {
-                            console.error('[useRideFeed] Failed to verify cold-start ride:', err);
+                            console.warn('[useRideFeed] Failed to verify cold-start ride:', err);
                             handleIncomingRide({ ...data, noVibrate: true });
                         }
                     })();
@@ -322,7 +391,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                     });
                 }
             } catch (err) {
-                console.error('[useRideFeed] Failed to verify ride status:', err);
+                console.warn('[useRideFeed] Failed to verify ride status:', err);
                 // Fallback: show anyway if error, handleIncomingRide will handle expiry if createdAt is present
                 handleIncomingRide({ ...data, noVibrate: true });
             }
@@ -423,8 +492,24 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         return () => clearInterval(timer);
     }, []);
 
-    const rejectRide = (id: number | string) => {
-        setRideQueue(prev => prev.filter(r => r.id !== id));
+    const rejectRide = (id: number | string, isManualDecline: boolean = false) => {
+        const tripId = String(id);
+
+        // 1. Remove from local queue immediately
+        setRideQueue(prev => prev.filter(r => String(r.id) !== tripId));
+
+        // 2. Track as rejected so reconnect sync won't re-add it (ONLY on manual decline)
+        if (isManualDecline) {
+            rejectedTripIdsRef.current.add(tripId);
+            
+            // 3. Notify backend so the server stops sending this ride
+            skipTrip(tripId)
+                .unwrap()
+                .then(() => console.log(`[useRideFeed] Successfully skipped trip ${tripId} on backend (Manual Decline).`))
+                .catch((err) => console.warn(`[useRideFeed] Failed to skip trip ${tripId} on backend:`, err));
+        } else {
+            console.log(`[useRideFeed] Ride ${tripId} auto-expired locally. Waiting for next radius broadcast.`);
+        }
     };
 
     const acceptRide = (id: number | string) => {
@@ -452,7 +537,18 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
         };
 
         const onTripRemoved = (data: { tripId: string }) => {
-            setRideQueue(prev => prev.filter(r => r.id !== data.tripId && r.trip_id !== data.tripId));
+            const removedId = String(data.tripId);
+            cancelledTripIdsRef.current.add(removedId);
+            setRideQueue(prev => prev.filter(r => String(r.id) !== removedId && String(r.trip_id) !== removedId));
+        };
+
+        // 🛡️ Instantly dismiss ride alert cards when customer cancels
+        const onTripCancelled = (data: any) => {
+            const cancelledId = String(data.tripId || data.trip_id || data.id || '');
+            if (!cancelledId) return;
+            console.log(`[useRideFeed] TRIP_CANCELLED received for ${cancelledId}, removing from queue.`);
+            cancelledTripIdsRef.current.add(cancelledId);
+            setRideQueue(prev => prev.filter(r => String(r.id) !== cancelledId && String(r.trip_id) !== cancelledId));
         };
 
         let isMounted = true;
@@ -464,6 +560,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             handleIncomingRide({ ...tripData, type: 'assigned_ride' });
         });
         socketService.on('TRIP_REMOVED', onTripRemoved);
+        socketService.on('TRIP_CANCELLED', onTripCancelled);
         
         // Refresh ride data on scheduled reminders
         socketService.on('SCHEDULED_REMINDER', async (data: any) => {
@@ -473,7 +570,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                 try {
                     const result = await triggerGetTrip(String(tripId)).unwrap();
                     if (result?.data) handleIncomingRide({ ...result.data, noVibrate: true });
-                } catch (e) { console.error('Failed to refresh scheduled ride:', e); }
+                } catch (e) { console.warn('Failed to refresh scheduled ride:', e); }
             }
         });
 
@@ -485,9 +582,14 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                     const result = await triggerGetIncoming(undefined).unwrap();
                     const trips = result?.data || result || [];
                     if (Array.isArray(trips)) {
-                        trips.forEach(trip => handleIncomingRide({ ...trip, noVibrate: true }));
+                        trips
+                            .filter((trip: any) => {
+                                const tid = String(trip.trip_id || trip.id || '');
+                                return !rejectedTripIdsRef.current.has(tid) && !cancelledTripIdsRef.current.has(tid);
+                            })
+                            .forEach(trip => handleIncomingRide({ ...trip, noVibrate: true }));
                     }
-                } catch (e) { console.error('Failed to sync rides on reconnect:', e); }
+                } catch (e) { console.warn('Failed to sync rides on reconnect:', e); }
             }
         });
 
@@ -497,6 +599,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             socketService.off('NEW_TRIP_REQUEST');
             socketService.off('TRIP_ASSIGNED');
             socketService.off('TRIP_REMOVED');
+            socketService.off('TRIP_CANCELLED');
             socketService.off('SCHEDULED_REMINDER');
         };
     }, [isOnline, user?.driverId, showConfirmModal, acceptedRide, handleIncomingRide]);

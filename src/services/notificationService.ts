@@ -39,6 +39,7 @@ const RIDE_NOTIFICATION_TYPES = new Set([
     'NEW_RIDE_REQUEST',
     'ASSIGNED_RIDE',
     'TRIP_ASSIGNED',
+    'ACTIVE_TRIP_WAKEUP',
 ]);
 
 /** Notification types that represent trip cancellations */
@@ -176,6 +177,21 @@ export function setupForegroundHandler(): () => void {
 
             const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
+            // 0. Handle FORCE_LOGOUT
+            if (type === 'FORCE_LOGOUT') {
+                const { Alert } = require('react-native');
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                
+                Alert.alert(
+                    'Session Ended',
+                    'Your account was accessed from another device.',
+                    [{ text: 'OK', onPress: () => logoutUser(store.dispatch) }],
+                    { cancelable: false }
+                );
+                return;
+            }
+
             // 1. Handle cancellations — emit event for dashboard to react
             if (CANCELLATION_TYPES.has(type)) {
                 try {
@@ -264,6 +280,7 @@ const ASSIGNMENT_TYPES = new Set([
     'ASSIGNED_RIDE',
     'RIDE_ASSIGNED',
     'TRIP_ASSIGNED',
+    'ACTIVE_TRIP_WAKEUP',
 ]);
 
 export function setupBackgroundHandler(): void {
@@ -272,14 +289,41 @@ export function setupBackgroundHandler(): void {
 
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
+        // 0. Handle FORCE_LOGOUT
+        if (type === 'FORCE_LOGOUT') {
+            try {
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                await logoutUser(store.dispatch);
+            } catch (err) {
+                console.warn('Failed to handle FORCE_LOGOUT in background', err);
+            }
+            return;
+        }
+
         // 🛡️ All valid ride notifications (NEW_RIDE_REQUEST, ASSIGNED_RIDE, etc) 
         // will show a high priority notification. For broadcast requests, we add a timeout.
         if (isValidRideNotification(remoteMessage.data as Record<string, string>)) {
             console.log(`📩 [Background] Valid ride notification (${type}) — showing system notification.`);
         }
 
+        // For CHAT_MESSAGE, we also increment unread count in Redux
+        if (type === 'CHAT_MESSAGE') {
+            try {
+                const { store } = require('../redux/store');
+                const { incrementUnreadCount } = require('../redux/chatSlice');
+                const rideId = remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || remoteMessage.data?.rideId;
+                if (rideId) {
+                    store.dispatch(incrementUnreadCount(String(rideId)));
+                }
+            } catch (err) {
+                console.warn('Failed to increment unread count from background handler', err);
+            }
+        }
+
         const isLiveRideRequest = type === 'NEW_RIDE_REQUEST' || type === 'RIDE_REQUEST';
         const isScheduledAlert = type === 'SCHEDULED_REMINDER' || type === 'SCHEDULED_RIDE_STARTED';
+        const isWakeUp = type === 'ACTIVE_TRIP_WAKEUP';
         const isBroadcast = isLiveRideRequest; // Live ride requests auto-expire
         const isCancellation = CANCELLATION_TYPES.has(type);
 
@@ -311,12 +355,12 @@ export function setupBackgroundHandler(): void {
                 importance: AndroidImportance.HIGH,
                 smallIcon: 'ic_launcher',
                 pressAction: { id: 'default' },
-                sound: isScheduledAlert ? 'sound_3' : 'default',
+                sound: isScheduledAlert || isWakeUp ? 'sound_3' : 'default',
                 ...(isBroadcast ? { timeoutAfter: 20000 } : {}),
-                ...(isLiveRideRequest ? { fullScreenAction: { id: 'default' } } : {}),
+                ...(isLiveRideRequest || isWakeUp ? { fullScreenAction: { id: 'default' } } : {}),
             },
             ios: {
-                sound: isScheduledAlert ? 'sound_3.mp3' : 'default',
+                sound: isScheduledAlert || isWakeUp ? 'sound_3.mp3' : 'default',
             },
             data: remoteMessage.data,
         });
@@ -343,7 +387,7 @@ export function onTokenRefresh(
 
 // 2. App was completely killed, user taps notification
 // Capture this as early as possible (at file load) to avoid missing it due to race conditions
-getInitialNotification(getMessaging())
+(() => { try { return getInitialNotification(getMessaging()); } catch(e) { return Promise.resolve(null); } })()
     .then(remoteMessage => {
         if (!remoteMessage) return;
 
@@ -354,8 +398,19 @@ getInitialNotification(getMessaging())
 
         const type = getNotificationType(remoteMessage.data as Record<string, string>);
 
+        if (type === 'FORCE_LOGOUT') {
+            try {
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                logoutUser(store.dispatch);
+            } catch (err) {
+                console.warn('Failed to handle FORCE_LOGOUT on launch', err);
+            }
+            return;
+        }
+
         // Emit after a short delay to ensure app navigation and listeners are ready
-        if (isValidRideNotification(remoteMessage.data as Record<string, string>) || type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER') {
+        if (isValidRideNotification(remoteMessage.data as Record<string, string>) || type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER' || type === 'CHAT_MESSAGE') {
             setTimeout(() => {
                 // 🛡️ Prevent duplicate processing: Only emit if it hasn't been consumed directly by a hook
                 if (cachedInitialNotification) {
@@ -376,6 +431,16 @@ export function setupNotificationOpenedHandler(
         const type = getNotificationType(data as Record<string, string>);
         console.log('🔔 Handling notification action for type:', type);
 
+        if (type === 'FORCE_LOGOUT') {
+            // Already logged out by background handler or launch handler, but just in case
+            try {
+                const { store } = require('../redux/store');
+                const { logoutUser } = require('../service/utils/logoutHelper');
+                logoutUser(store.dispatch);
+            } catch (e) {}
+            return;
+        }
+
         if (isValidRideNotification(data as Record<string, string>)) {
             // Emit so useRideFeed can verify the trip and show the card
             globalEmitter.emit(EVENTS.NOTIFICATION_OPENED, data);
@@ -385,6 +450,11 @@ export function setupNotificationOpenedHandler(
             navigate('RechargePlanScreen');
         } else if (type === 'SUPPORT_REPLY') {
             navigate('HelpCenter_Nav', { openChat: true });
+        } else if (type === 'CHAT_MESSAGE') {
+            const rideId = data.trip_id || data.id || data.tripId || data.rideId;
+            if (rideId) {
+                navigate('ChatScreen', { rideId });
+            }
         }
     };
 
@@ -398,7 +468,7 @@ export function setupNotificationOpenedHandler(
     const unsubscribeEmitter = globalEmitter.on(EVENTS.NOTIFICATION_OPENED, (data) => {
         const type = getNotificationType(data as Record<string, string>);
         // Only handle non-ride notifications here to avoid conflict with useRideFeed
-        if (type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER') {
+        if (type === 'PLAN_EXPIRY_REMINDER' || type === 'SCHEDULED_REMINDER' || type === 'CHAT_MESSAGE') {
             console.log('✅ [Emitter] Handling cold-start navigation for:', type);
             handleNotificationAction(data);
         }

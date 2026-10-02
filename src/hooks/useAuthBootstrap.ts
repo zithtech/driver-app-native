@@ -38,11 +38,20 @@ export const useAuthBootstrap = () => {
             }
         }, 10000);
 
+        // 🛡️ Safety fallback for tripProcessed: Force unlock after 15s
+        const tripMaxTimer = setTimeout(() => {
+            if (mountedRef.current && !tripProcessed) {
+                console.warn('[AuthBootstrap] ⏰ Trip rehydration timed out after 15s, forcing tripProcessed');
+                setTripProcessed(true);
+            }
+        }, 15000);
+
         return () => {
             clearTimeout(timer);
             clearTimeout(maxTimer);
+            clearTimeout(tripMaxTimer);
         };
-    }, [profileProcessed, isBootstrapping]);
+    }, [profileProcessed, isBootstrapping, tripProcessed]);
 
     // Phase 1: Load tokens from secure storage into Redux
     useEffect(() => {
@@ -327,11 +336,20 @@ export const useAuthBootstrap = () => {
     useEffect(() => { currentRideRef.current = currentRide; }, [currentRide]);
 
     useEffect(() => {
-        if (isActiveTripSuccess && activeTripData?.data) {
-            console.log('[AuthBootstrap] 🚖 Active trip found:', activeTripData.data.trip_id);
-            dispatch(setCurrentRide(activeTripData.data));
+        let validTripData = null;
+        if (activeTripData?.data) {
+            if (Array.isArray(activeTripData.data) && activeTripData.data.length > 0) {
+                validTripData = activeTripData.data[0];
+            } else if (!Array.isArray(activeTripData.data) && (activeTripData.data.trip_id || activeTripData.data.id)) {
+                validTripData = activeTripData.data;
+            }
+        }
+
+        if (isActiveTripSuccess && validTripData) {
+            console.log('[AuthBootstrap] 🚖 Active trip found:', validTripData.trip_id || validTripData.id);
+            dispatch(setCurrentRide(validTripData));
             setTripProcessed(true);
-        } else if (isActiveTripError || (isActiveTripSuccess && !activeTripData?.data)) {
+        } else if (isActiveTripError || (isActiveTripSuccess && !validTripData)) {
             // 🛡️ RECOVERY FIX: Only clear currentRide if it's NOT a scheduled ride AND it's not a recently accepted live ride.
             // When a driver accepts a ride, there is a race condition where activeTripData might poll and return null
             // before the backend has fully registered the trip as active.
@@ -340,13 +358,29 @@ export const useAuthBootstrap = () => {
                 currentRideObj?.booking_type === 'SCHEDULED' || 
                 currentRideObj?.is_scheduled;
             
-            // If the local Redux state already has an active trip (ACCEPTED or ARRIVING), give it some time
-            // before wiping it, or just trust the local state until a genuine cancellation event arrives.
+            // If the local Redux state already has an active trip in ANY non-terminal state,
+            // preserve it. The backend /trips/active endpoint might not return the trip in some
+            // edge cases, but the ride is still valid. Genuine cancellations arrive via socket events.
+            const ACTIVE_STATUSES = [
+                'ACCEPTED', 'ARRIVING', 'ARRIVED',
+                'VERIFICATION_PENDING', 'LIVE', 'STARTED', 'ON_TRIP',
+                'WAITING', 'DAY_HALT', 'RETURN_STARTED',
+                'DESTINATION_REACHED', 'RETURN_REACHED',
+            ];
             const isRecentlyAcceptedLive = 
                 currentRideObj && 
-                ['REQUESTED', 'ACCEPTED', 'ARRIVING', 'VERIFICATION_PENDING'].includes(currentRideObj.trip_status || currentRideObj.status);
+                ACTIVE_STATUSES.includes((currentRideObj.trip_status || currentRideObj.status || '').toUpperCase());
+
+            console.log('[AuthBootstrap] 🔍 Trip recovery decision:', {
+                hasApiData: !!validTripData,
+                isApiError: isActiveTripError,
+                persistedStatus: currentRideObj?.trip_status || currentRideObj?.status || 'NONE',
+                persistedTripId: currentRideObj?.trip_id || currentRideObj?.id || 'NONE',
+                isPersistedScheduled,
+                isRecentlyAcceptedLive,
+            });
             
-            if (!activeTripData?.data && !isPersistedScheduled && !isRecentlyAcceptedLive) {
+            if (!validTripData && !isPersistedScheduled && !isRecentlyAcceptedLive) {
                 console.log('[AuthBootstrap] No active trip found on backend, clearing non-scheduled currentRide');
                 dispatch(setCurrentRide(null));
             } else if (isPersistedScheduled) {

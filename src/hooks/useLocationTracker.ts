@@ -199,9 +199,9 @@ export const useLocationTracker = ({
       pos => emitLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.heading || 0),
       err => handleLocationError(err),
       {
-        enableHighAccuracy: isHighAccuracy,
-        timeout: 8000,
-        maximumAge: 5000,
+        enableHighAccuracy: true, // Force high accuracy for initial lock
+        timeout: 15000,
+        maximumAge: 0, // Force fresh location, don't use cache
         showLocationDialog: true,
         forceRequestLocation: true,
       },

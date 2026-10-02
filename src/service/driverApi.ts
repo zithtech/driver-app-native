@@ -242,7 +242,7 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
-    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; user_rating?: number }>({
+    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; user_rating?: number; payment_mode?: string }>({
       query: ({ tripId, ...body }) => ({
         url: `/trips/${tripId}/complete`,
         method: 'POST',

@@ -14,10 +14,11 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from '../../context/ToastContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useFocusEffect, StackActions } from '@react-navigation/native';
 import ImagePicker from 'react-native-image-crop-picker';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Animated, {
   FadeInDown,
   ZoomIn,
@@ -31,12 +32,14 @@ import Button from '../../Components/Button';
 import { useAlert } from '../../context/AlertContext';
 import { vS as vs, mS as ms } from '../../lib/scale';
 import { RootState } from '../../redux/store';
-import { useGetDocUploadUrlMutation, useSubmitTripPhotosMutation, useGetTripVerificationStatusQuery } from '../../service/driverApi';
+import { setCurrentRide } from '../../redux/rideSlice';
+import { useGetDocUploadUrlMutation, useSubmitTripPhotosMutation, useGetTripVerificationStatusQuery, useStartTripMutation } from '../../service/driverApi';
 import { documentApi } from '../../api/documentApi';
 import socketService from '../../service/socketService';
 import { checkCameraPermission, goToSettings } from '../../utils/permissionUtils';
 import { resolveImageUrl } from '../../utils/imageUtils';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { useLocationTracker } from '../../hooks/useLocationTracker';
 
 type Status = 'COLLECTING' | 'VERIFYING' | 'APPROVED' | 'REJECTED';
 
@@ -197,10 +200,26 @@ const VehicleVerificationScreen = ({ route }: any) => {
   const { isDark } = useAppTheme();
   const { showAlert } = useAlert();
   const { triggerHaptic } = useHaptic();
+  const { showToast } = useToast();
   const user = useSelector((state: RootState) => state.userSlice.user);
+  const dispatch = useDispatch();
 
+  // 📍 Keep foreground location service alive on this screen
+  const trip_id = ride?.trip_id || ride?.id;
+  useLocationTracker({
+    driverId: user?.driverId,
+    isTracking: !!trip_id,
+    tripId: trip_id,
+    mode: 'moving',
+    suppressEmission: false,
+  });
+
+  // 🛡️ Guard: Only exit if ride was present and then genuinely cleared (not during rehydration)
+  const hadRideRef = useRef(!!rideFromStore);
   useEffect(() => {
-    if (!rideFromStore) {
+    if (rideFromStore) {
+      hadRideRef.current = true;
+    } else if (hadRideRef.current && !rideFromStore) {
       navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
     }
   }, [rideFromStore, navigation]);
@@ -222,6 +241,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
 
   const [getUploadUrl] = useGetDocUploadUrlMutation();
   const [submitTripPhotos, { isLoading: isSubmitting }] = useSubmitTripPhotosMutation();
+  const [startTripApi] = useStartTripMutation();
 
   const bgColor = isDark ? '#121212' : '#FFFFFF';
   const cardBg = isDark ? '#1E1E1E' : '#FFF';
@@ -277,12 +297,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
-        showAlert({
-          title: t('verification_required'),
-          message: t('verification_required_msg'),
-          singleButton: true,
-          icon: 'information-circle-outline',
-        });
+        showToast({ message: 'Complete verification to proceed.', type: 'error' });
         return true;
       };
       const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -426,8 +441,22 @@ const VehicleVerificationScreen = ({ route }: any) => {
   };
 
   const startTripAction = async () => {
-    navigation.replace('DropMapScreen', { ride });
+    try {
+      await startTripApi(ride?.trip_id || ride?.id).unwrap();
+      dispatch(setCurrentRide({ ...ride, trip_status: 'STARTED' }));
+      navigation.replace('DropMapScreen', { ride });
+    } catch (e) {
+      showToast({ message: t('failed_to_start_trip') || 'Failed to start trip. Please try again.', type: 'error' });
+    }
   };
+
+  const hasStartedTripRef = useRef(false);
+  useEffect(() => {
+    if (status === 'APPROVED' && !hasStartedTripRef.current) {
+      hasStartedTripRef.current = true;
+      startTripAction();
+    }
+  }, [status]);
 
   if (isStatusLoading) {
     return (
@@ -462,57 +491,35 @@ const VehicleVerificationScreen = ({ route }: any) => {
           </View>
         </Animated.View>
         <Text style={[styles.verifyMainTitle, { color: textPrimary }]}>{t('youve_been_verified')}</Text>
-        <Text style={[styles.verifySubText, { color: textSecondary }]}>{t('verified_ready_subtext')}</Text>
-        <TouchableOpacity onPress={startTripAction} style={styles.startTripBtn}>
-          <Text style={styles.startTripBtnText}>{t('start_trip')}</Text>
-          <Ionicons name="arrow-forward" size={ms(20)} color="#FFF" />
-        </TouchableOpacity>
+        <Text style={[styles.verifySubText, { color: textSecondary, marginBottom: vs(32) }]}>{t('verified_ready_subtext')}</Text>
+        <ActivityIndicator size="large" color={SCREENSHOT_GREEN} />
       </View>
     );
   }
 
-  const renderUploadBox = (key: string, title: string) => {
+  const renderUploadBox = (key: string, title: string, subtitle: string, placeholderImage: any) => {
     const isCompleted = vehiclePhotos[key];
     const uri = vehicleUris[key];
-
-    const getIcon = () => {
-      if (key === 'front') return 'car';
-      if (key === 'back') return 'car-back';
-      if (key === 'left' || key === 'right') return 'car-side';
-      return 'car';
-    };
 
     return (
       <TouchableOpacity
         key={key}
         activeOpacity={0.85}
         onPress={() => retakeSingleVehiclePhoto(key)}
-        style={styles.uploadRowCard}
+        style={[styles.carGridCard, isDark && { backgroundColor: '#111827', borderColor: '#4B5563' }, isCompleted && { borderColor: activeColor }]}
       >
-        <View style={styles.uploadRowLeft}>
-          <View style={{ width: ms(50), height: ms(50), justifyContent: 'center', alignItems: 'center', marginRight: ms(12) }}>
-            <MaterialCommunityIcons 
-              name={getIcon()} 
-              size={ms(42)} 
-              color={isCompleted ? activeColor : (isDark ? '#9CA3AF' : '#6B7280')} 
-              style={key === 'right' ? { transform: [{ scaleX: -1 }] } : {}}
-            />
-          </View>
-          <View style={styles.uploadRowTextCol}>
-            <Text style={[styles.uploadRowTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{title}</Text>
-            <Text style={[styles.uploadRowSub, { color: textSecondary }]}>{isCompleted ? (t('tap_to_retake') || 'Tap to retake photo') : (t('capture_now') || 'Capture now')}</Text>
-          </View>
-        </View>
-        <View style={[styles.uploadRowRight, isDark && { borderColor: '#4B5563' }, isCompleted && { borderStyle: 'solid', borderColor: activeColor }]}>
+        <View style={styles.carGridImageContainer}>
           {isCompleted && uri ? (
-            <Image source={{ uri }} style={[styles.uploadRowImage, { borderRadius: ms(8), width: '100%', height: '100%' }]} resizeMode="cover" />
+            <Image source={{ uri }} style={styles.carGridUploadedImage} resizeMode="cover" />
           ) : (
-            <Ionicons name="camera-outline" size={ms(32)} color={isDark ? '#4B5563' : '#D1D5DB'} />
+            <Image source={placeholderImage} style={styles.carGridPlaceholderImage} resizeMode="contain" />
           )}
-          <View style={[styles.uploadRowPlus, isCompleted ? { backgroundColor: '#2E7D32' } : { backgroundColor: isDark ? '#4B5563' : '#D1D5DB' }]}>
-            <Ionicons name={isCompleted ? "checkmark" : "add"} size={ms(16)} color="#FFF" />
+          <View style={[styles.carGridBadge, isDark && { borderColor: '#111827' }, isCompleted && { backgroundColor: '#22C55E' }]}>
+            <Ionicons name={isCompleted ? "checkmark" : "camera"} size={ms(12)} color="#FFF" />
           </View>
         </View>
+        <Text style={[styles.carGridTitle, { color: textPrimary }]} numberOfLines={1}>{title}</Text>
+        <Text style={[styles.carGridSub, { color: textSecondary }]} numberOfLines={1}>{subtitle}</Text>
       </TouchableOpacity>
     );
   };
@@ -521,121 +528,110 @@ const VehicleVerificationScreen = ({ route }: any) => {
     <SafeAreaView style={[styles.safe, { backgroundColor: bgColor }]} edges={['top']}>
       <AppStatusBar />
 
-      {/* Top Illustration Image (Fixed at top) */}
-      <Animated.View entering={FadeInDown.delay(50).springify()} style={{ alignItems: 'center', marginTop: vs(8) }}>
+      {/* Banner Section */}
+      <Animated.View entering={FadeInDown.delay(50).springify()} style={[styles.bannerContainer, { backgroundColor: isDark ? '#1E293B' : '#EAF2FF' }]}>
+        <View style={styles.bannerContent}>
+          <Text style={[styles.bannerOverline, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>FOR A SAFE TRIP</Text>
+          <Text style={[styles.bannerTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>Verify Selfie & Car</Text>
+          <Text style={[styles.bannerDesc, { color: isDark ? '#D1D5DB' : '#4B5563' }]}>
+            Upload your selfie and{'\n'}car photos to start trip.
+          </Text>
+        </View>
         <Image
-          source={require('../../assets/images/t2.png')}
-          style={{ width: '100%', height: vs(150), resizeMode: 'contain' }}
+          source={require('../../assets/images/tripverification.png')}
+          style={styles.bannerImage}
         />
       </Animated.View>
 
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1, paddingRight: ms(16) }}>
-            <Text style={[styles.title, { color: textPrimary }]}>{t('verification') || 'Verification'}</Text>
-            <Text style={[styles.headerSubtitle, { color: textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>
-              {t('verification_subtitle') || 'Add a selfie and photos of your vehicle.'}
-            </Text>
-          </View>
-          <View style={[styles.timerBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6' }]}>
-            <Ionicons name="time-outline" size={ms(14)} color={textPrimary} />
-            <Text style={[styles.timerText, { color: textPrimary }]}>{formatTime(timeLeft)}</Text>
-          </View>
-        </View>
 
-        <View style={styles.mainStepperContainer}>
-          {[
-            { key: 'photos', label: t('photos') || 'Photos' },
-            { key: 'details', label: t('details') || 'Details' },
-            { key: 'review', label: t('review') || 'Review' },
-          ].map((step, index) => {
-            const isActive = index === 0;
-            const isPast = false;
-            const nodeColor = isActive || isPast ? '#6366F1' : 'transparent';
-            const nodeBorder = isActive || isPast ? '#6366F1' : (isDark ? '#4B5563' : '#D1D5DB');
-            const textColor = isActive || isPast ? '#FFF' : (isDark ? '#9CA3AF' : '#6B7280');
-            const labelColor = isActive || isPast ? '#6366F1' : (isDark ? '#9CA3AF' : '#6B7280');
-
-            return (
-              <React.Fragment key={step.key}>
-                <View style={styles.mainStepperItem}>
-                  <View style={[styles.mainStepperCircle, { backgroundColor: nodeColor, borderColor: nodeBorder }]}>
-                    <Text style={[styles.mainStepperCircleText, { color: textColor }]}>{index + 1}</Text>
-                  </View>
-                  <Text style={[styles.mainStepperItemLabel, { color: labelColor }]}>{step.label}</Text>
-                </View>
-                {index < 2 && (
-                  <View style={[styles.mainStepperLine, { backgroundColor: isDark ? '#4B5563' : '#E5E7EB' }]} />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </View>
-      </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.delay(100).springify()}>
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={captureSelfie}
-            style={styles.uploadRowCard}
-          >
-            <View style={styles.uploadRowLeft}>
-              <View style={styles.uploadRowIconCircle}>
-                {user?.profile_pic_url || user?.profile_picture ? (
-                  <Image
-                    source={{ uri: resolveImageUrl(user.profile_pic_url || user.profile_picture) || undefined }}
-                    style={{ width: '100%', height: '100%', resizeMode: 'cover' }}
-                  />
+          <View style={[styles.sectionContainer, isDark && { backgroundColor: '#1E293B' }]}>
+            <Text numberOfLines={2} style={[styles.sectionTitle, { color: textPrimary }]}>Upload Selfie</Text>
+            <Text numberOfLines={2} style={[styles.sectionSubtitle, { color: textSecondary }]}>Take a clear selfie for verification.</Text>
+
+            <View style={styles.selfieCardsRow}>
+              {/* Card 1: Upload Box */}
+              <TouchableOpacity onPress={captureSelfie} activeOpacity={0.85} style={[styles.selfieUploadCard, isDark && { borderColor: '#4B5563', backgroundColor: '#111827' }]}>
+                {selfieTaken && selfieUri ? (
+                  <Image source={{ uri: selfieUri }} style={styles.selfieTakenImage} />
                 ) : (
-                  <Ionicons name="person-outline" size={ms(28)} color="#FFA500" />
+                  <>
+                    <View style={styles.selfieAvatarContainer}>
+                      <Ionicons name="person" size={ms(24)} color={isDark ? '#4B5563' : '#9CA3AF'} />
+                      <View style={[styles.selfieCameraBadge, isDark && { borderColor: '#111827' }]}>
+                        <Ionicons name="camera" size={ms(10)} color="#FFF" />
+                      </View>
+                    </View>
+                    <Text style={[styles.selfieUploadTitle, { color: textPrimary }]}>Upload</Text>
+                    <Text style={[styles.selfieUploadSub, { color: textSecondary }]}>Clear face</Text>
+                  </>
                 )}
-              </View>
-              <View style={styles.uploadRowTextCol}>
-                <Text style={[styles.uploadRowTitle, { color: textPrimary }]}>{t('profile_photo') || 'Profile Photo'}</Text>
-                <Text style={[styles.uploadRowSub, { color: textSecondary }]}>{t('upload_clear_photo') || 'Upload a clear photo of yourself'}</Text>
-              </View>
-            </View>
-            <View style={[styles.uploadRowRight, isDark && { borderColor: '#4B5563' }, selfieTaken && { borderStyle: 'solid', borderColor: activeColor }]}>
-              {selfieTaken && selfieUri ? (
-                <Image source={{ uri: selfieUri }} style={[styles.uploadRowImage, { borderRadius: ms(8), width: '100%', height: '100%' }]} resizeMode="cover" />
-              ) : (
-                <Ionicons name="person" size={ms(48)} color={isDark ? '#4B5563' : '#D1D5DB'} />
+              </TouchableOpacity>
+
+              {/* Card 2: Example Image (Driver Profile Pic) */}
+              {!selfieTaken && (
+                <View style={[styles.selfieExampleImage, { backgroundColor: isDark ? '#1E293B' : '#E2E8F0', justifyContent: 'center', alignItems: 'center' }]}>
+                  {user?.profile_pic_url || user?.profile_picture ? (
+                    <Image
+                      source={{ uri: resolveImageUrl(user.profile_pic_url || user.profile_picture) || undefined }}
+                      style={{ width: '100%', height: '100%', borderRadius: ms(8), resizeMode: 'cover' }}
+                    />
+                  ) : (
+                    <Ionicons name="person" size={ms(28)} color={isDark ? '#4B5563' : '#9CA3AF'} />
+                  )}
+                </View>
               )}
-              <View style={[styles.uploadRowPlus, selfieTaken && { backgroundColor: '#2E7D32' }]}>
-                <Ionicons name={selfieTaken ? "checkmark" : "add"} size={ms(16)} color="#FFF" />
+
+              {/* Card 3: Guidelines */}
+              <View style={[styles.selfieGuideCard, isDark && { backgroundColor: '#111827' }]}>
+                <Text style={styles.selfieGuideTitle}>Face clearly visible</Text>
+
+                <View style={styles.guideListItem}>
+                  <Ionicons name="checkmark-circle" size={ms(12)} color="#22C55E" />
+                  <Text style={[styles.guideListText, { color: textSecondary }]}>Good light</Text>
+                </View>
+                <View style={styles.guideListItem}>
+                  <Ionicons name="checkmark-circle" size={ms(12)} color="#22C55E" />
+                  <Text style={[styles.guideListText, { color: textSecondary }]}>No mask</Text>
+                </View>
+                <View style={styles.guideListItem}>
+                  <Ionicons name="checkmark-circle" size={ms(12)} color="#22C55E" />
+                  <Text style={[styles.guideListText, { color: textSecondary }]}>Clear face</Text>
+                </View>
+                <View style={styles.guideListItem}>
+                  <Ionicons name="close-circle" size={ms(12)} color="#EF4444" />
+                  <Text style={[styles.guideListText, { color: textSecondary }]}>No blur</Text>
+                </View>
               </View>
             </View>
-          </TouchableOpacity>
+          </View>
 
           {/* Main Content Area */}
-          {vehicleCount === 0 ? (
-            <TouchableOpacity style={styles.uploadRowCard} onPress={() => setShowSequentialCamera(true)}>
-              <View style={styles.uploadRowLeft}>
-                <View style={styles.uploadRowIconCircle}>
-                  <Ionicons name="car-outline" size={ms(24)} color="#FFA500" />
-                </View>
-                <View style={styles.uploadRowTextCol}>
-                  <Text style={[styles.uploadRowTitle, { color: textPrimary }]} numberOfLines={1} adjustsFontSizeToFit>{t('car_upload_all_view') || 'Car - Upload all view'}</Text>
-                  <Text style={[styles.uploadRowSub, { color: textSecondary }]}>{t('capture_all_sides_car') || 'Capture all sides of customer car'}</Text>
-                </View>
+          <View style={[styles.sectionContainer, isDark && { backgroundColor: '#1E293B' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: ms(4) }}>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={2} style={[styles.sectionTitle, { color: textPrimary }]}>Upload Car Photos (4 Sides)</Text>
+                <Text numberOfLines={2} style={[styles.sectionSubtitle, { color: textSecondary }]}>Take clear photos of your car from all 4 sides.</Text>
               </View>
-              <View style={[styles.uploadRowRight, isDark && { borderColor: '#4B5563' }]}>
-                <Image source={require('../../assets/images/car.png')} style={styles.uploadRowImage} resizeMode="contain" />
-                <View style={styles.uploadRowPlus}>
-                  <Ionicons name="add" size={ms(16)} color="#FFF" />
-                </View>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <View>
-              <Text style={[styles.gridTitle, { color: textPrimary, textAlign: 'left' }]}>{t('captured_photos') || 'Captured Photos'}</Text>
-              {renderUploadBox('front', t('front_view') || 'Front View')}
-              {renderUploadBox('back', t('back_view') || 'Back View')}
-              {renderUploadBox('left', t('left_side') || 'Left Side')}
-              {renderUploadBox('right', t('right_side') || 'Right Side')}
+              <TouchableOpacity onPress={() => setShowSequentialCamera(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#374151' : '#F3F4F6', paddingHorizontal: ms(10), paddingVertical: vs(6), borderRadius: ms(16), marginBottom: vs(10) }}>
+                <Ionicons name="camera" size={ms(14)} color={isDark ? '#E5E7EB' : '#374151'} />
+                <Text style={{ fontSize: ms(11), fontWeight: '700', color: isDark ? '#E5E7EB' : '#374151', marginLeft: ms(4) }}>Upload All</Text>
+              </TouchableOpacity>
             </View>
-          )}
+
+            <View style={styles.carGridContainer}>
+              <View style={styles.carGridRow}>
+                {renderUploadBox('front', 'Front View', 'Upload front side photo', require('../../assets/images/Carfrontview.png'))}
+                {renderUploadBox('back', 'Rear View', 'Upload rear side photo', require('../../assets/images/Carbackview.png'))}
+              </View>
+              <View style={styles.carGridRow}>
+                {renderUploadBox('left', 'Left Side View', 'Upload left side photo', require('../../assets/images/Carleftsideview.png'))}
+                {renderUploadBox('right', 'Right Side View', 'Upload right side photo', require('../../assets/images/Carrightsideview.png'))}
+              </View>
+            </View>
+          </View>
 
         </Animated.View>
         <View style={{ height: vs(120) }} />
@@ -644,6 +640,7 @@ const VehicleVerificationScreen = ({ route }: any) => {
       {status === 'COLLECTING' && (
         <View style={[styles.footer, { backgroundColor: cardBg, borderTopColor: borderColorTheme }]}>
           <Button
+            style={{ backgroundColor: '#1A73E8', borderRadius: ms(30), borderWidth: 0 }}
             disabled={!canSubmit}
             loading={isSubmitting}
             onPress={submitAction}
@@ -707,9 +704,32 @@ const VehicleVerificationScreen = ({ route }: any) => {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: { paddingHorizontal: ms(20), paddingTop: vs(16), paddingBottom: vs(16) },
+  bannerContainer: { marginHorizontal: ms(20), marginTop: vs(12), borderRadius: ms(12), padding: ms(16), flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  bannerContent: { flex: 1, paddingRight: ms(120), zIndex: 1, justifyContent: 'center' },
+  bannerOverline: { fontSize: ms(10), fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  bannerTitle: { fontSize: ms(18), fontWeight: '800', marginTop: vs(4) },
+  bannerDesc: { fontSize: ms(12), marginTop: vs(4), lineHeight: vs(18) },
+  bannerImage: { position: 'absolute', right: -ms(20), bottom: -vs(25), width: ms(190), height: ms(190), resizeMode: 'contain', zIndex: 0 },
+  header: { paddingHorizontal: ms(20), paddingTop: vs(12), paddingBottom: vs(16) },
   title: { fontSize: ms(26), fontWeight: '900', letterSpacing: -0.5 },
   headerSubtitle: { fontSize: ms(15), marginTop: vs(4), lineHeight: vs(20) },
+
+  sectionContainer: { marginTop: vs(12), backgroundColor: '#FFFFFF', paddingVertical: vs(12), paddingHorizontal: ms(12), borderRadius: ms(12), marginHorizontal: 0, marginBottom: vs(12) },
+  sectionTitle: { fontSize: ms(14), fontWeight: '800' },
+  sectionSubtitle: { fontSize: ms(11), marginTop: vs(2), marginBottom: vs(12) },
+  selfieCardsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: ms(10) },
+  selfieUploadCard: { flex: 1.5, height: ms(110), borderRadius: ms(10), borderWidth: 2, borderStyle: 'dashed', borderColor: '#D1D5DB', backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', padding: ms(4) },
+  selfieTakenImage: { width: '100%', height: '100%', borderRadius: ms(8), resizeMode: 'cover' },
+  selfieAvatarContainer: { width: ms(40), height: ms(40), borderRadius: ms(20), backgroundColor: '#E2E8F0', justifyContent: 'center', alignItems: 'center', marginBottom: vs(6) },
+  selfieCameraBadge: { position: 'absolute', right: -ms(4), bottom: -ms(4), width: ms(16), height: ms(16), borderRadius: ms(8), backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+  selfieUploadTitle: { fontSize: ms(10), fontWeight: '700', textAlign: 'center' },
+  selfieUploadSub: { fontSize: ms(8), textAlign: 'center', marginTop: vs(2) },
+  selfieExampleImage: { flex: 0.85, height: ms(110), borderRadius: ms(10), overflow: 'hidden' },
+  selfieGuideCard: { flex: 1.25, height: ms(110), borderRadius: ms(10), backgroundColor: '#F0F7FF', padding: ms(8), justifyContent: 'center' },
+  selfieGuideTitle: { fontSize: ms(9), fontWeight: '700', color: '#2563EB', marginBottom: vs(6) },
+  guideListItem: { flexDirection: 'row', alignItems: 'center', marginBottom: vs(4) },
+  guideListText: { fontSize: ms(8), marginLeft: ms(4) },
+
   mainStepperContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', marginTop: vs(24) },
   mainStepperItem: { alignItems: 'center', width: ms(60) },
   mainStepperCircle: { width: ms(28), height: ms(28), borderRadius: ms(14), borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
@@ -721,7 +741,6 @@ const styles = StyleSheet.create({
 
   scroll: { flexGrow: 1, paddingHorizontal: ms(20) },
 
-  sectionTitle: { fontSize: ms(16), fontWeight: '800', marginBottom: vs(12) },
   selfieListItem: { flexDirection: 'row', alignItems: 'center', padding: ms(16), borderRadius: ms(20), borderWidth: 1, marginBottom: vs(24) },
   selfieListIconBg: { width: ms(60), height: ms(60), borderRadius: ms(30), justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   selfieListImage: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -749,7 +768,7 @@ const styles = StyleSheet.create({
   actionButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: vs(6), paddingHorizontal: ms(12), borderRadius: ms(20), backgroundColor: 'rgba(0,0,0,0.6)' },
   actionButtonText: { color: '#fff', fontSize: ms(12), fontWeight: '600', marginLeft: ms(4) },
 
-  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: ms(20), paddingTop: vs(16), paddingBottom: vs(32), borderTopWidth: 1 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: ms(20), paddingTop: vs(16), paddingBottom: vs(32), borderTopWidth: 0 },
   submitBtn: { height: vs(56), borderRadius: ms(28), justifyContent: 'center', alignItems: 'center' },
   submitBtnText: { fontSize: ms(16), fontWeight: '800' },
 
@@ -773,17 +792,15 @@ const styles = StyleSheet.create({
   scanBtnText: { color: '#FFF', fontSize: ms(16), fontWeight: '700' },
 
   // New Car Upload UI
-  uploadRowCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: vs(10), marginBottom: vs(8) },
-  uploadRowLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: ms(16) },
-  uploadRowIconCircle: { width: ms(52), height: ms(52), borderRadius: ms(26), borderWidth: 1, borderColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center', marginRight: ms(12), overflow: 'hidden' },
-  uploadRowTextCol: { flex: 1 },
-  uploadRowTitle: { fontSize: ms(16), fontWeight: '700' },
-  uploadRowSub: { fontSize: ms(13), marginTop: vs(4) },
-  uploadRowRight: { width: ms(110), height: ms(70), borderRadius: ms(12), borderWidth: 1.5, borderColor: '#D1D5DB', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
-  uploadRowImage: { width: '85%', height: '85%' },
-  uploadRowPlus: { position: 'absolute', bottom: -ms(8), right: -ms(8), width: ms(22), height: ms(22), borderRadius: ms(11), backgroundColor: PRIMARY_COLOR, justifyContent: 'center', alignItems: 'center' },
-
-  gridTitle: { fontSize: ms(18), fontWeight: '700', marginBottom: vs(16), marginTop: vs(10), textAlign: 'center' },
+  carGridContainer: { gap: ms(8) },
+  carGridRow: { flexDirection: 'row', gap: ms(8) },
+  carGridCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: ms(10), borderWidth: 1, borderColor: '#F3F4F6', padding: ms(8), alignItems: 'center' },
+  carGridImageContainer: { width: '100%', height: ms(60), justifyContent: 'center', alignItems: 'center', marginBottom: vs(8) },
+  carGridPlaceholderImage: { width: '100%', height: '100%' },
+  carGridUploadedImage: { width: '100%', height: '100%', borderRadius: ms(8) },
+  carGridBadge: { position: 'absolute', right: ms(4), bottom: -ms(4), width: ms(24), height: ms(24), borderRadius: ms(12), backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
+  carGridTitle: { fontSize: ms(11), fontWeight: '700', textAlign: 'center' },
+  carGridSub: { fontSize: ms(9), textAlign: 'center', marginTop: vs(2) },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },

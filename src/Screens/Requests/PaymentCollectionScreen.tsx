@@ -19,11 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { Dashboard_Nav } from '../../Navigations/navigations';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import Animated, {
-    FadeIn,
-    FadeInDown,
-    SlideInDown,
-} from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
 
@@ -35,8 +31,19 @@ import { RootState } from '../../redux/store';
 import { clearAcceptedRide } from '../../redux/rideSlice';
 import { checkPhotoLibraryPermission, goToSettings } from '../../utils/permissionUtils';
 import { mS as ms, vS as vs } from '../../lib/scale';
+import { useLocationTracker } from '../../hooks/useLocationTracker';
 
 const { width } = Dimensions.get('window');
+
+const MOTIVATION_QUOTES = [
+    "Great job! You're making a difference.",
+    "Another successful trip! Keep up the great work.",
+    "You are a star! Drive safe and see you on the next one.",
+    "Awesome driving! Thank you for your dedication.",
+    "Fantastic! Your passengers appreciate your great service.",
+    "You're on a roll! Keep earning.",
+    "Success! Every trip counts, keep it up."
+];
 
 const PaymentCollectionScreen = ({ route, navigation }: any) => {
     const rideFromStore = useSelector((state: RootState) => state.ride.currentRide);
@@ -45,6 +52,15 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
     const actualDistance = route.params?.actualDistance;
     const actualDuration = route.params?.actualDuration;
     const [isFinished, setIsFinished] = useState(false);
+    const [motivationText, setMotivationText] = useState('');
+
+    const { t } = useTranslation();
+    const { theme, isDark } = useAppTheme();
+    const { showAlert } = useAlert();
+    const { triggerHaptic } = useHaptic();
+    const [completeTripMutation] = useCompleteTripMutation();
+    const dispatch = useDispatch();
+    const user = useSelector((state: RootState) => state.userSlice?.user);
 
     React.useEffect(() => {
         if (!tripId && !isFinished) {
@@ -54,29 +70,30 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
 
     React.useEffect(() => {
         if (isFinished) {
+            const randomQuote = MOTIVATION_QUOTES[Math.floor(Math.random() * MOTIVATION_QUOTES.length)];
+            setMotivationText(randomQuote);
+
             const timeout = setTimeout(() => {
+                dispatch(clearAcceptedRide());
                 navigation.navigate(Dashboard_Nav);
-            }, 3500);
+            }, 3000);
             return () => clearTimeout(timeout);
         }
-    }, [isFinished, navigation]);
+    }, [isFinished, navigation, dispatch]);
 
-    const { t } = useTranslation();
-    const { theme, isDark } = useAppTheme();
-    const { showAlert } = useAlert();
-    const { triggerHaptic } = useHaptic();
-    const [completeTripMutation] = useCompleteTripMutation();
-    const dispatch = useDispatch();
+    // 📍 Keep foreground location service alive on this screen
+    useLocationTracker({
+        driverId: user?.driverId,
+        isTracking: !!tripId,
+        tripId: tripId,
+        mode: 'moving',
+        suppressEmission: false,
+    });
 
     useFocusEffect(
         React.useCallback(() => {
             const onBackPress = () => {
-                showAlert({
-                    title: t('payment_collection_title'),
-                    message: t('payment_back_restriction'),
-                    singleButton: true,
-                    icon: 'information-circle-outline',
-                });
+                navigation.navigate('DashboardScreen');
                 return true;
             };
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -187,18 +204,17 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                 distance_km: actualDistance,
                 trip_duration_minutes: actualDuration,
                 user_rating: rating,
+                payment_mode: paymentMode ?? undefined,
             }).unwrap();
 
-            dispatch(clearAcceptedRide());
-            triggerHaptic(HapticFeedbackTypes.notificationSuccess);
             setIsFinished(true);
+            triggerHaptic(HapticFeedbackTypes.notificationSuccess);
         } catch (err: any) {
             triggerHaptic(HapticFeedbackTypes.notificationError);
             const errorMsg = err?.data?.message?.toLowerCase() || '';
             const isAlreadyDone = errorMsg.includes('already completed') || errorMsg.includes('cancelled');
 
             if (isAlreadyDone) {
-                dispatch(clearAcceptedRide());
                 setIsFinished(true);
             } else {
                 showAlert({
@@ -243,7 +259,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     <View style={styles.ground} />
                 </View>
 
-                <Animated.View entering={FadeIn.delay(200)} style={styles.successContent}>
+                <Animated.View style={styles.successContent}>
                     <View style={styles.outerCircle}>
                         <View style={[styles.diamond, { top: -ms(10), left: ms(20) }]} />
                         <View style={[styles.diamondGreen, { top: ms(60), left: -ms(20) }]} />
@@ -260,18 +276,11 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     </View>
                     <Text style={styles.successTitleText}>{t('trip_completed', 'Trip Completed!')}</Text>
                     <Text style={styles.successSubtitleText}>
-                        {t('thank_you_trip', 'Thank you for completing the trip')}
+                        {motivationText || t('thank_you_trip', 'Thank you for completing the trip')}
                     </Text>
                 </Animated.View>
 
-                <Animated.View entering={SlideInDown.delay(500)} style={styles.successFooter}>
-                    <Pressable
-                        style={styles.doneBtnLight}
-                        onPress={() => navigation.navigate(Dashboard_Nav)}
-                    >
-                        <Text style={styles.doneBtnTextLight}>{t('done') || 'Done'}</Text>
-                    </Pressable>
-                </Animated.View>
+
             </View>
         );
     }
@@ -321,7 +330,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
 
 
                     {/* Fare Details */}
-                    <Animated.View entering={FadeInDown.delay(200)} style={{ marginTop: vs(16) }}>
+                    <Animated.View style={{ marginTop: vs(16) }}>
                         <View style={styles.fareRow}>
                             <Text style={[styles.fareLabel, { color: textSecondary }]}>{t('base_fare', 'Base Fare')}</Text>
                             <Text style={[styles.fareValue, { color: textPrimary }]}>₹{Math.round((ride?.base_fare || 0) + (ride?.distance_fare || 0) + (ride?.time_fare || 0) || (ride?.fare || ride?.price || 0))}</Text>
@@ -360,7 +369,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     </Animated.View>
 
                     {/* Payment Method List Items */}
-                    <Animated.View entering={FadeInDown.delay(300)} style={{ marginTop: vs(32) }}>
+                    <Animated.View style={{ marginTop: vs(32) }}>
                         <Text style={[styles.sectionHeading, { color: textPrimary }]}>{t('select_received_method', 'Select Payment Method')}</Text>
                         <Text style={[styles.sectionSubheading, { color: textSecondary, marginBottom: vs(16), fontSize: ms(14) }]}>{t('choose_how_customer_paid', 'Choose how the customer has paid for this trip')}</Text>
 
@@ -420,12 +429,12 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     </Animated.View>
 
                     {/* Trip Summary */}
-                    <Animated.View entering={FadeInDown.delay(400)} style={{ marginTop: vs(32) }}>
+                    <Animated.View style={{ marginTop: vs(32) }}>
                         <View style={[styles.accordionHeader, { backgroundColor: 'transparent' }]}>
                             <Text style={[styles.accordionTitle, { color: textPrimary, fontSize: ms(18), fontWeight: '800' }]}>{t('trip_summary', 'Trip Summary')}</Text>
                         </View>
 
-                        <Animated.View entering={FadeInDown.duration(200)} style={[styles.accordionContent, { backgroundColor: 'transparent' }]}>
+                        <Animated.View style={[styles.accordionContent, { backgroundColor: 'transparent' }]}>
                             {/* Trip ID */}
                             <View style={[styles.summaryRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: vs(12), marginBottom: vs(12) }]}>
                                 <View style={styles.summaryLabelWrap}>
@@ -506,7 +515,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     </Animated.View>
                     {/* Contextual Action (UPI QR) */}
                     {paymentMode === 'UPI' && (
-                        <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: vs(16) }}>
+                        <Animated.View style={{ marginTop: vs(16) }}>
                             <TouchableOpacity
                                 activeOpacity={0.8}
                                 onPress={handleOpenGallery}
@@ -526,7 +535,7 @@ const PaymentCollectionScreen = ({ route, navigation }: any) => {
                     <View style={{ height: 1, backgroundColor: borderColorTheme, marginTop: vs(24), marginBottom: vs(8) }} />
 
                     {/* Rating UI */}
-                    <Animated.View entering={FadeInDown.duration(400)} style={styles.ratingCard}>
+                    <Animated.View style={styles.ratingCard}>
                         <Text style={[styles.ratingMainTitle, { color: isDark ? '#F9FAFB' : '#1E293B' }]}>{t('how_was_trip', 'How was your trip?')}</Text>
                         <Text style={[styles.ratingSubTitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('rate_experience', 'Rate your experience')}</Text>
                         <View style={styles.starsRow}>

@@ -53,6 +53,7 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
 
   const takePhoto = async () => {
     if (isCapturingRef.current || !camera.current) return;
+    isCapturingRef.current = true; // Set ref synchronously to avoid race condition
     setIsCapturing(true);
     try {
       const photo = await camera.current.takePhoto({
@@ -63,6 +64,7 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
       console.error('Selfie Capture Error:', e);
       setFeedback('Capture failed. Please try again.');
       setIsCapturing(false);
+      isCapturingRef.current = false;
       stabilityCounter.current = 0;
     }
   };
@@ -99,7 +101,7 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
     'worklet';
     const faces = detectFaces(frame);
     handleDetectedFace(faces);
-  }, [detectFaces, handleDetectedFace]);
+  }, [handleDetectedFace]);
 
   const confirmPhoto = () => {
     if (capturedPhoto) {
@@ -155,6 +157,8 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
               {isCapturing && <ActivityIndicator size="small" color="#FFF" style={{ marginTop: 10 }} />}
             </View>
           </View>
+          
+          
           
           <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
             <Ionicons name="close" size={28} color="#FFF" />
