@@ -170,7 +170,7 @@ const RootNavigation = () => {
     }
 
     // 1. Voice alert
-    audioService.speak(t(voiceKey) || 'The ride has been cancelled');
+    audioService.speak(t(voiceKey, 'The ride has been cancelled'));
 
     // 2. Clear Redux State Immediately
     dispatch(clearAcceptedRide());
@@ -187,10 +187,6 @@ const RootNavigation = () => {
     const cancelReason = data?.cancelReason || data?.reason;
     if (cancelReason) {
       displayMessage += `\nReason: ${cancelReason}`;
-    }
-    const tripIdToDisplay = data?.trip_id || data?.tripId;
-    if (tripIdToDisplay) {
-      displayMessage += `\nRide ID: ${tripIdToDisplay}`;
     }
 
     // 3. Show Alert and Redirect
@@ -310,7 +306,13 @@ const RootNavigation = () => {
     } else if (rawStatus === 'VERIFICATION_PENDING') {
       expectedScreen = 'VehicleVerificationScreen';
     } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
-      expectedScreen = DropMapScreen_Nav;
+      const isRoundTrip = (currentRide as any)?.ride_type === 'ROUND_TRIP' || (currentRide as any)?.ride_type === 'OUTSTATION_ROUND_TRIP';
+      const hasFinishedFirstLeg = !!((currentRide as any)?.actual_drop_time || (currentRide as any)?.wait_started_at || (currentRide as any)?.waiting_started_at || (currentRide as any)?.return_started_at);
+      if (isRoundTrip && hasFinishedFirstLeg) {
+        expectedScreen = ReturnTripMapScreen_Nav;
+      } else {
+        expectedScreen = DropMapScreen_Nav;
+      }
     } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
       expectedScreen = WaitingScreen_Nav;
     } else if (rawStatus === 'RETURN_STARTED') {
@@ -405,7 +407,13 @@ const RootNavigation = () => {
       } else if (rawStatus === 'VERIFICATION_PENDING') {
         initialRoute = 'VehicleVerificationScreen';
       } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
-        initialRoute = DropMapScreen_Nav;
+        const isRoundTrip = (currentRide as any)?.ride_type === 'ROUND_TRIP' || (currentRide as any)?.ride_type === 'OUTSTATION_ROUND_TRIP';
+        const hasFinishedFirstLeg = !!((currentRide as any)?.actual_drop_time || (currentRide as any)?.wait_started_at || (currentRide as any)?.waiting_started_at || (currentRide as any)?.return_started_at);
+        if (isRoundTrip && hasFinishedFirstLeg) {
+          initialRoute = ReturnTripMapScreen_Nav;
+        } else {
+          initialRoute = DropMapScreen_Nav;
+        }
       } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
         initialRoute = WaitingScreen_Nav;
       } else if (rawStatus === 'RETURN_STARTED') {

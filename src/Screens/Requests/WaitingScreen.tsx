@@ -240,9 +240,11 @@ const WaitingScreen = ({ route }: any) => {
   const handleStartReturnTrip = async () => {
     try {
       if (!trip_id) return;
-      await startReturnTripApi(trip_id.toString()).unwrap();
+      const result = await startReturnTripApi(trip_id.toString()).unwrap();
+      const updatedRide = result?.data || { ...ride, trip_status: 'RETURN_STARTED' };
+      dispatch(setCurrentRide(updatedRide));
       triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
-      navigation.dispatch(StackActions.replace('ReturnTripMapScreen', { ride }));
+      navigation.dispatch(StackActions.replace('ReturnTripMapScreen', { ride: updatedRide }));
     } catch (error: any) {
       triggerHaptic?.(HapticFeedbackTypes.notificationError);
       showAlert({

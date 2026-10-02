@@ -20,6 +20,7 @@ export interface Ride {
     drop_lng: number;
     drop_address: string;
     distance_km: number;
+    trip_duration_minutes?: number;
     base_fare: number;
     driver_allowance: number;
     platform_fee: number;
@@ -30,6 +31,7 @@ export interface Ride {
     passenger?: string; // Adding for UI compatibility if needed
     phone?: string;
     rating?: number;
+    user_rating?: number;
     scheduled_status?: string;
     re_dispatch_count?: number;
     startTime?: number; // Added for UI compatibility (mapped from scheduled_start_time)

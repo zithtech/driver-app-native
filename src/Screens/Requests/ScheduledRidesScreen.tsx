@@ -123,7 +123,7 @@ const ScheduledRidesScreen = () => {
       refetchTrips();
     });
     socketService.on('SCHEDULED_RIDE_CANCELLED', (data: any) => {
-      if (data.previousDriverId === (user.driverId || user.id)) {
+      if (data.previousDriverId === (user?.driverId || user?.id)) {
         dispatch(setMyAcceptedRideId(null));
         dispatch(setCurrentRide(null));
         showAlert({
@@ -154,7 +154,7 @@ const ScheduledRidesScreen = () => {
       socketService.off('SCHEDULED_RIDE_CANCELLED');
       socketService.off('TRIP_REMOVED');
     };
-  }, [refetchTrips, user.driverId, user.id, dispatch, showAlert, t]);
+  }, [refetchTrips, user?.driverId, user?.id, dispatch, showAlert, t]);
 
   // Animation values
   const countPulseAnim = useRef(new Animated.Value(1)).current;
@@ -212,6 +212,8 @@ const ScheduledRidesScreen = () => {
           total_fare: typeof trip.total_fare === 'number' ? trip.total_fare : parseFloat(trip.total_fare || trip.price || '0'),
           distance_km: trip.distance_km ? parseFloat(trip.distance_km) : parseFloat(trip.distance || '0'),
           trip_status: (trip.trip_status || trip.status || '').toString().toUpperCase(),
+          // 🛡️ Always mark as SCHEDULED since this query only fetches booking_type=SCHEDULED
+          booking_type: (trip.booking_type || 'SCHEDULED').toString().toUpperCase(),
           scheduled_start_time: timeVal,
           startTime: new Date(timeVal).getTime(), // Added for RideCard display & timer logic
           passenger: trip.passenger || trip.passenger_details?.name || trip.user_details?.full_name || trip.user_details?.first_name || trip.passenger_name || trip.customer?.name || 'Customer',
@@ -220,6 +222,7 @@ const ScheduledRidesScreen = () => {
           paymentType: trip.paymentType || trip.payment_method || trip.paymentType || 'CASH',
           scheduled_status: trip.scheduled_status,
           re_dispatch_count: trip.re_dispatch_count,
+          ride_type: (trip.ride_type || trip.service_type || 'ONE_WAY').toLowerCase(),
           car_name: trip.car_name || trip.vehicle_model || trip.vehicle_type || 'Standard Sedan',
           transmission: String(trip.transmission || trip.transmission_type || 'Manual').replace('_', ' '),
           fuel_type: trip.fuel_type || trip.engine_type || 'Petrol',
@@ -300,36 +303,17 @@ const ScheduledRidesScreen = () => {
       if (ride.booking_type !== 'SCHEDULED') { return false; }
 
       // ALWAYS allow my accepted ride to show in the accepted tab
-      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user.driverId || user.id);
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user?.driverId || user?.id);
       if (isMine) return true;
 
-      // 2. No new scheduled rides if it's a 'day' plan or no subscription
-      if (billingCycle === 'day' || !billingCycle) {
-        return false;
-      }
-
-      // 3. Plan based restrictions
-      const isPremium = planName.includes('premium');
-      const isElite = planName.includes('elite');
-      const isBasic = planName.includes('basic') || (!isPremium && !isElite); // Default to basic if unknown
-
-      const type = (ride.ride_type || ride.service_type || '').toLowerCase();
-
-      if (isBasic) {
-        // Basic: local, one_way, and round_trip ONLY (no outstation)
-        if (!['local', 'one_way', 'round_trip'].includes(type)) {
-          return false;
-        }
-      }
-      
-      // Elite and Premium allow all
+      // Plan-based restrictions removed: All drivers receive all scheduled rides
       return true;
     });
   }, [rides, myAcceptedRideId, subData, user]);
 
   const filteredRides = useMemo(() => {
     let result = baseEligibleRides.filter((ride) => {
-      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user.driverId || user.id);
+      const isMine = String(ride.trip_id) === String(myAcceptedRideId) || String(ride.driver_id) === String(user?.driverId || user?.id);
       const status = ride.trip_status;
       
       if (['COMPLETED', 'CANCELLED', 'CANCEL', 'REJECTED'].includes(status)) {

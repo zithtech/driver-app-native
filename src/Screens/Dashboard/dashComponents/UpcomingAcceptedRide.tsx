@@ -16,16 +16,14 @@ interface UpcomingAcceptedRideProps {
 
 const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onViewAllPress, onNavigatePress }) => {
     const { t } = useTranslation();
-    if (!trip) return null;
+    const { getCurrentLocation } = useLocation();
+    const [distanceAway, setDistanceAway] = useState<string>(trip?.distance ? `${trip.distance} away` : 'Calculating...');
 
     // Parse date and time
-    const tripDate = new Date(trip.scheduled_start_time || trip.startTime || new Date());
+    const tripDate = new Date(trip?.scheduled_start_time || trip?.startTime || new Date());
     const day = tripDate.getDate();
     const month = tripDate.toLocaleString('default', { month: 'short' });
     const timeString = tripDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    const { getCurrentLocation } = useLocation();
-    const [distanceAway, setDistanceAway] = useState<string>(trip.distance ? `${trip.distance} away` : 'Calculating...');
 
     useEffect(() => {
         let isMounted = true;
@@ -54,6 +52,9 @@ const UpcomingAcceptedRide: React.FC<UpcomingAcceptedRideProps> = ({ trip, onVie
         fetchAndCalculate();
         return () => { isMounted = false; };
     }, [trip, getCurrentLocation]);
+
+    if (!trip) return null;
+
     const tripType = trip.booking_type === 'ROUND_TRIP' ? 'Round Trip' : 'One Way';
     const estimatedFare = trip.estimated_fare || trip.total_fare || trip.amount || '0.00';
 

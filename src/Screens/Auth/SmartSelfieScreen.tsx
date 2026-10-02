@@ -53,6 +53,7 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
 
   const takePhoto = async () => {
     if (isCapturingRef.current || !camera.current) return;
+    isCapturingRef.current = true; // Set ref synchronously to avoid race condition
     setIsCapturing(true);
     try {
       const photo = await camera.current.takePhoto({
@@ -63,6 +64,7 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
       console.error('Selfie Capture Error:', e);
       setFeedback('Capture failed. Please try again.');
       setIsCapturing(false);
+      isCapturingRef.current = false;
       stabilityCounter.current = 0;
     }
   };

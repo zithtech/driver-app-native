@@ -17,12 +17,12 @@ class AudioService {
     try {
       await Tts.getInitStatus();
       this.initialized = true;
-      // Tts.setDefaultRate(0.5, true); // Slightly slower for better clarity
-      // Tts.setDefaultPitch(1.0);
       
-      // On some Android devices, we need to request voices
-      if (Platform.OS === 'android') {
-          Tts.setDefaultLanguage('en-US');
+      if (Platform.OS === 'ios') {
+        // Ensure voice is heard even if the physical silent switch is turned on
+        Tts.setIgnoreSilentSwitch('ignore');
+      } else if (Platform.OS === 'android') {
+        Tts.setDefaultLanguage('en-US');
       }
       
       console.log('🎙️ AudioService (TTS) Initialized');
@@ -46,7 +46,7 @@ class AudioService {
     if (!this.initialized) {
         // Retry initialization if it failed earlier
         this.init().then(() => {
-            if (this.initialized) Tts.speak(message);
+            if (this.initialized) this.speak(message); // Recursively call to preserve settings
         });
         return;
     }

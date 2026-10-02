@@ -38,7 +38,7 @@ import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import { useLocation } from '../../hooks/useLocation';
 import { useReturnReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery } from '../../service/driverApi';
-import { clearAcceptedRide } from '../../redux/rideSlice';
+import { clearAcceptedRide, setCurrentRide } from '../../redux/rideSlice';
 import { MapConnectionStatus, CancellationModal } from '../../Components';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -104,8 +104,8 @@ const ReturnTripMapScreen = ({ route }: any) => {
   const simInterval = useRef<any>(null);
 
   // Normalize Drop-off coordinates
-  const return_lat = parseFloat(ride.return_lat?.toString() || "0");
-  const return_lng = parseFloat(ride.return_lng?.toString() || "0");
+  const return_lat = parseFloat(ride.return_lat?.toString() || ride.pickup_lat?.toString() || ride.pickupLat?.toString() || "0");
+  const return_lng = parseFloat(ride.return_lng?.toString() || ride.pickup_lng?.toString() || ride.pickupLng?.toString() || "0");
   const hasValidCoords = !!(return_lat && return_lng);
   const trip_id = ride?.trip_id || ride?.id || '';
 
@@ -448,6 +448,20 @@ const ReturnTripMapScreen = ({ route }: any) => {
 
         setDistance(currentDistance);
         setEta(currentEta);
+
+        // Voice Alert (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalVoiceRef.current) {
+          hasNotifiedArrivalVoiceRef.current = true;
+          audioService.speak(t('reached_return_voice', 'You have reached the return location'));
+        }
+
+        // Automatic Arrival Push Notification & Bottom Sheet Auto-Expand (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalRef.current) {
+          hasNotifiedArrivalRef.current = true;
+          if (bottomSheetRef.current) {
+            bottomSheetRef.current.snapToIndex(1);
+          }
+        }
       }
 
       if (isAutoFollow && mapRef.current) {
@@ -546,14 +560,14 @@ const ReturnTripMapScreen = ({ route }: any) => {
         const factor = initialDistance.current > 0 ? (initialEta.current / initialDistance.current) : 4;
         setEta(Math.max(1, Math.round(remainKm * factor)));
 
-        // Voice Alert (10 meters)
-        if (remainKm <= 0.01 && !hasNotifiedArrivalVoiceRef.current) {
+        // Voice Alert (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalVoiceRef.current) {
           hasNotifiedArrivalVoiceRef.current = true;
-          audioService.speak(t('reached_return_voice') || 'You have reached the return location');
+          audioService.speak(t('reached_return_voice', 'You have reached the return location'));
         }
 
-        // Automatic Arrival Push Notification & Bottom Sheet Auto-Expand (10 meters)
-        if (remainKm <= 0.01 && !hasNotifiedArrivalRef.current) {
+        // Automatic Arrival Push Notification & Bottom Sheet Auto-Expand (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalRef.current) {
           hasNotifiedArrivalRef.current = true;
           if (bottomSheetRef.current) {
             bottomSheetRef.current.snapToIndex(1);
@@ -612,6 +626,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
         : (initialEta.current || 15);
 
       await returnReachedTripApi(trip_id.toString()).unwrap();
+      dispatch(setCurrentRide({ ...ride, trip_status: 'RETURN_REACHED' }));
       triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
       navigation.replace('PaymentCollectionScreen', {
         ride,
@@ -790,6 +805,20 @@ const ReturnTripMapScreen = ({ route }: any) => {
       </Pressable>
     </Modal>
   );
+
+  // Proximity Logic: Auto-expand bottom sheet and trigger voice at 50m (0.05km)
+  useEffect(() => {
+    if (distance <= 0.05) {
+      if (!hasNotifiedArrivalRef.current) {
+        hasNotifiedArrivalRef.current = true;
+        bottomSheetRef.current?.snapToIndex(1);
+      }
+      if (!hasNotifiedArrivalVoiceRef.current) {
+        hasNotifiedArrivalVoiceRef.current = true;
+        audioService.speak(t('reached_return_voice', 'You have reached the return location'));
+      }
+    }
+  }, [distance, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -1139,7 +1168,7 @@ const ReturnTripMapScreen = ({ route }: any) => {
             <View style={[styles.actionFooter, { borderTopWidth: 0, paddingHorizontal: ms(20) }]}>
               {distance <= 0.01 && (
                 <View style={{ alignItems: 'center', marginBottom: vs(16), marginTop: vs(4) }}>
-                  <Text style={{ fontSize: ms(22), fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A', letterSpacing: -0.5, marginBottom: vs(6) }}>
+                  <Text style={{ fontSize: ms(20), fontWeight: '900', color: isDark ? '#FFFFFF' : '#0F172A', letterSpacing: -0.5, marginBottom: vs(6) }} numberOfLines={1} adjustsFontSizeToFit>
                     You've reached the <Text style={{ color: '#E11D48' }}>return location!</Text>
                   </Text>
                   <Text style={{ fontSize: ms(13), color: isDark ? '#9CA3AF' : '#64748B', fontWeight: '500' }} numberOfLines={1} adjustsFontSizeToFit>

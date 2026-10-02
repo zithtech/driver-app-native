@@ -13,6 +13,7 @@ import { ScheduledRides_Nav } from '../Navigations/navigations';
 
 
 
+
 export type RideItem = {
     id: string;
     trip_id: string;
@@ -151,6 +152,40 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             return;
         }
 
+        // 🛡️ Trip Settings Filter (Only for Live Broadcasts, not Direct Assignments)
+        if (!isDirectAssignment) {
+            const tripPrefs = user?.tripPreferences || {
+                local: true,
+                outstation: true,
+                roundTrip: true,
+                oneWay: true,
+            };
+            const rideTypeStr = (data?.ride_type || 'ONE_WAY').toUpperCase();
+            
+            // Local trips (which don't have 'OUTSTATION' in their ride type) should always be allowed
+            const isOutstation = rideTypeStr.includes('OUTSTATION');
+            
+            if (isOutstation) {
+                // If the driver has disabled outstation completely
+                if (tripPrefs.outstation === false) {
+                    console.log(`[useRideFeed] Filtering out OUTSTATION request ${tripId} due to preferences.`);
+                    return;
+                }
+                
+                // If it's specifically an outstation round trip
+                if (rideTypeStr === 'OUTSTATION_ROUND_TRIP' && tripPrefs.roundTrip === false) {
+                    console.log(`[useRideFeed] Filtering out OUTSTATION_ROUND_TRIP request ${tripId} due to preferences.`);
+                    return;
+                }
+                
+                // If it's specifically an outstation one way
+                if (rideTypeStr === 'OUTSTATION_ONE_WAY' && tripPrefs.oneWay === false) {
+                    console.log(`[useRideFeed] Filtering out OUTSTATION_ONE_WAY request ${tripId} due to preferences.`);
+                    return;
+                }
+            }
+        }
+
         const newRide: RideItem = {
             ...data,
             id: tripId,
@@ -189,14 +224,18 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
             isAssigned: isAssigned,
         };
 
+        // [STRICT SEPARATION] Dashboard handles LIVE rides and UNACCEPTED Assigned rides.
+        // UNACCEPTED Scheduled requests are filtered out and managed via the Scheduled Rides screen.
+        // Notification is handled by SocketProvider's NEW_SCHEDULED_RIDE listener.
+        const isScheduledRequest = newRide.booking_type === 'SCHEDULED' && !isAssigned;
+        if (isScheduledRequest) {
+            console.log(`[useRideFeed] Ignoring SCHEDULED request ${newRide.id} for dashboard queue.`);
+            // Refetch scheduled rides in the background to update RTK Query cache
+            triggerGetIncoming('SCHEDULED');
+            return; // Don't add to dashboard queue
+        }
+
         setRideQueue(prev => {
-            // [STRICT SEPARATION] Dashboard handles LIVE rides and UNACCEPTED Assigned rides.
-            // UNACCEPTED Scheduled requests are filtered out and managed via the Scheduled Rides screen.
-            const isScheduledRequest = newRide.booking_type === 'SCHEDULED' && !isAssigned;
-            if (isScheduledRequest) {
-                console.log(`[useRideFeed] Ignoring SCHEDULED request ${newRide.id} for dashboard queue.`);
-                return prev;
-            }
             
             // ACCEPTED Scheduled rides should NOT be in the floating dashboard queue.
             // They are handled by the native 'nextScheduledRide' widget on the dashboard.
@@ -311,7 +350,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                                 console.log(`[useRideFeed] Cold-start Ride ${tripId} is no longer available.`);
                             }
                         } catch (err) {
-                            console.error('[useRideFeed] Failed to verify cold-start ride:', err);
+                            console.warn('[useRideFeed] Failed to verify cold-start ride:', err);
                             handleIncomingRide({ ...data, noVibrate: true });
                         }
                     })();
@@ -352,7 +391,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                     });
                 }
             } catch (err) {
-                console.error('[useRideFeed] Failed to verify ride status:', err);
+                console.warn('[useRideFeed] Failed to verify ride status:', err);
                 // Fallback: show anyway if error, handleIncomingRide will handle expiry if createdAt is present
                 handleIncomingRide({ ...data, noVibrate: true });
             }
@@ -531,7 +570,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                 try {
                     const result = await triggerGetTrip(String(tripId)).unwrap();
                     if (result?.data) handleIncomingRide({ ...result.data, noVibrate: true });
-                } catch (e) { console.error('Failed to refresh scheduled ride:', e); }
+                } catch (e) { console.warn('Failed to refresh scheduled ride:', e); }
             }
         });
 
@@ -550,7 +589,7 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
                             })
                             .forEach(trip => handleIncomingRide({ ...trip, noVibrate: true }));
                     }
-                } catch (e) { console.error('Failed to sync rides on reconnect:', e); }
+                } catch (e) { console.warn('Failed to sync rides on reconnect:', e); }
             }
         });
 

@@ -147,14 +147,16 @@ const CompactRideAlertCard: React.FC<Props> = ({ item, onAccept, onReject, isMul
   };
 
   const isRoundTrip = item.ride_type === 'ROUND_TRIP' || item.ride_type === 'OUTSTATION_ROUND_TRIP';
-  const tripDistanceNum = parseFloat(item.trip_distance?.toString() || '0');
-  const displayDistance = isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : (tripDistanceNum ? tripDistanceNum.toFixed(1) : '--');
+  const parsedTripDistance = parseFloat(((item as any).trip_distance || (item as any).distance_km || item.distance || '0').toString().replace(/[^0-9.]/g, ''));
+  const tripDistanceNum = isNaN(parsedTripDistance) ? 0 : parsedTripDistance;
+  const displayDistance = tripDistanceNum > 0 ? (isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : tripDistanceNum.toFixed(1)) : '--';
 
-  const tripTimeNum = parseFloat(item.trip_time?.toString() || '0');
-  const displayTime = isRoundTrip ? (tripTimeNum * 2).toFixed(0) : (tripTimeNum ? tripTimeNum.toFixed(0) : '--');
+  const parsedTripTime = parseFloat(((item as any).trip_time || (item as any).trip_duration_minutes || item.eta || '0').toString().replace(/[^0-9.]/g, ''));
+  const tripTimeNum = isNaN(parsedTripTime) ? 0 : parsedTripTime;
+  const displayTime = tripTimeNum > 0 ? (isRoundTrip ? (tripTimeNum * 2).toFixed(0) : tripTimeNum.toFixed(0)) : '--';
 
-  const pickupDistance = item.distance_to_pickup || item.distance || '--';
-  const pickupTime = item.eta_to_pickup || item.eta || '--';
+  const pickupDistance = (item.distance_to_pickup && item.distance_to_pickup !== '--') ? item.distance_to_pickup : (item.distance && item.distance !== '--' ? item.distance : '--');
+  const pickupTime = (item.eta_to_pickup && item.eta_to_pickup !== '--') ? item.eta_to_pickup : (item.eta && item.eta !== '--' ? item.eta : '--');
 
   // Split addresses for better display
   const pickupParts = (item.pickup || '').split(',').map(p => p.trim());

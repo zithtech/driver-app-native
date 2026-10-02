@@ -38,7 +38,7 @@ import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import { useLocation } from '../../hooks/useLocation';
 import { useDestinationReachedTripMutation, useTriggerSosMutation, useCancelTripMutation, useGetTripByIdQuery, useWaitingTripMutation } from '../../service/driverApi';
-import { clearAcceptedRide } from '../../redux/rideSlice';
+import { clearAcceptedRide, setCurrentRide } from '../../redux/rideSlice';
 import { MapConnectionStatus, CancellationModal } from '../../Components';
 import { useLocationTracker } from '../../hooks/useLocationTracker';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -147,6 +147,20 @@ const DropMapScreen = ({ route }: any) => {
   const [showEndTripConfirmModal, setShowEndTripConfirmModal] = useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showHelpDropdown, setShowHelpDropdown] = useState(false);
+
+  // Fix for Android OutOfMemoryError on setMyLocationEnabled
+  const [showUserLoc, setShowUserLoc] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    const timer = setTimeout(() => {
+      if (mounted) setShowUserLoc(true);
+    }, 800);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      setShowUserLoc(false);
+    };
+  }, []);
 
   const getVehicleInfo = useCallback((type?: string) => {
     const lowerType = type?.toLowerCase() || '';
@@ -448,6 +462,20 @@ const DropMapScreen = ({ route }: any) => {
 
         setDistance(currentDistance);
         setEta(currentEta);
+
+        // Voice Alert (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalVoiceRef.current) {
+          hasNotifiedArrivalVoiceRef.current = true;
+          audioService.speak(t('reached_drop_voice', 'You have reached the drop location'));
+        }
+
+        // Automatic Arrival Push Notification & Bottom Sheet Auto-Expand (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalRef.current) {
+          hasNotifiedArrivalRef.current = true;
+          if (bottomSheetRef.current) {
+            bottomSheetRef.current.snapToIndex(1);
+          }
+        }
       }
 
       if (isAutoFollow && mapRef.current) {
@@ -546,14 +574,14 @@ const DropMapScreen = ({ route }: any) => {
         const factor = initialDistance.current > 0 ? (initialEta.current / initialDistance.current) : 4;
         setEta(Math.max(1, Math.round(remainKm * factor)));
 
-        // Voice Alert (10 meters)
-        if (remainKm <= 0.01 && !hasNotifiedArrivalVoiceRef.current) {
+        // Voice Alert (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalVoiceRef.current) {
           hasNotifiedArrivalVoiceRef.current = true;
-          audioService.speak(t('reached_drop_voice') || 'You have reached the drop location');
+          audioService.speak(t('reached_drop_voice', 'You have reached the drop location'));
         }
 
-        // Automatic Arrival Push Notification & Bottom Sheet Auto-Expand (10 meters)
-        if (remainKm <= 0.01 && !hasNotifiedArrivalRef.current) {
+        // Automatic Arrival Push Notification & Bottom Sheet Auto-Expand (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalRef.current) {
           hasNotifiedArrivalRef.current = true;
           if (bottomSheetRef.current) {
             bottomSheetRef.current.snapToIndex(1);
@@ -612,11 +640,14 @@ const DropMapScreen = ({ route }: any) => {
         : (initialEta.current || 15);
 
       if (ride?.ride_type === 'ROUND_TRIP' || ride?.ride_type === 'OUTSTATION_ROUND_TRIP') {
-        await waitingTripApi(trip_id.toString()).unwrap();
+        const result = await waitingTripApi(trip_id.toString()).unwrap();
+        const updatedRide = result?.data || { ...ride, trip_status: 'WAITING' };
+        dispatch(setCurrentRide(updatedRide));
         triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
-        navigation.replace('WaitingScreen', { ride });
+        navigation.replace('WaitingScreen', { ride: updatedRide });
       } else {
         await destinationReachedApi(trip_id.toString()).unwrap();
+        dispatch(setCurrentRide({ ...ride, trip_status: 'DESTINATION_REACHED' }));
         triggerHaptic?.(HapticFeedbackTypes.notificationSuccess);
         navigation.replace('PaymentCollectionScreen', {
           ride,
@@ -796,6 +827,20 @@ const DropMapScreen = ({ route }: any) => {
       </Pressable>
     </Modal>
   );
+
+  // Proximity Logic: Auto-expand bottom sheet and trigger voice at 50m (0.05km)
+  useEffect(() => {
+    if (distance <= 0.05) {
+      if (!hasNotifiedArrivalRef.current) {
+        hasNotifiedArrivalRef.current = true;
+        bottomSheetRef.current?.snapToIndex(1);
+      }
+      if (!hasNotifiedArrivalVoiceRef.current) {
+        hasNotifiedArrivalVoiceRef.current = true;
+        audioService.speak(t('reached_drop_voice', 'You have reached the drop location'));
+      }
+    }
+  }, [distance, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

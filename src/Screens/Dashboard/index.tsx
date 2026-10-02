@@ -720,6 +720,9 @@ const DriverDashboard = () => {
           onViewAllPress={() => navigation.navigate('EarningsScreen')}
         />
 
+        {/* ── ACTIVE RIDE BANNER ── */}
+        <ActiveRideBanner />
+
         {/* ── QUICK ACTIONS ── */}
         <QuickActions />
 
@@ -756,9 +759,6 @@ const DriverDashboard = () => {
 
         {/* ── SUBSCRIPTION CARD ── */}
         <RechargeCard subscription={subData?.data?.subscription} />
-
-        {/* ── ACTIVE RIDE BANNER ── */}
-        <ActiveRideBanner />
 
         {/* ── RECENT ACTIVITY ── */}
         <RecentActivity items={combinedActivity} />

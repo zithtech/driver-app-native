@@ -336,11 +336,20 @@ export const useAuthBootstrap = () => {
     useEffect(() => { currentRideRef.current = currentRide; }, [currentRide]);
 
     useEffect(() => {
-        if (isActiveTripSuccess && activeTripData?.data) {
-            console.log('[AuthBootstrap] 🚖 Active trip found:', activeTripData.data.trip_id);
-            dispatch(setCurrentRide(activeTripData.data));
+        let validTripData = null;
+        if (activeTripData?.data) {
+            if (Array.isArray(activeTripData.data) && activeTripData.data.length > 0) {
+                validTripData = activeTripData.data[0];
+            } else if (!Array.isArray(activeTripData.data) && (activeTripData.data.trip_id || activeTripData.data.id)) {
+                validTripData = activeTripData.data;
+            }
+        }
+
+        if (isActiveTripSuccess && validTripData) {
+            console.log('[AuthBootstrap] 🚖 Active trip found:', validTripData.trip_id || validTripData.id);
+            dispatch(setCurrentRide(validTripData));
             setTripProcessed(true);
-        } else if (isActiveTripError || (isActiveTripSuccess && !activeTripData?.data)) {
+        } else if (isActiveTripError || (isActiveTripSuccess && !validTripData)) {
             // 🛡️ RECOVERY FIX: Only clear currentRide if it's NOT a scheduled ride AND it's not a recently accepted live ride.
             // When a driver accepts a ride, there is a race condition where activeTripData might poll and return null
             // before the backend has fully registered the trip as active.
@@ -363,7 +372,7 @@ export const useAuthBootstrap = () => {
                 ACTIVE_STATUSES.includes((currentRideObj.trip_status || currentRideObj.status || '').toUpperCase());
 
             console.log('[AuthBootstrap] 🔍 Trip recovery decision:', {
-                hasApiData: !!activeTripData?.data,
+                hasApiData: !!validTripData,
                 isApiError: isActiveTripError,
                 persistedStatus: currentRideObj?.trip_status || currentRideObj?.status || 'NONE',
                 persistedTripId: currentRideObj?.trip_id || currentRideObj?.id || 'NONE',
@@ -371,7 +380,7 @@ export const useAuthBootstrap = () => {
                 isRecentlyAcceptedLive,
             });
             
-            if (!activeTripData?.data && !isPersistedScheduled && !isRecentlyAcceptedLive) {
+            if (!validTripData && !isPersistedScheduled && !isRecentlyAcceptedLive) {
                 console.log('[AuthBootstrap] No active trip found on backend, clearing non-scheduled currentRide');
                 dispatch(setCurrentRide(null));
             } else if (isPersistedScheduled) {

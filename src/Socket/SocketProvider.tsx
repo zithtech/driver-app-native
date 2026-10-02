@@ -174,6 +174,22 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
         socketService.on("rider_cancelled", handleGlobalCancellation);
         socketService.on("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
 
+        // 🛡️ Global New Scheduled Ride Listener
+        socketService.on("NEW_SCHEDULED_RIDE", (data: any) => {
+            console.log('[SocketProvider] New scheduled ride available:', data);
+            
+            // Check if user is already on Scheduled Rides screen
+            const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
+            if (currentRoute?.name !== 'ScheduledRides') {
+                audioService.speak('A new scheduled ride is available');
+                showToast({
+                    message: 'New scheduled ride available!',
+                    type: 'info',
+                    duration: 5000
+                });
+            }
+        });
+
         // 🛡️ Document Status Update Listener
         socketService.on("DOCUMENT_STATUS_UPDATE", (data: any) => {
             console.log('[SocketProvider] Document status update received:', data);
@@ -254,6 +270,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             socketService.off("TRIP_CANCELLED", handleGlobalCancellation);
             socketService.off("rider_cancelled", handleGlobalCancellation);
             socketService.off("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
+            socketService.off("NEW_SCHEDULED_RIDE");
             socketService.off("ACCOUNT_STATUS_UPDATE");
             socketService.off("DOCUMENT_STATUS_UPDATE");
             socketService.off("PLAN_ELIGIBILITY_UPDATE");

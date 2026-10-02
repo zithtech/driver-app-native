@@ -150,14 +150,20 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
   };
 
   const isRoundTrip = item.ride_type === 'ROUND_TRIP' || item.ride_type === 'OUTSTATION_ROUND_TRIP';
-  const tripDistanceNum = parseFloat(item.trip_distance?.toString() || '0');
-  const displayDistance = isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : (tripDistanceNum ? tripDistanceNum.toFixed(1) : '--');
+  
+  const parsedTripDistance = parseFloat(((item as any).trip_distance || (item as any).distance_km || item.distance || '0').toString().replace(/[^0-9.]/g, ''));
+  const tripDistanceNum = isNaN(parsedTripDistance) ? 0 : parsedTripDistance;
+  const displayDistance = tripDistanceNum > 0 ? (isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : tripDistanceNum.toFixed(1)) : '--';
 
-  const tripTimeNum = parseFloat(item.trip_time?.toString() || '0');
-  const displayTime = isRoundTrip ? (tripTimeNum * 2).toFixed(0) : (tripTimeNum ? tripTimeNum.toFixed(0) : '--');
+  const parsedTripTime = parseFloat(((item as any).trip_time || (item as any).trip_duration_minutes || item.eta || '0').toString().replace(/[^0-9.]/g, ''));
+  const tripTimeNum = isNaN(parsedTripTime) ? 0 : parsedTripTime;
+  const displayTime = tripTimeNum > 0 ? (isRoundTrip ? (tripTimeNum * 2).toFixed(0) : tripTimeNum.toFixed(0)) : '--';
 
   const tripDistanceStr = displayDistance !== '--' ? `${displayDistance} km` : '--';
   const tripTimeStr = displayTime !== '--' ? `${displayTime} min` : '';
+
+  const pickupDistance = (item.distance_to_pickup && item.distance_to_pickup !== '--') ? item.distance_to_pickup : (item.distance && item.distance !== '--' ? item.distance : '--');
+  const pickupTime = (item.eta_to_pickup && item.eta_to_pickup !== '--') ? item.eta_to_pickup : (item.eta && item.eta !== '--' ? item.eta : '--');
 
   return (
     <RNAnimated.View
@@ -252,7 +258,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <MaterialCommunityIcons name="map-marker-distance" size={ms(18)} color="#4F46E5" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.distance_to_pickup || item.distance || '--'}</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{pickupDistance}</Text>
               <Text style={styles.infoLabel} numberOfLines={1}>Distance to pickup</Text>
             </View>
           </View>
@@ -262,7 +268,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <Ionicons name="time-outline" size={ms(18)} color="#059669" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.eta_to_pickup || item.eta || '--'}</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{pickupTime}</Text>
               <Text style={styles.infoLabel} numberOfLines={1}>Est. time to pickup</Text>
             </View>
           </View>

@@ -595,10 +595,10 @@ const PickupMapScreen = ({ route }: any) => {
         const factor = initialDistance.current > 0 ? (initialEta.current / initialDistance.current) : 4;
         const currentEta = Math.max(1, Math.round(remainKm * factor));
 
-        // Voice Alert (10 meters)
-        if (remainKm <= 0.01 && !hasNotifiedArrivalVoiceRef.current && !isArrivedRef.current) {
+        // Voice Alert (50 meters)
+        if (remainKm <= 0.05 && !hasNotifiedArrivalVoiceRef.current && !isArrivedRef.current) {
           hasNotifiedArrivalVoiceRef.current = true;
-          audioService.speak(t('reached_pickup_voice') || 'You have reached the pickup location');
+          audioService.speak(t('reached_pickup_voice', 'You have reached the pickup location'));
         }
 
         // Update local state for UI (renders after this loop ends)
