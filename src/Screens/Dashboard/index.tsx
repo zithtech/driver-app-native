@@ -51,7 +51,10 @@ import {
   useGetTodayOverviewQuery,
   useGetIncomingTripsQuery,
   useUpdateDriverMutation,
+  useSaveFcmTokenMutation,
 } from '../../service/driverApi';
+
+import { getFCMToken } from '../../services/notificationService';
 
 // ── DashComponents ──
 import DashboardMap from './dashComponents/DashboardMap';
@@ -78,6 +81,7 @@ import RatingReceivedModal from '../../Components/RatingReceivedModal';
 import AppStatusBar from '../../Components/AppStatusBar';
 import { setLastTripRating, setCurrentRide } from '../../redux/rideSlice';
 import axiosInstance from '../../api/axiosInstance';
+import { FloatingOverlayService } from '../../service/floatingOverlayService';
 // Use RideItem from the hook
 // Use RideItem from the hook, but for now we keep the local type for compatibility if needed.
 // Actually, let's just use it implicitly.
@@ -126,6 +130,7 @@ const DriverDashboard = () => {
   const [acceptTripApi] = useAcceptTripMutation();
   const [arrivingTrip] = useArrivingTripMutation();
   const [updateDriver] = useUpdateDriverMutation();
+  const [saveFcmToken] = useSaveFcmTokenMutation();
 
   // ── BACKEND DATA ──
   const { data: subData, isLoading: isSubLoading, refetch: refetchSub } = useGetMySubscriptionQuery();
@@ -350,8 +355,37 @@ const DriverDashboard = () => {
       }
 
       const proceedToOnline = async () => {
+        if (Platform.OS === 'android') {
+          const hasOverlay = await FloatingOverlayService.checkPermission();
+          if (!hasOverlay) {
+             showAlert(
+               'Permission Required',
+               'Floating Quick Access requires permission to display over other apps.',
+               {
+                 icon: 'layers-outline',
+                 singleButton: false,
+                 confirmText: 'Enable',
+                 onConfirm: () => {
+                   setAlertModalVisible(false);
+                   FloatingOverlayService.requestPermission();
+                 }
+               }
+             );
+          }
+        }
         try {
           const res = await goOnline(currentDriverId).unwrap();
+          
+          // Phase 1: Register FCM Token when going online
+          try {
+            const token = await getFCMToken();
+            if (token) {
+              await saveFcmToken({ driverId: currentDriverId, fcmToken: token }).unwrap();
+            }
+          } catch (tokenErr) {
+            console.log('Error saving FCM token on go online:', tokenErr);
+          }
+
           dispatch(setOnlineStatus(true));
           try {
             ReactNativeHapticFeedback.trigger('impactLight');

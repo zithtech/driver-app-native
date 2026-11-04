@@ -8,7 +8,6 @@ import {
   Platform,
   Pressable,
   KeyboardAvoidingView,
-  Image,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,6 +37,8 @@ const isAgeValid = (date: Date) => {
 
   return age >= 18;
 };
+
+const cleanStepText = (text: string) => (text ? text.replace(/\\n/g, '\n') : '');
 
 /* ================= SCREEN ================= */
 
@@ -291,28 +292,36 @@ const PersonalDetails = ({ navigation }: any) => {
               <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Ionicons name="checkmark" size={16} color="#FFF" />
               </View>
-              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('mobile_verification_step', 'Mobile\nVerification')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+              </Text>
             </View>
             {/* Step 2 */}
             <View style={styles.stepContainer}>
               <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Text style={[styles.stepNumber, { color: '#FFF' }]}>2</Text>
               </View>
-              <Text style={[styles.stepText, { color: colors.primary }]}>{t('personal_details_step', 'Personal\nDetails')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
+                {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+              </Text>
             </View>
             {/* Step 3 */}
             <View style={styles.stepContainer}>
               <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
                 <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>3</Text>
               </View>
-              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('address_details_step', 'Address\nDetails')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+              </Text>
             </View>
             {/* Step 4 */}
             <View style={styles.stepContainer}>
               <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
                 <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>4</Text>
               </View>
-              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('documents_upload_step', 'Documents\nUpload')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+              </Text>
             </View>
           </View>
         </View>
@@ -335,10 +344,6 @@ const PersonalDetails = ({ navigation }: any) => {
                   {t('personal_details_subtitle', 'Please enter your details exactly as per your official documents.')}
                 </Text>
               </View>
-              <Image 
-                source={require('../../assets/images/personaldetailsImg.png')} 
-                style={styles.headerImage} 
-              />
             </View>
 
             {/* FORM CARD */}
@@ -614,11 +619,12 @@ const styles = StyleSheet.create({
   },
   progressLineContainer: {
     position: 'absolute',
-    top: 28,
-    left: 40,
-    right: 40,
+    top: 23,
+    left: 48,
+    right: 48,
     height: 2,
     flexDirection: 'row',
+    zIndex: 1,
   },
   progressLine: {
     height: '100%',
@@ -626,10 +632,12 @@ const styles = StyleSheet.create({
   progressStepsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    zIndex: 2,
   },
   stepContainer: {
     alignItems: 'center',
-    width: 60,
+    flex: 1,
+    paddingHorizontal: 2,
   },
   stepCircle: {
     width: 24,
@@ -640,7 +648,7 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   stepNumber: {
     fontSize: 12,
@@ -649,6 +657,7 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontSize: 10,
+    lineHeight: 13,
     color: '#9CA3AF',
     textAlign: 'center',
     fontWeight: '600',
@@ -656,15 +665,11 @@ const styles = StyleSheet.create({
 
   /* Header */
   headerSection: {
-    flexDirection: 'row',
     paddingHorizontal: 16,
-    justifyContent: 'space-between',
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   headerTextContainer: {
-    flex: 1,
     justifyContent: 'center',
-    paddingRight: 10,
   },
   headerTitle: {
     fontSize: 22,
@@ -676,12 +681,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
     lineHeight: 18,
-  },
-  headerImage: {
-    width: 110,
-    height: 110,
-    resizeMode: 'contain',
-    marginRight: -10,
   },
 
   /* Form Card */

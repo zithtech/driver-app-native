@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { globalEmitter, EVENTS } from '../utils/EventEmitter';
 import { useNavigation } from '@react-navigation/native';
 import { ScheduledRides_Nav } from '../Navigations/navigations';
+import { cancelCustomNotification } from '../services/CustomNotificationService';
 
 
 
@@ -497,6 +498,9 @@ export const useRideFeed = ({ isOnline, showConfirmModal, acceptedRide }: UseRid
 
         // 1. Remove from local queue immediately
         setRideQueue(prev => prev.filter(r => String(r.id) !== tripId));
+
+        // Clear Android custom notification if it's still ringing
+        cancelCustomNotification(tripId);
 
         // 2. Track as rejected so reconnect sync won't re-add it (ONLY on manual decline)
         if (isManualDecline) {

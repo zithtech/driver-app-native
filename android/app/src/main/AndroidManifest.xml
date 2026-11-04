@@ -41,6 +41,9 @@
     <!-- CONTACTS (For SOS Trusted Contacts feature) -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- OVERLAY (For Floating Quick Access Button) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
 
     <application
       android:name=".MainApplication"
@@ -96,6 +99,12 @@
       <service 
           android:name="com.asterinet.react.bgactions.RNBackgroundActionsTask"
           android:foregroundServiceType="location" />
+
+      <!-- REQUIRED FOR Floating Quick Access Button -->
+      <service 
+          android:name=".floating.FloatingOverlayService"
+          android:exported="false"
+          android:foregroundServiceType="specialUse" />
 
     </application>
 </manifest>

@@ -39,6 +39,8 @@ import { useLocation } from '../../hooks/useLocation';
 import { ALL_CITIES, ALL_STATES, ALL_DISTRICTS } from '../../constant/cities';
 import AppStatusBar from '../../Components/AppStatusBar';
 
+const cleanStepText = (text: string) => (text ? text.replace(/\\n/g, '\n') : '');
+
 /* ================= COMPONENT EXTRACTIONS ================= */
 const Dot: React.FC<{ index: number }> = ({ index: _index }) => {
   const dotScale = useSharedValue(1);
@@ -330,28 +332,36 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
               <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Ionicons name="checkmark" size={16} color="#FFF" />
               </View>
-              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('mobile_verification_step', 'Mobile\nVerification')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+              </Text>
             </View>
             {/* Step 2 */}
             <View style={styles.stepContainer}>
               <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Ionicons name="checkmark" size={16} color="#FFF" />
               </View>
-              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('personal_details_step', 'Personal\nDetails')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+              </Text>
             </View>
             {/* Step 3 */}
             <View style={styles.stepContainer}>
               <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                 <Text style={[styles.stepNumber, { color: '#FFF' }]}>3</Text>
               </View>
-              <Text style={[styles.stepText, { color: colors.primary }]}>{t('address_details_step', 'Address\nDetails')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
+                {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+              </Text>
             </View>
             {/* Step 4 */}
             <View style={styles.stepContainer}>
               <View style={[styles.stepCircle, { backgroundColor: isDark ? colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
                 <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>4</Text>
               </View>
-              <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>{t('documents_upload_step', 'Documents\nUpload')}</Text>
+              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+              </Text>
             </View>
           </View>
         </View>
@@ -637,16 +647,17 @@ const styles = StyleSheet.create({
 
   /* --- PROGRESS BAR --- */
   progressWrapper: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 10,
     position: 'relative',
     marginBottom: 4,
   },
   progressLineContainer: {
     position: 'absolute',
-    top: 21,
-    left: 45,
-    right: 45,
+    top: 23,
+    left: 48,
+    right: 48,
     height: 2,
     flexDirection: 'row',
     zIndex: 1,
@@ -661,18 +672,19 @@ const styles = StyleSheet.create({
   },
   stepContainer: {
     alignItems: 'center',
-    width: 60,
+    flex: 1,
+    paddingHorizontal: 2,
   },
   stepCircle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   stepNumber: {
     fontSize: 12,
@@ -680,11 +692,11 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   stepText: {
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     color: '#6B7280',
     textAlign: 'center',
-    fontWeight: '500',
-    lineHeight: 12,
+    fontWeight: '600',
   },
 
   /* --- HEADER --- */

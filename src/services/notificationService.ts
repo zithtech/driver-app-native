@@ -25,6 +25,8 @@ import {
 } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 import { globalEmitter, EVENTS } from '../utils/EventEmitter';
+import { displayCustomNotification, isRideNotificationRejected } from './CustomNotificationService';
+import { Platform } from 'react-native';
 
 /* ================================================================
    CONSTANTS
@@ -375,9 +377,38 @@ export function setupBackgroundHandler(): void {
         body = formatted.body;
         const notificationId = String(remoteMessage.data?.trip_id || remoteMessage.data?.id || remoteMessage.data?.tripId || Date.now());
 
+        // Skip if this ride request was already rejected locally
+        if (isLiveRideRequest && isRideNotificationRejected(notificationId)) {
+            console.log(`📩 [Background] Ignoring Push for rejected ride ${notificationId}`);
+            return;
+        }
+
         // If it's a cancellation, cancel any existing ringing notification first
         if (isCancellation) {
             await notifee.cancelNotification(notificationId);
+        }
+
+        // Custom layout for New Ride Requests on Android
+        if (isLiveRideRequest && Platform.OS === 'android') {
+            const rawFare = String(remoteMessage.data?.fare || remoteMessage.data?.amount || remoteMessage.data?.total_fare || '0');
+            const fareFormatted = rawFare.startsWith('₹') ? rawFare : `₹${rawFare}`;
+
+            let distanceFormatted = 'Unknown';
+            const distanceMeters = remoteMessage.data?.distanceToUser;
+            if (distanceMeters) {
+                distanceFormatted = `${(Number(distanceMeters) / 1000).toFixed(1)} km`;
+            } else if (remoteMessage.data?.distance_km) {
+                distanceFormatted = `${remoteMessage.data.distance_km} km`;
+            } else if (remoteMessage.data?.distance) {
+                distanceFormatted = String(remoteMessage.data.distance);
+            }
+
+            displayCustomNotification({
+                tripId: notificationId,
+                distance: distanceFormatted,
+                fare: fareFormatted
+            });
+            return;
         }
 
         await notifee.displayNotification({
@@ -421,7 +452,20 @@ export function onTokenRefresh(
 
 // 2. App was completely killed, user taps notification
 // Capture this as early as possible (at file load) to avoid missing it due to race conditions
-(() => { try { return getInitialNotification(getMessaging()); } catch(e) { return Promise.resolve(null); } })()
+import { getInitialRideRequest } from './CustomNotificationService';
+
+(() => { 
+    try { 
+        return Promise.all([
+            getInitialNotification(getMessaging()),
+            getInitialRideRequest()
+        ]).then(([remoteMessage, customMessage]) => {
+            return (customMessage ? { data: customMessage } : remoteMessage) as FirebaseMessagingTypes.RemoteMessage | null;
+        });
+    } catch(e) { 
+        return Promise.resolve(null); 
+    } 
+})()
     .then(remoteMessage => {
         if (!remoteMessage) return;
 

@@ -47,6 +47,8 @@ import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
 import WaitingForApprovalModal from './components/WaitingForApprovalModal';
 
+const cleanStepText = (text: string) => (text ? text.replace(/\\n/g, '\n') : '');
+
 /* ================= TYPES ================= */
 
 interface DocumentItem {
@@ -469,28 +471,36 @@ const DocumentScreen = ({ navigation }: any) => {
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Mobile{'\n'}Verification</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+              {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+            </Text>
           </View>
           {/* Step 2 */}
           <View style={styles.stepContainer}>
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Personal{'\n'}Details</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+              {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+            </Text>
           </View>
           {/* Step 3 */}
           <View style={styles.stepContainer}>
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Address{'\n'}Details</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+              {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+            </Text>
           </View>
           {/* Step 4 */}
           <View style={styles.stepContainer}>
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Text style={[styles.stepNumber, { color: '#FFF' }]}>4</Text>
             </View>
-            <Text style={[styles.stepText, { color: colors.primary }]}>Documents{'\n'}Upload</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
+              {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+            </Text>
           </View>
         </View>
       </View>
@@ -521,10 +531,6 @@ const DocumentScreen = ({ navigation }: any) => {
                   Please upload clear and original documents.
                 </Text>
               </View>
-              <Image 
-                source={require('../../assets/images/documents.png')} 
-                style={styles.headerImage} 
-              />
             </View>
 
             {/* INFO BANNER */}
@@ -737,17 +743,18 @@ const styles = StyleSheet.create({
   /* Progress Bar */
   progressWrapper: {
     paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 4,
+    paddingTop: 12,
+    paddingBottom: 10,
     position: 'relative',
   },
   progressLineContainer: {
     position: 'absolute',
-    top: 22,
-    left: 40,
-    right: 40,
+    top: 23,
+    left: 48,
+    right: 48,
     height: 2,
     flexDirection: 'row',
+    zIndex: 1,
   },
   progressLine: {
     height: '100%',
@@ -755,10 +762,12 @@ const styles = StyleSheet.create({
   progressStepsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    zIndex: 2,
   },
   stepContainer: {
     alignItems: 'center',
-    width: 60,
+    flex: 1,
+    paddingHorizontal: 2,
   },
   stepCircle: {
     width: 24,
@@ -769,7 +778,7 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   stepNumber: {
     fontSize: 12,
@@ -777,7 +786,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepText: {
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     color: '#9CA3AF',
     textAlign: 'center',
     fontWeight: '600',
@@ -785,16 +795,11 @@ const styles = StyleSheet.create({
 
   /* Header Section */
   headerSection: {
-    position: 'relative',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    minHeight: 60,
+    marginBottom: 14,
   },
   headerTextContainer: {
-    width: '65%',
+    width: '100%',
     justifyContent: 'center',
-    paddingRight: 10,
   },
   headerTitle: {
     fontSize: 20,
@@ -806,15 +811,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
     lineHeight: 16,
-  },
-  headerImage: {
-    position: 'absolute',
-    right: -10,
-    top: -30,
-    width: 130,
-    height: 130,
-    resizeMode: 'contain',
-    zIndex: 1,
   },
 
   /* Info Banner */

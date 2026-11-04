@@ -111,7 +111,22 @@ export const driverApi = createApi({
     }),
 
     // Save document after upload
-    saveDocument: builder.mutation<any, { driverId: string; documentType: string; documentUrl: Record<string, string> }>({
+    saveDocument: builder.mutation<any, {
+      driverId: string;
+      documentType: string;
+      documentUrl: Record<string, string>;
+      documentNumber?: string;
+      document_number?: string;
+      licenseNumber?: string;
+      license_number?: string;
+      panNumber?: string;
+      pan_number?: string;
+      aadhaarNumber?: string;
+      aadhaar_number?: string;
+      aadharNumber?: string;
+      aadhar_number?: string;
+      [key: string]: any;
+    }>({
       query: ({ driverId, ...body }) => ({
         url: `/drivers/documents/save/${driverId}`,
         method: 'POST',

@@ -127,6 +127,7 @@ import socketService from '../service/socketService';
 import audioService from '../utils/audioService';
 import { StackActions } from '@react-navigation/native';
 import { globalEmitter, EVENTS as GLOBAL_EVENTS } from '../utils/EventEmitter';
+import { FloatingOverlayService } from '../service/floatingOverlayService';
 
 const Stack = createStackNavigator();
 
@@ -363,6 +364,45 @@ const RootNavigation = () => {
     const timer = setTimeout(tryRedirect, 500);
     return () => clearTimeout(timer);
   }, [isBootstrapping, currentRide]);
+
+  // 5. Floating Overlay Sync
+  useEffect(() => {
+    if (!isAuthenticated) {
+      FloatingOverlayService.stop();
+      return;
+    }
+
+    if (currentRide) {
+      const rawStatus = (currentRide.trip_status || (currentRide as any).status || '').toUpperCase();
+      
+      if (['ARRIVING', 'ARRIVED', 'ACCEPTED'].includes(rawStatus)) {
+         FloatingOverlayService.updateState('INCOMING_RIDE');
+         FloatingOverlayService.start('INCOMING_RIDE');
+      } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
+         FloatingOverlayService.updateState('ACTIVE_TRIP');
+         FloatingOverlayService.start('ACTIVE_TRIP');
+      } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
+         FloatingOverlayService.updateState('ROUND_TRIP_WAITING');
+         FloatingOverlayService.start('ROUND_TRIP_WAITING');
+      } else {
+         FloatingOverlayService.updateState('DEFAULT');
+         FloatingOverlayService.start('DEFAULT');
+      }
+    } else if (user?.isOnline) {
+      FloatingOverlayService.start('DEFAULT');
+    } else {
+      FloatingOverlayService.stop();
+    }
+  }, [isAuthenticated, currentRide, user?.isOnline]);
+
+  useEffect(() => {
+    const subscription = FloatingOverlayService.onTap(() => {
+      console.log('[RootNavigation] Floating Button Tapped');
+      // Reset the recovery flag to force a redirect to the active trip screen
+      hasRedirectedRef.current = false;
+    });
+    return () => subscription?.remove();
+  }, []);
 
   /* ================= NAVIGATION LOGIC ================= */
 
