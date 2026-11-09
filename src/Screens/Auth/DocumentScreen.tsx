@@ -546,48 +546,6 @@ const DocumentScreen = ({ navigation }: any) => {
               </Text>
             </View>
 
-            {/* FAST VIDEO KYC ACTION CARD (SKIP UPLOAD) */}
-            <TouchableOpacity
-              activeOpacity={0.88}
-              onPress={() => {
-                triggerHaptic(HapticFeedbackTypes.impactMedium);
-                navigation.navigate(VideoKYCWaiting_Nav);
-              }}
-              style={[
-                styles.videoKycCard,
-                {
-                  backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF',
-                  borderColor: isDark ? '#2563EB' : '#93C5FD',
-                },
-              ]}
-            >
-              <View style={styles.videoKycHeaderRow}>
-                <View style={styles.videoKycIconBadge}>
-                  <Ionicons name="videocam" size={20} color="#FFFFFF" />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={[fonts.bold, { color: isDark ? '#93C5FD' : '#1D4ED8', fontSize: 14 }]}>
-                      Skip Upload & Verify via Video KYC
-                    </Text>
-                    <View style={styles.fastTag}>
-                      <Text style={styles.fastTagText}>INSTANT</Text>
-                    </View>
-                  </View>
-                  <Text style={{ color: isDark ? '#BFDBFE' : '#475569', fontSize: 12, marginTop: 2 }}>
-                    Skip document uploads! Connect live with an admin verification officer to verify original documents.
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.videoKycButtonRow}>
-                <View style={styles.videoKycCta}>
-                  <Text style={styles.videoKycCtaText}>Start Video Verification</Text>
-                  <Ionicons name="arrow-forward" size={14} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                </View>
-              </View>
-            </TouchableOpacity>
-
             {/* REJECTION BANNER */}
             {(isDocsRejected || user?.status === 'rejected' || user?.status === 'blocked') && (
               <View style={[styles.rejectionBanner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FECACA' }, (user?.status === 'blocked' || user?.status === 'rejected') && { borderLeftColor: '#EF4444' }]}>
@@ -734,11 +692,17 @@ const DocumentScreen = ({ navigation }: any) => {
             triggerHaptic(HapticFeedbackTypes.impactLight);
             navigation.navigate(VideoKYCWaiting_Nav);
           }}
-          style={styles.skipToVideoBtn}
+          style={[
+            styles.skipToVideoBtn,
+            {
+              backgroundColor: isDark ? 'rgba(37, 99, 235, 0.12)' : '#EFF6FF',
+              borderColor: isDark ? 'rgba(37, 99, 235, 0.3)' : '#BFDBFE',
+            },
+          ]}
         >
-          <Ionicons name="videocam" size={16} color="#2563EB" />
-          <Text style={[fonts.bold, { color: '#2563EB', fontSize: 13, marginLeft: 6 }]}>
-            Skip Upload & Test Video KYC →
+          <Ionicons name="videocam" size={18} color="#2563EB" />
+          <Text style={[fonts.bold, { color: '#2563EB', fontSize: 13, marginLeft: 8 }]}>
+            {t('skip_upload_video_kyc', 'Skip Upload & Verify via Video KYC →')}
           </Text>
         </TouchableOpacity>
 
@@ -1270,7 +1234,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    marginTop: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
   },
 });

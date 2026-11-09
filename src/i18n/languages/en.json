@@ -1392,6 +1392,7 @@
   "video_kyc_rejected_desc": "The officer was unable to verify your identity. Please check the remarks and try again.",
   "video_kyc_permission_required": "Camera and microphone permissions are required for Video KYC",
   "video_kyc_step": "Video\nKYC",
+  "skip_upload_video_kyc": "Skip Upload & Verify via Video KYC →",
   "verification_step_1": "Documents Uploaded",
   "verification_step_2": "Verification in Progress",
   "verification_step_3": "Start Earning",
