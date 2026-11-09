@@ -144,6 +144,48 @@ export const driverApi = createApi({
       invalidatesTags: ['Documents', 'Driver'],
     }),
 
+    /* ─────────── VIDEO KYC (/kyc/video) ─────────── */
+
+    // Request a Video KYC session
+    requestVideoKyc: builder.mutation<any, { driverId: string; location?: { latitude: number; longitude: number } }>({
+      query: ({ driverId, ...body }) => ({
+        url: `/kyc/video/request/${driverId}`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
+    // Get Agora RTC token for a KYC session
+    getVideoKycToken: builder.query<
+      { channelName: string; token: string; uid: number; sessionId: string },
+      { sessionId: string; driverId: string }
+    >({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/token/${sessionId}?driverId=${driverId}`,
+        method: 'GET',
+      }),
+    }),
+
+    // Get current KYC session status
+    getVideoKycStatus: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/kyc/video/status/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Driver'],
+    }),
+
+    // Cancel a pending KYC request
+    cancelVideoKyc: builder.mutation<any, { sessionId: string; driverId: string }>({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/cancel/${sessionId}`,
+        method: 'POST',
+        body: { driverId },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
     /* ─────────── TRIP VERIFICATION (/drivers/trip-verification) ─────────── */
 
     // Submit trip photos (selfie + multiple car images)
@@ -544,5 +586,13 @@ export const {
   useLazyGetMyTicketsQuery,
   useGetTicketMessagesQuery,
   useLazyGetTicketMessagesQuery,
+
+  // Video KYC
+  useRequestVideoKycMutation,
+  useGetVideoKycTokenQuery,
+  useLazyGetVideoKycTokenQuery,
+  useGetVideoKycStatusQuery,
+  useLazyGetVideoKycStatusQuery,
+  useCancelVideoKycMutation,
 } = driverApi;
 

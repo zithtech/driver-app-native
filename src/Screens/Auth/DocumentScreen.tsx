@@ -41,7 +41,7 @@ import {
   PoliceVerification,
 } from '../../assets/svg';
 
-import { DocumentUploadScreen_Nav, Dashboard_Nav, VerificationSuccessScreen_Nav } from '../../Navigations/navigations';
+import { DocumentUploadScreen_Nav, Dashboard_Nav, VerificationSuccessScreen_Nav, VideoKYCWaiting_Nav } from '../../Navigations/navigations';
 import { useHaptic } from '../../hooks/useHaptic';
 import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
@@ -457,6 +457,9 @@ const DocumentScreen = ({ navigation }: any) => {
         onContactSupport={() => {
           Linking.openURL('tel:+919043522612');
         }}
+        onRequestVideoKyc={() => {
+          navigation.navigate(VideoKYCWaiting_Nav);
+        }}
       />
 
 
@@ -542,6 +545,48 @@ const DocumentScreen = ({ navigation }: any) => {
                 All documents are secure and will be used only for verification purposes.
               </Text>
             </View>
+
+            {/* FAST VIDEO KYC ACTION CARD (SKIP UPLOAD) */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => {
+                triggerHaptic(HapticFeedbackTypes.impactMedium);
+                navigation.navigate(VideoKYCWaiting_Nav);
+              }}
+              style={[
+                styles.videoKycCard,
+                {
+                  backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF',
+                  borderColor: isDark ? '#2563EB' : '#93C5FD',
+                },
+              ]}
+            >
+              <View style={styles.videoKycHeaderRow}>
+                <View style={styles.videoKycIconBadge}>
+                  <Ionicons name="videocam" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[fonts.bold, { color: isDark ? '#93C5FD' : '#1D4ED8', fontSize: 14 }]}>
+                      Skip Upload & Verify via Video KYC
+                    </Text>
+                    <View style={styles.fastTag}>
+                      <Text style={styles.fastTagText}>INSTANT</Text>
+                    </View>
+                  </View>
+                  <Text style={{ color: isDark ? '#BFDBFE' : '#475569', fontSize: 12, marginTop: 2 }}>
+                    Skip document uploads! Connect live with an admin verification officer to verify original documents.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.videoKycButtonRow}>
+                <View style={styles.videoKycCta}>
+                  <Text style={styles.videoKycCtaText}>Start Video Verification</Text>
+                  <Ionicons name="arrow-forward" size={14} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                </View>
+              </View>
+            </TouchableOpacity>
 
             {/* REJECTION BANNER */}
             {(isDocsRejected || user?.status === 'rejected' || user?.status === 'blocked') && (
@@ -683,6 +728,20 @@ const DocumentScreen = ({ navigation }: any) => {
           {allUploaded && !isSubmitting ? t('ready_to_submit') : t('submit_for_verification')}
         </Button>
         
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            triggerHaptic(HapticFeedbackTypes.impactLight);
+            navigation.navigate(VideoKYCWaiting_Nav);
+          }}
+          style={styles.skipToVideoBtn}
+        >
+          <Ionicons name="videocam" size={16} color="#2563EB" />
+          <Text style={[fonts.bold, { color: '#2563EB', fontSize: 13, marginLeft: 6 }]}>
+            Skip Upload & Test Video KYC →
+          </Text>
+        </TouchableOpacity>
+
         <View style={styles.secureInfoContainer}>
           <Ionicons name="lock-closed-outline" size={14} color="#6B7280" />
           <Text style={[styles.secureInfoText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
@@ -1154,5 +1213,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 4,
+  },
+  videoKycCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  videoKycHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  videoKycIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fastTag: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  fastTagText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  videoKycButtonRow: {
+    marginTop: 12,
+    alignItems: 'flex-end',
+  },
+  videoKycCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  videoKycCtaText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  skipToVideoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 6,
   },
 });

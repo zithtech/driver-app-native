@@ -43,6 +43,8 @@ import {
   SubscriptionHistory_Nav,
   SubscriptionDetail_Nav,
   VerificationSuccessScreen_Nav,
+  VideoKYCWaiting_Nav,
+  VideoKYCCall_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -109,6 +111,8 @@ import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
 import PersonalDetails from '../Screens/Auth/PersonalDetails';
 import AddressDetails from '../Screens/Auth/AddressDetails';
 import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
+import VideoKYCWaitingScreen from '../Screens/Auth/VideoKYCWaitingScreen';
+import VideoKYCCallScreen from '../Screens/Auth/VideoKYCCallScreen';
 import VehicleVerificationScreen from '../Screens/Requests/VehicleVerificationScreen';
 import NavigationScreen from '../Screens/Navigation/NavigationScreen';
 import ChatScreen from '../Screens/Chatscreen';
@@ -365,6 +369,55 @@ const RootNavigation = () => {
     return () => clearTimeout(timer);
   }, [isBootstrapping, currentRide]);
 
+  // 4b. Video KYC Bootstrap Recovery: If app was killed/closed during VIDEO_KYC_IN_PROGRESS
+  useEffect(() => {
+    if (isBootstrapping || !isAuthenticated || currentRide) return;
+
+    if (onboardingStatus === 'VIDEO_KYC_IN_PROGRESS') {
+      let attempts = 0;
+      const maxAttempts = 5;
+      const tryKycRedirect = () => {
+        attempts++;
+        if (!navigationRef.isReady()) {
+          if (attempts < maxAttempts) {
+            setTimeout(tryKycRedirect, 300);
+          }
+          return;
+        }
+
+        const currentRoute = navigationRef.getCurrentRoute()?.name;
+        if (currentRoute && currentRoute !== VideoKYCCall_Nav) {
+          console.log(`[RootNavigation] 📹 Video KYC In-Progress Recovery: ${currentRoute} → ${VideoKYCCall_Nav}`);
+          navigationRef.dispatch(StackActions.replace(VideoKYCCall_Nav));
+        }
+      };
+
+      const timer = setTimeout(tryKycRedirect, 400);
+      return () => clearTimeout(timer);
+    } else if (onboardingStatus === 'VIDEO_KYC_WAITING' || onboardingStatus === 'VIDEO_KYC_REQUESTED') {
+      let attempts = 0;
+      const maxAttempts = 5;
+      const tryKycRedirect = () => {
+        attempts++;
+        if (!navigationRef.isReady()) {
+          if (attempts < maxAttempts) {
+            setTimeout(tryKycRedirect, 300);
+          }
+          return;
+        }
+
+        const currentRoute = navigationRef.getCurrentRoute()?.name;
+        if (currentRoute && currentRoute !== VideoKYCWaiting_Nav) {
+          console.log(`[RootNavigation] 📹 Video KYC Waiting Recovery: ${currentRoute} → ${VideoKYCWaiting_Nav}`);
+          navigationRef.dispatch(StackActions.replace(VideoKYCWaiting_Nav));
+        }
+      };
+
+      const timer = setTimeout(tryKycRedirect, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isBootstrapping, isAuthenticated, onboardingStatus, currentRide]);
+
   // 5. Floating Overlay Sync
   useEffect(() => {
     if (!isAuthenticated) {
@@ -488,6 +541,13 @@ const RootNavigation = () => {
         onboardingStatus === 'DOCS_REJECTED'
       ) {
         initialRoute = DocumentScreen_Nav;
+      } else if (
+        onboardingStatus === 'VIDEO_KYC_WAITING' ||
+        onboardingStatus === 'VIDEO_KYC_REQUESTED'
+      ) {
+        initialRoute = VideoKYCWaiting_Nav;
+      } else if (onboardingStatus === 'VIDEO_KYC_IN_PROGRESS') {
+        initialRoute = VideoKYCCall_Nav;
       } else if (!hasIdentity) {
         initialRoute = PersonalDetails_Nav;
       } else if (!hasAddress) {
@@ -524,6 +584,8 @@ const RootNavigation = () => {
           <Stack.Screen name={DocumentUploadScreen_Nav} component={DocumentUploadScreen} />
           <Stack.Screen name={SmartSelfieScreen_Nav} component={SmartSelfieScreen} options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name={VerificationSuccessScreen_Nav} component={VerificationSuccessScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={VideoKYCWaiting_Nav} component={VideoKYCWaitingScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={VideoKYCCall_Nav} component={VideoKYCCallScreen} options={{ headerShown: false, gestureEnabled: false }} />
 
           {/* -------- DASHBOARD -------- */}
           <Stack.Screen name={Dashboard_Nav} component={DriverTabs} />

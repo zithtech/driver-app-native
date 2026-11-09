@@ -13,6 +13,11 @@
     <!-- CAMERA -->
     <uses-permission android:name="android.permission.CAMERA"/>
 
+    <!-- AUDIO & VIDEO CALL (For Video KYC Agora RTC) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <!-- Android 13+ image access -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 

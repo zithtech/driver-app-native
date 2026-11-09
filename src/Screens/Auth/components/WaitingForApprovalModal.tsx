@@ -28,6 +28,7 @@ interface WaitingForApprovalModalProps {
   status?: 'review' | 'rejected';
   rejectionReasons?: string;
   onReupload?: () => void;
+  onRequestVideoKyc?: () => void;
 }
 
 const PulseCircle = ({ color }: { color: string }) => {
@@ -178,6 +179,7 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
   status = 'review',
   rejectionReasons,
   onReupload,
+  onRequestVideoKyc,
 }) => {
   const { t } = useTranslation();
   const { theme, isDark } = useAppTheme();
@@ -295,6 +297,38 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
           </View>
 
           <AutoSwipeVerificationInfo fonts={fonts} isDark={isDark} theme={theme} />
+
+          {/* VIDEO KYC CTA — Available when status is 'review' */}
+          {status === 'review' && onRequestVideoKyc && (
+            <Animated.View entering={FadeInDown.duration(800).delay(250)} style={[styles.videoKycCard, { backgroundColor: theme.colors.card }]}>
+              <View style={[styles.videoKycIconWrapper, { backgroundColor: '#10B981' }]}>
+                <Ionicons name="videocam" size={24} color="#FFF" />
+              </View>
+              <View style={styles.videoKycTextContent}>
+                <View style={styles.videoKycBadgeRow}>
+                  <Text style={[fonts.bold, styles.videoKycTitle, { color: theme.colors.text, fontSize: isTamil ? 13 : 15 }]} numberOfLines={1} adjustsFontSizeToFit>
+                    {t('request_video_kyc', 'Instant Video Verification')}
+                  </Text>
+                  <View style={styles.instantBadge}>
+                    <Text style={styles.instantBadgeText}>FAST</Text>
+                  </View>
+                </View>
+                <Text style={[styles.videoKycSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 10 : 12 }]} numberOfLines={2} adjustsFontSizeToFit>
+                  {t('video_kyc_subtitle', 'Get verified in minutes — no more waiting!')}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.videoKycBtn, { backgroundColor: '#10B981' }]}
+                onPress={onRequestVideoKyc}
+                activeOpacity={0.8}
+              >
+                <Text style={[fonts.bold, styles.videoKycBtnText, { color: '#FFF', fontSize: isTamil ? 11 : 13 }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {t('start', 'Start')}
+                </Text>
+                <Ionicons name="arrow-forward" size={14} color="#FFF" style={{ marginLeft: 2 }} />
+              </TouchableOpacity>
+            </Animated.View>
+          )}
 
           <Animated.View entering={FadeInDown.duration(800).delay(300)} style={[styles.supportCard, { backgroundColor: theme.colors.card }]}>
             <View style={[styles.supportIconWrapper, { backgroundColor: theme.colors.primary }]}>
@@ -576,5 +610,65 @@ const styles = StyleSheet.create({
     width: 6,
     borderRadius: 3,
     marginHorizontal: 4,
+  },
+  videoKycCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    marginHorizontal: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+    elevation: 3,
+    shadowColor: '#10B981',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  videoKycIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoKycTextContent: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
+  },
+  videoKycBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  videoKycTitle: {
+    fontWeight: '700',
+  },
+  instantBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  instantBadgeText: {
+    color: '#16A34A',
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  videoKycSubtitle: {
+    marginTop: 2,
+  },
+  videoKycBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    elevation: 2,
+  },
+  videoKycBtnText: {
+    fontWeight: '700',
   },
 });
