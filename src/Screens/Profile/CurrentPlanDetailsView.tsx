@@ -17,6 +17,7 @@ import AppStatusBar from '../../Components/AppStatusBar';
 import { trigger } from 'react-native-haptic-feedback';
 import Clipboard from '@react-native-clipboard/clipboard';
 import RNPrint from 'react-native-print';
+import { useAppTheme } from '../../context/ThemeContext';
 
 /* ================= HELPERS ================= */
 
@@ -85,6 +86,7 @@ const getFeaturesList = (features: any): string[] => {
 export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan, navigation }: any) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { theme, isDark } = useAppTheme();
   const item = activePlan || {};
 
   const [showAllBenefits, setShowAllBenefits] = useState(false);
@@ -199,11 +201,11 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
   return (
     <ImageBackground
       source={require('../../assets/images/subhis.png')}
-      style={{ flex: 1 }}
-      imageStyle={{ opacity: 0.15, resizeMode: 'cover' }}
+      style={{ flex: 1, backgroundColor: isDark ? theme.colors.background : '#FFFFFF' }}
+      imageStyle={{ opacity: isDark ? 0.05 : 0.15, resizeMode: 'cover' }}
     >
       <SafeAreaView style={styles.containerTrans} edges={['top']}>
-        <AppStatusBar backgroundColor="transparent" translucent={true} barStyle="dark-content" />
+        <AppStatusBar backgroundColor="transparent" translucent={true} barStyle={isDark ? "light-content" : "dark-content"} />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
@@ -212,22 +214,22 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
           <View style={[styles.headerBg, { paddingTop: 10 }]}>
             <View style={styles.headerRow}>
               <Pressable onPress={() => navigation?.goBack()} style={styles.backBtn}>
-                <Ionicons name="arrow-back" size={24} color="#111827" />
+                <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
               </Pressable>
               <View style={styles.headerTextWrap}>
-                <Text style={styles.headerTitle}>{t('current_plan_details', 'Current Plan Details')}</Text>
-                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('current_plan_details', 'Current Plan Details')}</Text>
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1}>
                   Details of your active subscription
                 </Text>
               </View>
               <Pressable onPress={() => navigation?.navigate('SubscriptionHistoryScreen')} style={styles.historyBtn}>
-                <MaterialCommunityIcons name="history" size={26} color="#111827" />
+                <MaterialCommunityIcons name="history" size={26} color={theme.colors.text} />
               </Pressable>
             </View>
           </View>
 
           {/* ─── PLAN CARD (GREEN/BLUE/VIOLET & WHITE SPLIT) ─── */}
-          <View style={styles.planCard}>
+          <View style={[styles.planCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
             <View style={[styles.planCardLeft, { backgroundColor: topCardColor }]}>
               <MaterialCommunityIcons name="crown" size={32} color="#FBBF24" />
               <Text style={styles.planNameTextWhite}>{planName.toUpperCase()} {t('plan', 'PLAN')}</Text>
@@ -238,15 +240,15 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
             </View>
             <View style={styles.planCardRight}>
               <View style={styles.planCardRightCol1}>
-                <Text style={styles.planPriceBig} numberOfLines={1} adjustsFontSizeToFit>₹{formattedPlanAmount}</Text>
-                <Text style={styles.planPriceSub}>{getBillingCycleLabel(item.billing_cycle)}</Text>
+                <Text style={[styles.planPriceBig, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>₹{formattedPlanAmount}</Text>
+                <Text style={[styles.planPriceSub, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{getBillingCycleLabel(item.billing_cycle)}</Text>
               </View>
-              <View style={styles.verticalDivider} />
+              <View style={[styles.verticalDivider, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]} />
               <View style={styles.planCardRightCol2}>
-                <View style={[styles.shieldIconWrap, { backgroundColor: item.auto_renew ? '#E8F5E9' : '#FEE2E2' }]}>
-                  <Ionicons name={item.auto_renew ? "shield-checkmark-outline" : "shield-half-outline"} size={24} color={item.auto_renew ? "#2E7D32" : "#EF4444"} />
+                <View style={[styles.shieldIconWrap, { backgroundColor: item.auto_renew ? (isDark ? 'rgba(46, 125, 50, 0.2)' : '#E8F5E9') : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2') }]}>
+                  <Ionicons name={item.auto_renew ? "shield-checkmark-outline" : "shield-half-outline"} size={24} color={item.auto_renew ? (isDark ? '#4ADE80' : '#2E7D32') : (isDark ? '#F87171' : '#EF4444')} />
                 </View>
-                <Text style={[styles.autoRenewTextGreen, { color: item.auto_renew ? '#2E7D32' : '#EF4444' }]} numberOfLines={1} adjustsFontSizeToFit>
+                <Text style={[styles.autoRenewTextGreen, { color: item.auto_renew ? (isDark ? '#4ADE80' : '#2E7D32') : (isDark ? '#F87171' : '#EF4444') }]} numberOfLines={1} adjustsFontSizeToFit>
                   {t('auto_renew', 'Auto-renew')} {item.auto_renew ? t('on', 'ON') : t('off', 'OFF')}
                 </Text>
               </View>
@@ -254,36 +256,36 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
           </View>
 
           {/* ─── DATES CARD ─── */}
-          <View style={styles.sectionCard}>
+          <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
             <View style={styles.dateCardsRow}>
               <View style={styles.dateCol}>
-                <View style={styles.dateIconWrap}>
-                  <Ionicons name="calendar-outline" size={20} color="#2E7D32" />
+                <View style={[styles.dateIconWrap, { backgroundColor: isDark ? 'rgba(46, 125, 50, 0.2)' : '#F3F4F6' }]}>
+                  <Ionicons name="calendar-outline" size={20} color={isDark ? '#4ADE80' : '#2E7D32'} />
                 </View>
-                <Text style={styles.dateLabelText}>Start Date</Text>
-                <Text style={styles.dateValueText}>{formatDate(item.start_date)}</Text>
-                <Text style={styles.timeValueText}>{formatTime(item.start_date)}</Text>
+                <Text style={[styles.dateLabelText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Start Date</Text>
+                <Text style={[styles.dateValueText, { color: theme.colors.text }]}>{formatDate(item.start_date)}</Text>
+                <Text style={[styles.timeValueText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{formatTime(item.start_date)}</Text>
               </View>
 
-              <View style={styles.verticalDividerLight} />
+              <View style={[styles.verticalDividerLight, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
 
               <View style={styles.dateCol}>
-                <View style={styles.dateIconWrap}>
-                  <Ionicons name="calendar-outline" size={20} color="#2E7D32" />
+                <View style={[styles.dateIconWrap, { backgroundColor: isDark ? 'rgba(46, 125, 50, 0.2)' : '#F3F4F6' }]}>
+                  <Ionicons name="calendar-outline" size={20} color={isDark ? '#4ADE80' : '#2E7D32'} />
                 </View>
-                <Text style={styles.dateLabelText}>{t('next_billing_date', 'Next Billing Date')}</Text>
-                <Text style={styles.dateValueText}>{formatDate(item.expiry_date)}</Text>
-                <Text style={styles.timeValueText}>{formatTime(item.expiry_date)}</Text>
+                <Text style={[styles.dateLabelText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('next_billing_date', 'Next Billing Date')}</Text>
+                <Text style={[styles.dateValueText, { color: theme.colors.text }]}>{formatDate(item.expiry_date)}</Text>
+                <Text style={[styles.timeValueText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{formatTime(item.expiry_date)}</Text>
               </View>
 
-              <View style={styles.verticalDividerLight} />
+              <View style={[styles.verticalDividerLight, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]} />
 
               <View style={styles.dateCol}>
-                <View style={styles.dateIconWrap}>
-                  <Ionicons name="receipt-outline" size={20} color="#2E7D32" />
+                <View style={[styles.dateIconWrap, { backgroundColor: isDark ? 'rgba(46, 125, 50, 0.2)' : '#F3F4F6' }]}>
+                  <Ionicons name="receipt-outline" size={20} color={isDark ? '#4ADE80' : '#2E7D32'} />
                 </View>
-                <Text style={styles.dateLabelText}>{t('billing_cycle', 'Billing Cycle')}</Text>
-                <Text style={styles.dateValueText}>
+                <Text style={[styles.dateLabelText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('billing_cycle', 'Billing Cycle')}</Text>
+                <Text style={[styles.dateValueText, { color: theme.colors.text }]}>
                   {item.billing_cycle === 'day' || item.billing_cycle === 'daily'
                     ? t('daily', 'Daily')
                     : item.billing_cycle === 'week' || item.billing_cycle === 'weekly'
@@ -295,11 +297,11 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
           </View>
 
           {/* ─── PLAN BENEFITS ─── */}
-          <View style={styles.sectionCard}>
+          <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>{t('plan_benefits', 'Plan Benefits')}</Text>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('plan_benefits', 'Plan Benefits')}</Text>
               <Pressable onPress={() => setShowAllBenefits(!showAllBenefits)}>
-                <Text style={styles.viewAllBtnText}>{showAllBenefits ? t('view_less', 'View Less') : t('view_all_benefits', 'View All Benefits >')}</Text>
+                <Text style={[styles.viewAllBtnText, { color: isDark ? '#4ADE80' : '#2E7D32' }]}>{showAllBenefits ? t('view_less', 'View Less') : t('view_all_benefits', 'View All Benefits >')}</Text>
               </Pressable>
             </View>
             <View style={styles.benefitsContainer}>
@@ -310,9 +312,9 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
 
                   return visibleFeatures.map((benefit: string, index: number) => (
                     <View key={index} style={styles.benefitRowNew}>
-                      <Ionicons name="checkmark-circle" size={20} color="#2E7D32" style={{ marginRight: 12 }} />
-                      <Text style={styles.benefitTextNew}>{benefit}</Text>
-                      <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                      <Ionicons name="checkmark-circle" size={20} color={isDark ? '#4ADE80' : '#2E7D32'} style={{ marginRight: 12 }} />
+                      <Text style={[styles.benefitTextNew, { color: isDark ? '#D1D5DB' : '#374151' }]}>{benefit}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={isDark ? '#6B7280' : '#9CA3AF'} />
                     </View>
                   ));
                 })()}
@@ -322,14 +324,14 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
 
 
           {/* ─── TIME REMAINING ─── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>{t('time_remaining', 'Time Remaining')}</Text>
-            <View style={styles.timeRemainingCard}>
-              <View style={styles.timeIconWrap}>
-                <Ionicons name="time-outline" size={28} color="#F59E0B" />
+          <View style={[styles.sectionCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('time_remaining', 'Time Remaining')}</Text>
+            <View style={[styles.timeRemainingCard, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#FFFBEB', borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#FEF3C7' }]}>
+              <View style={[styles.timeIconWrap, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
+                <Ionicons name="time-outline" size={28} color={isDark ? '#FCD34D' : '#F59E0B'} />
               </View>
               <View style={styles.timeRemainingContent}>
-                <Text style={styles.timeRemainingText}>
+                <Text style={[styles.timeRemainingText, { color: isDark ? '#FCD34D' : '#92400E' }]}>
                   {(() => {
                     if (!item.expiry_date) return t('unknown', 'Unknown');
                     const diff = new Date(item.expiry_date).getTime() - new Date().getTime();
@@ -340,7 +342,7 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
                     return `${hours} hour${hours !== 1 ? 's' : ''}`;
                   })()}
                 </Text>
-                <Text style={styles.timeRemainingSub}>{t('until_next_billing', 'Until next billing cycle')}</Text>
+                <Text style={[styles.timeRemainingSub, { color: isDark ? '#FBBF24' : '#B45309' }]}>{t('until_next_billing', 'Until next billing cycle')}</Text>
               </View>
             </View>
           </View>
@@ -348,19 +350,19 @@ export default function CurrentPlanDetailsView({ activePlan, user, onManagePlan,
 
         {/* ─── BOTTOM STATUS BAR ─── */}
         <View style={[styles.bottomBarNew, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <View style={styles.statusBoxGreen}>
+          <View style={[styles.statusBoxGreen, { backgroundColor: isDark ? 'rgba(46, 125, 50, 0.15)' : '#F4FBF4', borderColor: isDark ? 'rgba(46, 125, 50, 0.3)' : '#D1E8D5' }]}>
             <View style={styles.statusBoxLeft}>
-              <Ionicons name="shield-checkmark" size={24} color="#2E7D32" style={{ marginRight: 12 }} />
+              <Ionicons name="shield-checkmark" size={24} color={isDark ? '#4ADE80' : '#2E7D32'} style={{ marginRight: 12 }} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.statusBoxTitle}>{t('you_are_all_set', "You're all set!")}</Text>
-                <Text style={styles.statusBoxSubtitle}>
+                <Text style={[styles.statusBoxTitle, { color: theme.colors.text }]}>{t('you_are_all_set', "You're all set!")}</Text>
+                <Text style={[styles.statusBoxSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
                   {t('plan_is_active', 'Your {{planName}} is active', { planName: planDisplayName })} {item.auto_renew ? t('will_renew', 'and will renew automatically.') : t('renew_off', 'but auto-renewal is off.')}
                 </Text>
               </View>
             </View>
-            <Pressable style={styles.managePlanBtn} onPress={onManagePlan}>
-              <Text style={styles.managePlanBtnText}>{t('manage_plan', 'Manage Plan')}</Text>
-              <Ionicons name="settings-outline" size={16} color="#2E7D32" style={{ marginLeft: 6 }} />
+            <Pressable style={[styles.managePlanBtn, { borderColor: isDark ? '#4ADE80' : '#2E7D32' }]} onPress={onManagePlan}>
+              <Text style={[styles.managePlanBtnText, { color: isDark ? '#4ADE80' : '#2E7D32' }]}>{t('manage_plan', 'Manage Plan')}</Text>
+              <Ionicons name="settings-outline" size={16} color={isDark ? '#4ADE80' : '#2E7D32'} style={{ marginLeft: 6 }} />
             </Pressable>
           </View>
         </View>

@@ -14,6 +14,8 @@ import {
   Modal,
   BackHandler,
   Image,
+  Linking,
+  Share,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -38,16 +40,19 @@ import { RootState } from '../../redux/store';
 import { useAppTheme } from '../../context/ThemeContext';
 import { vS as vs, mS as ms } from '../../lib/scale';
 import { useAlert } from '../../context/AlertContext';
-import { VehicleVerificationScreen_Nav } from '../../Navigations/navigations';
+import { useToast } from '../../context/ToastContext';
+import { VehicleVerificationScreen_Nav, ScheduledRideDetails_Nav, HelpCenter_Nav, ChatScreen_Nav } from '../../Navigations/navigations';
 import { useStartTripMutation, useCancelTripMutation } from '../../service/driverApi';
-import { clearAcceptedRide } from '../../redux/rideSlice';
+import { clearAcceptedRide, setCurrentRide } from '../../redux/rideSlice';
 import { CancellationModal } from '../../Components';
+import AppStatusBar from '../../Components/AppStatusBar';
 import socketService from '../../service/socketService';
 import audioService from '../../utils/audioService';
 import { StackActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { resolveImageUrl } from '../../utils/imageUtils';
+import { useLocationTracker } from '../../hooks/useLocationTracker';
 
-const DEMO_OTP = '1234';
 
 
 interface PickupOTPModalProps {
@@ -56,23 +61,78 @@ interface PickupOTPModalProps {
   ride?: any;
 }
 
-const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPModalProps) => {
+const PickupOTPScreen = ({ route, navigation }: any) => {
   const rideFromStore = useSelector((state: RootState) => state.ride.currentRide);
-  const ride = rideFromProps || rideFromStore || {};
+  const user = useSelector((state: RootState) => state.userSlice?.user);
+  const ride = route?.params?.ride || rideFromStore || {};
   const { t } = useTranslation();
-  const navigation = useNavigation<any>();
   const { theme, isDark } = useAppTheme();
   const { showAlert, hideAlert } = useAlert();
+  const { showToast } = useToast();
   const { triggerHaptic } = useHaptic();
   const dispatch = useDispatch();
 
-  // 🛡️ Guard: Exit modal if ride is cleared from Redux (e.g. by global cancellation)
+  // 📍 Keep foreground location service alive on this screen
+  const trip_id = ride?.trip_id || ride?.id;
+  useLocationTracker({
+    driverId: user?.driverId,
+    isTracking: !!trip_id,
+    tripId: trip_id,
+    mode: 'moving',
+    suppressEmission: false,
+  });
+
+  const onClose = () => {
+    navigation.navigate('DashboardScreen');
+  };
+
+  // 🛡️ Guard: Exit screen if ride is cleared from Redux (e.g. by global cancellation)
+  // We use a ref to track whether we've seen a valid ride at least once.
+  // This prevents the guard from firing during initial Redux rehydration
+  // when rideFromStore is momentarily null before persisted data loads.
+  const hadRideRef = useRef(!!rideFromStore);
   useEffect(() => {
-    if (!rideFromStore && isVisible) {
-      console.log('[PickupOTPModal] Active ride cleared from Redux, closing...');
+    if (rideFromStore) {
+      hadRideRef.current = true; // Mark that we've seen a valid ride
+    } else if (hadRideRef.current && !rideFromStore) {
+      // Ride was present but is now cleared → genuine cancellation
+      console.log('[PickupOTPScreen] Active ride cleared from Redux, closing...');
       onClose();
     }
-  }, [rideFromStore, isVisible, onClose]);
+  }, [rideFromStore]);
+
+  // Auto-redirect if OTP was already verified
+  useEffect(() => {
+    const checkOTPStatus = async () => {
+      const tripId = ride?.trip_id || ride?.id;
+      if (tripId) {
+        try {
+          const isOTPVerified = await AsyncStorage.getItem(`otp_verified_${tripId}`);
+          if (isOTPVerified === 'true') {
+            navigation.replace('VehicleVerificationScreen', { ride });
+          }
+        } catch (e) {
+          console.error('Failed to read OTP state:', e);
+        }
+      }
+    };
+    checkOTPStatus();
+  }, [ride]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        navigation.navigate('DashboardScreen');
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => {
+        subscription.remove();
+      };
+    }, [navigation])
+  );
 
   const getInitials = (name: string) => {
     if (!name) return 'PA';
@@ -89,6 +149,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
   const [showTripOptionsModal, setShowTripOptionsModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [otpError, setOtpError] = useState(false);
 
   const [startTripApi] = useStartTripMutation();
   const [cancelTripApi, { isLoading: isCancelling }] = useCancelTripMutation();
@@ -121,7 +182,6 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
 
       setTimeout(() => {
         hideAlert();
-        onClose();
         dispatch(clearAcceptedRide());
         navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
       }, 1500);
@@ -144,7 +204,6 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         singleButton: true,
         icon: isAlreadyCancelled ? 'checkmark-circle-outline' : 'alert-circle-outline',
         onConfirm: shouldAllowForceClear ? () => {
-          onClose(); // Close OTP modal
           dispatch(clearAcceptedRide());
           navigation.reset({ index: 0, routes: [{ name: 'DashboardScreen' }] });
         } : undefined
@@ -183,6 +242,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
   }, [pulseScale]);
 
   const handleChange = (value: string, index: number) => {
+    if (otpError) setOtpError(false);
     if (!/^\d?$/.test(value)) { return; }
 
     const newOtp = [...otp];
@@ -228,14 +288,17 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
     setIsLoading(true);
 
     setTimeout(async () => {
-      const correctOtp = ride?.otp || DEMO_OTP;
+      const correctOtp = ride?.otp;
       if (enteredOtp === correctOtp) {
         try {
           // Navigate to verification screen first, startTrip will happen after approval
           setIsLoading(false);
           triggerHaptic(HapticFeedbackTypes.notificationSuccess);
           setIsVerified(true);
-          
+
+          // Instantly advance local state to VERIFICATION_PENDING to prevent banner/navigation issues
+          dispatch(setCurrentRide({ ...ride, trip_status: 'VERIFICATION_PENDING' }));
+
           // Persist OTP verified state locally to prevent modal reopening on app reload
           const tripId = ride?.trip_id || ride?.id;
           if (tripId) {
@@ -244,7 +307,6 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
 
           // Wait 1.5s to show the "Verified" state before navigating
           setTimeout(() => {
-            onClose();
             navigation.replace(VehicleVerificationScreen_Nav, { ride });
           }, 1500);
         } catch (error: any) {
@@ -260,14 +322,7 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         setIsLoading(false);
         triggerShake();
         triggerHaptic(HapticFeedbackTypes.notificationError);
-        setOtp(['', '', '', '']);
-        inputs.current[0].focus();
-        showAlert({
-          title: t('incorrect_otp'),
-          message: t('check_otp_passenger'),
-          singleButton: true,
-          icon: 'close-circle-outline',
-        });
+        setOtpError(true);
       }
     }, 500);
   };
@@ -275,87 +330,95 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
   const isOtpComplete = otp.every(digit => digit !== '');
 
   return (
-    <Modal
-      visible={isVisible}
-      animationType="fade"
-      transparent={true}
-      onRequestClose={onClose}
-      statusBarTranslucent
-      navigationBarTranslucent
-    >
-      <Pressable style={styles.modalOverlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.keyboardView}
-        >
-          <Pressable style={[styles.modalContent, { backgroundColor: theme.colors.card }]} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={[styles.modalTitleText, { color: theme.colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('verify_pickup_otp')}</Text>
-                <Text style={[styles.modalSubtitleText, { color: theme.colors.paragraphText }]}>{t('ask_otp')}</Text>
-              </View>
-              <View style={{ position: 'relative', zIndex: 10 }}>
-                <TouchableOpacity onPress={() => setShowTripOptionsModal(!showTripOptionsModal)} style={{ padding: ms(4) }}>
-                  <Ionicons name="ellipsis-vertical" size={ms(24)} color={theme.colors.paragraphText} />
-                </TouchableOpacity>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <AppStatusBar />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
 
-                {showTripOptionsModal && (
-                  <View style={{
-                    position: 'absolute',
-                    top: ms(32),
-                    right: 0,
-                    backgroundColor: theme.colors.card,
-                    borderRadius: ms(12),
-                    paddingVertical: ms(8),
-                    width: ms(180),
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 12,
-                    elevation: 5,
-                    borderWidth: 1,
-                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6',
-                    zIndex: 20
-                  }}>
-                    <TouchableOpacity
-                      style={{ paddingHorizontal: ms(16), paddingVertical: ms(12), flexDirection: 'row', alignItems: 'center' }}
-                      onPress={() => {
-                        setShowTripOptionsModal(false);
-                        showAlert({
-                          title: t('contact_support') || 'Contact Support',
-                          message: t('support_msg') || 'Get assistance from our 24/7 team',
-                          singleButton: true,
-                          icon: 'headset-outline',
-                        });
-                        triggerHaptic(HapticFeedbackTypes.impactLight);
-                      }}
-                    >
-                      <Ionicons name="headset-outline" size={ms(18)} color={theme.colors.text} style={{ marginRight: ms(12) }} />
-                      <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.text }}>{t('contact_support') || 'Support'}</Text>
-                    </TouchableOpacity>
+          <TouchableOpacity style={styles.closeBtnIcon} onPress={() => setShowTripOptionsModal(!showTripOptionsModal)}>
+            <Ionicons name="menu" size={ms(20)} color={isDark ? "#FFF" : "#111827"} />
+          </TouchableOpacity>
 
-                    <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6', marginVertical: ms(4) }} />
+          {showTripOptionsModal && (
+            <View style={{
+              position: 'absolute',
+              top: vs(54),
+              right: ms(16),
+              backgroundColor: theme.colors.card,
+              borderRadius: ms(12),
+              paddingVertical: ms(8),
+              width: ms(200),
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 5,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6',
+              zIndex: 20
+            }}>
+              <TouchableOpacity
+                style={{ paddingHorizontal: ms(16), paddingVertical: ms(12), flexDirection: 'row', alignItems: 'center' }}
+                onPress={() => {
+                  setShowTripOptionsModal(false);
+                  navigation.navigate(ScheduledRideDetails_Nav, { ride, isLiveRide: true });
+                  triggerHaptic(HapticFeedbackTypes.impactLight);
+                }}
+              >
+                <Ionicons name="information-circle-outline" size={ms(18)} color={theme.colors.text} style={{ marginRight: ms(12) }} />
+                <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.text }}>Trip Details</Text>
+              </TouchableOpacity>
+              <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6', marginVertical: ms(4) }} />
+              <TouchableOpacity
+                style={{ paddingHorizontal: ms(16), paddingVertical: ms(12), flexDirection: 'row', alignItems: 'center' }}
+                onPress={() => {
+                  setShowTripOptionsModal(false);
+                  navigation.navigate(HelpCenter_Nav);
+                  triggerHaptic(HapticFeedbackTypes.impactLight);
+                }}
+              >
+                <Ionicons name="headset-outline" size={ms(18)} color={theme.colors.text} style={{ marginRight: ms(12) }} />
+                <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.text }}>Help Center</Text>
+              </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={{ paddingHorizontal: ms(16), paddingVertical: ms(12), flexDirection: 'row', alignItems: 'center' }}
-                      onPress={() => {
-                        setShowTripOptionsModal(false);
-                        setShowCancelModal(true);
-                      }}
-                    >
-                      <Ionicons name="trash-outline" size={ms(18)} color={theme.colors.error} style={{ marginRight: ms(12) }} />
-                      <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.error }}>{t('cancel_trip') || 'Cancel Trip'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
+              <View style={{ height: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6', marginVertical: ms(4) }} />
+
+              <TouchableOpacity
+                style={{ paddingHorizontal: ms(16), paddingVertical: ms(12), flexDirection: 'row', alignItems: 'center' }}
+                onPress={() => {
+                  setShowTripOptionsModal(false);
+                  setShowCancelModal(true);
+                }}
+              >
+                <Ionicons name="trash-outline" size={ms(18)} color={theme.colors.error} style={{ marginRight: ms(12) }} />
+                <Text style={{ fontSize: ms(14), fontWeight: '600', color: theme.colors.error }}>{t('cancel_trip') || 'Cancel Trip'}</Text>
+              </TouchableOpacity>
             </View>
+          )}
 
-            {/* DEVELOPMENT ONLY: Show OTP */}
-            <View style={{ backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, marginTop: 16, marginBottom: -10, borderWidth: 1, borderColor: '#F59E0B', borderStyle: 'dashed', alignSelf: 'center', width: '80%' }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#D97706', textAlign: 'center' }}>
-                🚧 Dev Mode OTP: {ride?.otp || DEMO_OTP} 🚧
-              </Text>
+          <Image source={require('../../assets/images/tripotptop.png')} style={styles.topImage} />
+
+          <View style={styles.contentContainer}>
+            <Text style={styles.mainTitle} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={{ color: theme.colors.text }}>You've reached the </Text>
+              <Text style={{ color: theme.colors.primary }}>pickup </Text>
+              <Text style={{ color: theme.colors.text }}>location!</Text>
+            </Text>
+
+            <Text style={styles.subTitle}>
+              Please ask the rider for the 4-digit OTP to confirm{'\n'}the pickup and start the trip.
+            </Text>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: vs(12) }}>
+              <Text style={[styles.enterOtpText, { color: theme.colors.text, marginBottom: 0 }]}>Enter 4-digit OTP</Text>
+              <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', paddingHorizontal: ms(10), paddingVertical: vs(4), borderRadius: ms(12) }}>
+                <Text style={{ color: theme.colors.text, fontSize: ms(12), fontWeight: '700' }}>
+                  Verify OTP : <Text style={{ color: '#10B981' }}>{ride?.otp}</Text>
+                </Text>
+              </View>
             </View>
 
             {/* OTP SECTION */}
@@ -371,9 +434,9 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
                       styles.otpBox,
                       {
                         backgroundColor: 'transparent',
-                        color: theme.colors.text,
-                        borderColor: focusedIndex === index ? theme.colors.primary : (isDark ? 'rgba(255,255,255,0.15)' : '#D1D5DB'),
-                        borderWidth: 2,
+                        color: theme.colors.primary,
+                        borderColor: otpError ? theme.colors.error : (focusedIndex === index ? theme.colors.primary : (isDark ? 'rgba(255,255,255,0.15)' : '#D1D5DB')),
+                        borderWidth: 1,
                       }
                     ]}
                     keyboardType="number-pad"
@@ -391,112 +454,223 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
               </Animated.View>
             </View>
 
-            {/* TRIP CODE */}
-            {ride.trip_code && (
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
-                padding: ms(12),
-                borderRadius: ms(12),
-                marginBottom: vs(12),
-                borderWidth: 1,
-                borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#F3F4F6',
-              }}>
-                <Text style={{ fontSize: ms(14), color: theme.colors.paragraphText }}>{t('trip_code') || 'Trip Code'}</Text>
-                <Text style={{ fontSize: ms(16), fontWeight: '800', color: theme.colors.text, letterSpacing: 1 }}>#{ride.trip_code}</Text>
-              </View>
-            )}
+            {/* OTP STATUS SECTION */}
+            <View style={{ height: vs(32), justifyContent: 'center', alignItems: 'center', marginTop: vs(8) }}>
+              {isVerified ? (
+                <Animated.View entering={FadeIn.duration(400)} exiting={FadeOut.duration(200)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={ms(20)} color="#10B981" />
+                  <Text style={{ color: '#10B981', fontSize: ms(14), fontWeight: '700', marginLeft: ms(6), marginRight: ms(8) }}>OTP Successfully Verified!</Text>
+                  <ActivityIndicator size="small" color="#10B981" />
+                </Animated.View>
+              ) : isLoading ? (
+                <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={{ color: theme.colors.text, fontSize: ms(13), fontWeight: '500', marginLeft: ms(8) }}>Verifying...</Text>
+                </Animated.View>
+              ) : otpError ? (
+                <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: theme.colors.error, fontSize: ms(13), fontWeight: '600', marginRight: ms(8) }}>Incorrect OTP</Text>
+                  <TouchableOpacity onPress={() => {
+                    setOtp(['', '', '', '']);
+                    setOtpError(false);
+                    inputs.current[0]?.focus();
+                  }}>
+                    <Text style={{ color: theme.colors.primary, fontSize: ms(13), fontWeight: '700' }}>Retry</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ) : null}
+            </View>
 
-            {/* RIDER INFO */}
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: vs(16),
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                {ride.user_details?.profile_url ? (
-                  <Image
-                    source={{ uri: ride.user_details.profile_url }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <View style={[styles.avatarBox, { backgroundColor: theme.colors.primary + '15' }]}>
-                    <Text style={[styles.avatarText, { color: theme.colors.primary }]}>
-                      {getInitials(ride.user_details?.full_name || ride.passenger_details?.name || ride.passenger || 'Passenger')}
-                    </Text>
-                  </View>
-                )}
-                <View style={{ flex: 1, paddingRight: ms(8) }}>
-                  <Text style={{ fontSize: ms(16), fontWeight: '800', color: isDark ? '#FFFFFF' : '#111827' }} numberOfLines={1}>
-                    {ride.user_details?.full_name || ride.passenger_details?.name || ride.passenger || 'Passenger'}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(8), marginTop: vs(4) }}>
-                    <Text style={{ fontSize: ms(12), color: '#16A34A', fontWeight: '600' }}>{t('verified_passenger') || 'Verified Passenger'}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: ms(3) }}>
-                      <Ionicons name="star" size={ms(12)} color="#F59E0B" />
-                      <Text style={{ fontSize: ms(12), fontWeight: '800', color: '#92400E' }}>
-                        {ride.rating?.toFixed(1) || ride.passenger_details?.rating?.toFixed(1) || '5.0'}
+            {/* Rider Info Card */}
+            <View style={[styles.riderCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', padding: ms(12), borderRadius: ms(16), elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, width: '100%', flexDirection: 'column' }]}>
+
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
+
+                {/* Left Side: Profile */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1.1 }}>
+                  {resolveImageUrl(ride?.passenger_details?.image || ride?.passenger_details?.profile_picture || ride?.user_details?.profile_url || ride?.user_details?.profile_picture || ride?.riderImage || ride?.customer?.profile_url || ride?.customer?.profile_picture || ride?.customer?.image) ? (
+                    <Image source={{ uri: resolveImageUrl(ride?.passenger_details?.image || ride?.passenger_details?.profile_picture || ride?.user_details?.profile_url || ride?.user_details?.profile_picture || ride?.riderImage || ride?.customer?.profile_url || ride?.customer?.profile_picture || ride?.customer?.image) }} style={{ width: ms(40), height: ms(40), borderRadius: ms(20) }} />
+                  ) : (
+                    <View style={{ width: ms(40), height: ms(40), borderRadius: ms(20), backgroundColor: theme.colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={[styles.riderAvatarText, { color: theme.colors.primary, fontSize: ms(14) }]}>
+                        {getInitials(ride.user_details?.full_name || ride.passenger_details?.name || ride.passenger || 'Passenger')}
                       </Text>
                     </View>
+                  )}
+
+                  <View style={{ flex: 1, marginLeft: ms(10) }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.riderName, { color: theme.colors.text, fontSize: ms(14), fontWeight: '700' }]} numberOfLines={1} adjustsFontSizeToFit>
+                        {ride.user_details?.full_name || ride.passenger_details?.name || ride.passenger || 'Passenger'}
+                      </Text>
+                      <Ionicons name="checkmark-circle" size={ms(14)} color="#3B82F6" style={{ marginLeft: ms(4) }} />
+                    </View>
+
+                    {/* Stats Section */}
+                    {ride.last_message ? (
+                      <>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: vs(2) }}>
+                          <Ionicons name="star" size={ms(12)} color="#F59E0B" />
+                          <Text style={[styles.riderRatingText, { color: theme.colors.text, fontWeight: '700', marginLeft: ms(2), fontSize: ms(11) }]}>
+                            {Number(ride.rating ?? ride.passenger_details?.rating ?? 4.8).toFixed(1)}
+                          </Text>
+                          <View style={{ width: 1, height: ms(10), backgroundColor: isDark ? '#4B5563' : '#D1D5DB', marginHorizontal: ms(6) }} />
+                          <Text style={[styles.riderRidesText, { color: '#6B7280', fontSize: ms(11) }]} numberOfLines={1}>
+                            ({ride.user_details?.total_reviews || 0} reviews)
+                          </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: vs(2) }}>
+                          <Ionicons name="car-outline" size={ms(12)} color="#6B7280" />
+                          <Text style={[styles.riderRidesText, { color: '#6B7280', marginLeft: ms(2), fontSize: ms(11) }]} numberOfLines={1}>
+                            <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{ride.user_details?.total_rides || 0}</Text> Total Rides
+                          </Text>
+                        </View>
+                      </>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: vs(2) }}>
+                        <Ionicons name="star" size={ms(12)} color="#F59E0B" />
+                        <Text style={[styles.riderRatingText, { color: theme.colors.text, fontWeight: '700', marginLeft: ms(2), fontSize: ms(11) }]}>
+                          {Number(ride.rating ?? ride.passenger_details?.rating ?? 4.8).toFixed(1)}
+                        </Text>
+                        <View style={{ width: 1, height: ms(10), backgroundColor: isDark ? '#4B5563' : '#D1D5DB', marginHorizontal: ms(6) }} />
+                        <Text style={[styles.riderRidesText, { color: '#6B7280', fontSize: ms(11) }]} numberOfLines={1}>
+                          ({ride.user_details?.total_reviews || 0} reviews)
+                        </Text>
+
+                        <View style={{ width: 1, height: ms(10), backgroundColor: isDark ? '#4B5563' : '#D1D5DB', marginHorizontal: ms(6) }} />
+                        <Ionicons name="car-outline" size={ms(12)} color="#6B7280" />
+                        <Text style={[styles.riderRidesText, { color: '#6B7280', marginLeft: ms(2), fontSize: ms(11) }]} numberOfLines={1}>
+                          <Text style={{ color: theme.colors.text, fontWeight: '700' }}>{ride.user_details?.total_rides || 0}</Text> Total Rides
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
-              </View>
 
+                {/* Message Section (Only shown if last_message exists) */}
+                {ride.last_message && (
+                  <>
+                    {/* Vertical Divider */}
+                    <View style={{ width: 1, alignSelf: 'stretch', backgroundColor: isDark ? '#4B5563' : '#E5E7EB', marginHorizontal: ms(8) }} />
+
+                    {/* Right Side: Chat Bubble */}
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <View style={{
+                        backgroundColor: '#3B82F6',
+                        borderRadius: ms(10),
+                        width: ms(20),
+                        height: ms(20),
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: ms(6),
+                        marginTop: vs(2)
+                      }}>
+                        <Ionicons name="chatbubble-ellipses" size={ms(12)} color="#FFFFFF" />
+                      </View>
+
+                      <View style={{
+                        backgroundColor: isDark ? '#1F2937' : '#F4F6F9',
+                        padding: ms(8),
+                        borderRadius: ms(12),
+                        borderTopLeftRadius: 0,
+                        flex: 1
+                      }}>
+                        <Text style={{ color: theme.colors.text, fontSize: ms(11), lineHeight: vs(14) }}>
+                          "{ride.last_message}"
+                        </Text>
+                        <Text style={{ color: '#9CA3AF', fontSize: ms(9), textAlign: 'right', marginTop: vs(4) }}>
+                          {ride.last_message_time || 'Just now'}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: vs(16) }}>
+              {/* Message */}
+              <TouchableOpacity style={{ flex: 1, backgroundColor: '#ECFDF5', paddingVertical: vs(12), borderRadius: ms(12), alignItems: 'center', marginRight: ms(4) }} onPress={() => {
+                navigation.navigate(ChatScreen_Nav, {
+                  rideId: ride.trip_id || ride.id,
+                  userId: user?.driverId,
+                  userName: ride.passenger_details?.name || ride.user_details?.full_name || ride.user_details?.first_name || ride.passenger || ride.passenger_name || ride.customer?.name || t('rider'),
+                  userImage: ride.passenger_details?.image || ride.riderImage,
+                  userPhone: ride.phone || ride.riderPhone || ride.user_phone || ride.customer?.phone || ride.customer?.phone_number || ride.passenger_phone || ride.user_details?.phone_number || ride.user_details?.phone || ride.passenger_details?.phone || ride.passenger_details?.phone_number,
+                });
+                triggerHaptic(HapticFeedbackTypes.impactLight);
+              }}>
+                <Ionicons name="chatbubble-ellipses" size={ms(18)} color="#10B981" />
+                <Text style={{ color: '#10B981', fontSize: ms(10), fontWeight: '700', marginTop: vs(4) }} numberOfLines={1} adjustsFontSizeToFit>Message</Text>
+              </TouchableOpacity>
+
+              {/* Call */}
+              <TouchableOpacity style={{ flex: 1, backgroundColor: '#EFF6FF', paddingVertical: vs(12), borderRadius: ms(12), alignItems: 'center', marginHorizontal: ms(4) }} onPress={() => {
+                const phoneNumber = ride.phone || ride.riderPhone || ride.user_phone || ride.customer?.phone || ride.customer?.phone_number || ride.passenger_phone || ride.user_details?.phone_number || ride.user_details?.phone || ride.passenger_details?.phone || ride.passenger_details?.phone_number || '';
+                if (phoneNumber) {
+                  Linking.openURL(`tel:${phoneNumber}`);
+                } else {
+                  showToast({ message: t('phone_number_not_found') || 'Phone number not available', type: 'error' });
+                }
+                triggerHaptic(HapticFeedbackTypes.impactMedium);
+              }}>
+                <Ionicons name="call" size={ms(18)} color="#3B82F6" />
+                <Text style={{ color: '#3B82F6', fontSize: ms(10), fontWeight: '700', marginTop: vs(4) }} numberOfLines={1} adjustsFontSizeToFit>Call</Text>
+              </TouchableOpacity>
+
+              {/* Open Location */}
               <TouchableOpacity
-                style={{
-                  width: ms(44),
-                  height: ms(44),
-                  borderRadius: ms(22),
-                  backgroundColor: theme.colors.primary,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  elevation: 3,
-                  shadowColor: theme.colors.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
-                }}
+                style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: vs(12), borderRadius: ms(12), alignItems: 'center', marginHorizontal: ms(4) }}
                 onPress={() => {
-                  showAlert({
-                    title: t('call_passenger'),
-                    message: t('calling_passenger_msg') || 'Calling passenger...',
-                    singleButton: true,
-                    icon: 'call-outline',
-                  });
+                  const pickupLat = parseFloat(ride.pickup_lat?.toString() || "0");
+                  const pickupLng = parseFloat(ride.pickup_lng?.toString() || "0");
+                  if (pickupLat && pickupLng) {
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${pickupLat},${pickupLng}&travelmode=driving`;
+                    Linking.openURL(url).catch(err => {
+                      console.error("Failed to open Google Maps", err);
+                      showToast({ message: t('failed_to_open_maps') || 'Failed to open maps', type: 'error' });
+                    });
+                  } else {
+                    showToast({ message: t('location_not_ready') || 'Location not available', type: 'error' });
+                  }
                   triggerHaptic(HapticFeedbackTypes.impactMedium);
                 }}
               >
-                <Ionicons name="call" size={ms(20)} color="#FFF" />
+                <Ionicons name="navigate" size={ms(18)} color="#374151" />
+                <Text style={{ color: '#374151', fontSize: ms(10), fontWeight: '700', marginTop: vs(4) }} numberOfLines={1} adjustsFontSizeToFit>Open Location</Text>
+              </TouchableOpacity>
+
+              {/* Share Trip */}
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#F5F3FF', paddingVertical: vs(12), borderRadius: ms(12), alignItems: 'center', marginLeft: ms(4) }}
+                onPress={async () => {
+                  try {
+                    const pickupAddress = ride.pickup_address || ride.pickup || 'the pickup location';
+                    const riderName = ride.user_details?.full_name || ride.passenger_details?.name || ride.passenger || 'Passenger';
+                    const tripId = ride.trip_id || ride.id || 'Unknown';
+
+                    const message = `I am on my way to pick up ${riderName} at ${pickupAddress}. (Trip ID: ${tripId})`;
+
+                    await Share.share({
+                      message,
+                      title: 'Trip Details',
+                    });
+                    triggerHaptic(HapticFeedbackTypes.impactMedium);
+                  } catch (error) {
+                    console.error("Error sharing trip:", error);
+                    showToast({ message: t('failed_to_share') || 'Failed to share trip', type: 'error' });
+                  }
+                }}
+              >
+                <Ionicons name="share-social" size={ms(18)} color="#6D28D9" />
+                <Text style={{ color: '#6D28D9', fontSize: ms(10), fontWeight: '700', marginTop: vs(4) }} numberOfLines={1} adjustsFontSizeToFit>Share Trip</Text>
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              disabled={!isOtpComplete || isLoading || isVerified}
-              style={[
-                styles.confirmBtn,
-                { backgroundColor: theme.colors.primary },
-                (!isOtpComplete || isLoading) && !isVerified && { backgroundColor: theme.colors.border },
-                isVerified && { backgroundColor: theme.colors.success }
-              ]}
-              onPress={() => verifyOtp()}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : isVerified ? (
-                <Ionicons name="checkmark-circle" size={ms(24)} color="#FFF" />
-              ) : (
-                <Text style={styles.confirmBtnText} numberOfLines={1} adjustsFontSizeToFit>{t('confirm_pickup_btn')}</Text>
-              )}
-            </TouchableOpacity>
-
-
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Pressable>
-
+          </View>
+        </View>
+      </KeyboardAvoidingView>
 
       <CancellationModal
         isVisible={showCancelModal}
@@ -504,11 +678,11 @@ const PickupOTPModal = ({ isVisible, onClose, ride: rideFromProps }: PickupOTPMo
         onConfirm={handleCancelTrip}
         isSubmitting={isCancelling}
       />
-    </Modal>
+    </SafeAreaView>
   );
 };
 
-export default PickupOTPModal;
+export default PickupOTPScreen;
 
 const styles = StyleSheet.create({
   modalOverlay: {
@@ -523,109 +697,158 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
+    flex: 1,
     width: '100%',
-    borderRadius: ms(28),
-    padding: ms(24),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 20,
+    padding: 0,
+    overflow: 'hidden',
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: vs(15),
+  sheetHandle: {
+    width: ms(40),
+    height: vs(4),
+    backgroundColor: '#D1D5DB',
+    borderRadius: ms(2),
+    alignSelf: 'center',
+    marginTop: vs(12),
+    position: 'absolute',
+    top: 0,
+    zIndex: 10,
   },
-  modalTitleText: {
-    fontSize: ms(20),
-    fontWeight: '900',
+  closeBtnIcon: {
+    position: 'absolute',
+    top: vs(16),
+    right: ms(16),
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(16),
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  topImage: {
+    width: '100%',
+    height: vs(180),
+    marginTop: vs(24),
+    resizeMode: 'contain',
+  },
+  contentContainer: {
+    paddingHorizontal: ms(24),
+    paddingBottom: ms(24),
+    paddingTop: ms(16),
+  },
+  mainTitle: {
+    fontSize: ms(22),
+    fontWeight: '600',
+    textAlign: 'center',
     letterSpacing: -0.5,
+    marginBottom: vs(8),
   },
-  modalSubtitleText: {
+  subTitle: {
+    fontSize: ms(14),
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: vs(20),
+    marginBottom: vs(20),
+  },
+  riderCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: ms(16),
+    borderRadius: ms(16),
+    marginBottom: vs(20),
+  },
+  riderAvatarBox: {
+    width: ms(48),
+    height: ms(48),
+    borderRadius: ms(24),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: ms(12),
+  },
+  riderAvatar: {
+    width: ms(48),
+    height: ms(48),
+    borderRadius: ms(24),
+    marginRight: ms(12),
+  },
+  riderAvatarText: {
+    fontSize: ms(16),
+    fontWeight: '800',
+  },
+  riderName: {
+    fontSize: ms(16),
+    fontWeight: '800',
+  },
+  riderRatingText: {
     fontSize: ms(13),
-    marginTop: vs(2),
-    opacity: 0.7,
+    fontWeight: '700',
+    marginLeft: ms(4),
+  },
+  riderRidesText: {
+    fontSize: ms(13),
+    fontWeight: '500',
+  },
+  riderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(16),
+  },
+  actionBtn: {
+    alignItems: 'center',
+  },
+  actionIconCircle: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: vs(4),
+  },
+  actionText: {
+    fontSize: ms(11),
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  enterOtpText: {
+    fontSize: ms(15),
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: vs(10),
   },
   otpSection: {
-    marginVertical: vs(10),
+    marginVertical: vs(4),
   },
   otpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: ms(10),
+    gap: ms(12),
   },
   otpBox: {
-    width: ms(54),
-    height: ms(58),
-    borderRadius: ms(16),
+    width: ms(52),
+    height: ms(56),
+    borderRadius: ms(12),
     textAlign: 'center',
     fontSize: ms(24),
     fontWeight: '800',
   },
-  riderSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: ms(12),
-    borderRadius: ms(16),
-    marginVertical: vs(15),
-  },
-  avatarBox: {
-    width: ms(44),
-    height: ms(44),
-    borderRadius: ms(22),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: ms(12),
-  },
-  avatarImage: {
-    width: ms(44),
-    height: ms(44),
-    borderRadius: ms(22),
-    marginRight: ms(12),
-  },
-  avatarText: {
-    fontSize: ms(16),
-    fontWeight: '800',
-  },
-  riderInfoContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: ms(6),
-  },
-  riderNameText: {
-    fontSize: ms(16),
-    fontWeight: '800',
-  },
-  tripCodeText: {
-    fontSize: ms(13),
-    fontWeight: '600',
-    opacity: 0.7,
-  },
   confirmBtn: {
     height: vs(54),
-    borderRadius: ms(18),
+    borderRadius: ms(27),
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: vs(10),
+    marginTop: vs(20),
   },
   confirmBtnText: {
     color: '#FFF',
     fontSize: ms(16),
     fontWeight: '800',
-  },
-  skipBtn: {
-    marginTop: vs(15),
-    alignItems: 'center',
-    padding: ms(10),
-  },
-  skipBtnText: {
-    fontSize: ms(13),
-    fontWeight: '700',
-    textDecorationLine: 'underline',
   },
   /* Helper Modal Styles (Reused from previous) */
   modalOption: {

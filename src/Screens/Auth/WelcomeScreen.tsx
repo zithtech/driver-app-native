@@ -231,8 +231,9 @@ const WelcomeScreen = ({ navigation }: any) => {
       }).unwrap();
 
       const newOtp = result?.otp || result?.data?.otp || '';
+      const isExistingUser = result?.isExistingUser ?? result?.data?.isExistingUser ?? false;
 
-      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined, otp: newOtp }));
+      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined, otp: newOtp, isExistingUser }));
       // ToastAndroid.show(t('otp_sent_success'), ToastAndroid.SHORT);
 
       setTimeout(() => {

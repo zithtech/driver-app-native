@@ -9,7 +9,7 @@ import { name as appName } from './app.json';
 
 // Firebase background message handler — must be registered at top level
 import { setupBackgroundHandler } from './src/services/notificationService';
-setupBackgroundHandler();
+try { setupBackgroundHandler(); } catch(e) { console.warn("Firebase not initialized:", e); }
 
 import { Provider } from 'react-redux';
 import { store, persistor } from './src/redux/store';

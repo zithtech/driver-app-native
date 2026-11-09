@@ -301,7 +301,7 @@ const EarningsScreen: React.FC<any> = ({ navigation }) => {
         <LineChart
           areaChart
           data={lineData}
-          width={width - 32}
+          width={width - 32 - 36} // 32 for margins, 26 for yAxisLabelWidth, + 10 padding
           height={80}
           isAnimated
           animationDuration={1200}
@@ -555,9 +555,9 @@ const styles = StyleSheet.create({
 
   heroTopRight: { width: 100, height: 80, justifyContent: 'center', alignItems: 'center' },
 
-  heroBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, zIndex: 2 },
-  actionBox: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8, paddingRight: 10 },
-  actionBoxTexts: { marginLeft: 8 },
+  heroBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, zIndex: 2, flexWrap: 'wrap', gap: 10 },
+  actionBox: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8, paddingRight: 10, flexShrink: 1 },
+  actionBoxTexts: { marginLeft: 8, flexShrink: 1 },
   actionBoxLabel: { color: '#E0E7FF', fontSize: 10 },
   actionBoxAmount: { color: '#FFF', fontSize: 12, fontWeight: '700', marginTop: 0 },
 

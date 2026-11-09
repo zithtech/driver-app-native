@@ -10,6 +10,7 @@ import {
   Modal,
   RefreshControl,
   ScrollView,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -40,11 +41,13 @@ import {
   PoliceVerification,
 } from '../../assets/svg';
 
-import { DocumentUploadScreen_Nav, Dashboard_Nav, VerificationSuccessScreen_Nav } from '../../Navigations/navigations';
+import { DocumentUploadScreen_Nav, Dashboard_Nav, VerificationSuccessScreen_Nav, VideoKYCWaiting_Nav } from '../../Navigations/navigations';
 import { useHaptic } from '../../hooks/useHaptic';
 import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
 import WaitingForApprovalModal from './components/WaitingForApprovalModal';
+
+const cleanStepText = (text: string) => (text ? text.replace(/\\n/g, '\n') : '');
 
 /* ================= TYPES ================= */
 
@@ -383,7 +386,7 @@ const DocumentScreen = ({ navigation }: any) => {
     return { otherDocs: DOCUMENTS };
   }, [DOCUMENTS]);
 
-  const allUploaded = uploadedCount === requiredDocuments.length;
+  const allUploaded = Platform.OS === 'ios' ? true : uploadedCount === requiredDocuments.length;
 
   const rejectedDocs = useMemo(() => {
     return otherDocs.filter(doc => getDocState(doc).status?.toLowerCase() === 'rejected');
@@ -397,6 +400,20 @@ const DocumentScreen = ({ navigation }: any) => {
     if (!user?.driverId) { return; }
 
     try {
+      if (Platform.OS === 'ios') {
+        // Temporarily skip document submission for iOS
+        triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+        showToast({
+          type: 'success',
+          message: 'Documents skipped for iOS.',
+          duration: 3000,
+        });
+        setTimeout(() => {
+          dispatch(setUser({ onboarding_status: 'DOCUMENTS_VERIFIED' }));
+        }, 1500);
+        return;
+      }
+
       await submitDocuments(user.driverId).unwrap();
       triggerHaptic(HapticFeedbackTypes.notificationSuccess);
       
@@ -440,6 +457,9 @@ const DocumentScreen = ({ navigation }: any) => {
         onContactSupport={() => {
           Linking.openURL('tel:+919043522612');
         }}
+        onRequestVideoKyc={() => {
+          navigation.navigate(VideoKYCWaiting_Nav);
+        }}
       />
 
 
@@ -454,28 +474,36 @@ const DocumentScreen = ({ navigation }: any) => {
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Mobile{'\n'}Verification</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+              {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+            </Text>
           </View>
           {/* Step 2 */}
           <View style={styles.stepContainer}>
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Personal{'\n'}Details</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+              {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+            </Text>
           </View>
           {/* Step 3 */}
           <View style={styles.stepContainer}>
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Ionicons name="checkmark" size={16} color="#FFF" />
             </View>
-            <Text style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>Address{'\n'}Details</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+              {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+            </Text>
           </View>
           {/* Step 4 */}
           <View style={styles.stepContainer}>
             <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
               <Text style={[styles.stepNumber, { color: '#FFF' }]}>4</Text>
             </View>
-            <Text style={[styles.stepText, { color: colors.primary }]}>Documents{'\n'}Upload</Text>
+            <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
+              {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+            </Text>
           </View>
         </View>
       </View>
@@ -506,10 +534,6 @@ const DocumentScreen = ({ navigation }: any) => {
                   Please upload clear and original documents.
                 </Text>
               </View>
-              <Image 
-                source={require('../../assets/images/documents.png')} 
-                style={styles.headerImage} 
-              />
             </View>
 
             {/* INFO BANNER */}
@@ -662,6 +686,26 @@ const DocumentScreen = ({ navigation }: any) => {
           {allUploaded && !isSubmitting ? t('ready_to_submit') : t('submit_for_verification')}
         </Button>
         
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => {
+            triggerHaptic(HapticFeedbackTypes.impactLight);
+            navigation.navigate(VideoKYCWaiting_Nav);
+          }}
+          style={[
+            styles.skipToVideoBtn,
+            {
+              backgroundColor: isDark ? 'rgba(37, 99, 235, 0.12)' : '#EFF6FF',
+              borderColor: isDark ? 'rgba(37, 99, 235, 0.3)' : '#BFDBFE',
+            },
+          ]}
+        >
+          <Ionicons name="videocam" size={18} color="#2563EB" />
+          <Text style={[fonts.bold, { color: '#2563EB', fontSize: 13, marginLeft: 8 }]}>
+            {t('skip_upload_video_kyc', 'Skip Upload & Verify via Video KYC →')}
+          </Text>
+        </TouchableOpacity>
+
         <View style={styles.secureInfoContainer}>
           <Ionicons name="lock-closed-outline" size={14} color="#6B7280" />
           <Text style={[styles.secureInfoText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
@@ -722,17 +766,18 @@ const styles = StyleSheet.create({
   /* Progress Bar */
   progressWrapper: {
     paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 4,
+    paddingTop: 12,
+    paddingBottom: 10,
     position: 'relative',
   },
   progressLineContainer: {
     position: 'absolute',
-    top: 22,
-    left: 40,
-    right: 40,
+    top: 23,
+    left: 48,
+    right: 48,
     height: 2,
     flexDirection: 'row',
+    zIndex: 1,
   },
   progressLine: {
     height: '100%',
@@ -740,10 +785,12 @@ const styles = StyleSheet.create({
   progressStepsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    zIndex: 2,
   },
   stepContainer: {
     alignItems: 'center',
-    width: 60,
+    flex: 1,
+    paddingHorizontal: 2,
   },
   stepCircle: {
     width: 24,
@@ -754,7 +801,7 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   stepNumber: {
     fontSize: 12,
@@ -762,7 +809,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stepText: {
-    fontSize: 9,
+    fontSize: 10,
+    lineHeight: 13,
     color: '#9CA3AF',
     textAlign: 'center',
     fontWeight: '600',
@@ -770,16 +818,11 @@ const styles = StyleSheet.create({
 
   /* Header Section */
   headerSection: {
-    position: 'relative',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    minHeight: 60,
+    marginBottom: 14,
   },
   headerTextContainer: {
-    width: '65%',
+    width: '100%',
     justifyContent: 'center',
-    paddingRight: 10,
   },
   headerTitle: {
     fontSize: 20,
@@ -791,15 +834,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
     lineHeight: 16,
-  },
-  headerImage: {
-    position: 'absolute',
-    right: -10,
-    top: -30,
-    width: 130,
-    height: 130,
-    resizeMode: 'contain',
-    zIndex: 1,
   },
 
   /* Info Banner */
@@ -1143,5 +1177,67 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 4,
+  },
+  videoKycCard: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  videoKycHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  videoKycIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fastTag: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  fastTagText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  videoKycButtonRow: {
+    marginTop: 12,
+    alignItems: 'flex-end',
+  },
+  videoKycCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  videoKycCtaText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  skipToVideoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
   },
 });

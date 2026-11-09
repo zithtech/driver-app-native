@@ -50,17 +50,23 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     if (res?.data?.data) {
                         dispatch(setCurrentRide(res.data.data));
                     } else {
-                        // 🛡️ PRODUCTION FIX: Don't wipe currentRide if it's a persisted scheduled ride.
-                        // Scheduled rides in ACCEPTED status are returned by getActiveTrip,
-                        // but during brief network blips or reconnects we may get null.
-                        // Only wipe if the current ride is NOT a scheduled ride.
+                        // 🛡️ PRODUCTION FIX: Don't wipe currentRide if it's a persisted scheduled ride or an active live ride.
                         const existing = currentRideRef.current;
                         const isScheduled = existing?.booking_type === 'SCHEDULED' || (existing as any)?.is_scheduled;
-                        if (existing && !isScheduled) {
+                        
+                        const ACTIVE_STATUSES = [
+                            'ACCEPTED', 'ARRIVING', 'ARRIVED',
+                            'VERIFICATION_PENDING', 'LIVE', 'STARTED', 'ON_TRIP',
+                            'WAITING', 'DAY_HALT', 'RETURN_STARTED',
+                            'DESTINATION_REACHED', 'RETURN_REACHED',
+                        ];
+                        const isRecentlyAcceptedLive = existing && ACTIVE_STATUSES.includes((existing.trip_status || (existing as any).status || '').toUpperCase());
+
+                        if (existing && !isScheduled && !isRecentlyAcceptedLive) {
                             console.log('[SocketProvider] getActiveTrip returned null on connect, clearing non-scheduled ride');
                             dispatch(setCurrentRide(null));
-                        } else if (isScheduled) {
-                            console.log('[SocketProvider] getActiveTrip returned null on connect, preserving scheduled ride:', existing?.trip_id);
+                        } else if (isScheduled || isRecentlyAcceptedLive) {
+                            console.log('[SocketProvider] getActiveTrip returned null on connect, preserving ride:', existing?.trip_id || existing?.id);
                         }
                     }
                 } catch (e) {
@@ -72,15 +78,24 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
         socketService.addConnectionListener(connectionListener);
 
         socketService.on("receiveChatMessage", (data: any) => {
-            const { rideId } = data;
+            const rideId = data.rideId || data.trip_id || data.tripId || data.id;
             
             // Check if user is currently looking at this specific chat
             const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
             const isOnChatScreen = currentRoute?.name === 'ChatScreen';
-            const lookingAtSameRide = currentRoute?.params && (currentRoute.params as any).rideId === rideId;
+            const lookingAtSameRide = currentRoute?.params && String((currentRoute.params as any).rideId) === String(rideId);
 
             if (!(isOnChatScreen && lookingAtSameRide)) {
-                dispatch(incrementUnreadCount(rideId));
+                if (rideId) {
+                    dispatch(incrementUnreadCount(String(rideId)));
+                }
+                
+                audioService.speak('New message received');
+                showToast({
+                    message: data.text || 'New chat message received',
+                    type: 'info',
+                    duration: 4000
+                });
             }
         });
 
@@ -127,14 +142,23 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
                     if (res?.data?.data) {
                         dispatch(setCurrentRide(res.data.data));
                     } else {
-                        // 🛡️ Same guard as connectionListener — don't wipe scheduled rides on null
+                        // 🛡️ Same guard as connectionListener — don't wipe active rides on null
                         const existing = currentRideRef.current;
                         const isScheduled = existing?.booking_type === 'SCHEDULED' || (existing as any)?.is_scheduled;
-                        if (existing && !isScheduled) {
+                        
+                        const ACTIVE_STATUSES = [
+                            'ACCEPTED', 'ARRIVING', 'ARRIVED',
+                            'VERIFICATION_PENDING', 'LIVE', 'STARTED', 'ON_TRIP',
+                            'WAITING', 'DAY_HALT', 'RETURN_STARTED',
+                            'DESTINATION_REACHED', 'RETURN_REACHED',
+                        ];
+                        const isRecentlyAcceptedLive = existing && ACTIVE_STATUSES.includes((existing.trip_status || (existing as any).status || '').toUpperCase());
+
+                        if (existing && !isScheduled && !isRecentlyAcceptedLive) {
                             console.log('[SocketProvider] getActiveTrip returned null on trip_updated, clearing non-scheduled ride');
                             dispatch(setCurrentRide(null));
-                        } else if (isScheduled) {
-                            console.log('[SocketProvider] getActiveTrip returned null on trip_updated, preserving scheduled ride:', existing?.trip_id);
+                        } else if (isScheduled || isRecentlyAcceptedLive) {
+                            console.log('[SocketProvider] getActiveTrip returned null on trip_updated, preserving ride:', existing?.trip_id || existing?.id);
                         }
                     }
                 } catch (e) {
@@ -149,6 +173,22 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
         socketService.on("TRIP_CANCELLED", handleGlobalCancellation);
         socketService.on("rider_cancelled", handleGlobalCancellation);
         socketService.on("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
+
+        // 🛡️ Global New Scheduled Ride Listener
+        socketService.on("NEW_SCHEDULED_RIDE", (data: any) => {
+            console.log('[SocketProvider] New scheduled ride available:', data);
+            
+            // Check if user is already on Scheduled Rides screen
+            const currentRoute = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
+            if (currentRoute?.name !== 'ScheduledRides') {
+                audioService.speak('A new scheduled ride is available');
+                showToast({
+                    message: 'New scheduled ride available!',
+                    type: 'info',
+                    duration: 5000
+                });
+            }
+        });
 
         // 🛡️ Document Status Update Listener
         socketService.on("DOCUMENT_STATUS_UPDATE", (data: any) => {
@@ -230,6 +270,7 @@ export const SocketProvider: React.FC<Props> = ({ children }) => {
             socketService.off("TRIP_CANCELLED", handleGlobalCancellation);
             socketService.off("rider_cancelled", handleGlobalCancellation);
             socketService.off("SCHEDULED_RIDE_CANCELLED", handleGlobalCancellation);
+            socketService.off("NEW_SCHEDULED_RIDE");
             socketService.off("ACCOUNT_STATUS_UPDATE");
             socketService.off("DOCUMENT_STATUS_UPDATE");
             socketService.off("PLAN_ELIGIBILITY_UPDATE");

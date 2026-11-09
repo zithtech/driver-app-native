@@ -7,13 +7,16 @@ import {
     Linking,
     Alert,
     Animated,
-    ScrollView
+    ScrollView,
+    AppState
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useLocation } from '../../hooks/useLocation';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../../redux/store';
 import { resetUnreadCount } from '../../redux/chatSlice';
 import ImagePicker from "react-native-image-crop-picker";
 import { useChat } from '../../hooks/useChat';
@@ -28,6 +31,7 @@ import moment from 'moment';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAlert } from '../../context/AlertContext';
 import { checkCameraPermission, checkPhotoLibraryPermission, goToSettings } from '../../utils/permissionUtils';
+import { resolveImageUrl } from '../../utils/imageUtils';
 
 
 export const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -58,7 +62,18 @@ const ChatScreen = ({ route, navigation }: any) => {
     const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
 
-    const { userName, rideId, userId, userPhone, userImage } = route.params || {};
+    const currentRide = useSelector((state: RootState) => state.ride.currentRide);
+    const driverId = useSelector((state: RootState) => state.userSlice.user?.driverId);
+
+    const params = route.params || {};
+    const rideId = params.rideId || currentRide?.trip_id || currentRide?.id;
+    const userId = params.userId || driverId;
+    
+    // Fallback to currentRide data if opened from notification without full params
+    const userName = params.userName || currentRide?.user?.name || currentRide?.user?.firstName || 'Rider';
+    const userPhone = params.userPhone || currentRide?.user?.phone;
+    const rawUserImage = params.userImage || currentRide?.user?.image || currentRide?.user?.profile_image || currentRide?.passenger_details?.image || currentRide?.passenger_details?.profile_picture || currentRide?.user_details?.profile_url || currentRide?.user_details?.profile_picture || currentRide?.riderImage || currentRide?.customer?.profile_url || currentRide?.customer?.profile_picture || currentRide?.customer?.image;
+    const userImage = resolveImageUrl(rawUserImage);
     const insets = useSafeAreaInsets();
     const { getCurrentLocation } = useLocation();
 
@@ -85,6 +100,7 @@ const ChatScreen = ({ route, navigation }: any) => {
         sendLocation,
         sendTyping,
         sendSeen,
+        setChatScreenPresence,
         onMessage,
         onTyping,
         onDelivered,
@@ -93,6 +109,18 @@ const ChatScreen = ({ route, navigation }: any) => {
         onHistory,
     } = useChat(rideId, userId);
 
+    useFocusEffect(
+        useCallback(() => {
+            setChatScreenPresence(true); // User entered chat screen
+            if (rideId) {
+                dispatch(resetUnreadCount(rideId.toString()));
+            }
+            return () => {
+                setChatScreenPresence(false); // User left chat screen
+            };
+        }, [setChatScreenPresence, rideId, dispatch])
+    );
+
     const [message, setMessage] = useState('');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [showMenu, setShowMenu] = useState(false);
@@ -100,11 +128,14 @@ const ChatScreen = ({ route, navigation }: any) => {
     const [isLoading, setIsLoading] = useState(true);
     const [isChatDisabled, setIsChatDisabled] = useState(false);
 
-    // Reset unread count when entering this chat
+    // Reset unread count when app comes to foreground while on this screen
     useEffect(() => {
-        if (rideId) {
-            dispatch(resetUnreadCount(rideId.toString()));
-        }
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active' && rideId) {
+                dispatch(resetUnreadCount(rideId.toString()));
+            }
+        });
+        return () => subscription.remove();
     }, [rideId, dispatch]);
 
 

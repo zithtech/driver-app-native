@@ -16,6 +16,7 @@ export interface UserState {
   has_wallet_pin?: boolean;
   userId?: string;
   driverId?: string;
+  t2d_id?: string;
   device_id?: string;
   today_earnings?: number | string;
   total_earnings?: number | string;
@@ -25,6 +26,7 @@ export interface UserState {
   alternate_contact?: string | null;
   trusted_contact?: { name: string; number: string; relation_type: string };
   otp?: string;
+  isExistingUser?: boolean;
 
   accessToken?: string;
   refreshToken?: string;

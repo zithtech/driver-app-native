@@ -13,6 +13,11 @@
     <!-- CAMERA -->
     <uses-permission android:name="android.permission.CAMERA"/>
 
+    <!-- AUDIO & VIDEO CALL (For Video KYC Agora RTC) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <!-- Android 13+ image access -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
@@ -24,7 +29,7 @@
     <!-- LOCATION -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <!-- <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" /> -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- FOREGROUND SERVICE (for persistent location tracking when app is minimized) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -40,6 +45,9 @@
 
     <!-- CONTACTS (For SOS Trusted Contacts feature) -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- OVERLAY (For Floating Quick Access Button) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
 
     <application
@@ -96,6 +104,12 @@
       <service 
           android:name="com.asterinet.react.bgactions.RNBackgroundActionsTask"
           android:foregroundServiceType="location" />
+
+      <!-- REQUIRED FOR Floating Quick Access Button -->
+      <service 
+          android:name=".floating.FloatingOverlayService"
+          android:exported="false"
+          android:foregroundServiceType="specialUse" />
 
     </application>
 </manifest>

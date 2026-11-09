@@ -92,6 +92,42 @@ export const checkPhotoLibraryPermission = async (): Promise<boolean> => {
 };
 
 /**
+ * Get the platform-specific microphone permission
+ */
+const getMicrophonePermission = (): Permission | null => {
+  if (Platform.OS === 'android') return PERMISSIONS.ANDROID.RECORD_AUDIO;
+  if (Platform.OS === 'ios') return PERMISSIONS.IOS.MICROPHONE;
+  return null;
+};
+
+/**
+ * Check and request Microphone permission
+ */
+export const checkMicrophonePermission = async (): Promise<boolean> => {
+  const permission = getMicrophonePermission();
+  if (!permission) return false;
+
+  const result = await check(permission);
+  if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) return true;
+
+  const requestResult = await requestAndHandle(permission);
+  return requestResult === 'granted' || requestResult === 'limited';
+};
+
+/**
+ * Check and request both Camera & Microphone permissions for Video KYC
+ */
+export const requestVideoKycPermissions = async (): Promise<{ camera: boolean; microphone: boolean; allGranted: boolean }> => {
+  const camera = await checkCameraPermission();
+  const microphone = await checkMicrophonePermission();
+  return {
+    camera,
+    microphone,
+    allGranted: camera && microphone,
+  };
+};
+
+/**
  * Opens app settings
  */
 export const goToSettings = () => {

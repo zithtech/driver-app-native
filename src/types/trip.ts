@@ -69,6 +69,8 @@ export interface Ride {
   is_for_self: boolean;
   otp?: string;
   trip_code?: string;
+  last_message?: string;
+  last_message_time?: string;
   user_details?: {
     id: string;
     full_name: string;
@@ -76,6 +78,15 @@ export interface Ride {
     rating: number;
     phone_number?: string;
     email?: string;
+    total_reviews?: number | string;
+    total_rides?: number | string;
+    profile_picture?: string;
   };
+  // Additional fallback properties
+  id?: string;
+  user?: any;
+  passenger_details?: any;
+  riderImage?: string;
+  customer?: any;
 }
 

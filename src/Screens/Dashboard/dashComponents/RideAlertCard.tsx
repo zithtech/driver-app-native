@@ -41,18 +41,25 @@ export type RideItem = {
   trip_status?: string;
   otp?: string;
   noVibrate?: boolean;
+  trip_distance?: number | string;
+  trip_time?: number | string;
+  distance_to_pickup?: string;
+  eta_to_pickup?: string;
+  package_hours?: number | string;
 };
 
 type Props = {
   item: RideItem;
-  onAccept: () => void;
-  onReject: () => void;
+  onAccept: () => void | Promise<void>;
+  onReject: (isManual: boolean) => void;
+  isMultiple?: boolean;
 };
 
 /* ================= COMPONENT ================= */
 const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
   const { theme, isDark } = useAppTheme();
-  const slideAnim = useRef(new RNAnimated.Value(SCREEN_HEIGHT)).current; // Start from bottom
+  const slideAnim = useRef(new RNAnimated.Value(300)).current; // Start slightly below
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current; // Fade in
   const { triggerHaptic } = useHaptic();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
@@ -75,12 +82,19 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
   /* ---------- ENTRANCE ---------- */
   useEffect(() => {
-    RNAnimated.spring(slideAnim, {
-      toValue: 0,
-      useNativeDriver: true,
-      damping: 22,
-      stiffness: 110,
-    }).start();
+    RNAnimated.parallel([
+      RNAnimated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 22,
+        stiffness: 110,
+      }),
+      RNAnimated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      })
+    ]).start();
 
     triggerHaptic(HapticFeedbackTypes.notificationSuccess);
   }, [slideAnim, triggerHaptic]);
@@ -103,7 +117,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
       try {
         SoundPlayer.stop();
         Vibration.cancel();
-      } catch (e) {}
+      } catch (e) { }
     };
   }, [item.noVibrate]);
 
@@ -115,17 +129,17 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
     onAccept();
   }, [onAccept, triggerHaptic]);
 
-  const handleReject = useCallback(() => {
+  const handleReject = useCallback((isManual: boolean = false) => {
     SoundPlayer.stop();
     Vibration.cancel();
-    triggerHaptic(HapticFeedbackTypes.impactLight);
-    onReject();
+    if (isManual) triggerHaptic(HapticFeedbackTypes.impactLight);
+    onReject(isManual);
   }, [onReject, triggerHaptic]);
 
   /* ---------- AUTO EXPIRE ---------- */
   useEffect(() => {
     if (remaining <= 0) {
-      handleReject();
+      handleReject(false);
     }
   }, [remaining, handleReject]);
 
@@ -135,17 +149,34 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const isRoundTrip = item.ride_type === 'ROUND_TRIP' || item.ride_type === 'OUTSTATION_ROUND_TRIP';
+  
+  const parsedTripDistance = parseFloat(((item as any).trip_distance || (item as any).distance_km || item.distance || '0').toString().replace(/[^0-9.]/g, ''));
+  const tripDistanceNum = isNaN(parsedTripDistance) ? 0 : parsedTripDistance;
+  const displayDistance = tripDistanceNum > 0 ? (isRoundTrip ? (tripDistanceNum * 2).toFixed(1) : tripDistanceNum.toFixed(1)) : '--';
+
+  const parsedTripTime = parseFloat(((item as any).trip_time || (item as any).trip_duration_minutes || item.eta || '0').toString().replace(/[^0-9.]/g, ''));
+  const tripTimeNum = isNaN(parsedTripTime) ? 0 : parsedTripTime;
+  const displayTime = tripTimeNum > 0 ? (isRoundTrip ? (tripTimeNum * 2).toFixed(0) : tripTimeNum.toFixed(0)) : '--';
+
+  const tripDistanceStr = displayDistance !== '--' ? `${displayDistance} km` : '--';
+  const tripTimeStr = displayTime !== '--' ? `${displayTime} min` : '';
+
+  const pickupDistance = (item.distance_to_pickup && item.distance_to_pickup !== '--') ? item.distance_to_pickup : (item.distance && item.distance !== '--' ? item.distance : '--');
+  const pickupTime = (item.eta_to_pickup && item.eta_to_pickup !== '--') ? item.eta_to_pickup : (item.eta && item.eta !== '--' ? item.eta : '--');
+
   return (
     <RNAnimated.View
       style={[
         styles.cardWrapper,
         {
+          opacity: fadeAnim,
           transform: [{ translateY: slideAnim }],
         },
       ]}
     >
       <View style={[styles.card, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-        
+
         {/* DRAG HANDLE */}
         <View style={styles.dragHandleContainer}>
           <View style={styles.dragHandle} />
@@ -170,7 +201,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
         {/* INNER CONTENT BOX */}
         <View style={[styles.innerBox, isDark && { borderColor: theme.colors.border }]}>
           <View style={styles.innerBoxRow}>
-            
+
             {/* LOCATIONS */}
             <View style={styles.locationsContainer}>
               <View style={styles.locationItem}>
@@ -208,7 +239,13 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <Text style={styles.fareLabel}>Estimated Fare</Text>
               <View style={[styles.rideTypeBadge, isDark && { backgroundColor: theme.colors.card }]}>
                 <Ionicons name="car-outline" size={ms(12)} color={isDark ? theme.colors.text : "#0F172A"} />
-                <Text style={[styles.rideTypeText, isDark && { color: theme.colors.text }]}>{item.ride_type || 'One-way'}</Text>
+                <Text style={[styles.rideTypeText, isDark && { color: theme.colors.text }]}>
+                  {item.ride_type === 'ROUND_TRIP' ? 'Round Trip' :
+                    item.ride_type === 'OUTSTATION_ROUND_TRIP' ? 'Outstation Round Trip' :
+                      item.ride_type === 'OUTSTATION_ONE_WAY' ? 'Outstation One Way' :
+                        item.ride_type === 'ONE_WAY' ? 'One Way' : (item.ride_type || 'One-way')}
+                  {item.package_hours ? ` • ${item.package_hours} Hrs` : ''}
+                </Text>
               </View>
             </View>
           </View>
@@ -221,7 +258,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <MaterialCommunityIcons name="map-marker-distance" size={ms(18)} color="#4F46E5" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.distance || '2.4 km'}</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{pickupDistance}</Text>
               <Text style={styles.infoLabel} numberOfLines={1}>Distance to pickup</Text>
             </View>
           </View>
@@ -231,7 +268,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <Ionicons name="time-outline" size={ms(18)} color="#059669" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{item.eta || '6 min'}</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>{pickupTime}</Text>
               <Text style={styles.infoLabel} numberOfLines={1}>Est. time to pickup</Text>
             </View>
           </View>
@@ -241,8 +278,10 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
               <MaterialCommunityIcons name="source-commit" size={ms(18)} color="#EA580C" />
             </View>
             <View style={styles.infoColText}>
-              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }]} numberOfLines={1}>8.7 km</Text>
-              <Text style={styles.infoLabel} numberOfLines={1}>Total trip distance</Text>
+              <Text style={[styles.infoVal, isDark && { color: theme.colors.text }, { fontSize: ms(11) }]} numberOfLines={2}>
+                {tripDistanceStr}{tripTimeStr ? ` | ${tripTimeStr}` : ''}
+              </Text>
+              <Text style={styles.infoLabel} numberOfLines={1}>Est. Trip Total</Text>
             </View>
           </View>
         </View>
@@ -255,7 +294,7 @@ const RideAlertCard: React.FC<Props> = ({ item, onAccept, onReject }) => {
 
         {/* ACTIONS */}
         <View style={styles.actionsContainer}>
-          <Pressable style={[styles.declineBtn, isDark && { backgroundColor: theme.colors.background }]} onPress={handleReject}>
+          <Pressable style={[styles.declineBtn, isDark && { backgroundColor: theme.colors.background }]} onPress={() => handleReject(true)}>
             <View style={[styles.iconCircleOutline, isDark && { borderColor: theme.colors.text }]}>
               <Ionicons name="close" size={ms(16)} color={isDark ? theme.colors.text : "#0F172A"} />
             </View>

@@ -3,11 +3,13 @@ import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useToast } from '../context/ToastContext';
+import { useAppTheme } from '../context/ThemeContext';
 import { hS as s, vS as vs, mS as ms } from '../lib/scale';
 
 const Toast: React.FC = () => {
   const { isVisible, toastConfig, hideToast } = useToast();
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useAppTheme();
 
   if (!isVisible || !toastConfig) return null;
 
@@ -42,6 +44,8 @@ const Toast: React.FC = () => {
         styles.container,
         {
           top: insets.top + vs(10),
+          backgroundColor: isDark ? 'rgba(28, 28, 30, 0.95)' : '#FFFFFF',
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
         },
       ]}
     >
@@ -49,7 +53,7 @@ const Toast: React.FC = () => {
         <View style={styles.iconContainer}>
           <MaterialCommunityIcons name={config.icon} size={ms(20)} color={config.iconColor} />
         </View>
-        <Text style={styles.message} numberOfLines={2}>
+        <Text style={[styles.message, { color: isDark ? '#FFFFFF' : '#111827' }]} numberOfLines={2}>
           {message}
         </Text>
       </Pressable>
@@ -62,10 +66,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignSelf: 'center',
     zIndex: 9999,
-    backgroundColor: 'rgba(28, 28, 30, 0.95)', // Sleek dark aesthetic
-    borderRadius: 8, // Minimal professional curve
-    paddingVertical: vs(10),
-    paddingHorizontal: ms(16),
+    borderRadius: ms(24), // Pill-shaped curve
+    borderWidth: 1,
+    paddingVertical: vs(12),
+    paddingHorizontal: ms(20),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -84,7 +88,6 @@ const styles = StyleSheet.create({
   message: {
     fontSize: ms(14),
     fontWeight: '600',
-    color: '#FFFFFF', // Crisp white text
     lineHeight: vs(20),
   },
 });

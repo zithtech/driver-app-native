@@ -43,6 +43,8 @@ import {
   SubscriptionHistory_Nav,
   SubscriptionDetail_Nav,
   VerificationSuccessScreen_Nav,
+  VideoKYCWaiting_Nav,
+  VideoKYCCall_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -109,6 +111,8 @@ import SmartSelfieScreen from '../Screens/Auth/SmartSelfieScreen';
 import PersonalDetails from '../Screens/Auth/PersonalDetails';
 import AddressDetails from '../Screens/Auth/AddressDetails';
 import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
+import VideoKYCWaitingScreen from '../Screens/Auth/VideoKYCWaitingScreen';
+import VideoKYCCallScreen from '../Screens/Auth/VideoKYCCallScreen';
 import VehicleVerificationScreen from '../Screens/Requests/VehicleVerificationScreen';
 import NavigationScreen from '../Screens/Navigation/NavigationScreen';
 import ChatScreen from '../Screens/Chatscreen';
@@ -127,6 +131,7 @@ import socketService from '../service/socketService';
 import audioService from '../utils/audioService';
 import { StackActions } from '@react-navigation/native';
 import { globalEmitter, EVENTS as GLOBAL_EVENTS } from '../utils/EventEmitter';
+import { FloatingOverlayService } from '../service/floatingOverlayService';
 
 const Stack = createStackNavigator();
 
@@ -170,7 +175,7 @@ const RootNavigation = () => {
     }
 
     // 1. Voice alert
-    audioService.speak(t(voiceKey) || 'The ride has been cancelled');
+    audioService.speak(t(voiceKey, 'The ride has been cancelled'));
 
     // 2. Clear Redux State Immediately
     dispatch(clearAcceptedRide());
@@ -187,10 +192,6 @@ const RootNavigation = () => {
     const cancelReason = data?.cancelReason || data?.reason;
     if (cancelReason) {
       displayMessage += `\nReason: ${cancelReason}`;
-    }
-    const tripIdToDisplay = data?.trip_id || data?.tripId;
-    if (tripIdToDisplay) {
-      displayMessage += `\nRide ID: ${tripIdToDisplay}`;
     }
 
     // 3. Show Alert and Redirect
@@ -281,6 +282,16 @@ const RootNavigation = () => {
   // This handles the race condition where initialRouteName was consumed before
   // the trip data arrived from the API.
   const hasRedirectedRef = useRef(false);
+  const prevRideIdRef = useRef<string | null>(null);
+
+  // Reset redirect flag when the ride changes (e.g. new trip accepted)
+  useEffect(() => {
+    const rideId = currentRide?.trip_id || (currentRide as any)?.id || null;
+    if (rideId !== prevRideIdRef.current) {
+      prevRideIdRef.current = rideId;
+      hasRedirectedRef.current = false;
+    }
+  }, [currentRide]);
 
   useEffect(() => {
     // Only run after bootstrap is complete and we have a valid ride
@@ -300,7 +311,13 @@ const RootNavigation = () => {
     } else if (rawStatus === 'VERIFICATION_PENDING') {
       expectedScreen = 'VehicleVerificationScreen';
     } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
-      expectedScreen = DropMapScreen_Nav;
+      const isRoundTrip = (currentRide as any)?.ride_type === 'ROUND_TRIP' || (currentRide as any)?.ride_type === 'OUTSTATION_ROUND_TRIP';
+      const hasFinishedFirstLeg = !!((currentRide as any)?.actual_drop_time || (currentRide as any)?.wait_started_at || (currentRide as any)?.waiting_started_at || (currentRide as any)?.return_started_at);
+      if (isRoundTrip && hasFinishedFirstLeg) {
+        expectedScreen = ReturnTripMapScreen_Nav;
+      } else {
+        expectedScreen = DropMapScreen_Nav;
+      }
     } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
       expectedScreen = WaitingScreen_Nav;
     } else if (rawStatus === 'RETURN_STARTED') {
@@ -311,21 +328,134 @@ const RootNavigation = () => {
 
     if (!expectedScreen) return;
 
-    // Small delay to ensure navigator is fully ready and mounted
-    const timer = setTimeout(() => {
-      if (!navigationRef.isReady()) return;
-      const currentRoute = navigationRef.getCurrentRoute()?.name;
+    // All known trip screen names — if we're already on one, don't redirect
+    const TRIP_SCREENS = [
+      PickupMapScreen_Nav, PickupOTPScreen_Nav, 'VehicleVerificationScreen',
+      DropMapScreen_Nav, WaitingScreen_Nav, ReturnTripMapScreen_Nav,
+      'PaymentCollectionScreen', 'NavigationScreen',
+    ];
 
-      // Only redirect if we're on Dashboard but should be on a trip screen
-      if (currentRoute === Dashboard_Nav && expectedScreen) {
+    // Retry mechanism: navigator might not be ready immediately after bootstrap
+    let attempts = 0;
+    const maxAttempts = 5;
+    const tryRedirect = () => {
+      attempts++;
+      if (!navigationRef.isReady() || hasRedirectedRef.current) {
+        if (attempts < maxAttempts) {
+          setTimeout(tryRedirect, 300);
+        }
+        return;
+      }
+
+      const currentRoute = navigationRef.getCurrentRoute()?.name;
+      console.log(`[RootNavigation] 🔍 Trip Recovery Check (attempt ${attempts}): currentRoute=${currentRoute}, expectedScreen=${expectedScreen}, status=${rawStatus}`);
+
+      // If we're already on a trip screen, don't redirect
+      if (currentRoute && TRIP_SCREENS.includes(currentRoute)) {
+        console.log(`[RootNavigation] ✅ Already on trip screen: ${currentRoute}`);
+        hasRedirectedRef.current = true;
+        return;
+      }
+
+      // If we're on any non-trip screen (Dashboard, Home, tabs, etc.), redirect
+      if (currentRoute && expectedScreen) {
         console.log(`[RootNavigation] 🔄 Trip Recovery Redirect: ${currentRoute} → ${expectedScreen} (status: ${rawStatus})`);
         hasRedirectedRef.current = true;
         navigationRef.dispatch(StackActions.replace(expectedScreen, { ride: currentRide }));
       }
-    }, 300);
+    };
 
+    const timer = setTimeout(tryRedirect, 500);
     return () => clearTimeout(timer);
   }, [isBootstrapping, currentRide]);
+
+  // 4b. Video KYC Bootstrap Recovery: If app was killed/closed during VIDEO_KYC_IN_PROGRESS
+  useEffect(() => {
+    if (isBootstrapping || !isAuthenticated || currentRide) return;
+
+    if (onboardingStatus === 'VIDEO_KYC_IN_PROGRESS') {
+      let attempts = 0;
+      const maxAttempts = 5;
+      const tryKycRedirect = () => {
+        attempts++;
+        if (!navigationRef.isReady()) {
+          if (attempts < maxAttempts) {
+            setTimeout(tryKycRedirect, 300);
+          }
+          return;
+        }
+
+        const currentRoute = navigationRef.getCurrentRoute()?.name;
+        if (currentRoute && currentRoute !== VideoKYCCall_Nav) {
+          console.log(`[RootNavigation] 📹 Video KYC In-Progress Recovery: ${currentRoute} → ${VideoKYCCall_Nav}`);
+          navigationRef.dispatch(StackActions.replace(VideoKYCCall_Nav));
+        }
+      };
+
+      const timer = setTimeout(tryKycRedirect, 400);
+      return () => clearTimeout(timer);
+    } else if (onboardingStatus === 'VIDEO_KYC_WAITING' || onboardingStatus === 'VIDEO_KYC_REQUESTED') {
+      let attempts = 0;
+      const maxAttempts = 5;
+      const tryKycRedirect = () => {
+        attempts++;
+        if (!navigationRef.isReady()) {
+          if (attempts < maxAttempts) {
+            setTimeout(tryKycRedirect, 300);
+          }
+          return;
+        }
+
+        const currentRoute = navigationRef.getCurrentRoute()?.name;
+        if (currentRoute && currentRoute !== VideoKYCWaiting_Nav) {
+          console.log(`[RootNavigation] 📹 Video KYC Waiting Recovery: ${currentRoute} → ${VideoKYCWaiting_Nav}`);
+          navigationRef.dispatch(StackActions.replace(VideoKYCWaiting_Nav));
+        }
+      };
+
+      const timer = setTimeout(tryKycRedirect, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isBootstrapping, isAuthenticated, onboardingStatus, currentRide]);
+
+  // 5. Floating Overlay Sync
+  useEffect(() => {
+    if (!isAuthenticated) {
+      FloatingOverlayService.stop();
+      return;
+    }
+
+    if (currentRide) {
+      const rawStatus = (currentRide.trip_status || (currentRide as any).status || '').toUpperCase();
+      
+      if (['ARRIVING', 'ARRIVED', 'ACCEPTED'].includes(rawStatus)) {
+         FloatingOverlayService.updateState('INCOMING_RIDE');
+         FloatingOverlayService.start('INCOMING_RIDE');
+      } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
+         FloatingOverlayService.updateState('ACTIVE_TRIP');
+         FloatingOverlayService.start('ACTIVE_TRIP');
+      } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
+         FloatingOverlayService.updateState('ROUND_TRIP_WAITING');
+         FloatingOverlayService.start('ROUND_TRIP_WAITING');
+      } else {
+         FloatingOverlayService.updateState('DEFAULT');
+         FloatingOverlayService.start('DEFAULT');
+      }
+    } else if (user?.isOnline) {
+      FloatingOverlayService.start('DEFAULT');
+    } else {
+      FloatingOverlayService.stop();
+    }
+  }, [isAuthenticated, currentRide, user?.isOnline]);
+
+  useEffect(() => {
+    const subscription = FloatingOverlayService.onTap(() => {
+      console.log('[RootNavigation] Floating Button Tapped');
+      // Reset the recovery flag to force a redirect to the active trip screen
+      hasRedirectedRef.current = false;
+    });
+    return () => subscription?.remove();
+  }, []);
 
   /* ================= NAVIGATION LOGIC ================= */
 
@@ -370,7 +500,13 @@ const RootNavigation = () => {
       } else if (rawStatus === 'VERIFICATION_PENDING') {
         initialRoute = 'VehicleVerificationScreen';
       } else if (['LIVE', 'STARTED', 'ON_TRIP'].includes(rawStatus)) {
-        initialRoute = DropMapScreen_Nav;
+        const isRoundTrip = (currentRide as any)?.ride_type === 'ROUND_TRIP' || (currentRide as any)?.ride_type === 'OUTSTATION_ROUND_TRIP';
+        const hasFinishedFirstLeg = !!((currentRide as any)?.actual_drop_time || (currentRide as any)?.wait_started_at || (currentRide as any)?.waiting_started_at || (currentRide as any)?.return_started_at);
+        if (isRoundTrip && hasFinishedFirstLeg) {
+          initialRoute = ReturnTripMapScreen_Nav;
+        } else {
+          initialRoute = DropMapScreen_Nav;
+        }
       } else if (rawStatus === 'WAITING' || rawStatus === 'DAY_HALT') {
         initialRoute = WaitingScreen_Nav;
       } else if (rawStatus === 'RETURN_STARTED') {
@@ -382,6 +518,9 @@ const RootNavigation = () => {
       // If a route was determined by recovery, we can skip standard onboarding checks
       if (initialRoute !== Auth_Nav) {
         if (__DEV__) { console.log('[RootNav] 🚖 Trip Recovery Active | Status:', rawStatus, '| Target:', initialRoute); }
+      } else {
+        // Trip exists but status didn't match any recovery condition
+        if (__DEV__) { console.warn('[RootNav] ⚠️ Trip exists but no recovery route matched | Status:', rawStatus, '| isScheduled:', isScheduled, '| trip_id:', currentRide.trip_id || (currentRide as any)?.id); }
       }
     }
 
@@ -402,6 +541,13 @@ const RootNavigation = () => {
         onboardingStatus === 'DOCS_REJECTED'
       ) {
         initialRoute = DocumentScreen_Nav;
+      } else if (
+        onboardingStatus === 'VIDEO_KYC_WAITING' ||
+        onboardingStatus === 'VIDEO_KYC_REQUESTED'
+      ) {
+        initialRoute = VideoKYCWaiting_Nav;
+      } else if (onboardingStatus === 'VIDEO_KYC_IN_PROGRESS') {
+        initialRoute = VideoKYCCall_Nav;
       } else if (!hasIdentity) {
         initialRoute = PersonalDetails_Nav;
       } else if (!hasAddress) {
@@ -438,6 +584,8 @@ const RootNavigation = () => {
           <Stack.Screen name={DocumentUploadScreen_Nav} component={DocumentUploadScreen} />
           <Stack.Screen name={SmartSelfieScreen_Nav} component={SmartSelfieScreen} options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name={VerificationSuccessScreen_Nav} component={VerificationSuccessScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={VideoKYCWaiting_Nav} component={VideoKYCWaitingScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={VideoKYCCall_Nav} component={VideoKYCCallScreen} options={{ headerShown: false, gestureEnabled: false }} />
 
           {/* -------- DASHBOARD -------- */}
           <Stack.Screen name={Dashboard_Nav} component={DriverTabs} />
@@ -480,6 +628,7 @@ const RootNavigation = () => {
 
           {/* -------- TRIP FLOW -------- */}
           <Stack.Screen name={PickupMapScreen_Nav} component={PickupMapScreen} />
+          <Stack.Screen name={PickupOTPScreen_Nav} component={PickupOTPScreen} />
           <Stack.Screen name="VehicleVerificationScreen" component={VehicleVerificationScreen} />
           <Stack.Screen name={DropMapScreen_Nav} component={DropMapScreen} />
           <Stack.Screen name={WaitingScreen_Nav} component={WaitingScreen} />

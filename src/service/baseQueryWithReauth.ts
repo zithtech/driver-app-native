@@ -1,3 +1,4 @@
+import { Alert } from 'react-native';
 import {
   fetchBaseQuery,
   type BaseQueryFn,
@@ -158,6 +159,13 @@ export const baseQueryWithReauth: BaseQueryFn<
       }
     } else {
       // 401 but NOT token-expired (invalid token, etc.) → force logout
+      if (errorData?.code === 'FORCE_LOGOUT' || errorData?.code === 'SESSION_EXPIRED') {
+        Alert.alert(
+          'Session Ended',
+          'Your account was logged in from another device.',
+          [{ text: 'OK' }]
+        );
+      }
       await logoutUser(api.dispatch);
     }
   }

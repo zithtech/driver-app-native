@@ -338,7 +338,7 @@ const OTPScreen = ({ navigation }: any) => {
 
             <View style={styles.cardContent}>
               <Text style={[fonts.bold, { fontSize: 18, color: colors.text, textAlign: 'center' }]}>
-                OTP sent successfully!
+                {user?.isExistingUser ? t('welcome_back', 'Welcome back!') : t('otp_sent_successfully', 'OTP sent successfully!')}
               </Text>
               <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280', textAlign: 'center', marginTop: 4 }]}>
                 {t('otp_sent_to', "We've sent a 6-digit OTP to")}

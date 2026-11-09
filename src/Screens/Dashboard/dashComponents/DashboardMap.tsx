@@ -192,6 +192,20 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
     const [hasMountedMap, setHasMountedMap] = useState(false);
     const [trackChanges, setTrackChanges] = useState(true);
     const [isTransitioningOnline, setIsTransitioningOnline] = useState(false);
+    
+    // Fix for Android OutOfMemoryError on setMyLocationEnabled
+    const [showUserLoc, setShowUserLoc] = useState(false);
+    useEffect(() => {
+        let mounted = true;
+        const timer = setTimeout(() => {
+            if (mounted) setShowUserLoc(true);
+        }, 800);
+        return () => {
+            mounted = false;
+            clearTimeout(timer);
+            setShowUserLoc(false);
+        };
+    }, []);
 
     // ── Fix for Android Marker Disappearing ──
     // TracksViewChanges forces Android to continually re-render the view as a bitmap.
@@ -357,7 +371,7 @@ const DashboardMap: React.FC<DashboardMapProps> = ({
                             setIsMapLoaded(true);
                             setTimeout(() => setIsMapReady(true), 800);
                         }}
-                        showsUserLocation={true}
+                        showsUserLocation={showUserLoc}
                         showsMyLocationButton={false}
                         showsCompass={false}
                         showsTraffic={showTraffic}

@@ -14,6 +14,8 @@ export const DocumentUploadScreen_Nav = 'DocumentUploadScreen';
 export const CaptureSelfie_Nav = 'CaptureSelfie';
 export const SmartSelfieScreen_Nav = 'SmartSelfieScreen';
 export const VerificationSuccessScreen_Nav = 'VerificationSuccessScreen';
+export const VideoKYCWaiting_Nav = 'VideoKYCWaitingScreen';
+export const VideoKYCCall_Nav = 'VideoKYCCallScreen';
 /* ❌ REMOVED
 export const DocumentVerificationStatus_Nav = "DocumentVerificationStatus";
 */

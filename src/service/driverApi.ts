@@ -111,7 +111,22 @@ export const driverApi = createApi({
     }),
 
     // Save document after upload
-    saveDocument: builder.mutation<any, { driverId: string; documentType: string; documentUrl: Record<string, string> }>({
+    saveDocument: builder.mutation<any, {
+      driverId: string;
+      documentType: string;
+      documentUrl: Record<string, string>;
+      documentNumber?: string;
+      document_number?: string;
+      licenseNumber?: string;
+      license_number?: string;
+      panNumber?: string;
+      pan_number?: string;
+      aadhaarNumber?: string;
+      aadhaar_number?: string;
+      aadharNumber?: string;
+      aadhar_number?: string;
+      [key: string]: any;
+    }>({
       query: ({ driverId, ...body }) => ({
         url: `/drivers/documents/save/${driverId}`,
         method: 'POST',
@@ -127,6 +142,48 @@ export const driverApi = createApi({
         method: 'POST',
       }),
       invalidatesTags: ['Documents', 'Driver'],
+    }),
+
+    /* ─────────── VIDEO KYC (/kyc/video) ─────────── */
+
+    // Request a Video KYC session
+    requestVideoKyc: builder.mutation<any, { driverId: string; location?: { latitude: number; longitude: number } }>({
+      query: ({ driverId, ...body }) => ({
+        url: `/kyc/video/request/${driverId}`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
+    // Get Agora RTC token for a KYC session
+    getVideoKycToken: builder.query<
+      { channelName: string; token: string; uid: number; sessionId: string },
+      { sessionId: string; driverId: string }
+    >({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/token/${sessionId}?driverId=${driverId}`,
+        method: 'GET',
+      }),
+    }),
+
+    // Get current KYC session status
+    getVideoKycStatus: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/kyc/video/status/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Driver'],
+    }),
+
+    // Cancel a pending KYC request
+    cancelVideoKyc: builder.mutation<any, { sessionId: string; driverId: string }>({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/cancel/${sessionId}`,
+        method: 'POST',
+        body: { driverId },
+      }),
+      invalidatesTags: ['Driver'],
     }),
 
     /* ─────────── TRIP VERIFICATION (/drivers/trip-verification) ─────────── */
@@ -242,7 +299,7 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
-    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; user_rating?: number }>({
+    completeTrip: builder.mutation<any, { tripId: string; distance_km?: number; trip_duration_minutes?: number; user_rating?: number; payment_mode?: string }>({
       query: ({ tripId, ...body }) => ({
         url: `/trips/${tripId}/complete`,
         method: 'POST',
@@ -529,5 +586,13 @@ export const {
   useLazyGetMyTicketsQuery,
   useGetTicketMessagesQuery,
   useLazyGetTicketMessagesQuery,
+
+  // Video KYC
+  useRequestVideoKycMutation,
+  useGetVideoKycTokenQuery,
+  useLazyGetVideoKycTokenQuery,
+  useGetVideoKycStatusQuery,
+  useLazyGetVideoKycStatusQuery,
+  useCancelVideoKycMutation,
 } = driverApi;
 

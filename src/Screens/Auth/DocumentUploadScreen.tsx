@@ -6,6 +6,9 @@ import {
   Animated,
   StyleSheet,
   Platform,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from '@react-navigation/native';
@@ -242,6 +245,179 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
   const rejectionReason = currentStatus?.rejection_reason || currentStatus?.remarks;
 
+  /* ---------------- DOCUMENT NUMBER (DYNAMIC DL, PAN & AADHAAR) ---------------- */
+  const isDL = docKey === 'Driving_License';
+  const isPan = docKey === 'Pan_Card';
+  const isAadhaar = docKey === 'Aadhar_Card';
+  const hasDocumentNumberInput = isDL || isPan || isAadhaar;
+
+  const formatAadhaar = (text: string) => {
+    const digits = text.replace(/[^0-9]/g, '').slice(0, 12);
+    if (digits.length > 8) {
+      return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8)}`;
+    }
+    if (digits.length > 4) {
+      return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    }
+    return digits;
+  };
+
+  const existingDocNumber = useMemo(() => {
+    if (currentStatus?.document_number) {
+      return isAadhaar ? formatAadhaar(currentStatus.document_number) : currentStatus.document_number;
+    }
+    if (currentStatus?.documentNumber) {
+      return isAadhaar ? formatAadhaar(currentStatus.documentNumber) : currentStatus.documentNumber;
+    }
+    if (isDL && (currentStatus?.license_number || currentStatus?.licenseNumber)) {
+      return currentStatus.license_number || currentStatus.licenseNumber;
+    }
+    if (isPan && (currentStatus?.pan_number || currentStatus?.panNumber)) {
+      return currentStatus.pan_number || currentStatus.panNumber;
+    }
+    if (isAadhaar && (currentStatus?.aadhaar_number || currentStatus?.aadhaarNumber || currentStatus?.aadhar_number || currentStatus?.aadharNumber)) {
+      const num = currentStatus.aadhaar_number || currentStatus.aadhaarNumber || currentStatus.aadhar_number || currentStatus.aadharNumber;
+      return formatAadhaar(num);
+    }
+    if (Array.isArray(user?.documents_data)) {
+      const match = user.documents_data.find((d: any) => d.document_type === backendType);
+      if (match?.document_number) return isAadhaar ? formatAadhaar(match.document_number) : match.document_number;
+      if (match?.documentNumber) return isAadhaar ? formatAadhaar(match.documentNumber) : match.documentNumber;
+      if (isDL && (match?.license_number || match?.licenseNumber)) return match.license_number || match.licenseNumber;
+      if (isPan && (match?.pan_number || match?.panNumber)) return match.pan_number || match.panNumber;
+      if (isAadhaar && (match?.aadhaar_number || match?.aadhaarNumber || match?.aadhar_number || match?.aadharNumber)) {
+        return formatAadhaar(match.aadhaar_number || match.aadhaarNumber || match.aadhar_number || match.aadharNumber);
+      }
+    }
+    return '';
+  }, [currentStatus, user?.documents_data, backendType, isDL, isPan, isAadhaar]);
+
+  const [documentNumber, setDocumentNumber] = useState(existingDocNumber);
+  const [docNumberTouched, setDocNumberTouched] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  useEffect(() => {
+    if (existingDocNumber && !documentNumber) {
+      setDocumentNumber(existingDocNumber);
+    }
+  }, [existingDocNumber]);
+
+  const validateDLNumber = (val: string): string | undefined => {
+    if (!val || !val.trim()) {
+      return t('dl_number_required', 'Driving Licence number is required');
+    }
+    const clean = val.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (clean.length < 10) {
+      return t('dl_number_too_short', 'Driving Licence number must be at least 10 characters');
+    }
+    if (clean.length > 18) {
+      return t('dl_number_too_long', 'Driving Licence number cannot exceed 18 characters');
+    }
+    if (!/^[A-Z]{2}/.test(clean)) {
+      return t('dl_invalid_state_code', 'Must start with a valid 2-letter state code (e.g. TN, DL, MH)');
+    }
+    if (!/^[A-Z]{2}[0-9]{2}/.test(clean)) {
+      return t('dl_invalid_format', 'Invalid format. Example: DL-1420110012345 or TN0120150001234');
+    }
+    return undefined;
+  };
+
+  const validatePanNumber = (val: string): string | undefined => {
+    if (!val || !val.trim()) {
+      return t('pan_number_required', 'PAN Card number is required');
+    }
+    const clean = val.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (clean.length < 10) {
+      return t('pan_number_too_short', 'PAN Card number must be exactly 10 characters');
+    }
+    if (clean.length > 10) {
+      return t('pan_number_too_long', 'PAN Card number cannot exceed 10 characters');
+    }
+    if (!/^[A-Z]{5}/.test(clean)) {
+      return t('pan_first_five_letters', 'First 5 characters must be letters (e.g. ABCDE)');
+    }
+    if (!/^[A-Z]{5}[0-9]{4}/.test(clean)) {
+      return t('pan_next_four_digits', 'Characters 6 to 9 must be 4 digits (e.g. 1234)');
+    }
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(clean)) {
+      return t('pan_invalid_format', 'Invalid PAN format. Example: ABCDE1234F');
+    }
+    return undefined;
+  };
+
+  const validateAadhaarNumber = (val: string): string | undefined => {
+    if (!val || !val.trim()) {
+      return t('aadhaar_number_required', 'Aadhaar Card number is required');
+    }
+    const clean = val.replace(/[^0-9]/g, '');
+    if (clean.length < 12) {
+      return t('aadhaar_number_too_short', 'Aadhaar number must be 12 digits');
+    }
+    if (clean.length > 12) {
+      return t('aadhaar_number_too_long', 'Aadhaar number cannot exceed 12 digits');
+    }
+    if (clean.startsWith('0') || clean.startsWith('1')) {
+      return t('aadhaar_invalid_first_digit', 'Aadhaar number cannot start with 0 or 1');
+    }
+    if (/^(\d)\1{11}$/.test(clean)) {
+      return t('aadhaar_invalid_sequence', 'Please enter a valid 12-digit Aadhaar number');
+    }
+    return undefined;
+  };
+
+  const docConfig = useMemo(() => {
+    if (isDL) {
+      return {
+        label: t('driving_license_number', 'Driving Licence Number'),
+        placeholder: t('dl_number_placeholder', 'e.g. DL-1420110012345'),
+        hint: t('dl_number_hint', 'Enter the 15-16 digit number exactly as printed on your card.'),
+        icon: 'card' as const,
+        inputIcon: 'id-card-outline' as const,
+        maxLength: 20,
+        keyboardType: 'default' as const,
+        autoCapitalize: 'characters' as const,
+        validate: validateDLNumber,
+        filter: (text: string) => text.toUpperCase().replace(/[^A-Z0-9 -]/g, ''),
+      };
+    }
+    if (isPan) {
+      return {
+        label: t('pan_card_number', 'PAN Card Number'),
+        placeholder: t('pan_number_placeholder', 'e.g. ABCDE1234F'),
+        hint: t('pan_number_hint', 'Enter the 10-character alphanumeric PAN exactly as on your card.'),
+        icon: 'card' as const,
+        inputIcon: 'id-card-outline' as const,
+        maxLength: 10,
+        keyboardType: 'default' as const,
+        autoCapitalize: 'characters' as const,
+        validate: validatePanNumber,
+        filter: (text: string) => text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10),
+      };
+    }
+    if (isAadhaar) {
+      return {
+        label: t('aadhaar_card_number', 'Aadhaar Card Number'),
+        placeholder: t('aadhaar_number_placeholder', 'e.g. 2345 6789 0123'),
+        hint: t('aadhaar_number_hint', 'Enter the 12-digit number exactly as on your Aadhaar card.'),
+        icon: 'card' as const,
+        inputIcon: 'finger-print-outline' as const,
+        maxLength: 14,
+        keyboardType: 'numeric' as const,
+        autoCapitalize: 'none' as const,
+        validate: validateAadhaarNumber,
+        filter: formatAadhaar,
+      };
+    }
+    return null;
+  }, [isDL, isPan, isAadhaar, t]);
+
+  const docNumberError = docConfig && docNumberTouched ? docConfig.validate(documentNumber) : undefined;
+  const isDocNumberValid = docConfig && 
+    (isAadhaar 
+      ? documentNumber.replace(/[^0-9]/g, '').length === 12 
+      : documentNumber.trim().length >= 10) && 
+    !docConfig.validate(documentNumber);
+
   /* ---------------- IMAGE PRE-VALIDATION ---------------- */
   const validateImageLocally = async (filePath: string): Promise<{ valid: boolean; error?: string }> => {
     try {
@@ -274,6 +450,22 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
   /* ---------------- CONTINUE ---------------- */
   const handleContinue = async () => {
+    // Validate Document Number before proceeding if required (DL or PAN)
+    if (docConfig) {
+      const error = docConfig.validate(documentNumber);
+      if (error) {
+        setDocNumberTouched(true);
+        showAlert({
+          title: t('validation_error', 'Validation Error'),
+          message: error,
+          singleButton: true,
+          icon: 'information-circle-outline',
+        });
+        triggerHaptic(HapticFeedbackTypes.notificationError);
+        return;
+      }
+    }
+
     if (Object.keys(images).length !== side.length) {
       showAlert({
         title: t('upload_incomplete'),
@@ -373,11 +565,34 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       // --- Stage 2: Save & AI Verification ---
       setUploadStage('verifying');
 
-      const saveResult = await saveDocument({
+      const cleanedDocNum = isAadhaar
+        ? documentNumber.replace(/\s+/g, '').trim()
+        : documentNumber.trim().toUpperCase();
+
+      const savePayload: any = {
         driverId: user.driverId,
         documentType: backendType,
         documentUrl,
-      }).unwrap();
+      };
+
+      if (cleanedDocNum) {
+        savePayload.documentNumber = cleanedDocNum;
+        savePayload.document_number = cleanedDocNum;
+        if (isDL) {
+          savePayload.licenseNumber = cleanedDocNum;
+          savePayload.license_number = cleanedDocNum;
+        } else if (isPan) {
+          savePayload.panNumber = cleanedDocNum;
+          savePayload.pan_number = cleanedDocNum;
+        } else if (isAadhaar) {
+          savePayload.aadhaarNumber = cleanedDocNum;
+          savePayload.aadhaar_number = cleanedDocNum;
+          savePayload.aadharNumber = cleanedDocNum;
+          savePayload.aadhar_number = cleanedDocNum;
+        }
+      }
+
+      const saveResult = await saveDocument(savePayload).unwrap();
 
       // --- Stage 3: Saving ---
       setUploadStage('saving');
@@ -390,9 +605,32 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
       updatedDocs[docKey] = {
         status: 'pending',
         preview: localPreview,
+        ...(cleanedDocNum ? { document_number: cleanedDocNum } : {}),
       };
 
       const profileUpdate: any = { documents: updatedDocs };
+
+      if (cleanedDocNum && Array.isArray(user?.documents_data)) {
+        profileUpdate.documents_data = user.documents_data.map((d: any) =>
+          d.document_type === backendType
+            ? {
+                ...d,
+                document_number: cleanedDocNum,
+                documentNumber: cleanedDocNum,
+                ...(isDL ? { license_number: cleanedDocNum, licenseNumber: cleanedDocNum } : {}),
+                ...(isPan ? { pan_number: cleanedDocNum, panNumber: cleanedDocNum } : {}),
+                ...(isAadhaar
+                  ? {
+                      aadhaar_number: cleanedDocNum,
+                      aadhaarNumber: cleanedDocNum,
+                      aadhar_number: cleanedDocNum,
+                      aadharNumber: cleanedDocNum,
+                    }
+                  : {}),
+              }
+            : d
+        );
+      }
 
       if (docKey === 'Profile_Selfie' || backendType === 'profile_selfie') {
         profileUpdate.profile_picture = localPreview;
@@ -462,52 +700,152 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <AppStatusBar />
-      <View style={[Styles.flex, styles.container]}>
-        {/* HEADER SECTION */}
-        <View style={styles.headerSection}>
-          <View style={styles.headerTextContainer}>
-            <Text style={[styles.headerTitle, { color: colors.text }]} adjustsFontSizeToFit numberOfLines={1}>
-              {t(labelKey)}
-            </Text>
-            {docKey === 'Aadhar_Card' ? (
-              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
-                Upload clear images of your Aadhaar card.
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* HEADER SECTION */}
+          <View style={styles.headerSection}>
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.headerTitle, { color: colors.text }]} adjustsFontSizeToFit numberOfLines={1}>
+                {t(labelKey)}
               </Text>
-            ) : docKey === 'Pan_Card' ? (
-              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
-                Upload clear images of your PAN card.
-              </Text>
-            ) : docKey === 'Driving_License' ? (
-              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
-                Upload clear images of your Driving License.
-              </Text>
-            ) : (
-              <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
-                {getTip()}
-              </Text>
-            )}
+              {docKey === 'Aadhar_Card' ? (
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                  Upload clear images of your Aadhaar card.
+                </Text>
+              ) : docKey === 'Pan_Card' ? (
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                  Upload clear images of your PAN card.
+                </Text>
+              ) : docKey === 'Driving_License' ? (
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                  Upload clear images of your Driving License.
+                </Text>
+              ) : (
+                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+                  {getTip()}
+                </Text>
+              )}
+            </View>
           </View>
-          <Image
-            source={
-              docKey === 'Profile_Selfie'
-                ? require('../../assets/images/profileTop.png')
-                : require('../../assets/images/documents.png')
-            }
-            style={styles.headerImage}
-          />
-        </View>
 
+          {/* REJECTION REASON */}
+          {rejectionReason && (
+            <View style={[styles.rejectionBox, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FCA5A5' }]}>
+              <Ionicons name="alert-circle" size={20} color="#DC2626" />
+              <Text style={[styles.rejectionText, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>
+                <Text style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>{t('rejection_reason')}: </Text>
+                {rejectionReason}
+              </Text>
+            </View>
+          )}
 
-        {/* REJECTION REASON */}
-        {rejectionReason && (
-          <View style={[styles.rejectionBox, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FCA5A5' }]}>
-            <Ionicons name="alert-circle" size={20} color="#DC2626" />
-            <Text style={[styles.rejectionText, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>
-              <Text style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>{t('rejection_reason')}: </Text>
-              {rejectionReason}
-            </Text>
-          </View>
-        )}
+          {/* DOCUMENT NUMBER INPUT (TOP SECTION FOR DL / PAN / AADHAAR) */}
+          {hasDocumentNumberInput && docConfig && (
+            <View
+              style={[
+                styles.docNumberCard,
+                {
+                  backgroundColor: isDark ? theme.colors.card : '#F8FAFC',
+                  borderColor: docNumberError
+                    ? '#EF4444'
+                    : isInputFocused
+                      ? colors.primary
+                      : isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+                },
+              ]}
+            >
+              <View style={styles.docNumberHeader}>
+                <View style={styles.docNumberLabelRow}>
+                  <Ionicons name={docConfig.icon} size={16} color={colors.primary} />
+                  <Text style={[styles.docNumberLabel, { color: colors.text }]}>
+                    {docConfig.label}
+                  </Text>
+                  <Text style={styles.requiredStar}>*</Text>
+                </View>
+                {isDocNumberValid && (
+                  <View style={styles.validBadge}>
+                    <Ionicons name="checkmark-circle" size={14} color="#16A34A" />
+                    <Text style={styles.validBadgeText}>{t('valid', 'Valid')}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFFFFF',
+                    borderColor: docNumberError
+                      ? '#EF4444'
+                      : isInputFocused
+                        ? colors.primary
+                        : isDark ? 'rgba(255,255,255,0.15)' : '#CBD5E1',
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={docConfig.inputIcon}
+                  size={20}
+                  color={docNumberError ? '#EF4444' : isInputFocused ? colors.primary : '#9CA3AF'}
+                  style={styles.inputLeadingIcon}
+                />
+                <TextInput
+                  value={documentNumber}
+                  onChangeText={(text) => {
+                    const cleaned = docConfig.filter(text);
+                    setDocumentNumber(cleaned);
+                    if (docNumberTouched) setDocNumberTouched(true);
+                  }}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => {
+                    setIsInputFocused(false);
+                    setDocNumberTouched(true);
+                  }}
+                  placeholder={docConfig.placeholder}
+                  placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
+                  autoCapitalize={docConfig.autoCapitalize || 'characters'}
+                  autoCorrect={false}
+                  keyboardType={docConfig.keyboardType || 'default'}
+                  maxLength={docConfig.maxLength}
+                  style={[
+                    styles.textInput,
+                    { color: colors.text },
+                  ]}
+                />
+                {documentNumber.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setDocumentNumber('');
+                      setDocNumberTouched(false);
+                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.clearBtn}
+                  >
+                    <Ionicons name="close-circle" size={18} color={isDark ? '#6B7280' : '#9CA3AF'} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {docNumberError ? (
+                <View style={styles.errorRow}>
+                  <Ionicons name="alert-circle-outline" size={13} color="#EF4444" />
+                  <Text style={styles.errorText}>{docNumberError}</Text>
+                </View>
+              ) : (
+                <Text style={[styles.docNumberHint, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                  {docConfig.hint}
+                </Text>
+              )}
+            </View>
+          )}
 
         {/* UPLOAD BOXES */}
         <View
@@ -850,7 +1188,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         </View>
 
         {/* TIPS SECTION */}
-        {docKey !== 'Profile_Selfie' && (
+        {docKey !== 'Profile_Selfie' && docKey !== 'Driving_License' && docKey !== 'Pan_Card' && docKey !== 'Aadhar_Card' && (
           <View style={[styles.tipsCardContainer, { backgroundColor: isDark ? theme.colors.card : '#F0F5FF' }]}>
             <View style={styles.tipsIconContainer}>
               <Ionicons name="shield-checkmark" size={28} color={colors.primary} />
@@ -927,7 +1265,8 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
             </Text>
           </View>
         </View>
-      </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
 
       <ImageZoomModal
         visible={!!zoomImage}
@@ -972,15 +1311,93 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
   },
-  headerSection: {
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+    flexGrow: 1,
+  },
+  docNumberCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 20,
+  },
+  docNumberHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  docNumberLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
+    gap: 6,
+  },
+  docNumberLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  requiredStar: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  validBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
+  },
+  validBadgeText: {
+    color: '#16A34A',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 46,
+    paddingHorizontal: 12,
+  },
+  inputLeadingIcon: {
+    marginRight: 8,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    paddingVertical: 0,
+  },
+  clearBtn: {
+    padding: 4,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  docNumberHint: {
+    fontSize: 11,
+    marginTop: 6,
+    lineHeight: 15,
+  },
+  headerSection: {
+    marginBottom: 20,
   },
   headerTextContainer: {
-    flex: 1,
-    paddingRight: 10,
+    width: '100%',
   },
   headerTitle: {
     fontSize: 24,
@@ -991,11 +1408,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 18,
-  },
-  headerImage: {
-    width: 140,
-    height: 100,
-    resizeMode: 'contain',
   },
   row: {
     flexDirection: 'row',

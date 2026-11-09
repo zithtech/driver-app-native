@@ -22,7 +22,16 @@ class SocketService {
   private lastSocketErrorTime: number = 0;
 
   async connect(userId?: string, role?: string) {
-    if (this.socket?.connected) { return; }
+    if (userId) {
+      this.driverId = userId;
+    }
+
+    if (this.socket?.connected) {
+      if (this.driverId) {
+        this.joinDriverRoom(this.driverId);
+      }
+      return;
+    }
 
     const token = await storage.getAccessToken();
 
@@ -36,8 +45,8 @@ class SocketService {
       timeout: 20000,
       auth: {
         token: token || '',
-        userId: userId,
-        role: role,
+        userId: userId || this.driverId,
+        role: role || 'DRIVER',
       },
     });
 
@@ -65,8 +74,10 @@ class SocketService {
       }
 
       if (this.driverId) {
-        console.log('🔄 Re-joining driver room:', this.driverId);
+        console.log('🔄 Re-joining driver rooms:', this.driverId);
         this.socket?.emit('JOIN_DRIVER_ROOM', this.driverId);
+        this.socket?.emit('join', `driver_${this.driverId}`);
+        this.socket?.emit('join', `kyc_${this.driverId}`);
       }
     });
 
@@ -145,10 +156,23 @@ class SocketService {
     if (!driverId) return;
     this.driverId = driverId;
     if (this.socket?.connected) {
-      console.log('📡 Emitting JOIN_DRIVER_ROOM:', driverId);
+      console.log('📡 Emitting JOIN_DRIVER_ROOM & join kyc:', driverId);
       this.socket.emit('JOIN_DRIVER_ROOM', driverId);
+      this.socket.emit('join', `driver_${driverId}`);
+      this.socket.emit('join', `kyc_${driverId}`);
     } else {
       console.log('⏳ Socket not connected, JOIN_DRIVER_ROOM will happen on connect:', driverId);
+    }
+  }
+
+  joinKycSession(sessionId?: string, driverId?: string) {
+    if (driverId) {
+      this.joinDriverRoom(driverId);
+    }
+    if (sessionId && this.socket?.connected) {
+      console.log('📡 Emitting JOIN_KYC_SESSION:', sessionId);
+      this.socket.emit('JOIN_KYC_SESSION', { sessionId, driverId: driverId || this.driverId });
+      this.socket.emit('join', `kyc_session_${sessionId}`);
     }
   }
 
@@ -296,6 +320,79 @@ class SocketService {
   // Cleanup listener
   offLocationUpdate() {
     this.socket?.off('locationUpdate');
+  }
+
+  // ─── VIDEO KYC SOCKET METHODS ─────────────────────────
+
+  /** Emit: Driver requests video KYC */
+  emitKycRequest(driverId: string, location?: { latitude: number; longitude: number }) {
+    this.emit('KYC_REQUEST_VIDEO', { driverId, location });
+  }
+
+  /** Emit: Driver cancels pending KYC request */
+  emitKycCancel(sessionId: string) {
+    this.emit('KYC_CANCEL_REQUEST', { sessionId });
+  }
+
+  /** Emit: Driver joined the Agora call */
+  emitKycDriverJoined(sessionId: string) {
+    this.emit('KYC_DRIVER_JOINED', { sessionId });
+  }
+
+  /** Emit: Driver left or hung up */
+  emitKycDriverLeft(sessionId: string) {
+    this.emit('KYC_DRIVER_LEFT', { sessionId });
+  }
+
+  /** Listen: Queue position updates */
+  onKycQueueUpdate(callback: (data: { position: number; estimatedWaitSeconds: number }) => void) {
+    this.on('KYC_QUEUE_UPDATE', callback);
+  }
+  offKycQueueUpdate(callback?: (data: any) => void) {
+    this.off('KYC_QUEUE_UPDATE', callback);
+  }
+
+  /** Listen: Admin accepted — time to join call */
+  onKycCallAccepted(callback: (data: {
+    sessionId: string;
+    channelName: string;
+    token: string;
+    uid: number;
+    adminName?: string;
+  }) => void) {
+    this.on('KYC_CALL_ACCEPTED', callback);
+  }
+  offKycCallAccepted(callback?: (data: any) => void) {
+    this.off('KYC_CALL_ACCEPTED', callback);
+  }
+
+  /** Listen: Admin sends an instruction during call */
+  onKycAdminPrompt(callback: (data: { promptText: string }) => void) {
+    this.on('KYC_ADMIN_PROMPT', callback);
+  }
+  offKycAdminPrompt(callback?: (data: any) => void) {
+    this.off('KYC_ADMIN_PROMPT', callback);
+  }
+
+  /** Listen: Admin ended call & submitted verdict */
+  onKycResult(callback: (data: {
+    sessionId: string;
+    status: 'APPROVED' | 'REJECTED';
+    remarks?: string;
+    rejectionReasons?: string[];
+  }) => void) {
+    this.on('KYC_RESULT', callback);
+  }
+  offKycResult(callback?: (data: any) => void) {
+    this.off('KYC_RESULT', callback);
+  }
+
+  /** Listen: Admin disconnected mid-call (network issue) */
+  onKycAdminDisconnected(callback: (data: { sessionId: string }) => void) {
+    this.on('KYC_ADMIN_DISCONNECTED', callback);
+  }
+  offKycAdminDisconnected(callback?: (data: any) => void) {
+    this.off('KYC_ADMIN_DISCONNECTED', callback);
   }
 
 

@@ -24,6 +24,8 @@ class MainApplication : Application(), ReactApplication {
             PackageList(this).packages.apply {
               // Packages that cannot be autolinked yet can be added manually here, for example:
               // add(MyReactNativePackage())
+              add(com.driverclient.floating.FloatingOverlayPackage())
+              add(com.driverclient.notifications.CustomNotificationPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"
