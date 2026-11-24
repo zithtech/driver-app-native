@@ -11,15 +11,15 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { isTamilLanguage } from '../../utils/languageSizings';
-
-const { width } = Dimensions.get('window');
+import { useResponsive } from '../../lib/scale';
 
 const VerificationSuccessScreen = () => {
   const { t } = useTranslation();
   const { theme, isDark } = useAppTheme();
-  const fonts = theme.fonts as any; // Cast to any to avoid type complaints if fonts typing isn't fully robust, though theme.fonts should be fine. Actually let's just do `theme.fonts`.
+  const fonts = theme.fonts as any;
   const navigation = useNavigation<any>();
   const isTamil = isTamilLanguage();
+  const { rs, rvs, rms, cs, selectByDevice, isSmallDevice, isMediumDevice, isLargeDevice, isTablet } = useResponsive();
 
   const user = useSelector((state: RootState) => state.userSlice.user);
 
@@ -50,32 +50,33 @@ const VerificationSuccessScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={{ flex: 1, width: '100%', maxWidth: isTablet ? 480 : undefined, alignSelf: 'center' }}>
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color={theme.colors.text} />
+          <Ionicons name="chevron-back" size={selectByDevice({ small: 24, medium: 28, large: 30 })} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={[fonts.bold, styles.headerTitle, { color: theme.colors.text }]}>
+        <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.headerTitle, { fontSize: selectByDevice({ small: rms(16), medium: rms(18), large: rms(20) }), color: theme.colors.text }]}>
           {t('verification_successful', 'Verification Successful')}
         </Text>
         <TouchableOpacity style={[styles.headerBtn, styles.supportBtn]} onPress={() => navigation.navigate(HelpCenter_Nav)}>
-          <Ionicons name="headset-outline" size={20} color={theme.colors.text} />
+          <Ionicons name="headset-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingHorizontal: selectByDevice({ small: 14, medium: rms(18), large: rms(22) }), paddingBottom: selectByDevice({ small: 16, medium: 24, large: 30 }) }]} showsVerticalScrollIndicator={false}>
         
         {/* HERO SECTION */}
         <Animated.View entering={FadeIn.duration(800)} style={styles.heroSection}>
           <Image 
             source={require('../../assets/images/verified.png')} 
-            style={styles.heroImage} 
+            style={[styles.heroImage, { width: selectByDevice({ small: 105, medium: 135, large: 160 }), height: selectByDevice({ small: 80, medium: 100, large: 120 }) }]} 
             resizeMode="contain" 
           />
-          <Text style={[fonts.bold, styles.congratsText, { color: theme.colors.text }]}>
+          <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.congratsText, { fontSize: selectByDevice({ small: rms(18), medium: rms(22), large: rms(24) }), color: theme.colors.text }]}>
             {t('congratulations', 'Congratulations!')}
           </Text>
-          <Text style={[styles.congratsSubtext, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+          <Text maxFontSizeMultiplier={1.25} style={[styles.congratsSubtext, { fontSize: selectByDevice({ small: rms(12), medium: rms(13.5), large: rms(14.5) }), color: isDark ? '#9CA3AF' : '#4B5563' }]}>
             {t('verified_desc_1', 'Your documents have been verified successfully.')}
             {'\n'}
             {t('verified_desc_2', 'You are now ready to start accepting rides.')}
@@ -83,14 +84,14 @@ const VerificationSuccessScreen = () => {
         </Animated.View>
 
         {/* VERIFICATION SUMMARY */}
-        <Animated.View entering={FadeInDown.duration(800).delay(100)} style={[styles.card, { backgroundColor: theme.colors.card }]}>
+        <Animated.View entering={FadeInDown.duration(800).delay(100)} style={[styles.card, { padding: selectByDevice({ small: 10, medium: 14, large: 16 }), marginBottom: selectByDevice({ small: 10, medium: 14, large: 18 }), backgroundColor: theme.colors.card }]}>
           <View style={styles.cardHeader}>
-            <Text style={[fonts.bold, styles.cardTitle, { color: theme.colors.text }]}>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.cardTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14.5), large: rms(15.5) }), color: theme.colors.text }]}>
               {t('verification_summary', 'Verification Summary')}
             </Text>
             <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={14} color={isDark ? '#9CA3AF' : '#6B7280'} />
-              <Text style={[styles.dateText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+              <Ionicons name="calendar-outline" size={selectByDevice({ small: 13, medium: 14, large: 15 })} color={isDark ? '#9CA3AF' : '#6B7280'} />
+              <Text maxFontSizeMultiplier={1.25} style={[styles.dateText, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>
                 {t('verified_on', 'Verified on')} {today}
               </Text>
             </View>
@@ -105,76 +106,76 @@ const VerificationSuccessScreen = () => {
             const isVerified = status === 'verified' || status === 'approved';
             
             return (
-              <View key={index} style={[styles.docRow, isLast && { borderBottomWidth: 0 }]}>
+              <View key={index} style={[styles.docRow, { paddingVertical: selectByDevice({ small: 6, medium: 8, large: 10 }) }, isLast && { borderBottomWidth: 0 }]}>
                 <View style={[styles.docIconBg, { backgroundColor: isDark ? '#374151' : (isVerified ? '#F0FDF4' : '#FFFBEB') }]}>
-                  <Ionicons name={icon} size={20} color={isVerified ? "#10B981" : "#F59E0B"} />
+                  <Ionicons name={icon} size={selectByDevice({ small: 18, medium: 20, large: 22 })} color={isVerified ? "#10B981" : "#F59E0B"} />
                 </View>
                 <View style={styles.docTextCol}>
-                  <Text style={[fonts.medium, styles.docTitle, { color: theme.colors.text }]}>
+                  <Text maxFontSizeMultiplier={1.25} style={[fonts.medium, styles.docTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }), color: theme.colors.text }]}>
                     {title}
                   </Text>
-                  <Text style={[styles.docStatus, { color: isVerified ? '#10B981' : '#F59E0B' }]}>
+                  <Text maxFontSizeMultiplier={1.25} style={[styles.docStatus, { fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), color: isVerified ? '#10B981' : '#F59E0B' }]}>
                     {isVerified ? t('verified', 'Verified') : t('uploaded', 'Uploaded')}
                   </Text>
                 </View>
-                <Ionicons name={isVerified ? "checkmark-circle" : "time-outline"} size={24} color={isVerified ? "#10B981" : "#F59E0B"} />
+                <Ionicons name={isVerified ? "checkmark-circle" : "time-outline"} size={selectByDevice({ small: 22, medium: 24, large: 26 })} color={isVerified ? "#10B981" : "#F59E0B"} />
               </View>
             );
           })}
         </Animated.View>
 
         {/* ALL SET BANNER */}
-        <Animated.View entering={FadeInDown.duration(800).delay(200)} style={[styles.allSetCard, { backgroundColor: isDark ? '#064E3B' : '#F0FDF4' }]}>
+        <Animated.View entering={FadeInDown.duration(800).delay(200)} style={[styles.allSetCard, { padding: selectByDevice({ small: 10, medium: 14, large: 16 }), marginBottom: selectByDevice({ small: 10, medium: 14, large: 18 }), backgroundColor: isDark ? '#064E3B' : '#F0FDF4' }]}>
           <View style={styles.allSetTextCol}>
-            <Text style={[fonts.bold, styles.allSetTitle, { color: isDark ? '#D1FAE5' : '#065F46' }]}>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.allSetTitle, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }), color: isDark ? '#D1FAE5' : '#065F46' }]}>
               {t('you_are_all_set', 'You are all set!')}
             </Text>
-            <Text style={[styles.allSetSub, { color: isDark ? '#A7F3D0' : '#047857' }]}>
+            <Text maxFontSizeMultiplier={1.25} style={[styles.allSetSub, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: isDark ? '#A7F3D0' : '#047857' }]}>
               {t('all_set_desc', 'You can now go online and start receiving ride requests.')}
             </Text>
           </View>
-          <Image source={isDark ? require('../../assets/images/dashboraddarkcar.png') : require('../../assets/images/dashboradcar.png')} style={styles.allSetImage} resizeMode="contain" />
+          <Image source={isDark ? require('../../assets/images/dashboraddarkcar.png') : require('../../assets/images/dashboradcar.png')} style={[styles.allSetImage, { width: selectByDevice({ small: 80, medium: 90, large: 100 }), height: selectByDevice({ small: 50, medium: 60, large: 70 }) }]} resizeMode="contain" />
         </Animated.View>
 
         {/* QUICK INFO GRID */}
-        <Animated.View entering={FadeInDown.duration(800).delay(300)} style={[styles.card, { backgroundColor: theme.colors.card, flexDirection: 'row', padding: 16 }]}>
+        <Animated.View entering={FadeInDown.duration(800).delay(300)} style={[styles.card, { backgroundColor: theme.colors.card, flexDirection: 'row', padding: selectByDevice({ small: 12, medium: 16, large: 18 }), marginBottom: selectByDevice({ small: 10, medium: 14, large: 18 }) }]}>
           
           <View style={styles.infoCol}>
             <View style={[styles.infoIconBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
-              <Ionicons name="time-outline" size={20} color="#10B981" />
+              <Ionicons name="time-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#10B981" />
             </View>
-            <Text style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: isTamil ? 10 : 12 }]} numberOfLines={1} adjustsFontSizeToFit>{t('go_online', 'Go Online')}</Text>
-            <Text style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 8 : 10 }]} numberOfLines={1} adjustsFontSizeToFit>{t('start_accepting', 'Start accepting')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: selectByDevice({ small: rms(9.5), medium: rms(11), large: rms(12) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('go_online', 'Go Online')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(8), medium: rms(9), large: rms(10) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('start_accepting', 'Start accepting')}</Text>
           </View>
 
           <View style={styles.infoDivider} />
 
           <View style={styles.infoCol}>
             <View style={[styles.infoIconBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
-              <Ionicons name="wallet-outline" size={20} color="#10B981" />
+              <Ionicons name="wallet-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#10B981" />
             </View>
-            <Text style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: isTamil ? 10 : 12 }]} numberOfLines={1} adjustsFontSizeToFit>{t('earn_more', 'Earn More')}</Text>
-            <Text style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 8 : 10 }]} numberOfLines={1} adjustsFontSizeToFit>{t('complete_rides', 'Complete rides')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: selectByDevice({ small: rms(9.5), medium: rms(11), large: rms(12) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('earn_more', 'Earn More')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(8), medium: rms(9), large: rms(10) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('complete_rides', 'Complete rides')}</Text>
           </View>
 
           <View style={styles.infoDivider} />
 
           <View style={styles.infoCol}>
             <View style={[styles.infoIconBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
-              <Ionicons name="shield-checkmark-outline" size={20} color="#10B981" />
+              <Ionicons name="shield-checkmark-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#10B981" />
             </View>
-            <Text style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: isTamil ? 10 : 12 }]} numberOfLines={1} adjustsFontSizeToFit>{t('stay_safe', 'Stay Safe')}</Text>
-            <Text style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 8 : 10 }]} numberOfLines={1} adjustsFontSizeToFit>{t('safety_first', 'Your safety is first')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: selectByDevice({ small: rms(9.5), medium: rms(11), large: rms(12) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('stay_safe', 'Stay Safe')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(8), medium: rms(9), large: rms(10) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('safety_first', 'Your safety is first')}</Text>
           </View>
 
           <View style={styles.infoDivider} />
 
           <View style={styles.infoCol}>
             <View style={[styles.infoIconBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
-              <Ionicons name="headset-outline" size={20} color="#10B981" />
+              <Ionicons name="headset-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#10B981" />
             </View>
-            <Text style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: isTamil ? 10 : 12 }]} numberOfLines={1} adjustsFontSizeToFit>{t('24_7_support', '24/7 Support')}</Text>
-            <Text style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 8 : 10 }]} numberOfLines={1} adjustsFontSizeToFit>{t('here_to_help', "We're here to help")}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.infoTitle, { color: theme.colors.text, fontSize: selectByDevice({ small: rms(9.5), medium: rms(11), large: rms(12) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('24_7_support', '24/7 Support')}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[styles.infoSub, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(8), medium: rms(9), large: rms(10) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('here_to_help', "We're here to help")}</Text>
           </View>
 
         </Animated.View>
@@ -182,20 +183,21 @@ const VerificationSuccessScreen = () => {
       </ScrollView>
 
       {/* BOTTOM ACTION */}
-      <View style={[styles.bottomSection, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.bottomSection, { paddingHorizontal: selectByDevice({ small: 14, medium: 16, large: 20 }), paddingTop: selectByDevice({ small: 8, medium: 12, large: 14 }), paddingBottom: selectByDevice({ small: 14, medium: 20, large: 28 }), backgroundColor: theme.colors.background }]}>
         <TouchableOpacity 
-          style={styles.actionBtn} 
+          style={[styles.actionBtn, { height: selectByDevice({ small: cs(48, 0.9, 1.1), medium: cs(52, 0.9, 1.1), large: cs(56, 0.9, 1.1) }) }]} 
           activeOpacity={0.8}
           onPress={() => navigation.reset({
             index: 0,
             routes: [{ name: Dashboard_Nav }],
           })}
         >
-          <Ionicons name="speedometer-outline" size={22} color="#FFF" style={{ position: 'absolute', left: 20 }} />
-          <Text style={[fonts.bold, styles.actionBtnText, { fontSize: isTamil ? 14 : 16 }]}>{t('go_to_dashboard', 'Go to Dashboard')}</Text>
-          <Ionicons name="arrow-forward" size={22} color="#FFF" style={{ position: 'absolute', right: 20 }} />
+          <Ionicons name="speedometer-outline" size={selectByDevice({ small: 20, medium: 22, large: 24 })} color="#FFF" style={{ position: 'absolute', left: 20 }} />
+          <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.actionBtnText, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }) }]}>{t('go_to_dashboard', 'Go to Dashboard')}</Text>
+          <Ionicons name="arrow-forward" size={selectByDevice({ small: 20, medium: 22, large: 24 })} color="#FFF" style={{ position: 'absolute', right: 20 }} />
         </TouchableOpacity>
-        <Text style={[styles.bottomTagline, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('start_journey', 'Start your journey with us!')}</Text>
+        <Text maxFontSizeMultiplier={1.25} style={[styles.bottomTagline, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(12.5), large: rms(13.5) }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('start_journey', 'Start your journey with us!')}</Text>
+      </View>
       </View>
     </SafeAreaView>
   );
@@ -238,8 +240,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heroImage: {
-    width: width * 0.35,
-    height: width * 0.25,
+    resizeMode: 'contain',
   },
   congratsText: {
     fontSize: 20,

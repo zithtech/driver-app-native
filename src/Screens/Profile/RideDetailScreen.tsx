@@ -833,7 +833,11 @@ const RideDetailScreen: React.FC<any> = ({ route, navigation }) => {
         animationType="slide"
         onRequestClose={() => setReportModalVisible(false)}
       >
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          enabled={Platform.OS === 'ios'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalContent, isDark && { backgroundColor: theme.colors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, isDark && { color: '#FFFFFF' }]}>Report an Issue</Text>

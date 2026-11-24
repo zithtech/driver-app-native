@@ -333,6 +333,7 @@ const PickupOTPScreen = ({ route, navigation }: any) => {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <AppStatusBar />
       <KeyboardAvoidingView
+        enabled={Platform.OS === 'ios'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >

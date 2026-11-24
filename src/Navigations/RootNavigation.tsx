@@ -564,6 +564,7 @@ const RootNavigation = () => {
 
   return (
     <Stack.Navigator
+      key={isAuthenticated ? 'authenticated' : 'unauthenticated'}
       initialRouteName={initialRoute}
       screenOptions={{ headerShown: false }}
     >

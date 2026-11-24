@@ -186,6 +186,35 @@ export const driverApi = createApi({
       invalidatesTags: ['Driver'],
     }),
 
+    // Automatic 2-minute retry
+    retryVideoKyc: builder.mutation<any, { sessionId: string; driverId: string }>({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/retry/${sessionId}`,
+        method: 'POST',
+        body: { driverId, attempt: 2 },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
+    // Total 4-minute timeout -> move to admin scheduling
+    timeoutVideoKycToSchedule: builder.mutation<any, { sessionId: string; driverId: string }>({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/timeout-to-schedule/${sessionId}`,
+        method: 'POST',
+        body: { driverId },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
+    // Get confirmed scheduled appointment details
+    getScheduledKycAppointment: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/kyc/video/appointment/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Driver'],
+    }),
+
     /* ─────────── TRIP VERIFICATION (/drivers/trip-verification) ─────────── */
 
     // Submit trip photos (selfie + multiple car images)
@@ -594,5 +623,9 @@ export const {
   useGetVideoKycStatusQuery,
   useLazyGetVideoKycStatusQuery,
   useCancelVideoKycMutation,
+  useRetryVideoKycMutation,
+  useTimeoutVideoKycToScheduleMutation,
+  useGetScheduledKycAppointmentQuery,
+  useLazyGetScheduledKycAppointmentQuery,
 } = driverApi;
 

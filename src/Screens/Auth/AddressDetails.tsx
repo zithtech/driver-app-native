@@ -30,6 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../lib/scale';
 
 import { Input } from '../../Components';
 import { RootState } from '../../redux/store';
@@ -87,6 +88,7 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   const { t, i18n } = useTranslation();
   const { triggerHaptic } = useHaptic();
   const user = useSelector((state: RootState) => state.userSlice.user);
+  const { rs, rvs, rms, cs, selectByDevice, isSmallDevice, isTablet } = useResponsive();
 
   /* ---------------- STATE ---------------- */
   const [street, setStreet] = useState('');
@@ -310,320 +312,336 @@ const AddressDetails: React.FC<any> = ({ navigation }) => {
   }, []);
 
   const Label = ({ text, required }: { text: string; required?: boolean }) => (
-    <Text style={[styles.labelText, { color: colors.text }]}>
+    <Text maxFontSizeMultiplier={1.25} style={[styles.labelText, { color: colors.text, fontSize: selectByDevice({ small: rms(11.5), medium: rms(12), large: rms(13) }) }]}>
       {text} {required && <Text style={{ color: '#EF4444' }}>*</Text>}
     </Text>
   );
 
-  return (
-    <View style={[styles.container, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
-      <AppStatusBar />
-
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-        {/* PROGRESS BAR */}
-        <View style={styles.progressWrapper}>
-          <View style={styles.progressLineContainer}>
-            <View style={[styles.progressLine, { width: '66%', backgroundColor: colors.primary }]} />
-            <View style={[styles.progressLine, { width: '34%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+  const renderScreenContent = () => (
+    <>
+      {/* PROGRESS BAR */}
+      <View style={[styles.progressWrapper, {
+        paddingTop: selectByDevice({ small: 8, medium: 12, large: 14 }),
+        paddingBottom: selectByDevice({ small: 8, medium: 12, large: 14 }),
+      }]}>
+        <View style={[styles.progressLineContainer, { top: selectByDevice({ small: 19, medium: 23, large: 25 }) }]}>
+          <View style={[styles.progressLine, { width: '66%', backgroundColor: colors.primary }]} />
+          <View style={[styles.progressLine, { width: '34%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+        </View>
+        <View style={styles.progressStepsRow}>
+          {/* Step 1 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary, width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Ionicons name="checkmark" size={selectByDevice({ small: 14, medium: 16, large: 18 })} color="#FFF" />
+            </View>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+            </Text>
           </View>
-          <View style={styles.progressStepsRow}>
-            {/* Step 1 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                <Ionicons name="checkmark" size={16} color="#FFF" />
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-                {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
-              </Text>
+          {/* Step 2 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary, width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Ionicons name="checkmark" size={selectByDevice({ small: 14, medium: 16, large: 18 })} color="#FFF" />
             </View>
-            {/* Step 2 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                <Ionicons name="checkmark" size={16} color="#FFF" />
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-                {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
-              </Text>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+            </Text>
+          </View>
+          {/* Step 3 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary, width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Text maxFontSizeMultiplier={1.2} style={[styles.stepNumber, { color: '#FFF', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }) }]}>3</Text>
             </View>
-            {/* Step 3 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                <Text style={[styles.stepNumber, { color: '#FFF' }]}>3</Text>
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
-                {cleanStepText(t('address_details_step', 'Address\nDetails'))}
-              </Text>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: colors.primary, fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+            </Text>
+          </View>
+          {/* Step 4 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: isDark ? colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB', width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Text maxFontSizeMultiplier={1.2} style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }) }]}>4</Text>
             </View>
-            {/* Step 4 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: isDark ? colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
-                <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>4</Text>
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-                {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
-              </Text>
-            </View>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+            </Text>
           </View>
         </View>
+      </View>
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      <KeyboardAvoidingView
+        enabled={Platform.OS === 'ios'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingBottom: selectByDevice({ small: 20, medium: 32, large: 40 }) }]}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
-            keyboardShouldPersistTaps="handled"
+          {/* HEADER SECTION */}
+          <View style={[styles.headerSection, { paddingBottom: selectByDevice({ small: 8, medium: 12, large: 16 }) }]}>
+            <View style={styles.headerTextContainer}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.headerTitle, { color: colors.text, fontSize: selectByDevice({ small: rms(20), medium: rms(22), large: rms(24) }) }]}>{t('address_details_title', 'Address Details')}</Text>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), lineHeight: selectByDevice({ small: rms(16), medium: rms(18), large: rms(20) }) }]}>
+                {t('address_details_subtitle', 'Please enter your current address as per your proof of address.')}
+              </Text>
+            </View>
+            <Image
+              source={isDark ? require('../../assets/images/addressDarkmode.png') : require('../../assets/images/addressLightmode.png')}
+              style={[styles.headerImage, { width: selectByDevice({ small: 44, medium: 52, large: 60 }), height: selectByDevice({ small: 44, medium: 52, large: 60 }) }]}
+            />
+          </View>
+
+          {/* LOCATION CARD */}
+          <Pressable
+            onPress={handleGetCurrentLocation}
+            disabled={locationLoading}
+            onPressIn={() => {
+              triggerHaptic(HapticFeedbackTypes.impactLight);
+              locationScale.value = withSpring(0.97);
+            }}
+            onPressOut={() => { locationScale.value = withSpring(1); }}
           >
-            {/* HEADER SECTION */}
-            <View style={styles.headerSection}>
-              <View style={styles.headerTextContainer}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('address_details_title', 'Address Details')}</Text>
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                  {t('address_details_subtitle', 'Please enter your current address as per your proof of address.')}
-                </Text>
+            <Animated.View style={[styles.locationCard, locationAnimatedStyle, isDark && { backgroundColor: theme.colors.card, borderColor: 'rgba(255,255,255,0.1)' }]}>
+              <View style={styles.locationCardInner}>
+                <View style={[styles.locationIconCircle, { backgroundColor: colors.primary }]}>
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Ionicons name="locate" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#FFF" />
+                  )}
+                </View>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text maxFontSizeMultiplier={1.25} style={[styles.locationTitle, { color: colors.text, fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }) }]} numberOfLines={1}>{t('use_current_location', 'Use Current Location')}</Text>
+                  <Text maxFontSizeMultiplier={1.2} style={[styles.locationSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(10.5), medium: rms(11), large: rms(11.5) }) }]} numberOfLines={2}>{t('detect_location_subtitle', 'Detect your current location and fill address automatically')}</Text>
+                </View>
+                <View style={[styles.locationActionBtn, { backgroundColor: colors.primary, height: selectByDevice({ small: 32, medium: 36, large: 38 }), minWidth: selectByDevice({ small: 54, medium: 60, large: 66 }) }]}>
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Text maxFontSizeMultiplier={1.2} style={[styles.locationActionText, { color: '#FFF', fontSize: selectByDevice({ small: rms(11.5), medium: rms(12), large: rms(13) }) }]} numberOfLines={1}>{t('use', 'Use')}</Text>
+                  )}
+                </View>
               </View>
-              <Image
-                source={isDark ? require('../../assets/images/addressDarkmode.png') : require('../../assets/images/addressLightmode.png')}
-                style={styles.headerImage}
+
+              {/* Location Success Banner */}
+              {locationString !== '' && !locationLoading && (
+                <View style={[styles.locationSuccessBanner, { backgroundColor: isDark ? 'rgba(5, 150, 105, 0.1)' : '#F0FDF4', borderTopColor: isDark ? 'rgba(5, 150, 105, 0.2)' : '#DCFCE7' }]}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={isDark ? '#4ADE80' : '#059669'} />
+                  <Text maxFontSizeMultiplier={1.2} style={[styles.locationSuccessText, { color: isDark ? '#4ADE80' : '#059669', fontSize: selectByDevice({ small: rms(11), medium: rms(11.5), large: rms(12) }) }]}>{t('location_detected_prefix', 'Location detected:')} {locationString}</Text>
+                </View>
+              )}
+            </Animated.View>
+          </Pressable>
+
+          {/* FORM FIELDS */}
+          <Animated.View style={animatedShakeStyle}>
+
+            {/* ADDRESS LINE 1 */}
+            <View style={styles.fieldBox}>
+              <Label text={t('address_line_1', 'Address Line 1')} required />
+              <Input
+                value={street}
+                autoCapitalize="words"
+                placeholder={t('address_line_1_placeholder', 'House / Flat / Building, Street')}
+                onChangeText={setStreet}
+                inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                style={[styles.flatInput, { color: colors.text, fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }) }]}
+                placeholderTextColor="#9CA3AF"
+                LeadingAccessory={
+                  <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                }
               />
             </View>
 
-            {/* LOCATION CARD */}
-            <Pressable
-              onPress={handleGetCurrentLocation}
-              disabled={locationLoading}
-              onPressIn={() => {
-                triggerHaptic(HapticFeedbackTypes.impactLight);
-                locationScale.value = withSpring(0.97);
-              }}
-              onPressOut={() => { locationScale.value = withSpring(1); }}
-            >
-              <Animated.View style={[styles.locationCard, locationAnimatedStyle, isDark && { backgroundColor: theme.colors.card, borderColor: 'rgba(255,255,255,0.1)' }]}>
-                <View style={styles.locationCardInner}>
-                  <View style={[styles.locationIconCircle, { backgroundColor: colors.primary }]}>
-                    {locationLoading ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <Ionicons name="locate" size={20} color="#FFF" />
-                    )}
-                  </View>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <Text style={[styles.locationTitle, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('use_current_location', 'Use Current Location')}</Text>
-                    <Text style={[styles.locationSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('detect_location_subtitle', 'Detect your current location and fill address automatically')}</Text>
-                  </View>
-                  <View style={[styles.locationActionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                    <Text style={[styles.locationActionText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('use_current_location', 'Use Current Location')}</Text>
-                  </View>
-                </View>
+            {/* ADDRESS LINE 2 */}
+            <View style={[styles.fieldBox, styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <Label text={t('address_line_2_optional', 'Address Line 2 (Optional)')} />
+              <Input
+                value={addressLine2}
+                autoCapitalize="words"
+                placeholder={t('address_line_2_placeholder', 'Area, Landmark, Nearby place')}
+                onChangeText={setAddressLine2}
+                inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                style={[styles.flatInput, { color: colors.text, fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }) }]}
+                placeholderTextColor="#9CA3AF"
+                LeadingAccessory={
+                  <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                }
+              />
+            </View>
 
-                {/* Location Success Banner */}
-                {locationString !== '' && !locationLoading && (
-                  <View style={[styles.locationSuccessBanner, { backgroundColor: isDark ? 'rgba(5, 150, 105, 0.1)' : '#F0FDF4', borderTopColor: isDark ? 'rgba(5, 150, 105, 0.2)' : '#DCFCE7' }]}>
-                    <Ionicons name="checkmark-circle-outline" size={16} color={isDark ? '#4ADE80' : '#059669'} />
-                    <Text style={[styles.locationSuccessText, { color: isDark ? '#4ADE80' : '#059669' }]}>{t('location_detected_prefix', 'Location detected:')} {locationString}</Text>
-                  </View>
-                )}
-              </Animated.View>
-            </Pressable>
-
-            {/* FORM FIELDS */}
-            <Animated.View style={animatedShakeStyle}>
-
-              {/* ADDRESS LINE 1 */}
-              <View style={styles.fieldBox}>
-                <Label text={t('address_line_1', 'Address Line 1')} required />
+            {/* CITY & DISTRICT */}
+            <View style={[styles.row, styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <View style={[styles.fieldBox, { flex: 1, zIndex: 10 }]}>
+                <Label text={t('city_town', 'City / Town')} required />
                 <Input
-                  value={street}
-                  autoCapitalize="words"
-                  placeholder={t('address_line_1_placeholder', 'House / Flat / Building, Street')}
-                  onChangeText={setStreet}
-                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                  style={[styles.flatInput, { color: colors.text }]}
-                  placeholderTextColor="#9CA3AF"
-                  LeadingAccessory={
-                    <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-                  }
-                />
-              </View>
-
-              {/* ADDRESS LINE 2 */}
-              <View style={[styles.fieldBox, styles.mt]}>
-                <Label text={t('address_line_2_optional', 'Address Line 2 (Optional)')} />
-                <Input
-                  value={addressLine2}
-                  autoCapitalize="words"
-                  placeholder={t('address_line_2_placeholder', 'Area, Landmark, Nearby place')}
-                  onChangeText={setAddressLine2}
-                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                  style={[styles.flatInput, { color: colors.text }]}
+                  value={city}
+                  placeholder={t('enter_city_town', 'Enter city / town')}
+                  onChangeText={handleCityChange}
+                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                  style={[styles.flatInput, { color: colors.text, fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }) }]}
                   placeholderTextColor="#9CA3AF"
                   LeadingAccessory={
                     <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
                   }
                 />
+                {citySuggestions.length > 0 && (
+                  <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+                    {citySuggestions.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
+                        onPress={() => selectCitySuggestion(item)}
+                      >
+                        <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
-              {/* CITY & DISTRICT */}
-              <View style={[styles.row, styles.mt]}>
-                <View style={[styles.fieldBox, { flex: 1, zIndex: 10 }]}>
-                  <Label text={t('city_town', 'City / Town')} required />
-                  <Input
-                    value={city}
-                    placeholder={t('enter_city_town', 'Enter city / town')}
-                    onChangeText={handleCityChange}
-                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                    style={[styles.flatInput, { color: colors.text }]}
-                    placeholderTextColor="#9CA3AF"
-                    LeadingAccessory={
-                      <Ionicons name="business-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    }
-                  />
-                  {citySuggestions.length > 0 && (
-                    <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
-                      {citySuggestions.map((item, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
-                          onPress={() => selectCitySuggestion(item)}
-                        >
-                          <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <View style={[styles.fieldBox, { flex: 1, zIndex: 9 }]}>
-                  <Label text={t('district', 'District')} required />
-                  <Input
-                    value={district}
-                    placeholder={t('enter_district', 'Enter district')}
-                    onChangeText={handleDistrictChange}
-                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                    style={[styles.flatInput, { color: colors.text }]}
-                    placeholderTextColor="#9CA3AF"
-                    LeadingAccessory={
-                      <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    }
-                  />
-                  {districtSuggestions.length > 0 && (
-                    <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
-                      {districtSuggestions.map((item, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
-                          onPress={() => selectDistrictSuggestion(item)}
-                        >
-                          <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-
-              {/* STATE & PINCODE */}
-              <View style={[styles.row, styles.mt]}>
-                <View style={[styles.fieldBox, { flex: 1, zIndex: 8 }]}>
-                  <Label text={t('state', 'State')} required />
-                  <Input
-                    value={stateName}
-                    placeholder={t('select_state', 'Select state')}
-                    onChangeText={handleStateChange}
-                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                    style={[styles.flatInput, { color: colors.text }]}
-                    placeholderTextColor="#9CA3AF"
-                    LeadingAccessory={
-                      <Ionicons name="map-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    }
-                  />
-                  {stateSuggestions.length > 0 && (
-                    <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
-                      {stateSuggestions.map((item, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
-                          onPress={() => selectStateSuggestion(item)}
-                        >
-                          <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <View style={[styles.fieldBox, { flex: 1 }]}>
-                  <Label text={t('pin_code', 'PIN Code')} required />
-                  <Input
-                    ref={pinRef}
-                    value={pincode}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    placeholder={t('enter_pin_code', 'Enter PIN code')}
-                    onChangeText={v => setPincode(v.replace(/[^0-9]/g, ''))}
-                    inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                    style={[styles.flatInput, { color: colors.text }]}
-                    placeholderTextColor="#9CA3AF"
-                    LeadingAccessory={
-                      <Ionicons name="archive-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    }
-                  />
-                </View>
-              </View>
-
-
-
-            </Animated.View>
-
-            {/* IMPORTANT ALERT BOX */}
-            <View style={[styles.alertBox, { backgroundColor: isDark ? theme.colors.card : '#EFF6FF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#BFDBFE', borderWidth: isDark ? 1 : 0 }]}>
-              <View style={[styles.alertIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#DBEAFE' }]}>
-                <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
-              </View>
-              <View style={styles.alertTextWrapper}>
-                <Text style={[styles.alertTitle, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('important', 'Important')}</Text>
-                <Text style={[styles.alertSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]} numberOfLines={1} adjustsFontSizeToFit>{t('address_matches_documents', 'Please make sure the address matches your official documents.')}</Text>
+              <View style={[styles.fieldBox, { flex: 1, zIndex: 9 }]}>
+                <Label text={t('district', 'District')} required />
+                <Input
+                  value={district}
+                  placeholder={t('enter_district', 'Enter district')}
+                  onChangeText={handleDistrictChange}
+                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                  style={[styles.flatInput, { color: colors.text, fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }) }]}
+                  placeholderTextColor="#9CA3AF"
+                  LeadingAccessory={
+                    <Ionicons name="location-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
+                />
+                {districtSuggestions.length > 0 && (
+                  <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+                    {districtSuggestions.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
+                        onPress={() => selectDistrictSuggestion(item)}
+                      >
+                        <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
 
-            {/* SUPPORT CHAT BUTTON */}
-            <TouchableOpacity style={[styles.chatButton, { backgroundColor: colors.primary }]} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav as never)}>
-              <View style={[styles.chatIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFF' }]}>
-                <Ionicons name="chatbubbles" size={16} color={isDark ? '#FFF' : colors.primary} />
+            {/* STATE & PINCODE */}
+            <View style={[styles.row, styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <View style={[styles.fieldBox, { flex: 1, zIndex: 8 }]}>
+                <Label text={t('state', 'State')} required />
+                <Input
+                  value={stateName}
+                  placeholder={t('select_state', 'Select state')}
+                  onChangeText={handleStateChange}
+                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                  style={[styles.flatInput, { color: colors.text, fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }) }]}
+                  placeholderTextColor="#9CA3AF"
+                  LeadingAccessory={
+                    <Ionicons name="map-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
+                />
+                {stateSuggestions.length > 0 && (
+                  <View style={[styles.suggestionBox, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}>
+                    {stateSuggestions.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[styles.suggestionItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}
+                        onPress={() => selectStateSuggestion(item)}
+                      >
+                        <Text style={[styles.suggestionText, { color: colors.text }]}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
-              <View style={styles.chatTextWrapper}>
-                <Text style={styles.chatTitle}>{t('start_chatting', 'Start Chatting')}</Text>
-                <Text style={styles.chatSubtitle}>{t('get_help_from_assistant', 'Get help from our assistant')}</Text>
+
+              <View style={[styles.fieldBox, { flex: 1 }]}>
+                <Label text={t('pin_code', 'PIN Code')} required />
+                <Input
+                  ref={pinRef}
+                  value={pincode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  placeholder={t('enter_pin_code', 'Enter PIN code')}
+                  onChangeText={v => setPincode(v.replace(/[^0-9]/g, ''))}
+                  inputContainerStyle={[styles.flatInputInner, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                  style={[styles.flatInput, { color: colors.text, fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }) }]}
+                  placeholderTextColor="#9CA3AF"
+                  LeadingAccessory={
+                    <Ionicons name="archive-outline" size={18} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
+                />
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#FFF" />
-            </TouchableOpacity>
+            </View>
 
-          </ScrollView>
+          </Animated.View>
 
-          {/* FOOTER BUTTON */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={handleSubmit}
-              disabled={!isFormValid || isSubmitting || isLoading}
-              style={[
-                styles.continueBtn,
-                { backgroundColor: colors.primary },
-                (!isFormValid || isSubmitting || isLoading) && styles.continueBtnDisabled
-              ]}
-            >
-              <Text style={styles.continueText}>
-                {isSubmitting || isLoading ? t('saving', 'Saving...') : t('save_and_continue', 'Save & Continue')}
-              </Text>
-              {!(isSubmitting || isLoading) && (
-                <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
-              )}
-            </TouchableOpacity>
+          {/* IMPORTANT ALERT BOX */}
+          <View style={[styles.alertBox, { backgroundColor: isDark ? theme.colors.card : '#EFF6FF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#BFDBFE', borderWidth: isDark ? 1 : 0, marginVertical: selectByDevice({ small: 12, medium: 16, large: 20 }) }]}>
+            <View style={[styles.alertIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#DBEAFE' }]}>
+              <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+            </View>
+            <View style={styles.alertTextWrapper}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.alertTitle, { color: colors.text, fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }) }]} numberOfLines={1} adjustsFontSizeToFit>{t('important', 'Important')}</Text>
+              <Text maxFontSizeMultiplier={1.2} style={[styles.alertSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', fontSize: selectByDevice({ small: rms(11), medium: rms(11.5), large: rms(12) }) }]} numberOfLines={2} adjustsFontSizeToFit>{t('address_matches_documents', 'Please make sure the address matches your official documents.')}</Text>
+            </View>
           </View>
-        </KeyboardAvoidingView>
 
+          {/* SUPPORT CHAT BUTTON */}
+          <TouchableOpacity style={[styles.chatButton, { backgroundColor: colors.primary, marginVertical: selectByDevice({ small: 12, medium: 16, large: 20 }) }]} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav as never)}>
+            <View style={[styles.chatIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFF' }]}>
+              <Ionicons name="chatbubbles" size={16} color={isDark ? '#FFF' : colors.primary} />
+            </View>
+            <View style={styles.chatTextWrapper}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.chatTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }) }]}>{t('start_chatting', 'Start Chatting')}</Text>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.chatSubtitle, { fontSize: selectByDevice({ small: rms(10.5), medium: rms(11), large: rms(12) }) }]}>{t('get_help_from_assistant', 'Get help from our assistant')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#FFF" />
+          </TouchableOpacity>
+
+        </ScrollView>
+
+        {/* FOOTER BUTTON */}
+        <View style={[styles.footer, { padding: selectByDevice({ small: 12, medium: 16, large: 20 }) }]}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleSubmit}
+            disabled={!isFormValid || isSubmitting || isLoading}
+            style={[
+              styles.continueBtn,
+              { backgroundColor: colors.primary, height: selectByDevice({ small: cs(48, 0.9, 1.1), medium: cs(52, 0.9, 1.1), large: cs(54, 0.9, 1.1) }) },
+              (!isFormValid || isSubmitting || isLoading) && styles.continueBtnDisabled
+            ]}
+          >
+            <Text maxFontSizeMultiplier={1.25} style={[styles.continueText, { fontSize: selectByDevice({ small: rms(16), medium: rms(17), large: rms(18) }) }]}>
+              {isSubmitting || isLoading ? t('saving', 'Saving...') : t('save_and_continue', 'Save & Continue')}
+            </Text>
+            {!(isSubmitting || isLoading) && (
+              <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
+      <AppStatusBar />
+      <SafeAreaView style={styles.root} edges={Platform.OS === 'ios' ? ['top', 'bottom'] : ['top']}>
+        {isTablet ? (
+          <View style={{ maxWidth: 480, alignSelf: 'center', width: '100%', flex: 1 }}>
+            {renderScreenContent()}
+          </View>
+        ) : (
+          renderScreenContent()
+        )}
       </SafeAreaView>
     </View>
   );
@@ -731,13 +749,13 @@ const styles = StyleSheet.create({
   /* --- LOCATION CARD --- */
   locationCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    marginBottom: 10,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
     overflow: 'hidden',
@@ -745,40 +763,40 @@ const styles = StyleSheet.create({
   locationCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   locationIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EFF6FF',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#0062FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12,
   },
   locationTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   locationSubtitle: {
     fontSize: 11,
     color: '#6B7280',
+    lineHeight: 15,
   },
   locationActionBtn: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
-    maxWidth: 100,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   locationActionText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#0062FF',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
   locationSuccessBanner: {

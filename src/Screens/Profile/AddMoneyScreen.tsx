@@ -104,6 +104,7 @@ const AddMoneyScreen = ({ navigation, route }: any) => {
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
+        enabled={Platform.OS === 'ios'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView 

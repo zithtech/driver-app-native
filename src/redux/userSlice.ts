@@ -27,6 +27,8 @@ export interface UserState {
   trusted_contact?: { name: string; number: string; relation_type: string };
   otp?: string;
   isExistingUser?: boolean;
+  terms_accepted?: boolean;
+  terms_accepted_at?: string;
 
   accessToken?: string;
   refreshToken?: string;

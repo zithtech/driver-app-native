@@ -13,7 +13,7 @@ const Toast: React.FC = () => {
 
   if (!isVisible || !toastConfig) return null;
 
-  const { message, type = 'info' } = toastConfig;
+  const { message, type = 'info', position = 'top' } = toastConfig;
 
   const getToastStyles = () => {
     switch (type) {
@@ -42,11 +42,17 @@ const Toast: React.FC = () => {
     <View
       style={[
         styles.container,
-        {
-          top: insets.top + vs(10),
-          backgroundColor: isDark ? 'rgba(28, 28, 30, 0.95)' : '#FFFFFF',
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
-        },
+        position === 'bottom'
+          ? {
+              bottom: insets.bottom + vs(20),
+              backgroundColor: isDark ? 'rgba(28, 28, 30, 0.95)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+            }
+          : {
+              top: insets.top + vs(10),
+              backgroundColor: isDark ? 'rgba(28, 28, 30, 0.95)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
+            },
       ]}
     >
       <Pressable onPress={hideToast} style={styles.content}>

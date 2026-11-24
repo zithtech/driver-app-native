@@ -9,6 +9,7 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 // import Button from '../../Components/Button';
 
 import {
+  Onboarding_Nav,
   Dashboard_Nav,
   DocumentScreen_Nav,
   OnboardingSos_Nav,
@@ -24,7 +25,7 @@ import Page4 from './pages/Page4';
 import Page5 from './pages/Page5';
 import Page6 from './pages/Page6';
 
-import { hS, vS, mS } from '../../lib/scale';
+import { hS, vS, mS, useResponsive } from '../../lib/scale';
 import { useTheme } from '@react-navigation/native';
 import AnimatedReanimated, {
   FadeIn,
@@ -60,6 +61,7 @@ const Onboarding = ({ navigation }: any) => {
   const { isDark, theme } = useAppTheme();
   const { colors } = theme;
   const { t } = useTranslation();
+  const { selectByDevice } = useResponsive();
 
   // Pulse animation for brand text
   const pulseValue = useSharedValue(1);
@@ -67,8 +69,8 @@ const Onboarding = ({ navigation }: any) => {
   useEffect(() => {
     pulseValue.value = withRepeat(
       withSequence(
-        withTiming(1.05, { duration: 1500 }),
-        withTiming(1, { duration: 1500 }),
+        withTiming(1.03, { duration: 1800 }),
+        withTiming(1, { duration: 1800 }),
       ),
       -1,
       true,
@@ -126,7 +128,7 @@ const Onboarding = ({ navigation }: any) => {
   );
 
   useEffect(() => {
-    const route = navigation.getState().routes.find((r: any) => r.name === 'Onboarding_Nav');
+    const route = navigation.getState().routes.find((r: any) => r.name === Onboarding_Nav);
     if (route?.params?.showCongrats) {
       setShowCongratsModal(true);
       navigation.setParams({ showCongrats: undefined });
@@ -157,24 +159,28 @@ const Onboarding = ({ navigation }: any) => {
       <AppStatusBar forceDark={false} />
       <OnboardingBackground>
         <View style={styles.container}>
+          {/* TOP BAR */}
+          <View style={styles.topBar}>
+            <TouchableOpacity
+              style={[styles.helpButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0, 0, 0, 0.1)' }]}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate(HelpCenter_Nav as never)}
+            >
+              <Ionicons name="headset-outline" size={mS(13)} color={colors.text} style={{ marginRight: hS(4) }} />
+              <Text style={[styles.helpText, { color: colors.text }]} numberOfLines={1}>{t('help_center', 'Help Center')}</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* HEADER */}
           <View style={styles.headerContainer}>
+            <AnimatedReanimated.View style={[styles.titleWrapper, pulseStyle]}>
+              <Text style={styles.titleLine} numberOfLines={1} adjustsFontSizeToFit>
+                <Text style={[styles.title, { color: colors.text }]}>{t('welcome_to', 'Welcome to ')}</Text>
+                <Text style={[styles.brand, { color: colors.primary }]}>{displayText}</Text>
+              </Text>
+            </AnimatedReanimated.View>
 
-
-            <View style={styles.titleWrapper}>
-              <Text style={[styles.title, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('welcome_to', 'Welcome to ')}</Text>
-              <View
-                style={styles.brandWrapper}
-              >
-                <AnimatedReanimated.View style={pulseStyle}>
-                  <Text style={[styles.brand, { color: colors.primary }]} numberOfLines={1} adjustsFontSizeToFit>{displayText}</Text>
-                </AnimatedReanimated.View>
-              </View>
-            </View>
-
-            <Text
-              style={[styles.subtitle, { color: colors.text }]}
-            >
+            <Text style={[styles.subtitle, { color: colors.text }]}>
               T2drive Partner App
             </Text>
 
@@ -185,19 +191,6 @@ const Onboarding = ({ navigation }: any) => {
             >
               {t('onboarding_tagline', 'Your trusted platform to earn, drive, and grow with confidence.')}
             </Text>
-
-            <View
-              style={{ alignSelf: 'flex-end' }}
-            >
-              <TouchableOpacity
-                style={[styles.helpButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 0, 0, 0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0, 0, 0, 0.1)' }]}
-                activeOpacity={0.8}
-                onPress={() => navigation.navigate(HelpCenter_Nav as never)}
-              >
-                <Ionicons name="headset-outline" size={mS(12)} color={colors.text} style={{ marginRight: hS(4) }} />
-                <Text style={[styles.helpText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{t('help_center', 'Help Center')}</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* PAGES */}
@@ -338,35 +331,54 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
 
+  /* TOP BAR */
+  topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: hS(16),
+    paddingTop: Platform.OS === 'android' ? vS(4) : vS(2),
+  },
+  helpButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: hS(12),
+    paddingVertical: vS(5),
+    borderRadius: mS(20),
+    borderWidth: 1,
+  },
+  helpText: {
+    color: '#4B5563',
+    fontWeight: '600',
+    fontSize: mS(11),
+  },
+
   /* HEADER */
   headerContainer: {
-    paddingTop: vS(8),
+    paddingTop: vS(2),
     paddingHorizontal: hS(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brandWrapper: {
-    marginLeft: hS(6),
-    width: hS(140), // Fixed width to keep 'Welcome to' stable in centered Row
-    alignItems: 'flex-start',
-  },
   titleWrapper: {
-    flexDirection: 'row',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    marginBottom: vS(2),
+  },
+  titleLine: {
+    textAlign: 'center',
+    alignSelf: 'center',
   },
   title: {
-    fontSize: mS(18),
-    fontWeight: '600',
+    fontSize: mS(20),
+    fontWeight: '700',
     textAlign: 'center',
-    color: '#4B5563',
   },
   brand: {
-    fontSize: mS(22),
+    fontSize: mS(20),
     fontWeight: '800',
-    color: '#2563EB',
-    textAlign: 'left', // Left align inside the fixed-width wrapper
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: mS(14),
@@ -379,24 +391,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#6B7280',
     fontSize: mS(12),
-    marginBottom: vS(6),
-  },
-  helpButton: {
-    alignSelf: 'flex-end',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    paddingHorizontal: hS(14),
-    paddingVertical: vS(6),
-    borderRadius: mS(20),
-    marginTop: vS(4),
-  },
-  helpText: {
-    color: '#4B5563',
-    fontWeight: '600',
-    fontSize: mS(10),
+    marginBottom: vS(4),
   },
 
   /* PAGES */
@@ -408,8 +403,9 @@ const styles = StyleSheet.create({
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: vS(5),
-    marginTop: vS(5),
+    alignItems: 'center',
+    marginBottom: vS(10),
+    marginTop: vS(6),
   },
   dot: {
     width: mS(8),
@@ -420,8 +416,11 @@ const styles = StyleSheet.create({
 
   /* BOTTOM */
   bottomContainer: {
+    width: '100%',
     paddingHorizontal: hS(20),
-    paddingBottom: Platform.OS === 'android' ? vS(30) : vS(15),
+    paddingBottom: Platform.OS === 'android' ? vS(24) : vS(16),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
     marginTop: vS(20),
@@ -499,21 +498,24 @@ const styles = StyleSheet.create({
   verificationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: vS(16),
-    paddingHorizontal: hS(20),
-    borderRadius: mS(12),
-    width: 320,
     justifyContent: 'center',
+    paddingVertical: vS(14),
+    paddingHorizontal: hS(20),
+    borderRadius: mS(14),
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
   },
   verificationButtonText: {
     color: '#FFF',
-    fontSize: mS(13),
-    fontWeight: '500',
+    fontSize: mS(15),
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   premiumButtonWrapper: {
     marginTop: vS(12),
