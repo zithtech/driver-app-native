@@ -305,14 +305,9 @@ const WaitingForApprovalModal: React.FC<WaitingForApprovalModalProps> = ({
                 <Ionicons name="videocam" size={24} color="#FFF" />
               </View>
               <View style={styles.videoKycTextContent}>
-                <View style={styles.videoKycBadgeRow}>
-                  <Text style={[fonts.bold, styles.videoKycTitle, { color: theme.colors.text, fontSize: isTamil ? 13 : 15 }]} numberOfLines={1} adjustsFontSizeToFit>
-                    {t('request_video_kyc', 'Instant Video Verification')}
-                  </Text>
-                  <View style={styles.instantBadge}>
-                    <Text style={styles.instantBadgeText}>FAST</Text>
-                  </View>
-                </View>
+                <Text style={[fonts.bold, styles.videoKycTitle, { color: theme.colors.text, fontSize: isTamil ? 13 : 15 }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {t('request_video_kyc', 'Instant Video Verification')}
+                </Text>
                 <Text style={[styles.videoKycSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: isTamil ? 10 : 12 }]} numberOfLines={2} adjustsFontSizeToFit>
                   {t('video_kyc_subtitle', 'Get verified in minutes — no more waiting!')}
                 </Text>
@@ -638,27 +633,12 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     marginRight: 8,
   },
-  videoKycBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
   videoKycTitle: {
     fontWeight: '700',
-  },
-  instantBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6,
-  },
-  instantBadgeText: {
-    color: '#16A34A',
-    fontSize: 9,
-    fontWeight: '800',
+    marginBottom: 2,
   },
   videoKycSubtitle: {
-    marginTop: 2,
+    marginTop: 0,
   },
   videoKycBtn: {
     flexDirection: 'row',

@@ -655,7 +655,8 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
     } catch (error: any) {
       setIsSubmitting(false);
       setUploadStage(null);
-      console.error('Upload Error:', JSON.stringify(error, null, 2));
+      const readableError = error?.message || error?.data?.message || (typeof error === 'string' ? error : 'Upload failed');
+      console.error('Upload Error:', readableError, error);
 
       // --- Handle OCR validation errors from backend ---
       // RTK Query .unwrap() error shapes:
@@ -679,7 +680,17 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         setSubmissionStatus('failed');
         triggerHaptic(HapticFeedbackTypes.notificationError);
       } else {
+        const rawMsg = error?.data?.message || error?.message;
+        const fallbackMsg = typeof rawMsg === 'string' && rawMsg.trim().length > 0
+          ? rawMsg
+          : t('submission_failed_msg', "We couldn't verify your documents. Please check the details and try again.");
+        setOcrErrorMessage(fallbackMsg);
         setSubmissionStatus('failed');
+        showToast({
+          type: 'error',
+          message: fallbackMsg,
+          duration: 4000,
+        });
       }
     }
   };

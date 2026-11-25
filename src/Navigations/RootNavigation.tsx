@@ -45,6 +45,12 @@ import {
   VerificationSuccessScreen_Nav,
   VideoKYCWaiting_Nav,
   VideoKYCCall_Nav,
+  DrivingTestIntro_Nav,
+  DeviceCompatibilityCheck_Nav,
+  LiveDrivingTest_Nav,
+  DrivingTestCompletion_Nav,
+  DrivingTestResult_Nav,
+  OnboardingFinalStatus_Nav,
 } from './navigations';
 
 import { navigationRef } from './navigationRef';
@@ -113,6 +119,12 @@ import AddressDetails from '../Screens/Auth/AddressDetails';
 import VerificationSuccessScreen from '../Screens/Auth/VerificationSuccessScreen';
 import VideoKYCWaitingScreen from '../Screens/Auth/VideoKYCWaitingScreen';
 import VideoKYCCallScreen from '../Screens/Auth/VideoKYCCallScreen';
+import DrivingTestIntroScreen from '../Screens/DrivingTest/DrivingTestIntroScreen';
+import DeviceCompatibilityCheckScreen from '../Screens/DrivingTest/DeviceCompatibilityCheckScreen';
+import LiveDrivingTestScreen from '../Screens/DrivingTest/LiveDrivingTestScreen';
+import DrivingTestCompletionScreen from '../Screens/DrivingTest/DrivingTestCompletionScreen';
+import DrivingTestResultScreen from '../Screens/DrivingTest/DrivingTestResultScreen';
+import OnboardingFinalStatusScreen from '../Screens/DrivingTest/OnboardingFinalStatusScreen';
 import VehicleVerificationScreen from '../Screens/Requests/VehicleVerificationScreen';
 import NavigationScreen from '../Screens/Navigation/NavigationScreen';
 import ChatScreen from '../Screens/Chatscreen';
@@ -369,53 +381,74 @@ const RootNavigation = () => {
     return () => clearTimeout(timer);
   }, [isBootstrapping, currentRide]);
 
-  // 4b. Video KYC Bootstrap Recovery: If app was killed/closed during VIDEO_KYC_IN_PROGRESS
+  // 4b. Video KYC & Driving Test Bootstrap Recovery: If app was killed/closed during any active stage
   useEffect(() => {
     if (isBootstrapping || !isAuthenticated || currentRide) return;
 
+    const DRIVING_TEST_ACTIVE_SCREENS = [
+      DrivingTestIntro_Nav,
+      DeviceCompatibilityCheck_Nav,
+      LiveDrivingTest_Nav,
+      DrivingTestCompletion_Nav,
+      DrivingTestResult_Nav,
+      OnboardingFinalStatus_Nav,
+    ];
+
+    const KYC_SCREENS = [
+      VideoKYCWaiting_Nav,
+      VideoKYCCall_Nav,
+    ];
+
+    let targetRoute: string | null = null;
+    let allowedScreens: string[] = [];
+
     if (onboardingStatus === 'VIDEO_KYC_IN_PROGRESS') {
-      let attempts = 0;
-      const maxAttempts = 5;
-      const tryKycRedirect = () => {
-        attempts++;
-        if (!navigationRef.isReady()) {
-          if (attempts < maxAttempts) {
-            setTimeout(tryKycRedirect, 300);
-          }
-          return;
-        }
-
-        const currentRoute = navigationRef.getCurrentRoute()?.name;
-        if (currentRoute && currentRoute !== VideoKYCCall_Nav) {
-          console.log(`[RootNavigation] 📹 Video KYC In-Progress Recovery: ${currentRoute} → ${VideoKYCCall_Nav}`);
-          navigationRef.dispatch(StackActions.replace(VideoKYCCall_Nav));
-        }
-      };
-
-      const timer = setTimeout(tryKycRedirect, 400);
-      return () => clearTimeout(timer);
+      targetRoute = VideoKYCCall_Nav;
+      allowedScreens = [VideoKYCCall_Nav];
     } else if (onboardingStatus === 'VIDEO_KYC_WAITING' || onboardingStatus === 'VIDEO_KYC_REQUESTED') {
-      let attempts = 0;
-      const maxAttempts = 5;
-      const tryKycRedirect = () => {
-        attempts++;
-        if (!navigationRef.isReady()) {
-          if (attempts < maxAttempts) {
-            setTimeout(tryKycRedirect, 300);
-          }
-          return;
-        }
-
-        const currentRoute = navigationRef.getCurrentRoute()?.name;
-        if (currentRoute && currentRoute !== VideoKYCWaiting_Nav) {
-          console.log(`[RootNavigation] 📹 Video KYC Waiting Recovery: ${currentRoute} → ${VideoKYCWaiting_Nav}`);
-          navigationRef.dispatch(StackActions.replace(VideoKYCWaiting_Nav));
-        }
-      };
-
-      const timer = setTimeout(tryKycRedirect, 400);
-      return () => clearTimeout(timer);
+      targetRoute = VideoKYCWaiting_Nav;
+      allowedScreens = [VideoKYCWaiting_Nav];
+    } else if (onboardingStatus === 'DRIVING_TEST_IN_PROGRESS') {
+      targetRoute = LiveDrivingTest_Nav;
+      allowedScreens = [LiveDrivingTest_Nav, DrivingTestCompletion_Nav];
+    } else if (
+      onboardingStatus === 'DRIVING_TEST_SUBMITTED' ||
+      onboardingStatus === 'DRIVING_TEST_PENDING_APPROVAL' ||
+      onboardingStatus === 'DRIVING_TEST_RETEST_REQUIRED'
+    ) {
+      targetRoute = OnboardingFinalStatus_Nav;
+      allowedScreens = [OnboardingFinalStatus_Nav, DrivingTestResult_Nav];
+    } else if (
+      onboardingStatus === 'KYC_VERIFIED' ||
+      onboardingStatus === 'DRIVING_TEST_INTRO' ||
+      onboardingStatus === 'DRIVING_TEST_ELIGIBLE'
+    ) {
+      targetRoute = DrivingTestIntro_Nav;
+      allowedScreens = DRIVING_TEST_ACTIVE_SCREENS;
     }
+
+    if (!targetRoute) return;
+
+    let attempts = 0;
+    const maxAttempts = 5;
+    const tryRecoveryRedirect = () => {
+      attempts++;
+      if (!navigationRef.isReady()) {
+        if (attempts < maxAttempts) {
+          setTimeout(tryRecoveryRedirect, 300);
+        }
+        return;
+      }
+
+      const currentRoute = navigationRef.getCurrentRoute()?.name;
+      if (currentRoute && !allowedScreens.includes(currentRoute)) {
+        console.log(`[RootNavigation] 🔄 Stage Recovery Redirect (${onboardingStatus}): ${currentRoute} → ${targetRoute}`);
+        navigationRef.dispatch(StackActions.replace(targetRoute));
+      }
+    };
+
+    const timer = setTimeout(tryRecoveryRedirect, 400);
+    return () => clearTimeout(timer);
   }, [isBootstrapping, isAuthenticated, onboardingStatus, currentRide]);
 
   // 5. Floating Overlay Sync
@@ -548,6 +581,20 @@ const RootNavigation = () => {
         initialRoute = VideoKYCWaiting_Nav;
       } else if (onboardingStatus === 'VIDEO_KYC_IN_PROGRESS') {
         initialRoute = VideoKYCCall_Nav;
+      } else if (
+        onboardingStatus === 'KYC_VERIFIED' ||
+        onboardingStatus === 'DRIVING_TEST_INTRO' ||
+        onboardingStatus === 'DRIVING_TEST_ELIGIBLE'
+      ) {
+        initialRoute = DrivingTestIntro_Nav;
+      } else if (onboardingStatus === 'DRIVING_TEST_IN_PROGRESS') {
+        initialRoute = LiveDrivingTest_Nav;
+      } else if (
+        onboardingStatus === 'DRIVING_TEST_SUBMITTED' ||
+        onboardingStatus === 'DRIVING_TEST_PENDING_APPROVAL' ||
+        onboardingStatus === 'DRIVING_TEST_RETEST_REQUIRED'
+      ) {
+        initialRoute = OnboardingFinalStatus_Nav;
       } else if (!hasIdentity) {
         initialRoute = PersonalDetails_Nav;
       } else if (!hasAddress) {
@@ -587,6 +634,14 @@ const RootNavigation = () => {
           <Stack.Screen name={VerificationSuccessScreen_Nav} component={VerificationSuccessScreen} options={{ headerShown: false }} />
           <Stack.Screen name={VideoKYCWaiting_Nav} component={VideoKYCWaitingScreen} options={{ headerShown: false }} />
           <Stack.Screen name={VideoKYCCall_Nav} component={VideoKYCCallScreen} options={{ headerShown: false, gestureEnabled: false }} />
+
+          {/* -------- GUIDED VIDEO DRIVING TEST -------- */}
+          <Stack.Screen name={DrivingTestIntro_Nav} component={DrivingTestIntroScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={DeviceCompatibilityCheck_Nav} component={DeviceCompatibilityCheckScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={LiveDrivingTest_Nav} component={LiveDrivingTestScreen} options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name={DrivingTestCompletion_Nav} component={DrivingTestCompletionScreen} options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name={DrivingTestResult_Nav} component={DrivingTestResultScreen} options={{ headerShown: false }} />
+          <Stack.Screen name={OnboardingFinalStatus_Nav} component={OnboardingFinalStatusScreen} options={{ headerShown: false }} />
 
           {/* -------- DASHBOARD -------- */}
           <Stack.Screen name={Dashboard_Nav} component={DriverTabs} />

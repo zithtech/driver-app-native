@@ -28,9 +28,6 @@ import Page6 from './pages/Page6';
 import { hS, vS, mS, useResponsive } from '../../lib/scale';
 import { useTheme } from '@react-navigation/native';
 import AnimatedReanimated, {
-  FadeIn,
-  FadeInDown,
-  BounceIn,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
@@ -252,38 +249,29 @@ const Onboarding = ({ navigation }: any) => {
           {/* CONGRATS MODAL */}
           <Modal
             visible={showCongratsModal}
-            animationType="fade"
+            animationType="none"
             transparent={true}
           >
             <View style={styles.congratsOverlay}>
-              <AnimatedReanimated.View
-                entering={FadeIn.duration(400)}
-                style={styles.congratsBackdrop}
-              >
+              <View style={styles.congratsBackdrop}>
                 <TouchableOpacity
                   activeOpacity={1}
                   style={{ flex: 1 }}
                   onPress={() => setShowCongratsModal(false)}
                 />
-              </AnimatedReanimated.View>
-              <AnimatedReanimated.View
-                entering={FadeInDown.springify().damping(15)}
-                style={[styles.congratsContent, { backgroundColor: colors.card }]}
-              >
+              </View>
+              <View style={[styles.congratsContent, { backgroundColor: colors.card }]}>
                 <View style={styles.congratsIconContainer}>
-                  <AnimatedReanimated.View
-                    entering={FadeInDown.delay(200).springify()}
-                    style={[styles.checkCircle, { backgroundColor: colors.primary + '15' }]}
-                  >
+                  <View style={[styles.checkCircle, { backgroundColor: colors.primary + '15' }]}>
                     <Ionicons name="checkmark-circle" size={60} color={colors.primary} />
-                  </AnimatedReanimated.View>
+                  </View>
                 </View>
 
                 <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.congratsTitle, { color: colors.text }]}>
                   {t('registration_finished', 'Registration Finished!')}
                 </Text>
 
-                <Text adjustsFontSizeToFit numberOfLines={3} style={[styles.congratsSubtitle, { color: colors.text + '99' }]}>
+                <Text style={[styles.congratsSubtitle, { color: colors.text + '99' }]}>
                   {t('registration_finished_desc', 'Your profile details are saved. The final step to start earning is to upload your documents for verification.')}
                 </Text>
 
@@ -310,7 +298,7 @@ const Onboarding = ({ navigation }: any) => {
                     Maybe Later
                   </Text>
                 </TouchableOpacity>
-              </AnimatedReanimated.View>
+              </View>
             </View>
           </Modal>
         </View>

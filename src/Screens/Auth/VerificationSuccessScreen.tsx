@@ -6,7 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
-import { Dashboard_Nav, HelpCenter_Nav } from '../../Navigations/navigations';
+import { Dashboard_Nav, HelpCenter_Nav, DrivingTestIntro_Nav } from '../../Navigations/navigations';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
@@ -189,14 +189,18 @@ const VerificationSuccessScreen = () => {
           activeOpacity={0.8}
           onPress={() => navigation.reset({
             index: 0,
-            routes: [{ name: Dashboard_Nav }],
+            routes: [{ name: DrivingTestIntro_Nav }],
           })}
         >
-          <Ionicons name="speedometer-outline" size={selectByDevice({ small: 20, medium: 22, large: 24 })} color="#FFF" style={{ position: 'absolute', left: 20 }} />
-          <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.actionBtnText, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }) }]}>{t('go_to_dashboard', 'Go to Dashboard')}</Text>
+          <Ionicons name="car-sport" size={selectByDevice({ small: 20, medium: 22, large: 24 })} color="#FFF" style={{ position: 'absolute', left: 20 }} />
+          <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, styles.actionBtnText, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }) }]}>
+            {t('start_driving_test', 'Start Guided Driving Test')}
+          </Text>
           <Ionicons name="arrow-forward" size={selectByDevice({ small: 20, medium: 22, large: 24 })} color="#FFF" style={{ position: 'absolute', right: 20 }} />
         </TouchableOpacity>
-        <Text maxFontSizeMultiplier={1.25} style={[styles.bottomTagline, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(12.5), large: rms(13.5) }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('start_journey', 'Start your journey with us!')}</Text>
+        <Text maxFontSizeMultiplier={1.25} style={[styles.bottomTagline, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(12.5), large: rms(13.5) }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          {t('driving_test_unlock_note', 'Stage 5 unlocked: 15–20 min practical assessment')}
+        </Text>
       </View>
       </View>
     </SafeAreaView>

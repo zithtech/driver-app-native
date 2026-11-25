@@ -219,6 +219,20 @@ const VideoKYCWaitingScreen = ({ navigation }: any) => {
           setSessionId(sid);
           if (res?.position) setQueuePosition(res.position);
 
+          // If session is already connected/accepted by officer, jump directly to active call
+          if (res?.status === 'IN_CALL' || res?.data?.status === 'IN_CALL') {
+            const callData = res?.data || res;
+            dispatch(setUser({ onboarding_status: 'VIDEO_KYC_IN_PROGRESS' }));
+            navigation.replace(VideoKYCCall_Nav, {
+              sessionId: sid,
+              channelName: callData.channelName,
+              token: callData.token,
+              uid: callData.uid,
+              adminName: callData.adminName,
+            });
+            return;
+          }
+
           // Check if server returned already scheduled appointment
           if (res?.scheduledSlot || res?.data?.scheduledSlot) {
             const slot = res?.scheduledSlot || res?.data?.scheduledSlot;

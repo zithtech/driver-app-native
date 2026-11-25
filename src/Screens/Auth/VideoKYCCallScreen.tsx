@@ -17,15 +17,50 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 
-import createAgoraRtcEngine, {
-  ChannelProfileType,
-  ClientRoleType,
-  IRtcEngine,
-  RtcSurfaceView,
-  RenderModeType,
-  IRtcEngineEventHandler,
-  QualityType,
-} from 'react-native-agora';
+import type { IRtcEngine, IRtcEngineEventHandler } from 'react-native-agora';
+
+// Safe dynamic loading of react-native-agora to prevent runtime crash when native module is unlinked
+let AgoraModule: any = null;
+let isAgoraAvailable = false;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  AgoraModule = require('react-native-agora');
+  if (AgoraModule) {
+    isAgoraAvailable = true;
+  }
+} catch (e) {
+  console.warn('[VideoKYCCallScreen] react-native-agora native module is not linked:', e);
+}
+
+const createAgoraRtcEngine = AgoraModule?.default || AgoraModule?.createAgoraRtcEngine;
+const RtcSurfaceView = AgoraModule?.RtcSurfaceView;
+
+const ChannelProfileType = AgoraModule?.ChannelProfileType || {
+  ChannelProfileCommunication: 0,
+  ChannelProfileLiveBroadcasting: 1,
+};
+
+const ClientRoleType = AgoraModule?.ClientRoleType || {
+  ClientRoleBroadcaster: 1,
+  ClientRoleAudience: 2,
+};
+
+const RenderModeType = AgoraModule?.RenderModeType || {
+  RenderModeHidden: 1,
+  RenderModeFit: 2,
+  RenderModeAdaptive: 3,
+};
+
+const QualityType = AgoraModule?.QualityType || {
+  QualityUnknown: 0,
+  QualityExcellent: 1,
+  QualityGood: 2,
+  QualityPoor: 3,
+  QualityBad: 4,
+  QualityVBad: 5,
+  QualityDown: 6,
+};
 
 import { Text } from '../../Components';
 import AppStatusBar from '../../Components/AppStatusBar';
@@ -195,6 +230,30 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
 
     const setupAgora = async () => {
       try {
+        if (!isAgoraAvailable || !createAgoraRtcEngine) {
+          Alert.alert(
+            'Video KYC - Preview Mode',
+            'The Agora video engine is not linked in this installed APK build. To enable live audio/video streaming, rebuild the app with "npx react-native run-android" (or npm run apk).\n\nWould you like to enter Preview Mode to test the verification call UI & socket events?',
+            [
+              { text: 'Go Back', style: 'cancel', onPress: () => navigation.goBack() },
+              {
+                text: 'Continue (Preview Mode)',
+                onPress: () => {
+                  setIsJoined(true);
+                  setCallStatus('connected');
+                  socketService.emitKycDriverJoined(activeSession.sessionId);
+                  if (!callTimerRef.current) {
+                    callTimerRef.current = setInterval(() => {
+                      setCallDuration(prev => prev + 1);
+                    }, 1000);
+                  }
+                },
+              },
+            ]
+          );
+          return;
+        }
+
         if (!AGORA_APP_ID) {
           Alert.alert('Configuration Error', 'Agora App ID is missing.');
           navigation.goBack();
@@ -202,6 +261,9 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
         }
 
         engine = createAgoraRtcEngine();
+        if (!engine) {
+          throw new Error('Failed to create Agora RTC Engine');
+        }
         engineRef.current = engine;
 
         // Initialize engine
@@ -270,10 +332,28 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
           autoSubscribeVideo: true,
           autoSubscribeAudio: true,
         });
-      } catch (e) {
-        console.error('Failed to setup Agora:', e);
-        Alert.alert('Call Error', 'Failed to initialize video call.');
-        navigation.goBack();
+      } catch (e: any) {
+        console.warn('Failed to setup Agora:', e);
+        Alert.alert(
+          'Video KYC - Preview Mode',
+          'The Agora native video module is not available in this APK build. Would you like to enter Preview Mode to test the verification call UI & socket events?\n\nTo enable live streaming, install the updated APK build.',
+          [
+            { text: 'Go Back', style: 'cancel', onPress: () => navigation.goBack() },
+            {
+              text: 'Continue (Preview Mode)',
+              onPress: () => {
+                setIsJoined(true);
+                setCallStatus('connected');
+                socketService.emitKycDriverJoined(activeSession.sessionId);
+                if (!callTimerRef.current) {
+                  callTimerRef.current = setInterval(() => {
+                    setCallDuration(prev => prev + 1);
+                  }, 1000);
+                }
+              },
+            },
+          ]
+        );
       }
     };
 
@@ -371,30 +451,30 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
 
   // Actions
   const toggleMute = () => {
+    const nextMute = !isMuted;
     if (engineRef.current) {
-      const nextMute = !isMuted;
       engineRef.current.muteLocalAudioStream(nextMute);
-      setIsMuted(nextMute);
-      triggerHaptic(HapticFeedbackTypes.impactLight);
     }
+    setIsMuted(nextMute);
+    triggerHaptic(HapticFeedbackTypes.impactLight);
   };
 
   const switchCamera = () => {
     if (engineRef.current) {
       engineRef.current.switchCamera();
-      setIsUsingFrontCamera(prev => !prev);
-      setIsTorchOn(false); // Reset torch when switching
-      triggerHaptic(HapticFeedbackTypes.impactLight);
     }
+    setIsUsingFrontCamera(prev => !prev);
+    setIsTorchOn(false); // Reset torch when switching
+    triggerHaptic(HapticFeedbackTypes.impactLight);
   };
 
   const toggleTorch = () => {
+    const nextTorch = !isTorchOn;
     if (engineRef.current) {
-      const nextTorch = !isTorchOn;
       engineRef.current.setCameraTorchOn(nextTorch);
-      setIsTorchOn(nextTorch);
-      triggerHaptic(HapticFeedbackTypes.impactLight);
     }
+    setIsTorchOn(nextTorch);
+    triggerHaptic(HapticFeedbackTypes.impactLight);
   };
 
   const confirmEndCall = () => {
@@ -461,7 +541,7 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
 
       {/* FULL-SCREEN REMOTE VIDEO (OFFICER) */}
       <View style={styles.remoteVideoContainer}>
-        {remoteUid ? (
+        {remoteUid && isAgoraAvailable && RtcSurfaceView ? (
           <RtcSurfaceView
             style={StyleSheet.absoluteFill}
             canvas={{
@@ -473,12 +553,16 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
           <View style={styles.waitingRemoteBox}>
             <ActivityIndicator size="large" color="#FFF" />
             <Text style={styles.waitingRemoteTitle}>
-              {callStatus === 'reconnecting'
+              {!isAgoraAvailable
+                ? t('video_kyc_preview_active', 'Preview Mode (Video unlinked in APK)')
+                : callStatus === 'reconnecting'
                 ? t('video_kyc_reconnecting', 'Reconnecting with officer...')
                 : t('video_kyc_connecting', 'Waiting for officer video stream...')}
             </Text>
             <Text style={styles.waitingRemoteSubtitle}>
-              {activeSession.adminName || paramAdminName || t('video_kyc_officer', 'KYC Officer')}
+              {!isAgoraAvailable
+                ? t('video_kyc_rebuild_hint', 'Rebuild binary (npx react-native run-android) for live video')
+                : (activeSession.adminName || paramAdminName || t('video_kyc_officer', 'KYC Officer'))}
             </Text>
           </View>
         )}
@@ -487,14 +571,23 @@ const VideoKYCCallScreen = ({ navigation, route }: any) => {
       {/* FLOATING LOCAL PREVIEW (DRIVER) */}
       {isJoined && (
         <View style={styles.localPreviewCard}>
-          <RtcSurfaceView
-            style={StyleSheet.absoluteFill}
-            zOrderMediaOverlay={true}
-            canvas={{
-              uid: 0, // 0 = local user
-              renderMode: RenderModeType.RenderModeHidden,
-            }}
-          />
+          {isAgoraAvailable && RtcSurfaceView ? (
+            <RtcSurfaceView
+              style={StyleSheet.absoluteFill}
+              zOrderMediaOverlay={true}
+              canvas={{
+                uid: 0, // 0 = local user
+                renderMode: RenderModeType.RenderModeHidden,
+              }}
+            />
+          ) : (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#334155' }}>
+              <Ionicons name={isUsingFrontCamera ? 'person-circle-outline' : 'videocam-outline'} size={38} color="#94A3B8" />
+              <Text style={{ color: '#94A3B8', fontSize: 10, marginTop: 4 }}>
+                {isUsingFrontCamera ? 'Front Cam' : 'Back Cam'}
+              </Text>
+            </View>
+          )}
           <View style={styles.localLabelBadge}>
             <Text style={styles.localLabelText}>You</Text>
           </View>
