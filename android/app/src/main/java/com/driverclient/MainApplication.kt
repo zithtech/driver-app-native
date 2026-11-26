@@ -26,6 +26,8 @@ class MainApplication : Application(), ReactApplication {
               // add(MyReactNativePackage())
               add(com.driverclient.floating.FloatingOverlayPackage())
               add(com.driverclient.notifications.CustomNotificationPackage())
+              add(com.driverclient.phonenumber.PhoneNumberHintPackage())
+              add(com.driverclient.drivingtest.DualCameraPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

@@ -3,6 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Styles } from '../lib/styles';
 import { useTheme } from '@react-navigation/native';
 import { useAppTheme } from '../context/ThemeContext';
+import { useResponsive } from '../lib/scale';
 
 interface OTPInputProps {
   numberOfDigits?: number;
@@ -24,6 +25,7 @@ const OTPInput: React.FC<OTPInputProps> = ({
   const { colors: navColors, fonts } = useTheme() as any;
   const { theme, isDark } = useAppTheme();
   const colors = theme.colors;
+  const { cs, rms } = useResponsive();
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -43,6 +45,10 @@ const OTPInput: React.FC<OTPInputProps> = ({
 
   const codeDigitsArray = new Array(numberOfDigits).fill('');
 
+  const boxSize = cs(42, 0.85, 1.15);
+  const digitFontSize = rms(18);
+  const boxGap = cs(8, 0.8, 1.2);
+
   const renderDigit = (_: any, index: number) => {
     const digit = value[index] || '';
     const isCurrentDigit = index === value.length;
@@ -56,7 +62,12 @@ const OTPInput: React.FC<OTPInputProps> = ({
         style={[
           Styles.bw1,
           Styles.br2,
-          styles.box,
+          {
+            height: boxSize,
+            width: boxSize,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
           {
             borderColor: hasError
               ? '#EF4444'
@@ -65,19 +76,19 @@ const OTPInput: React.FC<OTPInputProps> = ({
                 : colors.border || colors.primary + '40',
             backgroundColor: isFocusedDigit ? colors.primary + '05' : 'transparent',
           },
-          index !== numberOfDigits - 1 && styles.gap,
+          index !== numberOfDigits - 1 && { marginRight: boxGap },
         ]}
       >
         {digit ? (
-          <Text style={[fonts.bold, { fontSize: 20, color: colors.text }]}>
+          <Text style={[fonts.bold, { fontSize: digitFontSize, color: colors.text }]}>
             {digit}
           </Text>
         ) : isFocusedDigit ? (
-          <Text style={[fonts.medium, { fontSize: 20, color: colors.primary }]}>
+          <Text style={[fonts.medium, { fontSize: digitFontSize, color: colors.primary }]}>
             |
           </Text>
         ) : (
-          <Text style={[fonts.medium, { fontSize: 20, color: colors.border || '#D1D5DB' }]}>
+          <Text style={[fonts.medium, { fontSize: digitFontSize, color: colors.border || '#D1D5DB' }]}>
             -
           </Text>
         )}
@@ -124,20 +135,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  box: {
-    height: 42,
-    width: 42,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gap: {
-    marginRight: 8,
-  },
   hiddenInput: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.01,
   },
 });
 

@@ -46,6 +46,7 @@ import { useHaptic } from '../../hooks/useHaptic';
 import ImageZoomModal from '../../Components/ImageZoomModal';
 import { resolveImageUrl, resolveAllImageUrls } from '../../utils/imageUtils';
 import WaitingForApprovalModal from './components/WaitingForApprovalModal';
+import { useResponsive } from '../../lib/scale';
 
 const cleanStepText = (text: string) => (text ? text.replace(/\\n/g, '\n') : '');
 
@@ -144,6 +145,7 @@ const DocumentScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const { triggerHaptic } = useHaptic();
   const { showToast } = useToast();
+  const { rs, rvs, rms, cs, selectByDevice, isSmallDevice, isMediumDevice, isLargeDevice, isTablet } = useResponsive();
   const prevDocsStatus = useRef<Record<string, string>>({});
   const [zoomData, setZoomData] = React.useState<{ uris: string[]; title: string } | null>(null);
   const [submissionStatus, setSubmissionStatus] = React.useState<'success' | 'failed' | null>(null);
@@ -437,7 +439,7 @@ const DocumentScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['top', 'bottom']}
+      edges={Platform.OS === 'ios' ? ['top', 'bottom'] : ['top']}
     >
       <AppStatusBar />
       {/* --- WAITING MODAL --- */}
@@ -463,54 +465,57 @@ const DocumentScreen = ({ navigation }: any) => {
       />
 
 
-      {/* PROGRESS BAR */}
-      <View style={styles.progressWrapper}>
-        <View style={styles.progressLineContainer}>
-           <View style={[styles.progressLine, { width: '100%', backgroundColor: colors.primary }]} />
+      {/* MAIN RESPONSIVE CONTENT WRAPPER */}
+      <View style={{ flex: 1, width: '100%', maxWidth: isTablet ? 480 : undefined, alignSelf: 'center' }}>
+        {/* PROGRESS BAR */}
+        <View style={[styles.progressWrapper, { paddingVertical: selectByDevice({ small: 8, medium: 12, large: 14 }) }]}>
+          <View style={[styles.progressLineContainer, { top: selectByDevice({ small: 20, medium: 23, large: 25 }) }]}>
+             <View style={[styles.progressLine, { width: '100%', backgroundColor: colors.primary }]} />
+          </View>
+          <View style={styles.progressStepsRow}>
+            {/* Step 1 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }), backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                <Ionicons name="checkmark" size={selectByDevice({ small: 14, medium: 16, large: 18 })} color="#FFF" />
+              </View>
+              <Text numberOfLines={2} maxFontSizeMultiplier={1.25} style={[styles.stepText, { fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+              </Text>
+            </View>
+            {/* Step 2 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }), backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                <Ionicons name="checkmark" size={selectByDevice({ small: 14, medium: 16, large: 18 })} color="#FFF" />
+              </View>
+              <Text numberOfLines={2} maxFontSizeMultiplier={1.25} style={[styles.stepText, { fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+              </Text>
+            </View>
+            {/* Step 3 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }), backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                <Ionicons name="checkmark" size={selectByDevice({ small: 14, medium: 16, large: 18 })} color="#FFF" />
+              </View>
+              <Text numberOfLines={2} maxFontSizeMultiplier={1.25} style={[styles.stepText, { fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
+                {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+              </Text>
+            </View>
+            {/* Step 4 */}
+            <View style={styles.stepContainer}>
+              <View style={[styles.stepCircle, { width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }), backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                <Text style={[styles.stepNumber, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: '#FFF' }]}>4</Text>
+              </View>
+              <Text numberOfLines={2} maxFontSizeMultiplier={1.25} style={[styles.stepText, { fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), color: colors.primary }]}>
+                {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.progressStepsRow}>
-          {/* Step 1 */}
-          <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              <Ionicons name="checkmark" size={16} color="#FFF" />
-            </View>
-            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-              {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
-            </Text>
-          </View>
-          {/* Step 2 */}
-          <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              <Ionicons name="checkmark" size={16} color="#FFF" />
-            </View>
-            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-              {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
-            </Text>
-          </View>
-          {/* Step 3 */}
-          <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              <Ionicons name="checkmark" size={16} color="#FFF" />
-            </View>
-            <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-              {cleanStepText(t('address_details_step', 'Address\nDetails'))}
-            </Text>
-          </View>
-          {/* Step 4 */}
-          <View style={styles.stepContainer}>
-            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              <Text style={[styles.stepNumber, { color: '#FFF' }]}>4</Text>
-            </View>
-            <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
-              {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
-            </Text>
-          </View>
-        </View>
-      </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingTop: 10, paddingBottom: 30 }}
+        contentContainerStyle={{ padding: selectByDevice({ small: 14, medium: rms(18), large: rms(22) }), paddingTop: 10, paddingBottom: selectByDevice({ small: 20, medium: 28, large: 34 }) }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />}
+        showsVerticalScrollIndicator={false}
       >
         {isFetching && !remoteDocs ? (
           <View style={{ gap: 15 }}>
@@ -529,19 +534,19 @@ const DocumentScreen = ({ navigation }: any) => {
             {/* HEADER SECTION */}
             <View style={styles.headerSection}>
               <View style={styles.headerTextContainer}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('documents_upload_title', 'Documents Upload')}</Text>
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.headerTitle, { fontSize: selectByDevice({ small: rms(18), medium: rms(20), large: rms(22) }), color: colors.text }]}>{t('documents_upload_title', 'Documents Upload')}</Text>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(12.5), large: rms(13.5) }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>
                   Please upload clear and original documents.
                 </Text>
               </View>
             </View>
 
             {/* INFO BANNER */}
-            <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : '#EFF6FF' }]}>
-              <View style={[styles.infoIconContainer, { backgroundColor: colors.primary }]}>
-                <Text style={{ color: '#FFF', fontSize: 16, fontWeight: 'bold' }}>i</Text>
+            <View style={[styles.infoBanner, { padding: selectByDevice({ small: 10, medium: 12, large: 14 }), backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : '#EFF6FF' }]}>
+              <View style={[styles.infoIconContainer, { width: selectByDevice({ small: 18, medium: 20, large: 22 }), height: selectByDevice({ small: 18, medium: 20, large: 22 }), borderRadius: 11, backgroundColor: colors.primary }]}>
+                <Text style={{ color: '#FFF', fontSize: selectByDevice({ small: 13, medium: 15, large: 16 }), fontWeight: 'bold' }}>i</Text>
               </View>
-              <Text style={[styles.infoBannerText, { color: colors.text }]}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.infoBannerText, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: colors.text }]}>
                 All documents are secure and will be used only for verification purposes.
               </Text>
             </View>
@@ -549,19 +554,17 @@ const DocumentScreen = ({ navigation }: any) => {
             {/* REJECTION BANNER */}
             {(isDocsRejected || user?.status === 'rejected' || user?.status === 'blocked') && (
               <View style={[styles.rejectionBanner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FECACA' }, (user?.status === 'blocked' || user?.status === 'rejected') && { borderLeftColor: '#EF4444' }]}>
-                <Ionicons name="warning-outline" size={22} color="#DC2626" />
+                <Ionicons name="warning-outline" size={selectByDevice({ small: 20, medium: 22, large: 24 })} color="#DC2626" />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626', fontSize: 14 }]}>
+                  <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626', fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }) }]}>
                     {user?.status === 'blocked' ? t('account_restricted', 'Account Restricted') : t('docs_rejected_title', 'Documents Need Correction')}
                   </Text>
-                  <Text style={{ color: isDark ? '#FECACA' : '#7F1D1D', fontSize: 12, marginTop: 2 }}>
+                  <Text maxFontSizeMultiplier={1.25} style={{ color: isDark ? '#FECACA' : '#7F1D1D', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), marginTop: 2 }}>
                     {user?.status_reason || t('docs_rejected_desc', 'Some documents were rejected. Please re-upload the highlighted items below.')}
                   </Text>
                 </View>
               </View>
             )}
-
-
 
             {/* LIST */}
             {otherDocs.map((doc, index) => {
@@ -592,12 +595,13 @@ const DocumentScreen = ({ navigation }: any) => {
                   }}
                   style={[
                     styles.docRow,
+                    { paddingVertical: selectByDevice({ small: 10, medium: 14, large: 16 }) },
                     !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? '#2C2C2E' : '#E5E7EB' },
                     isRejected && { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.05)' : 'rgba(239, 68, 68, 0.05)' }
                   ]}
                 >
                   <View style={styles.docRowLeft}>
-                    <View style={[styles.docIconBoxLarge, { borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? theme.colors.card : '#F9FAFB' }]}>
+                    <View style={[styles.docIconBoxLarge, { width: selectByDevice({ small: cs(48), medium: cs(54), large: cs(60) }), height: selectByDevice({ small: cs(36), medium: cs(40), large: cs(44) }), borderColor: isDark ? '#374151' : '#E5E7EB', backgroundColor: isDark ? theme.colors.card : '#F9FAFB' }]}>
                       {doc.key === 'Profile_Selfie' ? (
                          <Image source={require('../../assets/images/3.png')} style={styles.thumbnailLarge} resizeMode="cover" />
                       ) : doc.key === 'Aadhar_Card' ? (
@@ -615,34 +619,34 @@ const DocumentScreen = ({ navigation }: any) => {
                         />
                       ) : (
                         <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
-                           <doc.Logo width={30} height={30} preserveAspectRatio="xMidYMid slice" />
+                           <doc.Logo width={selectByDevice({ small: 26, medium: 30, large: 34 })} height={selectByDevice({ small: 26, medium: 30, large: 34 })} preserveAspectRatio="xMidYMid slice" />
                         </View>
                       )}
                     </View>
           
                     <View style={styles.docInfo}>
-                      <Text style={[styles.docTitle, { color: colors.text }]} numberOfLines={1}>
+                      <Text maxFontSizeMultiplier={1.25} style={[styles.docTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14.5), large: rms(15.5) }), color: colors.text }]} numberOfLines={1}>
                         {t(doc.labelKey)} {!doc.required && `(${t('optional')})`}
                       </Text>
                       
                       <View style={styles.statusWrapper}>
                         <View style={[styles.statusDot, { backgroundColor: activeStatus.dot }]} />
-                        <Text style={[styles.statusText, { color: activeStatus.text }]}>
+                        <Text maxFontSizeMultiplier={1.25} style={[styles.statusText, { fontSize: selectByDevice({ small: rms(10.5), medium: rms(11.5), large: rms(12.5) }), color: activeStatus.text }]}>
                           {t(displayStatus)}
                         </Text>
                       </View>
                       
                       {!isDone && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                          <Ionicons name="cloud-upload-outline" size={14} color="#10B981" />
-                          <Text style={{ color: '#10B981', fontSize: 12, marginLeft: 4, fontWeight: '600' }}>
+                          <Ionicons name="cloud-upload-outline" size={selectByDevice({ small: 13, medium: 14, large: 15 })} color="#10B981" />
+                          <Text maxFontSizeMultiplier={1.25} style={{ color: '#10B981', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), marginLeft: 4, fontWeight: '600' }}>
                             {t('tap_to_upload') || 'Tap to upload'}
                           </Text>
                         </View>
                       )}
                       
                       {isRejected && state.rejection_reason && (
-                        <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 4, fontWeight: '600' }}>
+                        <Text maxFontSizeMultiplier={1.25} style={{ color: '#EF4444', fontSize: selectByDevice({ small: rms(10), medium: rms(11), large: rms(12) }), marginTop: 4, fontWeight: '600' }}>
                           {t('rejected')}: {state.rejection_reason}
                         </Text>
                       )}
@@ -652,13 +656,13 @@ const DocumentScreen = ({ navigation }: any) => {
                   {isDone && (
                     <TouchableOpacity
                       onPress={() => navigation.navigate(DocumentUploadScreen_Nav, { doc })}
-                      style={[styles.actionBtn, { backgroundColor: isDark ? '#374151' : '#F3F4F6', borderColor: isDark ? '#4B5563' : '#E5E7EB' }]}
+                      style={[styles.actionBtn, { paddingHorizontal: selectByDevice({ small: 8, medium: 10, large: 12 }), paddingVertical: selectByDevice({ small: 4, medium: 6, large: 7 }), backgroundColor: isDark ? '#374151' : '#F3F4F6', borderColor: isDark ? '#4B5563' : '#E5E7EB' }]}
                     >
-                      <Ionicons name="camera-outline" size={14} color={isDark ? '#D1D5DB' : '#6B7280'} />
-                      <Text style={[styles.actionText, { color: isDark ? '#D1D5DB' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
+                      <Ionicons name="camera-outline" size={selectByDevice({ small: 12, medium: 14, large: 16 })} color={isDark ? '#D1D5DB' : '#6B7280'} />
+                      <Text style={[styles.actionText, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: isDark ? '#D1D5DB' : '#6B7280' }]} numberOfLines={1} adjustsFontSizeToFit>{t('retake') || 'Retake'}</Text>
                     </TouchableOpacity>
                   )}
-                  <Ionicons name="chevron-forward" size={20} color={isDark ? '#4B5563' : '#9CA3AF'} style={{ marginLeft: 12 }} />
+                  <Ionicons name="chevron-forward" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color={isDark ? '#4B5563' : '#9CA3AF'} style={{ marginLeft: 12 }} />
                 </TouchableOpacity>
               );
             })}
@@ -670,7 +674,7 @@ const DocumentScreen = ({ navigation }: any) => {
         )}
       </ScrollView>
 
-      <View style={[styles.footer, { backgroundColor: isDark ? theme.colors.background : '#FFFFFF', borderTopColor: isDark ? '#374151' : '#F3F4F6' }]}>
+      <View style={[styles.footer, { paddingHorizontal: selectByDevice({ small: 16, medium: 20, large: 24 }), paddingTop: selectByDevice({ small: 10, medium: 14, large: 16 }), paddingBottom: selectByDevice({ small: 16, medium: 24, large: 30 }), backgroundColor: isDark ? theme.colors.background : '#FFFFFF', borderTopColor: isDark ? '#374151' : '#F3F4F6' }]}>
         <Button
           disabled={!allUploaded || isSubmitting}
           loading={isSubmitting}
@@ -679,7 +683,7 @@ const DocumentScreen = ({ navigation }: any) => {
             handleSubmit();
           }}
           style={[
-            { height: 48, borderRadius: 12 },
+            { height: selectByDevice({ small: cs(48, 0.9, 1.1), medium: cs(52, 0.9, 1.1), large: cs(56, 0.9, 1.1) }), borderRadius: 12 },
             allUploaded && !isSubmitting && { backgroundColor: '#10B981', borderColor: '#10B981' }
           ]}
         >
@@ -695,24 +699,26 @@ const DocumentScreen = ({ navigation }: any) => {
           style={[
             styles.skipToVideoBtn,
             {
+              paddingVertical: selectByDevice({ small: 8, medium: 10, large: 12 }),
               backgroundColor: isDark ? 'rgba(37, 99, 235, 0.12)' : '#EFF6FF',
               borderColor: isDark ? 'rgba(37, 99, 235, 0.3)' : '#BFDBFE',
             },
           ]}
         >
-          <Ionicons name="videocam" size={18} color="#2563EB" />
-          <Text style={[fonts.bold, { color: '#2563EB', fontSize: 13, marginLeft: 8 }]}>
+          <Ionicons name="videocam" size={selectByDevice({ small: 16, medium: 18, large: 20 })} color="#2563EB" />
+          <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { color: '#2563EB', fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), marginLeft: 8 }]}>
             {t('skip_upload_video_kyc', 'Skip Upload & Verify via Video KYC →')}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.secureInfoContainer}>
-          <Ionicons name="lock-closed-outline" size={14} color="#6B7280" />
-          <Text style={[styles.secureInfoText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          <Ionicons name="lock-closed-outline" size={selectByDevice({ small: 12, medium: 14, large: 16 })} color="#6B7280" />
+          <Text maxFontSizeMultiplier={1.25} style={[styles.secureInfoText, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>
             {t('safe_secure_info', 'Your information is safe and secure with us')}
           </Text>
         </View>
       </View>
+    </View>
 
       <ImageZoomModal
         visible={!!zoomData}

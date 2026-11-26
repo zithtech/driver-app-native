@@ -27,6 +27,8 @@ export interface UserState {
   trusted_contact?: { name: string; number: string; relation_type: string };
   otp?: string;
   isExistingUser?: boolean;
+  terms_accepted?: boolean;
+  terms_accepted_at?: string;
 
   accessToken?: string;
   refreshToken?: string;
@@ -72,6 +74,14 @@ export interface UserState {
   | 'DOCS_REJECTED'
   | 'DOCS_SUBMITTED'
   | 'DOCUMENTS_APPROVED'
+  | 'KYC_VERIFIED'
+  | 'DRIVING_TEST_INTRO'
+  | 'DRIVING_TEST_ELIGIBLE'
+  | 'DRIVING_TEST_IN_PROGRESS'
+  | 'DRIVING_TEST_SUBMITTED'
+  | 'DRIVING_TEST_PENDING_APPROVAL'
+  | 'DRIVING_TEST_RETEST_REQUIRED'
+  | 'ONBOARDING_COMPLETED'
   | 'SUBSCRIPTION_ACTIVE'
   | 'ACTIVE'
   | string;

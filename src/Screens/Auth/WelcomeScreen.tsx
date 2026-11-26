@@ -13,9 +13,9 @@ import {
   TouchableOpacity,
   Keyboard,
   TouchableWithoutFeedback,
+  Linking,
+  ToastAndroid,
 } from 'react-native';
-import MaskedView from '@react-native-masked-view/masked-view';
-import LinearGradient from 'react-native-linear-gradient';
 import Reanimated, {
   FadeInDown,
   FadeInUp,
@@ -29,6 +29,7 @@ import Reanimated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
 import { useAppTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
@@ -52,6 +53,8 @@ import { useApplyReferralCodeMutation } from '../../service/driverApi';
 import { getDeviceId } from '../../service/utils/device';
 import { Logo } from '../../assets/svg';
 import AppStatusBar from '../../Components/AppStatusBar';
+import { useResponsive } from '../../lib/scale';
+import { requestDevicePhoneNumber, isValidIndianMobile } from '../../service/phoneHint';
 
 // const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -69,6 +72,11 @@ const DecorativeBackground = ({ colors }: { colors: any }) => (
 );
 
 
+const LEGAL_URLS = {
+  TERMS: 'https://www.j2bglobal.com/legal/terms.html',
+  PRIVACY: 'https://www.j2bglobal.com/legal/privacy.html',
+};
+
 const WelcomeScreen = ({ navigation }: any) => {
   const { colors: navColors, fonts } = useTheme() as any;
   const { theme, isDark: dark } = useAppTheme();
@@ -76,6 +84,8 @@ const WelcomeScreen = ({ navigation }: any) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const { triggerHaptic } = useHaptic();
+  const { showToast } = useToast();
+  const { rs, rvs, rms, cs, selectByDevice, isSmallDevice, isLargeDevice, isTablet } = useResponsive();
 
 
   /* ================= STATE ================= */
@@ -83,6 +93,8 @@ const WelcomeScreen = ({ navigation }: any) => {
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [isTermsAccepted, setIsTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState(false);
   const [referralCode, setReferralCode] = useState('');
   const [referralError, setReferralError] = useState('');
   const [referralMessage, setReferralMessage] = useState('');
@@ -90,12 +102,38 @@ const WelcomeScreen = ({ navigation }: any) => {
   const [referralCodeStatus, setReferralCodeStatus] = useState<'idle' | 'loading' | 'valid' | 'invalid'>('idle');
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [isReferralVisible, setIsReferralVisible] = useState(false);
-  const [typedTextLength, setTypedTextLength] = useState(0);
 
   const buttonScale = useSharedValue(1);
 
   const [sendOtp, { isLoading }] = useSendOtpMutation();
   const [applyReferralCode, { isLoading: isCheckingReferral }] = useApplyReferralCodeMutation();
+
+  const handleOpenLink = async (url: string, documentName: string) => {
+    try {
+      triggerHaptic(HapticFeedbackTypes.selection);
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          t('cannot_open_link', 'Unable to open link'),
+          t('cannot_open_link_desc', 'Could not open the legal document in your browser.')
+        );
+      }
+    } catch (error) {
+      console.log(`Error opening ${documentName} URL:`, error);
+      Alert.alert(
+        t('error', 'Error'),
+        t('cannot_open_link_desc', 'Could not open the legal document in your browser.')
+      );
+    }
+  };
+
+  const toggleTerms = () => {
+    triggerHaptic(HapticFeedbackTypes.selection);
+    setIsTermsAccepted(prev => !prev);
+    if (termsError) setTermsError(false);
+  };
 
   /* ================= DEVICE ID ================= */
   useEffect(() => {
@@ -114,6 +152,36 @@ const WelcomeScreen = ({ navigation }: any) => {
     loadDeviceId();
   }, [dispatch]);
 
+  /* ================= AUTO PHONE NUMBER RETRIEVAL ================= */
+  useEffect(() => {
+    let isMounted = true;
+
+    const autoRetrievePhoneNumber = async () => {
+      // 350ms delay to allow screen animations to settle before triggering system sheet
+      const timer = setTimeout(async () => {
+        if (!isMounted) return;
+        try {
+          const result = await requestDevicePhoneNumber();
+          if (isMounted && result.success && result.phoneNumber) {
+            setMobileNumber(result.phoneNumber);
+            setHasError(false);
+            triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+          }
+        } catch (e) {
+          // Graceful silent fallback to manual entry
+        }
+      }, 350);
+
+      return () => clearTimeout(timer);
+    };
+
+    autoRetrievePhoneNumber();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
@@ -130,38 +198,12 @@ const WelcomeScreen = ({ navigation }: any) => {
     };
   }, []);
 
-  /* ================= TYPING ANIMATION ================= */
+  /* ================= BRAND TEXT ================= */
   const fullText = t('driver_partner_anim', 'Driver Partner!');
-
-  useEffect(() => {
-    let currentLength = 0;
-
-    // Slight delay to wait for the screen fade-in animation
-    const timeout = setTimeout(() => {
-      const interval = setInterval(() => {
-        currentLength++;
-        setTypedTextLength(currentLength);
-        if (currentLength >= fullText.length) {
-          clearInterval(interval);
-        }
-      }, 80);
-
-      return () => clearInterval(interval);
-    }, 800);
-
-    return () => clearTimeout(timeout);
-  }, [fullText]);
 
   /* ================= ANIMATIONS ================= */
   const triggerShake = () => {
     triggerHaptic(HapticFeedbackTypes.notificationError);
-    // Animated.sequence([
-    //   Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-    //   Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-    //   Animated.timing(shakeAnim, { toValue: 6, duration: 50, useNativeDriver: true }),
-    //   Animated.timing(shakeAnim, { toValue: -6, duration: 50, useNativeDriver: true }),
-    //   Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
-    // ]).start();
   };
 
   const btnAnimatedStyle = useAnimatedStyle(() => ({
@@ -171,9 +213,8 @@ const WelcomeScreen = ({ navigation }: any) => {
   const inputAnimatedStyle = useAnimatedStyle(() => ({
     borderColor: withTiming(
       hasError ? '#EF4444' : isFocused ? colors.primary : dark ? 'rgba(255,255,255,0.3)' : '#9CA3AF',
-      { duration: 250 }
+      { duration: 200 }
     ),
-    transform: [{ scale: withSpring(isFocused ? 1.01 : 1) }],
     backgroundColor: dark ? theme.colors.card : '#FFFFFF',
   }));
 
@@ -208,12 +249,29 @@ const WelcomeScreen = ({ navigation }: any) => {
 
   /* ================= HANDLERS ================= */
   const handleContinue = async () => {
+    Keyboard.dismiss();
     buttonScale.value = withSequence(withSpring(0.95), withSpring(1));
     triggerHaptic(HapticFeedbackTypes.impactLight);
 
-    if (!mobileNumber || mobileNumber.length !== 10 || !/^[6-9]/.test(mobileNumber)) {
+    if (!isValidIndianMobile(mobileNumber)) {
       setHasError(true);
       triggerShake();
+      return;
+    }
+
+    if (!isTermsAccepted) {
+      setTermsError(true);
+      triggerHaptic(HapticFeedbackTypes.notificationWarning);
+      const termsMsg = t('accept_terms_required', 'Please accept the Terms of Use and Privacy Policy to continue.');
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(termsMsg, ToastAndroid.SHORT);
+      } else {
+        showToast({
+          type: 'error',
+          message: termsMsg,
+          position: 'bottom',
+        });
+      }
       return;
     }
 
@@ -233,12 +291,15 @@ const WelcomeScreen = ({ navigation }: any) => {
       const newOtp = result?.otp || result?.data?.otp || '';
       const isExistingUser = result?.isExistingUser ?? result?.data?.isExistingUser ?? false;
 
-      dispatch(setUser({ phone_number: mobileNumber, referred_by: referralCode || undefined, otp: newOtp, isExistingUser }));
-      // ToastAndroid.show(t('otp_sent_success'), ToastAndroid.SHORT);
-
-      setTimeout(() => {
-        navigation.navigate(OTPScreen_Nav);
-      }, OTP_NAVIGATION_DELAY);
+      dispatch(setUser({
+        phone_number: mobileNumber,
+        referred_by: referralCode || undefined,
+        otp: newOtp,
+        isExistingUser,
+        terms_accepted: true,
+        terms_accepted_at: new Date().toISOString(),
+      }));
+      navigation.navigate(OTPScreen_Nav);
 
     } catch (err: any) {
       Alert.alert(
@@ -250,8 +311,397 @@ const WelcomeScreen = ({ navigation }: any) => {
 
   /* ================= UI COMPONENTS ================= */
 
+  const mainContent = (
+    <View style={{ flex: 1, justifyContent: 'space-between' }}>
+      {/* 1. HERO SECTION (Hides when keyboard is active to maintain zero scroll) */}
+      {!isKeyboardVisible && (
+        <View style={{
+          marginTop: selectByDevice({ small: 2, medium: 6, large: 12 }),
+          minHeight: selectByDevice({ small: 125, medium: 180, large: 220 }),
+        }}>
+          {/* Right Side Image (Absolute) - positioned to the right to avoid overlapping with text */}
+          <View style={{
+            position: 'absolute',
+            right: selectByDevice({ small: -50, medium: -58, large: -45 }),
+            top: selectByDevice({ small: -10, medium: -6, large: 0 }),
+            width: selectByDevice({ small: 160, medium: 220, large: 260 }),
+            height: selectByDevice({ small: 160, medium: 220, large: 260 }),
+            zIndex: 0,
+            pointerEvents: 'none'
+          }}>
+            <Image
+              source={walcomeImg}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Left Side Content - maxWidth ensures text never collides with car/driver illustration */}
+          <View style={{ zIndex: 1, maxWidth: selectByDevice({ small: '58%', medium: '56%', large: '58%' }), paddingRight: 4 }}>
+            <Text
+              maxFontSizeMultiplier={1.25}
+              style={[
+                fonts.bold,
+                {
+                  fontSize: selectByDevice({ small: rms(21), medium: rms(25), large: rms(29) }),
+                  fontWeight: '900',
+                  color: dark ? '#FFFFFF' : '#0B132B',
+                  marginTop: selectByDevice({ small: 4, medium: 8, large: 12 }),
+                  lineHeight: selectByDevice({ small: rms(27), medium: rms(31), large: rms(35) }),
+                  marginLeft: -2,
+                }
+              ]}
+            >
+              Welcome{' '}
+              <Text style={{ color: colors.primary }}>
+                {fullText}
+              </Text>
+            </Text>
+
+            <View style={{ marginTop: selectByDevice({ small: 6, medium: 10, large: 14 }) }}>
+              <Text 
+                maxFontSizeMultiplier={1.25}
+                style={[fonts.medium, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13.5) }), color: dark ? '#9CA3AF' : '#6B7280', lineHeight: selectByDevice({ small: rms(15), medium: rms(17), large: rms(19) }) }]}
+              >
+                Ready to hit the road?
+              </Text>
+              <Text 
+                maxFontSizeMultiplier={1.25}
+                style={[fonts.medium, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13.5) }), color: dark ? '#9CA3AF' : '#6B7280', marginTop: 2, lineHeight: selectByDevice({ small: rms(15), medium: rms(17), large: rms(19) }) }]}
+              >
+                Turn your miles into money with flexible hours.
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 2. FORM SECTION */}
+      <View style={{ marginTop: isKeyboardVisible ? selectByDevice({ small: 10, medium: 20, large: 30 }) : 0 }}>
+        {/* Header: Icon + Let's get you started */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: selectByDevice({ small: 10, medium: 12, large: 14 }) }}>
+          <View style={{ backgroundColor: dark ? 'rgba(59, 130, 246, 0.1)' : '#EEF2FF', padding: selectByDevice({ small: 7, medium: 8, large: 9 }), borderRadius: 10, marginRight: 12 }}>
+            <Ionicons name="phone-portrait-outline" size={selectByDevice({ small: 18, medium: 21, large: 23 })} color={dark ? '#60A5FA' : '#3B82F6'} />
+          </View>
+          <View>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17.5) }), color: colors.text }]}>{t('lets_get_started', "Let's get you started")}</Text>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.medium, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), color: dark ? '#9CA3AF' : '#64748B', marginTop: 1 }]}>{t('enter_mobile_to_continue', 'Enter your mobile number to continue')}</Text>
+          </View>
+        </View>
+
+        {/* Input Field */}
+        <Reanimated.View
+          style={[
+            styles.glassInputContainer,
+            inputAnimatedStyle,
+            {
+              borderWidth: 1,
+              shadowColor: isFocused ? colors.primary : '#000',
+              shadowOffset: { width: 0, height: isFocused ? 4 : 0 },
+              shadowOpacity: isFocused ? 0.1 : 0,
+              shadowRadius: isFocused ? 10 : 0,
+              borderRadius: 12,
+              height: selectByDevice({ small: cs(48, 0.9, 1.1), medium: cs(52, 0.9, 1.1), large: cs(56, 0.9, 1.1) }),
+              paddingHorizontal: 12,
+            }
+          ]}
+        >
+          {/* INDIA FLAG + CODE */}
+          <View style={[styles.countryCode, { paddingRight: 10 }]}>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { fontSize: selectByDevice({ small: rms(14), medium: rms(15.5), large: rms(16.5) }), color: colors.text, fontWeight: '700' }]}>+91</Text>
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', height: 24 }]} />
+
+          {/* MOBILE INPUT */}
+          <Input
+            value={mobileNumber}
+            keyboardType="phone-pad"
+            maxLength={10}
+            textContentType="telephoneNumber"
+            autoComplete="tel"
+            placeholder={t('enter_mobile_placeholder', 'Enter your mobile number')}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+            returnKeyType="done"
+            onSubmitEditing={handleContinue}
+            onChangeText={text => {
+              const cleanText = text.replace(/[^0-9]/g, '');
+              setMobileNumber(cleanText);
+              if (hasError) setHasError(false);
+            }}
+            containerStyle={{
+              flex: 1,
+              backgroundColor: 'transparent',
+              marginLeft: 10,
+            }}
+            inputContainerStyle={{
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              height: '100%',
+              paddingHorizontal: 0,
+            }}
+            style={{
+              color: colors.text,
+              fontSize: selectByDevice({ small: rms(14), medium: rms(15.5), large: rms(16.5) }),
+              fontWeight: '600',
+              letterSpacing: 0.5,
+              backgroundColor: 'transparent',
+              paddingVertical: 0,
+              textAlignVertical: 'center',
+            }}
+            placeholderTextColor="#94A3B8"
+            keyboardAppearance={dark ? 'dark' : 'light'}
+          />
+        </Reanimated.View>
+
+        {hasError && (
+          <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 6, marginLeft: 8 }}>
+            {t('valid_mobile_error')}
+          </Text>
+        )}
+
+        {/* BUTTON */}
+        <Reanimated.View style={[btnAnimatedStyle, { marginTop: selectByDevice({ small: 10, medium: 14, large: 18 }), width: '100%' }]}>
+          <Button
+            style={{
+              height: selectByDevice({ small: cs(46, 0.9, 1.1), medium: cs(52, 0.9, 1.1), large: cs(56, 0.9, 1.1) }),
+              borderRadius: 12,
+              backgroundColor: colors.primary,
+              borderWidth: 0,
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
+            onPress={handleContinue}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { color: '#FFF', fontSize: selectByDevice({ small: rms(15), medium: rms(16.5), large: rms(17.5) }), fontWeight: '600' }]}>
+                  Get OTP
+                </Text>
+                <Ionicons name="arrow-forward" size={selectByDevice({ small: 18, medium: 21, large: 23 })} color="#FFF" style={{ position: 'absolute', right: 24 }} />
+              </View>
+            )}
+          </Button>
+        </Reanimated.View>
+
+        {/* OTP Hint text */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: selectByDevice({ small: 8, medium: 10, large: 14 }) }}>
+          <Ionicons name="lock-closed-outline" size={selectByDevice({ small: 12, medium: 13.5, large: 14.5 })} color={dark ? '#9CA3AF' : '#64748B'} />
+          <Text maxFontSizeMultiplier={1.25} style={{ fontSize: selectByDevice({ small: rms(10.5), medium: rms(11.5), large: rms(12.5) }), color: dark ? '#9CA3AF' : '#64748B', marginLeft: 6 }}>
+            We will send you a 6-digit OTP on this number
+          </Text>
+        </View>
+      </View>
+
+      {/* 3. REFERRAL CODE SECTION - Clean, readable 2-row card layout */}
+      <View style={{
+        backgroundColor: dark ? 'rgba(22, 163, 74, 0.1)' : '#F0FDF4',
+        borderRadius: 14,
+        padding: selectByDevice({ small: 8, medium: 12, large: 15 }),
+        marginTop: selectByDevice({ small: 20, medium: 12, large: 16 }),
+        marginBottom: selectByDevice({ small: 8, medium: 14, large: 18 }),
+        borderWidth: 1,
+        borderColor: dark ? 'rgba(74, 222, 128, 0.2)' : '#DCFCE7'
+      }}>
+        {/* Row 1: Header + subtitle with 100% width so text is never truncated */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: selectByDevice({ small: 7, medium: 9, large: 11 }) }}>
+          <View style={{ backgroundColor: dark ? 'rgba(22, 163, 74, 0.2)' : '#DCFCE7', padding: selectByDevice({ small: 6, medium: 7, large: 8 }), borderRadius: 8, marginRight: 10 }}>
+            <Ionicons name="gift" size={selectByDevice({ small: 18, medium: 21, large: 23 })} color="#16A34A" />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { color: colors.text, fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {t('have_referral_code', 'Have a referral code?')}
+            </Text>
+            <Text maxFontSizeMultiplier={1.25} style={{ fontSize: selectByDevice({ small: rms(10), medium: rms(11), large: rms(12) }), color: dark ? '#9CA3AF' : '#6B7280', marginTop: 1 }}>
+              {t('referral_rewards_hint', 'Enter referral code and earn exciting rewards when you join!')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Row 2: Full-width input + Apply Button */}
+        <View style={{
+          backgroundColor: dark ? theme.colors.card : '#FFF',
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: dark ? 'rgba(74, 222, 128, 0.3)' : '#86EFAC',
+          height: selectByDevice({ small: 40, medium: 44, large: 48 }),
+          flexDirection: 'row',
+          alignItems: 'center',
+          overflow: 'hidden'
+        }}>
+          <Input
+            value={referralCode}
+            placeholder={t('enter_code_placeholder', 'Enter code')}
+            autoCapitalize="characters"
+            maxLength={20}
+            onChangeText={(text: string) => {
+              setReferralCode(text.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+              setReferralCodeStatus('idle');
+              setReferralError('');
+              setReferralMessage('');
+            }}
+            containerStyle={{ flex: 1, backgroundColor: 'transparent' }}
+            inputContainerStyle={{ borderWidth: 0, backgroundColor: 'transparent', height: '100%', paddingHorizontal: 10 }}
+            style={{
+              color: colors.text,
+              fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }),
+              fontWeight: '600',
+              letterSpacing: 0.5,
+              backgroundColor: 'transparent',
+              paddingVertical: 0,
+            }}
+            placeholderTextColor="#9CA3AF"
+            keyboardAppearance={dark ? 'dark' : 'light'}
+          />
+          <TouchableOpacity
+            onPress={handleCheckReferral}
+            disabled={isCheckingReferral || !referralCode}
+            style={{ paddingHorizontal: selectByDevice({ small: 12, medium: 16, large: 20 }), height: '100%', justifyContent: 'center', backgroundColor: referralCode ? (dark ? '#15803D' : '#16A34A') : (dark ? 'rgba(22, 163, 74, 0.1)' : '#F0FDF4') }}
+          >
+            {isCheckingReferral ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text maxFontSizeMultiplier={1.25} style={[fonts.bold, { color: referralCode ? '#FFF' : (dark ? '#4ADE80' : '#16A34A'), fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+                {referralCodeStatus === 'valid' ? t('applied', 'Applied') : t('apply', 'Apply')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {referralCodeStatus === 'invalid' && (
+          <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 6, marginLeft: 4 }}>
+            {referralError || t('invalid_referral_code')}
+          </Text>
+        )}
+        {referralCodeStatus === 'valid' && (
+          <Text style={{ color: '#16A34A', fontSize: 11, marginTop: 6, marginLeft: 4 }}>
+            {referralMessage || t('referral_applied')}
+          </Text>
+        )}
+      </View>
+
+      {/* 4. FOOTER: TERMS & PRIVACY CONSENT */}
+      <View
+        style={{
+          marginTop: 'auto',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: selectByDevice({ small: 6, medium: 8, large: 12 }),
+          paddingBottom: selectByDevice({ small: 8, medium: 12, large: 16 }),
+          paddingHorizontal: selectByDevice({ small: 8, medium: 12, large: 16 }),
+          width: '100%',
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            alignSelf: 'center',
+            maxWidth: '96%',
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={toggleTerms}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessible={true}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: isTermsAccepted }}
+            accessibilityLabel={t('agree_terms_checkbox_label', 'I agree to the Terms of Use and Privacy Policy')}
+            style={[
+              styles.checkboxContainer,
+              {
+                borderColor: termsError
+                  ? '#EF4444'
+                  : isTermsAccepted
+                    ? colors.primary
+                    : dark ? '#4B5563' : '#CBD5E1',
+                backgroundColor: isTermsAccepted
+                  ? colors.primary
+                  : dark ? 'rgba(31, 41, 55, 0.6)' : '#FFFFFF',
+                marginRight: 8,
+              },
+            ]}
+          >
+            {isTermsAccepted && (
+              <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+
+          <View style={{ flexShrink: 1 }}>
+            <Text
+              style={[
+                styles.footerText,
+                {
+                  textAlign: 'center',
+                  paddingHorizontal: 0,
+                  color: dark ? '#9CA3AF' : '#6B7280',
+                  fontSize: selectByDevice({ small: rms(11), medium: rms(11.5), large: rms(12.5) }),
+                  lineHeight: selectByDevice({ small: rms(16), medium: rms(18), large: rms(20) }),
+                },
+              ]}
+            >
+              <Text onPress={toggleTerms}>
+                {t('i_agree_to', 'I agree to the ')}
+              </Text>
+              <Text
+                accessible={true}
+                accessibilityRole="link"
+                accessibilityLabel={`${t('terms_of_use', 'Terms of Use')}, opens in browser`}
+                accessibilityHint="Opens the Terms of Use webpage"
+                onPress={() => handleOpenLink(LEGAL_URLS.TERMS, 'Terms of Use')}
+                style={{
+                  color: colors.primary,
+                  fontWeight: '600',
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {t('terms_of_use', 'Terms of Use')}
+              </Text>
+              <Text onPress={toggleTerms}>
+                {t('and', ' and ')}
+              </Text>
+              <Text
+                accessible={true}
+                accessibilityRole="link"
+                accessibilityLabel={`${t('privacy_policy', 'Privacy Policy')}, opens in browser`}
+                accessibilityHint="Opens the Privacy Policy webpage"
+                onPress={() => handleOpenLink(LEGAL_URLS.PRIVACY, 'Privacy Policy')}
+                style={{
+                  color: colors.primary,
+                  fontWeight: '600',
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {t('privacy_policy', 'Privacy Policy')}
+              </Text>
+            </Text>
+          </View>
+        </View>
+
+        {termsError && (
+          <Text style={{ color: '#EF4444', fontSize: selectByDevice({ small: rms(10), medium: rms(11), large: rms(11.5) }), textAlign: 'center', marginTop: 6, fontWeight: '500' }}>
+            {t('accept_terms_required', 'Please accept the Terms of Use and Privacy Policy to continue.')}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={Platform.OS === 'ios' ? ['top', 'bottom'] : ['top']}>
       <AppStatusBar />
       <DecorativeBackground colors={colors} />
 
@@ -268,274 +718,18 @@ const WelcomeScreen = ({ navigation }: any) => {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
+        enabled={Platform.OS === 'ios'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View
-            style={{ flex: 1, padding: 24 }}
-          >
-            {/* HERO SECTION */}
-            {!isKeyboardVisible && (
-              <View style={{ marginTop: 12, marginBottom: 12 }}>
-                {/* Right Side Image (Absolute) */}
-                <Reanimated.View style={{ position: 'absolute', right: -80, top: -30, width: 250, height: 250, zIndex: 0, pointerEvents: 'none' }}>
-                  <Image
-                    source={walcomeImg}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="contain"
-                  />
-                </Reanimated.View>
-
-                {/* Left Side Content */}
-                <Reanimated.View
-                  style={{ zIndex: 1, paddingRight: 100 }}
-                >
-                  <Text
-                    style={[fonts.bold, { fontSize: 28, fontWeight: '900', color: dark ? '#FFFFFF' : '#0B132B', marginTop: 16, marginLeft: -2 }]}
-                  >
-                    Welcome
-                  </Text>
-
-                  <MaskedView
-                    style={{ height: 36, marginTop: -4, marginLeft: -2 }}
-                    maskElement={
-                      <Text style={[fonts.bold, { fontSize: 28, fontWeight: '900', backgroundColor: 'transparent' }]}>
-                        {fullText.substring(0, typedTextLength)}
-                      </Text>
-                    }
-                  >
-                    <LinearGradient
-                      colors={['#1D4ED8', '#3B82F6', '#60A5FA']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{ flex: 1 }}
-                    />
-                  </MaskedView>
-
-                  <View style={{ marginTop: 16 }}>
-                    <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280' }]}>
-                      Ready to hit the road?
-                    </Text>
-                    <Text style={[fonts.medium, { fontSize: 13, color: dark ? '#9CA3AF' : '#6B7280', marginTop: 2 }]}>
-                      Turn your miles into money with flexible hours.
-                    </Text>
-                  </View>
-                </Reanimated.View>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={{ flex: 1, paddingHorizontal: selectByDevice({ small: 18, medium: 22, large: 28 }), paddingBottom: selectByDevice({ small: 10, medium: 16, large: 20 }) }}>
+            {isTablet ? (
+              <View style={{ maxWidth: 480, alignSelf: 'center', width: '100%', flex: 1 }}>
+                {mainContent}
               </View>
+            ) : (
+              mainContent
             )}
-
-
-            <Reanimated.View
-              style={{
-                marginTop: 32,
-              }}
-            >
-              {/* Header: Icon + Let's get you started */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <View style={{ backgroundColor: dark ? 'rgba(59, 130, 246, 0.1)' : '#EEF2FF', padding: 8, borderRadius: 10, marginRight: 12 }}>
-                  <Ionicons name="phone-portrait-outline" size={20} color={dark ? '#60A5FA' : '#3B82F6'} />
-                </View>
-                <View>
-                  <Text style={[fonts.bold, { fontSize: 16, color: colors.text }]}>{t('lets_get_started', "Let's get you started")}</Text>
-                  <Text style={[fonts.medium, { fontSize: 12, color: dark ? '#9CA3AF' : '#64748B', marginTop: 1 }]}>{t('enter_mobile_to_continue', 'Enter your mobile number to continue')}</Text>
-                </View>
-              </View>
-
-              {/* Input Field */}
-              <Reanimated.View
-                style={[
-                  styles.glassInputContainer,
-                  inputAnimatedStyle,
-                  {
-                    borderWidth: 1,
-                    borderColor: isFocused ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : '#E2E8F0'),
-                    backgroundColor: dark ? theme.colors.card : '#FFFFFF',
-                    shadowColor: isFocused ? colors.primary : '#000',
-                    shadowOffset: { width: 0, height: isFocused ? 4 : 0 },
-                    shadowOpacity: isFocused ? 0.1 : 0,
-                    shadowRadius: isFocused ? 10 : 0,
-                    borderRadius: 12,
-                    height: 48,
-                    paddingHorizontal: 12,
-                  }
-                ]}
-              >
-                {/* INDIA FLAG + CODE */}
-                <View style={[styles.countryCode, { paddingRight: 10 }]}>
-                  <Text style={[fonts.bold, { fontSize: 15, color: colors.text, fontWeight: '700' }]}>+91</Text>
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', height: 24 }]} />
-
-                {/* MOBILE INPUT */}
-                <Input
-                  value={mobileNumber}
-                  keyboardType="phone-pad"
-                  maxLength={10}
-                  placeholder={t('enter_mobile_placeholder', 'Enter your mobile number')}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  returnKeyType="done"
-                  onSubmitEditing={handleContinue}
-                  onChangeText={text => {
-                    const cleanText = text.replace(/[^0-9]/g, '');
-                    setMobileNumber(cleanText);
-                    if (hasError) setHasError(false);
-                    if (cleanText.length > 0) triggerHaptic(HapticFeedbackTypes.selection);
-                  }}
-                  containerStyle={{
-                    flex: 1,
-                    backgroundColor: 'transparent',
-                    marginLeft: 10,
-                  }}
-                  inputContainerStyle={{
-                    borderWidth: 0,
-                    backgroundColor: 'transparent',
-                    height: '100%',
-                    paddingHorizontal: 0,
-                  }}
-                  style={{
-                    color: colors.text,
-                    fontSize: 15,
-                    fontWeight: mobileNumber ? '600' : '400',
-                    letterSpacing: mobileNumber ? 1 : 0,
-                    backgroundColor: 'transparent',
-                    paddingVertical: 0,
-                    textAlignVertical: 'center',
-                  }}
-                  placeholderTextColor="#94A3B8"
-                  keyboardAppearance={dark ? 'dark' : 'light'}
-                />
-              </Reanimated.View>
-
-              {hasError && (
-                <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 6, marginLeft: 8 }}>
-                  {t('valid_mobile_error')}
-                </Text>
-              )}
-
-              {/* BUTTON */}
-              <Reanimated.View style={[btnAnimatedStyle, { marginTop: 12, width: '85%', alignSelf: 'center' }]}>
-                <Button
-                  style={{
-                    height: 48,
-                    borderRadius: 12,
-                    backgroundColor: colors.primary,
-                    borderWidth: 0,
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 4,
-                  }}
-                  onPress={handleContinue}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                      <Text style={[fonts.bold, { color: '#FFF', fontSize: 16, fontWeight: '600' }]}>
-                        Get OTP
-                      </Text>
-                      <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ position: 'absolute', right: 24 }} />
-                    </View>
-                  )}
-                </Button>
-              </Reanimated.View>
-
-              {/* OTP Hint text */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
-                <Ionicons name="lock-closed-outline" size={12} color={dark ? '#9CA3AF' : '#64748B'} />
-                <Text style={{ fontSize: 11, color: dark ? '#9CA3AF' : '#64748B', marginLeft: 6 }}>
-                  We will send you a 6-digit OTP on this number
-                </Text>
-              </View>
-
-              {/* REFERRAL CODE SECTION */}
-              <View style={{ backgroundColor: dark ? 'rgba(22, 163, 74, 0.1)' : '#F0FDF4', borderRadius: 12, padding: 10, marginTop: 36 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ backgroundColor: dark ? 'rgba(22, 163, 74, 0.2)' : '#DCFCE7', padding: 8, borderRadius: 8, marginRight: 8 }}>
-                    <Ionicons name="gift" size={22} color="#16A34A" />
-                  </View>
-
-                  <View style={{ flex: 1, paddingRight: 6 }}>
-                    <Text numberOfLines={1} style={[fonts.bold, { color: colors.text, fontSize: 12 }]}>{t('have_referral_code', 'Have a referral code?')}</Text>
-                    <Text numberOfLines={1} style={{ fontSize: 10, color: dark ? '#9CA3AF' : '#6B7280', marginTop: 2, lineHeight: 14 }}>{t('referral_rewards_hint', 'Enter referral code and earn exciting rewards when you join!')}</Text>
-                  </View>
-
-                  {/* Referral Input & Apply Button Row */}
-                  <View style={{ width: 145, backgroundColor: dark ? theme.colors.card : '#FFF', borderRadius: 8, borderWidth: 1, borderColor: dark ? 'rgba(74, 222, 128, 0.3)' : '#86EFAC', height: 40, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
-                    <Input
-                      value={referralCode}
-                      placeholder={t('enter_code_placeholder', 'Enter code')}
-                      autoCapitalize="characters"
-                      maxLength={20}
-                      onChangeText={(text: string) => {
-                        setReferralCode(text.toUpperCase().replace(/[^A-Z0-9]/g, ''));
-                        setReferralCodeStatus('idle');
-                        setReferralError('');
-                        setReferralMessage('');
-                      }}
-                      containerStyle={{ flex: 1, backgroundColor: 'transparent' }}
-                      inputContainerStyle={{ borderWidth: 0, backgroundColor: 'transparent', height: '100%', paddingHorizontal: 6 }}
-                      style={{
-                        color: colors.text,
-                        fontSize: 12,
-                        fontWeight: '600',
-                        letterSpacing: 0.5,
-                        backgroundColor: 'transparent',
-                        paddingVertical: 0,
-                      }}
-                      placeholderTextColor="#9CA3AF"
-                      keyboardAppearance={dark ? 'dark' : 'light'}
-                    />
-                    <TouchableOpacity
-                      onPress={handleCheckReferral}
-                      disabled={isCheckingReferral || !referralCode}
-                      style={{ paddingHorizontal: 8, height: '100%', justifyContent: 'center', backgroundColor: dark ? 'rgba(22, 163, 74, 0.1)' : 'transparent' }}
-                    >
-                      {isCheckingReferral ? (
-                        <ActivityIndicator size="small" color={dark ? '#4ADE80' : '#16A34A'} />
-                      ) : (
-                        <Text style={[fonts.bold, { color: dark ? '#4ADE80' : '#16A34A', fontSize: 12, opacity: (!referralCode) ? 0.5 : 1 }]}>
-                          {referralCodeStatus === 'valid' ? t('applied', 'Applied') : t('apply', 'Apply')}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {referralCodeStatus === 'invalid' && (
-                  <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 6, marginLeft: 4 }}>
-                    {referralError || t('invalid_referral_code')}
-                  </Text>
-                )}
-                {referralCodeStatus === 'valid' && (
-                  <Text style={{ color: '#16A34A', fontSize: 11, marginTop: 6, marginLeft: 4 }}>
-                    {referralMessage || t('referral_applied')}
-                  </Text>
-                )}
-              </View>
-            </Reanimated.View>
-
-            {/* CHAT SUPPORT BUTTON */}
-
-            {/* FOOTER */}
-            <Reanimated.View
-              style={{ marginTop: 'auto', marginBottom: 10 }}
-            >
-              <Text style={[styles.footerText, { color: dark ? '#9CA3AF' : '#6B7280' }]}>
-                {t('agree_terms_prefix')}
-                <Text style={{ color: colors.primary, fontWeight: '500' }}>{t('terms')}</Text>
-                {'\n'}
-                {t('and')}
-                <Text style={{ color: colors.primary, fontWeight: '500' }}>{t('privacy_policy')}</Text>
-              </Text>
-            </Reanimated.View>
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
@@ -589,6 +783,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
     paddingHorizontal: 16,
+  },
+  checkboxContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

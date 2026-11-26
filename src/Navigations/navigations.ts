@@ -16,6 +16,14 @@ export const SmartSelfieScreen_Nav = 'SmartSelfieScreen';
 export const VerificationSuccessScreen_Nav = 'VerificationSuccessScreen';
 export const VideoKYCWaiting_Nav = 'VideoKYCWaitingScreen';
 export const VideoKYCCall_Nav = 'VideoKYCCallScreen';
+
+/* 🚗 GUIDED VIDEO DRIVING TEST MODULE */
+export const DrivingTestIntro_Nav = 'DrivingTestIntroScreen';
+export const DeviceCompatibilityCheck_Nav = 'DeviceCompatibilityCheckScreen';
+export const LiveDrivingTest_Nav = 'LiveDrivingTestScreen';
+export const DrivingTestCompletion_Nav = 'DrivingTestCompletionScreen';
+export const DrivingTestResult_Nav = 'DrivingTestResultScreen';
+export const OnboardingFinalStatus_Nav = 'OnboardingFinalStatusScreen';
 /* ❌ REMOVED
 export const DocumentVerificationStatus_Nav = "DocumentVerificationStatus";
 */

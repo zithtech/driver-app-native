@@ -652,6 +652,7 @@ const ChatScreen = ({ route, navigation }: any) => {
 
             {/* Input Footer */}
             <KeyboardAvoidingView
+                enabled={Platform.OS === 'ios'}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? vS(90) : 0}
             >

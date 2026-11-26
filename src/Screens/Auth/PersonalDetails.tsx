@@ -8,6 +8,8 @@ import {
   Platform,
   Pressable,
   KeyboardAvoidingView,
+  Keyboard,
+  TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useAppTheme } from '../../context/ThemeContext';
 import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useHaptic } from '../../hooks/useHaptic';
+import { useResponsive } from '../../lib/scale';
 
 import { Input } from '../../Components';
 import { AddressDetails_Nav, HelpCenter_Nav } from '../../Navigations/navigations';
@@ -50,6 +53,7 @@ const PersonalDetails = ({ navigation }: any) => {
   const dispatch = useDispatch();
   const { triggerHaptic } = useHaptic();
   const user = useSelector((state: RootState) => state.userSlice.user);
+  const { rs, rvs, rms, cs, selectByDevice, isSmallDevice, isTablet } = useResponsive();
 
   const [updateDriver, { isLoading: isUpdating }] = useUpdateDriverMutation();
 
@@ -62,6 +66,8 @@ const PersonalDetails = ({ navigation }: any) => {
   const [dobText, setDobText] = useState('');
   const [dobDate, setDobDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isManualDob, setIsManualDob] = useState(false);
+  const dobInputRef = useRef<TextInput | null>(null);
 
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -261,337 +267,439 @@ const PersonalDetails = ({ navigation }: any) => {
     }
   };
 
+  const handleEnableManualDob = () => {
+    triggerHaptic(HapticFeedbackTypes.selection);
+    setIsManualDob(true);
+    setTimeout(() => {
+      dobInputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleDisableManualDob = () => {
+    triggerHaptic(HapticFeedbackTypes.selection);
+    setIsManualDob(false);
+    Keyboard.dismiss();
+    setShowDatePicker(true);
+  };
+
+  const getDobError = () => {
+    if (!dobText) return undefined;
+    if (dobText.length === 14) {
+      if (!dobDate) {
+        return t('invalid_date_error', 'Please enter a valid date');
+      }
+      if (!isAgeValid(dobDate)) {
+        return t('driver_age_error', 'Driver must be at least 18 years old');
+      }
+    }
+    return undefined;
+  };
+
   const setAndFormatDate = (date: Date) => {
     const dd = String(date.getDate()).padStart(2, '0');
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const yyyy = date.getFullYear();
     setDobText(`${dd} / ${mm} / ${yyyy}`);
     setDobDate(date);
+    setIsManualDob(false);
   };
 
   const Label = ({ text, required }: { text: string; required?: boolean }) => (
-    <Text style={[styles.labelText, { color: colors.text }]}>
+    <Text maxFontSizeMultiplier={1.25} style={[styles.labelText, { color: colors.text, fontSize: selectByDevice({ small: rms(11.5), medium: rms(12), large: rms(13) }) }]}>
       {text} {required && <Text style={{ color: '#EF4444' }}>*</Text>}
     </Text>
+  );
+
+  const renderScreenContent = () => (
+    <>
+      {/* PROGRESS BAR */}
+      <View style={[styles.progressWrapper, {
+        paddingTop: selectByDevice({ small: 8, medium: 12, large: 14 }),
+        paddingBottom: selectByDevice({ small: 8, medium: 12, large: 14 }),
+      }]}>
+        <View style={[styles.progressLineContainer, { top: selectByDevice({ small: 19, medium: 23, large: 25 }) }]}>
+           <View style={[styles.progressLine, { width: '33%', backgroundColor: colors.primary }]} />
+           <View style={[styles.progressLine, { width: '67%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+        </View>
+        <View style={styles.progressStepsRow}>
+          {/* Step 1 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary, width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Ionicons name="checkmark" size={selectByDevice({ small: 14, medium: 16, large: 18 })} color="#FFF" />
+            </View>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
+            </Text>
+          </View>
+          {/* Step 2 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary, width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Text maxFontSizeMultiplier={1.2} style={[styles.stepNumber, { color: '#FFF', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }) }]}>2</Text>
+            </View>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: colors.primary, fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
+            </Text>
+          </View>
+          {/* Step 3 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB', width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Text maxFontSizeMultiplier={1.2} style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }) }]}>3</Text>
+            </View>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('address_details_step', 'Address\nDetails'))}
+            </Text>
+          </View>
+          {/* Step 4 */}
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB', width: selectByDevice({ small: 22, medium: 26, large: 28 }), height: selectByDevice({ small: 22, medium: 26, large: 28 }), borderRadius: selectByDevice({ small: 11, medium: 13, large: 14 }) }]}>
+              <Text maxFontSizeMultiplier={1.2} style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }) }]}>4</Text>
+            </View>
+            <Text numberOfLines={2} maxFontSizeMultiplier={1.2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF', fontSize: selectByDevice({ small: rms(9), medium: rms(10), large: rms(11) }), lineHeight: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }]}>
+              {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <KeyboardAvoidingView
+        enabled={Platform.OS === 'ios'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scroll, { flexGrow: 1 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* HEADER SECTION */}
+          <View style={[styles.headerSection, { paddingBottom: selectByDevice({ small: 8, medium: 12, large: 16 }) }]}>
+            <View style={styles.headerTextContainer}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.headerTitle, { color: colors.text, fontSize: selectByDevice({ small: rms(20), medium: rms(22), large: rms(24) }) }]}>{t('personal_details_title', 'Personal Details')}</Text>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), lineHeight: selectByDevice({ small: rms(16), medium: rms(18), large: rms(20) }) }]}>
+                {t('personal_details_subtitle', 'Please enter your details exactly as per your official documents.')}
+              </Text>
+            </View>
+          </View>
+
+          {/* FORM CARD */}
+          <View style={styles.formCard}>
+            
+            {/* FIRST & LAST NAME */}
+            <View style={styles.row}>
+              <View style={styles.half}>
+                <Label text={t('first_name', 'First Name')} required />
+                <Input
+                  value={firstName}
+                  autoCapitalize="words"
+                  onChangeText={(text: string) => setFirstName(sanitizeName(text))}
+                  placeholder={t('enter_first_name', 'Enter first name')}
+                  placeholderTextColor="#9CA3AF"
+                  maxLength={50}
+                  style={{ fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }), color: colors.text }}
+                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                  LeadingAccessory={
+                    <Ionicons name="person-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
+                  error={getNameError(firstName, t('first_name', 'First Name'))}
+                />
+              </View>
+              <View style={styles.half}>
+                <Label text={t('last_name', 'Last Name')} required />
+                <Input
+                  value={lastName}
+                  autoCapitalize="words"
+                  onChangeText={(text: string) => setLastName(sanitizeName(text))}
+                  placeholder={t('enter_last_name', 'Enter last name')}
+                  placeholderTextColor="#9CA3AF"
+                  maxLength={50}
+                  style={{ fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }), color: colors.text }}
+                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                  LeadingAccessory={
+                    <Ionicons name="person-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#9CA3AF" style={{ marginRight: 8 }} />
+                  }
+                  error={getNameError(lastName, t('last_name', 'Last Name'))}
+                />
+              </View>
+            </View>
+
+            {/* DATE OF BIRTH */}
+            <View style={[styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <Label text={t('date_of_birth_label', 'Date of Birth')} required />
+              <View style={{ position: 'relative' }}>
+                <Input
+                  ref={dobInputRef}
+                  value={dobText}
+                  onChangeText={handleDateTextChange}
+                  keyboardType="numeric"
+                  maxLength={14}
+                  editable={isManualDob}
+                  placeholder="DD / MM / YYYY"
+                  placeholderTextColor="#9CA3AF"
+                  style={{ fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }), color: colors.text }}
+                  inputContainerStyle={[
+                    styles.inputContainer,
+                    {
+                      backgroundColor: isDark ? theme.colors.card : '#FFF',
+                      borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB',
+                      height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }),
+                    },
+                  ]}
+                  LeadingAccessory={
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        if (isManualDob) {
+                          handleDisableManualDob();
+                        } else {
+                          triggerHaptic(HapticFeedbackTypes.selection);
+                          setShowDatePicker(true);
+                        }
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Ionicons
+                        name="calendar-outline"
+                        size={selectByDevice({ small: 18, medium: 20, large: 22 })}
+                        color={!isManualDob ? colors.primary : '#9CA3AF'}
+                        style={{ marginRight: 8 }}
+                      />
+                    </TouchableOpacity>
+                  }
+                  TailingAccessory={
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={isManualDob ? handleDisableManualDob : handleEnableManualDob}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityLabel={isManualDob ? t('open_calendar_picker', 'Open calendar picker') : t('enter_date_manually', 'Enter date manually')}
+                    >
+                      <Ionicons
+                        name={isManualDob ? 'calendar-outline' : 'create-outline'}
+                        size={selectByDevice({ small: 18, medium: 20, large: 22 })}
+                        color={colors.primary}
+                      />
+                    </TouchableOpacity>
+                  }
+                  error={getDobError()}
+                />
+                {!isManualDob && (
+                  <Pressable
+                    onPress={() => {
+                      triggerHaptic(HapticFeedbackTypes.selection);
+                      setShowDatePicker(true);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: selectByDevice({ small: 44, medium: 48, large: 52 }),
+                      height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }),
+                    }}
+                  />
+                )}
+              </View>
+            </View>
+
+            {/* GENDER */}
+            <View style={[styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <Label text={t('gender_label', 'Gender')} required />
+              <View style={styles.genderRow}>
+                {['Male', 'Female', 'Other'].map((option) => {
+                  const isActive = gender === option;
+                  let iconName = 'person';
+                  let iconColor = '#2563EB';
+                  
+                  if (option === 'Female') {
+                    iconName = 'female';
+                    iconColor = '#EC4899';
+                  } else if (option === 'Other') {
+                    iconName = 'person-circle-outline';
+                    iconColor = '#8B5CF6';
+                  }
+
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        triggerHaptic(HapticFeedbackTypes.selection);
+                        setGender(option as any);
+                      }}
+                      style={[
+                        styles.genderBtn,
+                        {
+                          backgroundColor: isDark ? theme.colors.card : '#FFF',
+                          borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB',
+                          height: selectByDevice({ small: cs(42, 0.9, 1.1), medium: cs(46, 0.9, 1.1), large: cs(48, 0.9, 1.1) })
+                        },
+                        isActive && [styles.genderBtnActive, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF', borderColor: colors.primary }]
+                      ]}
+                    >
+                      <View style={[styles.radioCircle, { borderColor: isDark ? 'rgba(255,255,255,0.3)' : '#D1D5DB' }, isActive && [styles.radioCircleActive, { borderColor: colors.primary }]]}>
+                        {isActive && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
+                      </View>
+                      <Ionicons name={iconName} size={18} color={isActive ? iconColor : '#9CA3AF'} />
+                      <Text maxFontSizeMultiplier={1.25} style={[styles.genderText, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }) }, isActive && [styles.genderTextActive, { color: colors.text }]]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* EMAIL */}
+            <View style={[styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <Label text={t('email_address_optional', 'Email Address (Optional)')} />
+              <Input
+                value={email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                onChangeText={setEmail}
+                placeholder={t('enter_email_address', 'Enter email address')}
+                placeholderTextColor="#9CA3AF"
+                style={{ fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }), color: colors.text }}
+                inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                LeadingAccessory={
+                  <Ionicons name="mail-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#9CA3AF" style={{ marginRight: 8 }} />
+                }
+                error={(email.length > 0 && !isValidEmail(email)) ? t('valid_email_error', 'Please enter a valid email address') : undefined}
+              />
+            </View>
+
+            {/* ALTERNATIVE CONTACT NUMBER */}
+            <View style={[styles.mt, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <Label text={t('alternative_contact_optional', 'Alternative Contact Number (Optional)')} />
+              <Input
+                value={alternateContact}
+                keyboardType="numeric"
+                maxLength={10}
+                onChangeText={(text) => setAlternateContact(text.replace(/[^0-9]/g, ''))}
+                placeholder={t('enter_alternative_contact', 'Enter alternative contact number')}
+                placeholderTextColor="#9CA3AF"
+                style={{ fontSize: selectByDevice({ small: rms(12.5), medium: rms(13), large: rms(14) }), color: colors.text }}
+                inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB', height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(50, 0.9, 1.1) }) }]}
+                LeadingAccessory={
+                  <View style={styles.phonePrefixContainer}>
+                    <Ionicons name="phone-portrait-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#9CA3AF" />
+                    <Text style={[styles.phonePrefixText, { color: colors.text, fontSize: selectByDevice({ small: rms(14), medium: rms(15), large: rms(16) }) }]}>+91</Text>
+                    <Ionicons name="chevron-down-outline" size={16} color={colors.text} />
+                    <View style={[styles.phoneDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+                  </View>
+                }
+                error={
+                  (alternateContact.length > 0 && !isValidAlternateContact(alternateContact)) 
+                    ? t('valid_phone_error', 'Please enter a valid phone number') 
+                    : (alternateContact.length > 0 && isSameAsMobile(alternateContact)) 
+                      ? t('alternate_same_as_mobile', 'Cannot be the same as mobile number') 
+                      : undefined
+                }
+              />
+            </View>
+
+          </View>
+
+          {/* SUPPORT CHAT BUTTON */}
+          <TouchableOpacity style={[styles.chatButton, { backgroundColor: colors.primary, marginVertical: selectByDevice({ small: 12, medium: 16, large: 20 }) }]} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav)}>
+            <View style={[styles.chatIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFF' }]}>
+              <Ionicons name="chatbubbles" size={16} color={isDark ? '#FFF' : colors.primary} />
+            </View>
+            <View style={styles.chatTextWrapper}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.chatTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }) }]}>{t('start_chatting', 'Start Chatting')}</Text>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.chatSubtitle, { fontSize: selectByDevice({ small: rms(10.5), medium: rms(11), large: rms(12) }) }]}>{t('get_help_from_assistant', 'Get help from our assistant')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#FFF" />
+          </TouchableOpacity>
+
+        </ScrollView>
+
+        {/* FOOTER BUTTON */}
+        {isFormValid && (
+          <View style={[styles.footer, { backgroundColor: isDark ? colors.background : '#FFFFFF', padding: selectByDevice({ small: 12, medium: 16, large: 20 }) }]}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleContinue}
+              disabled={isSubmitting || isUpdating}
+              style={[
+                styles.continueBtn,
+                { backgroundColor: colors.primary, height: selectByDevice({ small: cs(48, 0.9, 1.1), medium: cs(52, 0.9, 1.1), large: cs(54, 0.9, 1.1) }) },
+                (isSubmitting || isUpdating) && styles.continueBtnDisabled
+              ]}
+            >
+              <Text maxFontSizeMultiplier={1.25} style={[styles.continueText, { fontSize: selectByDevice({ small: rms(16), medium: rms(17), large: rms(18) }) }]}>
+                {isSubmitting || isUpdating ? t('saving', 'Saving...') : t('continue_btn', 'Continue')}
+              </Text>
+              {!(isSubmitting || isUpdating) && (
+                <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
+              )}
+            </TouchableOpacity>
+            
+            <View style={[styles.secureTextContainer, { marginTop: selectByDevice({ small: 10, medium: 14, large: 16 }) }]}>
+              <Ionicons name="lock-closed-outline" size={14} color={isDark ? '#9CA3AF' : '#6B7280'} />
+              <Text maxFontSizeMultiplier={1.25} style={[styles.secureText, { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: selectByDevice({ small: rms(11), medium: rms(11.5), large: rms(12) }) }]}>
+                Your information is safe and secure with us
+              </Text>
+            </View>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+
+      {showDatePicker && (
+        Platform.OS === 'ios' ? (
+          <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
+            <Pressable style={styles.modalOverlay} onPress={() => setShowDatePicker(false)} />
+            <View style={[styles.pickerContainer, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
+              <View style={[styles.pickerHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}>
+                <Text style={[styles.pickerTitle, { color: colors.text }]}>Date of Birth</Text>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={[styles.doneText, { color: colors.primary }]}>{t('done', 'Done')}</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={dobDate || new Date(2000, 0, 1)}
+                mode="date"
+                display="spinner"
+                maximumDate={new Date()}
+                textColor={colors.text}
+                onChange={(_event, selectedDate) => {
+                  if (selectedDate) {
+                    triggerHaptic(HapticFeedbackTypes.selection);
+                    setAndFormatDate(selectedDate);
+                  }
+                }}
+                style={{ height: 200, width: '100%' }}
+              />
+            </View>
+          </View>
+        ) : (
+          <DateTimePicker
+            value={dobDate || new Date(2000, 0, 1)}
+            mode="date"
+            display="default"
+            maximumDate={new Date()}
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(false);
+              if (event.type === 'set' && selectedDate) {
+                triggerHaptic(HapticFeedbackTypes.selection);
+                setAndFormatDate(selectedDate);
+              }
+            }}
+          />
+        )
+      )}
+    </>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
       <AppStatusBar />
-      <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-        
-        {/* PROGRESS BAR */}
-        <View style={styles.progressWrapper}>
-          <View style={styles.progressLineContainer}>
-             <View style={[styles.progressLine, { width: '33%', backgroundColor: colors.primary }]} />
-             <View style={[styles.progressLine, { width: '67%', backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
+      <SafeAreaView style={styles.root} edges={Platform.OS === 'ios' ? ['top', 'bottom'] : ['top']}>
+        {isTablet ? (
+          <View style={{ maxWidth: 480, alignSelf: 'center', width: '100%', flex: 1 }}>
+            {renderScreenContent()}
           </View>
-          <View style={styles.progressStepsRow}>
-            {/* Step 1 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                <Ionicons name="checkmark" size={16} color="#FFF" />
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-                {cleanStepText(t('mobile_details_step', 'Mobile\nDetails'))}
-              </Text>
-            </View>
-            {/* Step 2 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                <Text style={[styles.stepNumber, { color: '#FFF' }]}>2</Text>
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: colors.primary }]}>
-                {cleanStepText(t('personal_details_step', 'Personal\nDetails'))}
-              </Text>
-            </View>
-            {/* Step 3 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
-                <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>3</Text>
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-                {cleanStepText(t('address_details_step', 'Address\nDetails'))}
-              </Text>
-            </View>
-            {/* Step 4 */}
-            <View style={styles.stepContainer}>
-              <View style={[styles.stepCircle, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.2)' : '#D1D5DB' }]}>
-                <Text style={[styles.stepNumber, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>4</Text>
-              </View>
-              <Text numberOfLines={2} style={[styles.stepText, { color: isDark ? '#9CA3AF' : '#9CA3AF' }]}>
-                {cleanStepText(t('documents_upload_step', 'Documents\nUpload'))}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-        >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.scroll, { flexGrow: 1 }]}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* HEADER SECTION */}
-            <View style={styles.headerSection}>
-              <View style={styles.headerTextContainer}>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>{t('personal_details_title', 'Personal Details')}</Text>
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                  {t('personal_details_subtitle', 'Please enter your details exactly as per your official documents.')}
-                </Text>
-              </View>
-            </View>
-
-            {/* FORM CARD */}
-            <View style={styles.formCard}>
-              
-              {/* FIRST & LAST NAME */}
-              <View style={styles.row}>
-                <View style={styles.half}>
-                  <Label text={t('first_name', 'First Name')} required />
-                  <Input
-                    value={firstName}
-                    autoCapitalize="words"
-                    onChangeText={(text: string) => setFirstName(sanitizeName(text))}
-                    placeholder={t('enter_first_name', 'Enter first name')}
-                    placeholderTextColor="#9CA3AF"
-                    maxLength={50}
-                    style={{ fontSize: 13, color: colors.text }}
-                    inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                    LeadingAccessory={
-                      <Ionicons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    }
-                    error={getNameError(firstName, t('first_name', 'First Name'))}
-                  />
-                </View>
-                <View style={styles.half}>
-                  <Label text={t('last_name', 'Last Name')} required />
-                  <Input
-                    value={lastName}
-                    autoCapitalize="words"
-                    onChangeText={(text: string) => setLastName(sanitizeName(text))}
-                    placeholder={t('enter_last_name', 'Enter last name')}
-                    placeholderTextColor="#9CA3AF"
-                    maxLength={50}
-                    style={{ fontSize: 13, color: colors.text }}
-                    inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                    LeadingAccessory={
-                      <Ionicons name="person-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    }
-                    error={getNameError(lastName, t('last_name', 'Last Name'))}
-                  />
-                </View>
-              </View>
-
-              {/* DATE OF BIRTH */}
-              <View style={styles.mt}>
-                <Label text={t('date_of_birth_label', 'Date of Birth')} required />
-                <Input
-                  value={dobText}
-                  onChangeText={handleDateTextChange}
-                  keyboardType="numeric"
-                  maxLength={14}
-                  placeholder="DD / MM / YYYY"
-                  placeholderTextColor="#9CA3AF"
-                  style={{ fontSize: 13, color: colors.text }}
-                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                  LeadingAccessory={
-                    <Ionicons name="calendar-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
-                  }
-                  TailingAccessory={
-                    <TouchableOpacity onPress={() => setShowDatePicker(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                      <Ionicons name="chevron-down-outline" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  }
-                />
-              </View>
-
-              {/* GENDER */}
-              <View style={styles.mt}>
-                <Label text={t('gender_label', 'Gender')} required />
-                <View style={styles.genderRow}>
-                  {['Male', 'Female', 'Other'].map((option) => {
-                    const isActive = gender === option;
-                    let iconName = 'person';
-                    let iconColor = '#2563EB';
-                    
-                    if (option === 'Female') {
-                      iconName = 'female';
-                      iconColor = '#EC4899';
-                    } else if (option === 'Other') {
-                      iconName = 'person-circle-outline';
-                      iconColor = '#8B5CF6';
-                    }
-
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          triggerHaptic(HapticFeedbackTypes.selection);
-                          setGender(option as any);
-                        }}
-                        style={[
-                          styles.genderBtn,
-                          { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' },
-                          isActive && [styles.genderBtnActive, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF', borderColor: colors.primary }]
-                        ]}
-                      >
-                        <View style={[styles.radioCircle, { borderColor: isDark ? 'rgba(255,255,255,0.3)' : '#D1D5DB' }, isActive && [styles.radioCircleActive, { borderColor: colors.primary }]]}>
-                          {isActive && <View style={[styles.radioDot, { backgroundColor: colors.primary }]} />}
-                        </View>
-                        <Ionicons name={iconName} size={18} color={isActive ? iconColor : '#9CA3AF'} />
-                        <Text style={[styles.genderText, { color: isDark ? '#9CA3AF' : '#6B7280' }, isActive && [styles.genderTextActive, { color: colors.text }]]}>
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {/* EMAIL */}
-              <View style={styles.mt}>
-                <Label text={t('email_address_optional', 'Email Address (Optional)')} />
-                <Input
-                  value={email}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  onChangeText={setEmail}
-                  placeholder={t('enter_email_address', 'Enter email address')}
-                  placeholderTextColor="#9CA3AF"
-                  style={{ fontSize: 13, color: colors.text }}
-                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                  LeadingAccessory={
-                    <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={{ marginRight: 8 }} />
-                  }
-                  error={(email.length > 0 && !isValidEmail(email)) ? t('valid_email_error', 'Please enter a valid email address') : undefined}
-                />
-              </View>
-
-              {/* ALTERNATIVE CONTACT NUMBER */}
-              <View style={styles.mt}>
-                <Label text={t('alternative_contact_optional', 'Alternative Contact Number (Optional)')} />
-                <Input
-                  value={alternateContact}
-                  keyboardType="numeric"
-                  maxLength={10}
-                  onChangeText={(text) => setAlternateContact(text.replace(/[^0-9]/g, ''))}
-                  placeholder={t('enter_alternative_contact', 'Enter alternative contact number')}
-                  placeholderTextColor="#9CA3AF"
-                  style={{ fontSize: 13, color: colors.text }}
-                  inputContainerStyle={[styles.inputContainer, { backgroundColor: isDark ? theme.colors.card : '#FFF', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]}
-                  LeadingAccessory={
-                    <View style={styles.phonePrefixContainer}>
-                      <Ionicons name="phone-portrait-outline" size={20} color="#9CA3AF" />
-                      <Text style={[styles.phonePrefixText, { color: colors.text }]}>+91</Text>
-                      <Ionicons name="chevron-down-outline" size={16} color={colors.text} />
-                      <View style={[styles.phoneDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#E5E7EB' }]} />
-                    </View>
-                  }
-                  error={
-                    (alternateContact.length > 0 && !isValidAlternateContact(alternateContact)) 
-                      ? t('valid_phone_error', 'Please enter a valid phone number') 
-                      : (alternateContact.length > 0 && isSameAsMobile(alternateContact)) 
-                        ? t('alternate_same_as_mobile', 'Cannot be the same as mobile number') 
-                        : undefined
-                  }
-                />
-              </View>
-
-            </View>
-
-            {/* SUPPORT CHAT BUTTON */}
-            <TouchableOpacity style={[styles.chatButton, { backgroundColor: colors.primary }]} activeOpacity={0.8} onPress={() => navigation.navigate(HelpCenter_Nav)}>
-              <View style={[styles.chatIconWrapper, { backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : '#FFF' }]}>
-                <Ionicons name="chatbubbles" size={16} color={isDark ? '#FFF' : colors.primary} />
-              </View>
-              <View style={styles.chatTextWrapper}>
-                <Text style={styles.chatTitle}>{t('start_chatting', 'Start Chatting')}</Text>
-                <Text style={styles.chatSubtitle}>{t('get_help_from_assistant', 'Get help from our assistant')}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color="#FFF" />
-            </TouchableOpacity>
-
-          </ScrollView>
-
-          {/* FOOTER BUTTON */}
-          {isFormValid && (
-            <View style={[styles.footer, { backgroundColor: isDark ? colors.background : '#FFFFFF' }]}>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleContinue}
-                disabled={isSubmitting || isUpdating}
-                style={[
-                  styles.continueBtn,
-                  { backgroundColor: colors.primary },
-                  (isSubmitting || isUpdating) && styles.continueBtnDisabled
-                ]}
-              >
-                <Text style={styles.continueText}>
-                  {isSubmitting || isUpdating ? t('saving', 'Saving...') : t('continue_btn', 'Continue')}
-                </Text>
-                {!(isSubmitting || isUpdating) && (
-                  <Ionicons name="arrow-forward" size={24} color="#FFF" style={styles.continueIcon} />
-                )}
-              </TouchableOpacity>
-              
-              <View style={styles.secureTextContainer}>
-                <Ionicons name="lock-closed-outline" size={14} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                <Text style={[styles.secureText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                  Your information is safe and secure with us
-                </Text>
-              </View>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-
-        {showDatePicker && (
-          Platform.OS === 'ios' ? (
-            <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
-              <Pressable style={styles.modalOverlay} onPress={() => setShowDatePicker(false)} />
-              <View style={[styles.pickerContainer, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF' }]}>
-                <View style={[styles.pickerHeader, { borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : '#F3F4F6' }]}>
-                  <Text style={[styles.pickerTitle, { color: colors.text }]}>Date of Birth</Text>
-                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                    <Text style={[styles.doneText, { color: colors.primary }]}>{t('done', 'Done')}</Text>
-                  </TouchableOpacity>
-                </View>
-                <DateTimePicker
-                  value={dobDate || new Date(2000, 0, 1)}
-                  mode="date"
-                  display="spinner"
-                  maximumDate={new Date()}
-                  textColor={colors.text}
-                  onChange={(_event, selectedDate) => {
-                    if (selectedDate) {
-                      triggerHaptic(HapticFeedbackTypes.selection);
-                      setAndFormatDate(selectedDate);
-                    }
-                  }}
-                  style={{ height: 200, width: '100%' }}
-                />
-              </View>
-            </View>
-          ) : (
-            <DateTimePicker
-              value={dobDate || new Date(2000, 0, 1)}
-              mode="date"
-              display="default"
-              maximumDate={new Date()}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (event.type === 'set' && selectedDate) {
-                  triggerHaptic(HapticFeedbackTypes.selection);
-                  setAndFormatDate(selectedDate);
-                }
-              }}
-            />
-          )
+        ) : (
+          renderScreenContent()
         )}
       </SafeAreaView>
     </View>

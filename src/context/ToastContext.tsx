@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export type ToastType = 'success' | 'error' | 'info';
 
-interface ToastOptions {
+export interface ToastOptions {
   message: string;
   type?: ToastType;
   duration?: number;
+  position?: 'top' | 'bottom';
 }
 
 interface ToastContextData {
@@ -25,8 +26,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsVisible(false);
   }, []);
 
-  const showToast = useCallback(({ message, type = 'info', duration = 3000 }: ToastOptions) => {
-    setToastConfig({ message, type, duration });
+  const showToast = useCallback(({ message, type = 'info', duration = 3000, position = 'top' }: ToastOptions) => {
+    setToastConfig({ message, type, duration, position });
     setIsVisible(true);
     
     if (duration > 0) {

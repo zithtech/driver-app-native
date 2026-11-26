@@ -8,14 +8,15 @@ import { useIsFocused } from '@react-navigation/native';
 import { Text } from '../../Components';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width } = Dimensions.get('window');
-const MASK_WIDTH = width * 0.75;
-const MASK_HEIGHT = MASK_WIDTH * 1.3;
+import { useResponsive } from '../../lib/scale';
 
 const SmartSelfieScreen = ({ navigation, route }: any) => {
   const { onCapture } = route.params;
   const { t } = useTranslation();
+  const { width, height, rms, rvs, cs, selectByDevice, isTablet } = useResponsive();
+
+  const maskWidth = Math.min(width * 0.72, isTablet ? 340 : 290);
+  const maskHeight = maskWidth * 1.32;
 
   const [hasPermission, setHasPermission] = useState(false);
   const device = useCameraDevice('front');
@@ -212,46 +213,47 @@ const SmartSelfieScreen = ({ navigation, route }: any) => {
           />
           
           <View style={styles.overlay}>
-            <View style={styles.maskContainer}>
+            <View style={[styles.maskContainer, { width: maskWidth, height: maskHeight, borderRadius: maskWidth / 2 }]}>
               <View style={styles.maskOval} />
             </View>
-            <View style={styles.feedbackContainer}>
-              <Text style={styles.feedbackText}>{feedback}</Text>
+            <View style={[styles.feedbackContainer, { bottom: selectByDevice({ small: 100, medium: 120, large: 140 }), paddingHorizontal: selectByDevice({ small: 16, medium: 20, large: 24 }) }]}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.feedbackText, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }) }]}>{feedback}</Text>
               {isCapturing && <ActivityIndicator size="small" color="#FFF" style={{ marginTop: 10 }} />}
             </View>
 
             {/* MANUAL SHUTTER BUTTON */}
-            <View style={styles.shutterContainer}>
+            <View style={[styles.shutterContainer, { bottom: selectByDevice({ small: 18, medium: 24, large: 32 }) }]}>
               <TouchableOpacity
                 style={[
                   styles.shutterButton,
+                  { width: selectByDevice({ small: 62, medium: 68, large: 76 }), height: selectByDevice({ small: 62, medium: 68, large: 76 }), borderRadius: selectByDevice({ small: 31, medium: 34, large: 38 }) },
                   (!isCameraReady || isCapturing) && { opacity: 0.5 },
                 ]}
                 disabled={!isCameraReady || isCapturing}
                 onPress={() => takePhoto()}
                 activeOpacity={0.7}
               >
-                <View style={styles.shutterButtonInner} />
+                <View style={[styles.shutterButtonInner, { width: selectByDevice({ small: 46, medium: 52, large: 58 }), height: selectByDevice({ small: 46, medium: 52, large: 58 }), borderRadius: selectByDevice({ small: 23, medium: 26, large: 29 }) }]} />
               </TouchableOpacity>
-              <Text style={styles.shutterHint}>Tap to capture manually</Text>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.shutterHint, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }) }]}>Tap to capture manually</Text>
             </View>
           </View>
           
-          <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="close" size={28} color="#FFF" />
+          <TouchableOpacity style={[styles.closeButton, { top: selectByDevice({ small: 14, medium: 20, large: 26 }), left: selectByDevice({ small: 14, medium: 20, large: 26 }) }]} onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={selectByDevice({ small: 24, medium: 28, large: 32 })} color="#FFF" />
           </TouchableOpacity>
         </>
       ) : (
         <View style={styles.previewContainer}>
           <Image source={{ uri: capturedPhoto }} style={styles.previewImage} />
-          <View style={styles.previewActions}>
-            <TouchableOpacity style={[styles.actionBtn, styles.retakeBtn]} onPress={retakePhoto}>
-              <Ionicons name="refresh" size={20} color="#FFF" />
-              <Text style={styles.actionText} numberOfLines={1} adjustsFontSizeToFit>Retake</Text>
+          <View style={[styles.previewActions, { bottom: selectByDevice({ small: 28, medium: 40, large: 50 }), maxWidth: isTablet ? 480 : undefined, alignSelf: 'center', width: '100%' }]}>
+            <TouchableOpacity style={[styles.actionBtn, styles.retakeBtn, { paddingHorizontal: selectByDevice({ small: 18, medium: 24, large: 28 }), paddingVertical: selectByDevice({ small: 10, medium: 14, large: 16 }) }]} onPress={retakePhoto}>
+              <Ionicons name="refresh" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#FFF" />
+              <Text maxFontSizeMultiplier={1.25} style={[styles.actionText, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }) }]} numberOfLines={1} adjustsFontSizeToFit>Retake</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.confirmBtn]} onPress={confirmPhoto}>
-              <Ionicons name="checkmark" size={20} color="#FFF" />
-              <Text style={styles.actionText} numberOfLines={1} adjustsFontSizeToFit>Confirm</Text>
+            <TouchableOpacity style={[styles.actionBtn, styles.confirmBtn, { paddingHorizontal: selectByDevice({ small: 18, medium: 24, large: 28 }), paddingVertical: selectByDevice({ small: 10, medium: 14, large: 16 }) }]} onPress={confirmPhoto}>
+              <Ionicons name="checkmark" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color="#FFF" />
+              <Text maxFontSizeMultiplier={1.25} style={[styles.actionText, { fontSize: selectByDevice({ small: rms(14), medium: rms(16), large: rms(17) }) }]} numberOfLines={1} adjustsFontSizeToFit>Confirm</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -279,9 +281,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   maskContainer: {
-    width: MASK_WIDTH,
-    height: MASK_HEIGHT,
-    borderRadius: MASK_WIDTH / 2,
     borderWidth: 4,
     borderColor: 'rgba(16, 185, 129, 0.8)',
     borderStyle: 'dashed',

@@ -329,9 +329,19 @@ class SocketService {
     this.emit('KYC_REQUEST_VIDEO', { driverId, location });
   }
 
+  /** Emit: Automatic 2-minute retry */
+  emitKycRetry(sessionId: string, driverId?: string) {
+    this.emit('KYC_REQUEST_RETRY', { sessionId, driverId: driverId || this.driverId, attempt: 2 });
+  }
+
+  /** Emit: Total 4-minute timeout expired, moving to scheduling */
+  emitKycTimeoutToSchedule(sessionId: string, driverId?: string) {
+    this.emit('KYC_TIMEOUT_EXPIRED', { sessionId, driverId: driverId || this.driverId });
+  }
+
   /** Emit: Driver cancels pending KYC request */
-  emitKycCancel(sessionId: string) {
-    this.emit('KYC_CANCEL_REQUEST', { sessionId });
+  emitKycCancel(sessionId: string, driverId?: string) {
+    this.emit('KYC_CANCEL_REQUEST', { sessionId, driverId: driverId || this.driverId });
   }
 
   /** Emit: Driver joined the Agora call */
@@ -364,6 +374,21 @@ class SocketService {
   }
   offKycCallAccepted(callback?: (data: any) => void) {
     this.off('KYC_CALL_ACCEPTED', callback);
+  }
+
+  /** Listen: Admin scheduled a Video KYC appointment */
+  onKycAppointmentScheduled(callback: (data: {
+    sessionId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    adminName?: string;
+    adminId?: string;
+  }) => void) {
+    this.on('KYC_APPOINTMENT_SCHEDULED', callback);
+  }
+  offKycAppointmentScheduled(callback?: (data: any) => void) {
+    this.off('KYC_APPOINTMENT_SCHEDULED', callback);
   }
 
   /** Listen: Admin sends an instruction during call */

@@ -303,8 +303,17 @@ const ScheduledRideDetailsScreen = () => {
 
           <View style={styles.tripDetailRow}>
             <Text style={styles.tripDetailLbl}>Vehicle Name</Text>
-            <Text style={[styles.tripDetailVal, { color: theme.colors.text }]}>{ride?.car_name || ride?.vehicle_model}</Text>
+            <Text style={[styles.tripDetailVal, { color: theme.colors.text }]}>
+              {ride?.vehicle_name || ride?.car_name || ride?.vehicle_model || (ride?.vehicle_brand ? `${ride.vehicle_brand} ${ride.vehicle_model || ''}`.trim() : '-')}
+            </Text>
           </View>
+
+          {ride?.vehicle_number ? (
+            <View style={styles.tripDetailRow}>
+              <Text style={styles.tripDetailLbl}>Vehicle Number</Text>
+              <Text style={[styles.tripDetailVal, { color: theme.colors.text, fontWeight: '700' }]}>{ride?.vehicle_number}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.tripDetailRow}>
             <Text style={styles.tripDetailLbl}>Vehicle Type</Text>
@@ -317,6 +326,13 @@ const ScheduledRideDetailsScreen = () => {
               {String(ride?.transmission_type || ride?.transmission || 'Manual').replace('_', ' ')}
             </Text>
           </View>
+
+          {ride?.fuel_type ? (
+            <View style={styles.tripDetailRow}>
+              <Text style={styles.tripDetailLbl}>Fuel Type</Text>
+              <Text style={[styles.tripDetailVal, { color: theme.colors.text, textTransform: 'capitalize' }]}>{ride?.fuel_type}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.tripDetailRow}>
             <Text style={styles.tripDetailLbl}>Payment</Text>

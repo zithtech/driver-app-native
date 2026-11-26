@@ -9,7 +9,7 @@ import { baseQueryWithReauth } from './baseQueryWithReauth';
 export const driverApi = createApi({
   reducerPath: 'driverApi',
   baseQuery: baseQueryWithReauth,
-  tagTypes: ['Driver', 'Documents', 'TripVerification', 'Referral', 'Support'],
+  tagTypes: ['Driver', 'Documents', 'TripVerification', 'Referral', 'Support', 'DrivingTest'],
 
   endpoints: (builder) => ({
 
@@ -184,6 +184,164 @@ export const driverApi = createApi({
         body: { driverId },
       }),
       invalidatesTags: ['Driver'],
+    }),
+
+    // Automatic 2-minute retry
+    retryVideoKyc: builder.mutation<any, { sessionId: string; driverId: string }>({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/retry/${sessionId}`,
+        method: 'POST',
+        body: { driverId, attempt: 2 },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
+    // Total 4-minute timeout -> move to admin scheduling
+    timeoutVideoKycToSchedule: builder.mutation<any, { sessionId: string; driverId: string }>({
+      query: ({ sessionId, driverId }) => ({
+        url: `/kyc/video/timeout-to-schedule/${sessionId}`,
+        method: 'POST',
+        body: { driverId },
+      }),
+      invalidatesTags: ['Driver'],
+    }),
+
+    // Get confirmed scheduled appointment details
+    getScheduledKycAppointment: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/kyc/video/appointment/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['Driver'],
+    }),
+
+    /* ─────────── GUIDED VIDEO DRIVING TEST (/driving-test) ─────────── */
+
+    // Check Driving Test Eligibility (Must have Document KYC & Video KYC Approved)
+    getDrivingTestEligibility: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/driving-test/eligibility/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['DrivingTest', 'Driver'],
+    }),
+
+    // Fetch Assigned Driving Test Route with Checkpoints & Voice Instructions
+    getDrivingTestRoute: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/driving-test/routes/assigned/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['DrivingTest'],
+    }),
+
+    // Start Driving Test Session
+    startDrivingTestSession: builder.mutation<any, {
+      driverId: string;
+      routeId: string;
+      deviceModel: string;
+      simultaneousCameraSupported: boolean;
+    }>({
+      query: (body) => ({
+        url: '/driving-test/start',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['DrivingTest', 'Driver'],
+    }),
+
+    // Request Pre-signed S3 Upload URL from Backend
+    getDrivingRecordingUploadUrl: builder.mutation<any, {
+      sessionId: string;
+      cameraType: 'FRONT' | 'REAR' | 'COMPOSITE';
+      segmentIndex: number;
+      contentType?: string;
+    }>({
+      query: (body) => ({
+        url: '/driving-test/recordings/upload-url',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    // Upload Segmented Video Chunk Metadata / URL
+    uploadDrivingRecordingSegment: builder.mutation<any, {
+      sessionId: string;
+      cameraType: 'FRONT' | 'REAR' | 'COMPOSITE';
+      segmentIndex: number;
+      durationMs: number;
+      s3Key?: string;
+      fileSizeBytes?: number;
+      checksum?: string;
+    }>({
+      query: (body) => ({
+        url: '/driving-test/recordings/segment',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['DrivingTest'],
+    }),
+
+    // Stream GPS & Telemetry Batch
+    sendDrivingTelemetryBatch: builder.mutation<any, {
+      sessionId: string;
+      telemetryPoints: any[];
+    }>({
+      query: (body) => ({
+        url: '/driving-test/telemetry',
+        method: 'POST',
+        body,
+      }),
+    }),
+
+    // Log Reached Checkpoint
+    recordCheckpointArrival: builder.mutation<any, {
+      sessionId: string;
+      checkpointId: string;
+      reachedAt: number;
+      speedKmh: number;
+    }>({
+      query: (body) => ({
+        url: '/driving-test/checkpoint',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['DrivingTest'],
+    }),
+
+    // Complete Driving Test and Trigger Score Engine
+    completeDrivingTestSession: builder.mutation<any, {
+      sessionId: string;
+      driverId: string;
+      totalDurationSeconds: number;
+      totalDistanceMeters: number;
+      checkpointsCompleted: any;
+      eventsSummary: any;
+    }>({
+      query: (body) => ({
+        url: '/driving-test/complete',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['DrivingTest', 'Driver'],
+    }),
+
+    // Get Driving Test Score, Breakdown and Decision
+    getDrivingTestResult: builder.query<any, { sessionId: string }>({
+      query: ({ sessionId }) => ({
+        url: `/driving-test/result/${sessionId}`,
+        method: 'GET',
+      }),
+      providesTags: ['DrivingTest'],
+    }),
+
+    // Get Full Onboarding Final Status
+    getOnboardingFinalStatus: builder.query<any, { driverId: string }>({
+      query: ({ driverId }) => ({
+        url: `/drivers/onboarding-status/${driverId}`,
+        method: 'GET',
+      }),
+      providesTags: ['DrivingTest', 'Driver'],
     }),
 
     /* ─────────── TRIP VERIFICATION (/drivers/trip-verification) ─────────── */
@@ -594,5 +752,25 @@ export const {
   useGetVideoKycStatusQuery,
   useLazyGetVideoKycStatusQuery,
   useCancelVideoKycMutation,
+  useRetryVideoKycMutation,
+  useTimeoutVideoKycToScheduleMutation,
+  useGetScheduledKycAppointmentQuery,
+  useLazyGetScheduledKycAppointmentQuery,
+
+  // Guided Video Driving Test
+  useGetDrivingTestEligibilityQuery,
+  useLazyGetDrivingTestEligibilityQuery,
+  useGetDrivingTestRouteQuery,
+  useLazyGetDrivingTestRouteQuery,
+  useStartDrivingTestSessionMutation,
+  useGetDrivingRecordingUploadUrlMutation,
+  useUploadDrivingRecordingSegmentMutation,
+  useSendDrivingTelemetryBatchMutation,
+  useRecordCheckpointArrivalMutation,
+  useCompleteDrivingTestSessionMutation,
+  useGetDrivingTestResultQuery,
+  useLazyGetDrivingTestResultQuery,
+  useGetOnboardingFinalStatusQuery,
+  useLazyGetOnboardingFinalStatusQuery,
 } = driverApi;
 

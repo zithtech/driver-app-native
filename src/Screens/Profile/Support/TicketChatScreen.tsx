@@ -64,6 +64,7 @@ const TicketChatScreen = ({ navigation, route }: any) => {
 
             <KeyboardAvoidingView 
                 style={styles.container} 
+                enabled={Platform.OS === 'ios'}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 <ScrollView 

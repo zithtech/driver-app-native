@@ -39,6 +39,7 @@ import { ImageSourcePicker, DocSubmissionResultModal } from '../../Components';
 import type { ImageSourcePickerRef } from '../../Components/ImageSourcePicker';
 import type { OCRErrorCode } from '../../Components/DocSubmissionResultModal';
 import { checkCameraPermission, checkPhotoLibraryPermission, goToSettings } from '../../utils/permissionUtils';
+import { useResponsive } from '../../lib/scale';
 
 /* ================= IMAGE VALIDATION ================= */
 
@@ -58,6 +59,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { triggerHaptic } = useHaptic();
+  const { rs, rvs, rms, cs, selectByDevice, isSmallDevice, isMediumDevice, isLargeDevice, isTablet } = useResponsive();
   const user = useSelector((state: any) => state.userSlice.user);
 
   const [images, setImages] = useState<Record<string, string>>({});
@@ -653,7 +655,8 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
     } catch (error: any) {
       setIsSubmitting(false);
       setUploadStage(null);
-      console.error('Upload Error:', JSON.stringify(error, null, 2));
+      const readableError = error?.message || error?.data?.message || (typeof error === 'string' ? error : 'Upload failed');
+      console.error('Upload Error:', readableError, error);
 
       // --- Handle OCR validation errors from backend ---
       // RTK Query .unwrap() error shapes:
@@ -677,7 +680,17 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         setSubmissionStatus('failed');
         triggerHaptic(HapticFeedbackTypes.notificationError);
       } else {
+        const rawMsg = error?.data?.message || error?.message;
+        const fallbackMsg = typeof rawMsg === 'string' && rawMsg.trim().length > 0
+          ? rawMsg
+          : t('submission_failed_msg', "We couldn't verify your documents. Please check the details and try again.");
+        setOcrErrorMessage(fallbackMsg);
         setSubmissionStatus('failed');
+        showToast({
+          type: 'error',
+          message: fallbackMsg,
+          duration: 4000,
+        });
       }
     }
   };
@@ -698,38 +711,40 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
 
   /* ================= UI ================= */
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={Platform.OS === 'ios' ? ['top', 'bottom'] : ['top']}>
       <AppStatusBar />
       <KeyboardAvoidingView
+        enabled={Platform.OS === 'ios'}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
+        <View style={{ flex: 1, width: '100%', maxWidth: isTablet ? 480 : undefined, alignSelf: 'center' }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { padding: selectByDevice({ small: 14, medium: rms(18), large: rms(22) }), paddingBottom: selectByDevice({ small: 24, medium: 36, large: 44 }) }]}
           keyboardShouldPersistTaps="handled"
         >
           {/* HEADER SECTION */}
           <View style={styles.headerSection}>
             <View style={styles.headerTextContainer}>
-              <Text style={[styles.headerTitle, { color: colors.text }]} adjustsFontSizeToFit numberOfLines={1}>
+              <Text style={[styles.headerTitle, { fontSize: selectByDevice({ small: rms(20), medium: rms(24), large: rms(26) }), color: colors.text }]} maxFontSizeMultiplier={1.25} numberOfLines={1}>
                 {t(labelKey)}
               </Text>
               {docKey === 'Aadhar_Card' ? (
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(13), large: rms(14) }), color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: selectByDevice({ small: 18, medium: 22, large: 24 }) }]}>
                   Upload clear images of your Aadhaar card.
                 </Text>
               ) : docKey === 'Pan_Card' ? (
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(13), large: rms(14) }), color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: selectByDevice({ small: 18, medium: 22, large: 24 }) }]}>
                   Upload clear images of your PAN card.
                 </Text>
               ) : docKey === 'Driving_License' ? (
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: 22 }]}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(13), large: rms(14) }), color: isDark ? '#9CA3AF' : '#4B5563', lineHeight: selectByDevice({ small: 18, medium: 22, large: 24 }) }]}>
                   Upload clear images of your Driving License.
                 </Text>
               ) : (
-                <Text style={[styles.headerSubtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+                <Text maxFontSizeMultiplier={1.25} style={[styles.headerSubtitle, { fontSize: selectByDevice({ small: rms(11.5), medium: rms(13), large: rms(14) }), color: isDark ? '#9CA3AF' : '#4B5563' }]}>
                   {getTip()}
                 </Text>
               )}
@@ -740,7 +755,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
           {rejectionReason && (
             <View style={[styles.rejectionBox, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2', borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FCA5A5' }]}>
               <Ionicons name="alert-circle" size={20} color="#DC2626" />
-              <Text style={[styles.rejectionText, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>
+              <Text maxFontSizeMultiplier={1.25} style={[styles.rejectionText, { color: isDark ? '#FCA5A5' : '#B91C1C' }]}>
                 <Text style={[fonts.bold, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>{t('rejection_reason')}: </Text>
                 {rejectionReason}
               </Text>
@@ -753,6 +768,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
               style={[
                 styles.docNumberCard,
                 {
+                  padding: selectByDevice({ small: 10, medium: 14, large: 16 }),
                   backgroundColor: isDark ? theme.colors.card : '#F8FAFC',
                   borderColor: docNumberError
                     ? '#EF4444'
@@ -764,8 +780,8 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
             >
               <View style={styles.docNumberHeader}>
                 <View style={styles.docNumberLabelRow}>
-                  <Ionicons name={docConfig.icon} size={16} color={colors.primary} />
-                  <Text style={[styles.docNumberLabel, { color: colors.text }]}>
+                  <Ionicons name={docConfig.icon} size={selectByDevice({ small: 14, medium: 16, large: 18 })} color={colors.primary} />
+                  <Text maxFontSizeMultiplier={1.25} style={[styles.docNumberLabel, { fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), color: colors.text }]}>
                     {docConfig.label}
                   </Text>
                   <Text style={styles.requiredStar}>*</Text>
@@ -782,6 +798,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                 style={[
                   styles.inputWrapper,
                   {
+                    height: selectByDevice({ small: cs(44, 0.9, 1.1), medium: cs(48, 0.9, 1.1), large: cs(52, 0.9, 1.1) }),
                     backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : '#FFFFFF',
                     borderColor: docNumberError
                       ? '#EF4444'
@@ -793,7 +810,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
               >
                 <Ionicons
                   name={docConfig.inputIcon}
-                  size={20}
+                  size={selectByDevice({ small: 18, medium: 20, large: 22 })}
                   color={docNumberError ? '#EF4444' : isInputFocused ? colors.primary : '#9CA3AF'}
                   style={styles.inputLeadingIcon}
                 />
@@ -817,7 +834,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                   maxLength={docConfig.maxLength}
                   style={[
                     styles.textInput,
-                    { color: colors.text },
+                    { fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }), color: colors.text },
                   ]}
                 />
                 {documentNumber.length > 0 && (
@@ -852,7 +869,7 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
           style={[
             styles.row,
             docKey === 'Profile_Selfie' && styles.selfieRow,
-            (docKey === 'Driving_License' || docKey === 'Aadhar_Card' || docKey === 'Pan_Card' || docKey === 'Police_Verification') && { flexDirection: 'column', gap: 20 }
+            (docKey === 'Driving_License' || docKey === 'Aadhar_Card' || docKey === 'Pan_Card' || docKey === 'Police_Verification') && { flexDirection: 'column', gap: selectByDevice({ small: 12, medium: 16, large: 20 }) }
           ]}
         >
           {side.map((s: string) => {
@@ -873,13 +890,42 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                 {!isSelfie && !isVerticalLayout && <Text adjustsFontSizeToFit numberOfLines={1} style={[styles.sideLabel, { color: isDark ? '#D1D5DB' : '#6B7280' }]}>{getSideLabel(s)}</Text>}
 
                 {isSelfie ? (
-                  <View style={styles.selfieDetailedContainer}>
-                    <View style={[styles.selfieCircleWrapper, { borderColor: colors.primary }]}>
-                      <View style={[styles.selfiePlaceholderCircle, hasImage && styles.selfieHasImage, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+                  <View style={[styles.selfieDetailedContainer, { paddingVertical: selectByDevice({ small: 4, medium: 8, large: 12 }) }]}>
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => chooseSource(s)}
+                      disabled={isSubmitting}
+                      style={[
+                        styles.selfieCircleWrapper,
+                        {
+                          width: selectByDevice({ small: cs(116), medium: cs(134), large: cs(150) }),
+                          height: selectByDevice({ small: cs(116), medium: cs(134), large: cs(150) }),
+                          borderRadius: selectByDevice({ small: cs(58), medium: cs(67), large: cs(75) }),
+                          borderColor: colors.primary,
+                          marginBottom: selectByDevice({ small: 8, medium: 12, large: 14 }),
+                        }
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.selfiePlaceholderCircle,
+                          {
+                            width: selectByDevice({ small: cs(100), medium: cs(116), large: cs(130) }),
+                            height: selectByDevice({ small: cs(100), medium: cs(116), large: cs(130) }),
+                            borderRadius: selectByDevice({ small: cs(50), medium: cs(58), large: cs(65) }),
+                            backgroundColor: isDark ? '#374151' : '#F3F4F6'
+                          },
+                          hasImage && styles.selfieHasImage,
+                        ]}
+                      >
                         {hasImage ? (
                           <Image source={{ uri: images[s] }} style={styles.selfieCapturedImage} />
                         ) : (
-                          <Ionicons name="person" size={60} color={isDark ? '#4B5563' : '#D1D5DB'} />
+                          <Ionicons
+                            name="person"
+                            size={selectByDevice({ small: 50, medium: 58, large: 66 })}
+                            color={isDark ? '#4B5563' : '#D1D5DB'}
+                          />
                         )}
 
                         {isSubmitting && currentlyUploading[s] && (
@@ -909,101 +955,219 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
                           </View>
                         )}
                       </View>
-                    </View>
+                    </TouchableOpacity>
 
-                    <Text style={[styles.selfieTitle, { color: colors.text }]}>{t('take_a_selfie', 'Take a Selfie')}</Text>
-                    <Text style={[styles.selfieSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                      Position your face in the frame{"\n"}and take a clear selfie.
+                    <Text style={[styles.selfieTitle, { fontSize: selectByDevice({ small: rms(15), medium: rms(16.5), large: rms(18) }), color: colors.text }]}>
+                      {hasImage ? t('selfie_captured', 'Selfie Captured') : t('take_a_selfie', 'Take a Selfie')}
+                    </Text>
+                    <Text style={[styles.selfieSubtitle, { fontSize: selectByDevice({ small: rms(11), medium: rms(12), large: rms(13) }), lineHeight: selectByDevice({ small: rms(15), medium: rms(17), large: rms(19) }), color: isDark ? '#9CA3AF' : '#6B7280', marginBottom: selectByDevice({ small: 10, medium: 14, large: 18 }) }]}>
+                      {hasImage ? t('selfie_ready_hint', 'Check your photo or retake if blurry') : t('selfie_instructions', 'Position your face in the frame\nand take a clear selfie.')}
                     </Text>
 
                     <TouchableOpacity
-                      style={styles.selfieCaptureButtonWrapper}
+                      style={[styles.selfieCaptureButtonWrapper, { marginBottom: selectByDevice({ small: 8, medium: 12, large: 14 }) }]}
                       onPress={() => chooseSource(s)}
                       disabled={isSubmitting}
                       activeOpacity={0.8}
                     >
-                      <View style={[styles.selfieCaptureRing, { borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF' }]}>
-                        <View style={[styles.selfieCaptureButton, { backgroundColor: colors.primary }]}>
-                          <Ionicons name="camera" size={20} color="#FFF" />
+                      <View
+                        style={[
+                          styles.selfieCaptureRing,
+                          {
+                            width: selectByDevice({ small: cs(52), medium: cs(60), large: cs(66) }),
+                            height: selectByDevice({ small: cs(52), medium: cs(60), large: cs(66) }),
+                            borderRadius: selectByDevice({ small: cs(26), medium: cs(30), large: cs(33) }),
+                            borderWidth: selectByDevice({ small: 4, medium: 5, large: 6 }),
+                            borderColor: isDark ? 'rgba(59, 130, 246, 0.2)' : '#EFF6FF'
+                          }
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.selfieCaptureButton,
+                            {
+                              width: selectByDevice({ small: cs(40), medium: cs(46), large: cs(50) }),
+                              height: selectByDevice({ small: cs(40), medium: cs(46), large: cs(50) }),
+                              borderRadius: selectByDevice({ small: cs(20), medium: cs(23), large: cs(25) }),
+                              backgroundColor: colors.primary
+                            }
+                          ]}
+                        >
+                          <Ionicons name="camera" size={selectByDevice({ small: 18, medium: 21, large: 24 })} color="#FFF" />
                         </View>
                       </View>
                     </TouchableOpacity>
 
-                    <Text style={[styles.selfieCaptureTitle, { color: colors.text }]}>{hasImage ? t('retake_selfie', 'Retake Selfie') : t('capture_selfie', 'Capture Selfie')}</Text>
-                    <Text style={[styles.selfieCaptureSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>{t('tap_to_open_camera', 'Tap to open camera')}</Text>
+                    <Text style={[styles.selfieCaptureTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14), large: rms(15) }), color: colors.text }]}>
+                      {hasImage ? t('retake_selfie', 'Retake Selfie') : t('capture_selfie', 'Capture Selfie')}
+                    </Text>
+                    <Text style={[styles.selfieCaptureSubtitle, { fontSize: selectByDevice({ small: rms(10), medium: rms(11), large: rms(12) }), marginBottom: selectByDevice({ small: 12, medium: 16, large: 20 }), color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                      {t('tap_to_open_camera', 'Tap to open camera')}
+                    </Text>
 
-                    <View style={[styles.selfieTipsContainer, { backgroundColor: isDark ? theme.colors.card : '#F8FAFC' }]}>
-                      <View style={styles.selfieTipsHeader}>
-                        <Ionicons name="bulb-outline" size={20} color={colors.primary} />
-                        <Text style={[styles.selfieTipsTitle, { color: colors.text }]}>{t('selfie_tips_title', 'Tips for a perfect selfie')}</Text>
+                    <View
+                      style={[
+                        styles.selfieTipsContainer,
+                        {
+                          backgroundColor: isDark ? theme.colors.card : '#F8FAFC',
+                          padding: selectByDevice({ small: 10, medium: 13, large: 16 }),
+                          borderRadius: selectByDevice({ small: 12, medium: 14, large: 16 }),
+                        }
+                      ]}
+                    >
+                      <View style={[styles.selfieTipsHeader, { marginBottom: selectByDevice({ small: 6, medium: 8, large: 10 }) }]}>
+                        <Ionicons name="bulb-outline" size={selectByDevice({ small: 18, medium: 20, large: 22 })} color={colors.primary} />
+                        <Text style={[styles.selfieTipsTitle, { fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), color: colors.text }]}>
+                          {t('selfie_tips_title', 'Tips for a perfect selfie')}
+                        </Text>
                       </View>
 
                       <View style={styles.selfieTipsGrid}>
                         <View style={styles.selfieTipsCol}>
-                          <View style={styles.selfieTipsListItem}>
-                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_1', 'Look straight into the camera')}</Text>
+                          <View style={[styles.selfieTipsListItem, { marginBottom: selectByDevice({ small: 4, medium: 6, large: 8 }) }]}>
+                            <Ionicons name="checkmark-circle-outline" size={selectByDevice({ small: 12, medium: 13, large: 14 })} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { fontSize: selectByDevice({ small: rms(9.5), medium: rms(10.5), large: rms(11.5) }), lineHeight: selectByDevice({ small: rms(13), medium: rms(15), large: rms(16) }), color: isDark ? '#CBD5E1' : '#334155' }]}>
+                              {t('selfie_tip_1', 'Look straight into the camera')}
+                            </Text>
                           </View>
-                          <View style={styles.selfieTipsListItem}>
-                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_2', 'Ensure good lighting')}</Text>
+                          <View style={[styles.selfieTipsListItem, { marginBottom: selectByDevice({ small: 4, medium: 6, large: 8 }) }]}>
+                            <Ionicons name="checkmark-circle-outline" size={selectByDevice({ small: 12, medium: 13, large: 14 })} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { fontSize: selectByDevice({ small: rms(9.5), medium: rms(10.5), large: rms(11.5) }), lineHeight: selectByDevice({ small: rms(13), medium: rms(15), large: rms(16) }), color: isDark ? '#CBD5E1' : '#334155' }]}>
+                              {t('selfie_tip_2', 'Ensure good lighting')}
+                            </Text>
                           </View>
                         </View>
                         <View style={styles.selfieTipsCol}>
-                          <View style={styles.selfieTipsListItem}>
-                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_3', 'Remove sunglasses, mask or hat')}</Text>
+                          <View style={[styles.selfieTipsListItem, { marginBottom: selectByDevice({ small: 4, medium: 6, large: 8 }) }]}>
+                            <Ionicons name="checkmark-circle-outline" size={selectByDevice({ small: 12, medium: 13, large: 14 })} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { fontSize: selectByDevice({ small: rms(9.5), medium: rms(10.5), large: rms(11.5) }), lineHeight: selectByDevice({ small: rms(13), medium: rms(15), large: rms(16) }), color: isDark ? '#CBD5E1' : '#334155' }]}>
+                              {t('selfie_tip_3', 'Remove sunglasses, mask or hat')}
+                            </Text>
                           </View>
-                          <View style={styles.selfieTipsListItem}>
-                            <Ionicons name="checkmark-circle-outline" size={12} color="#2563EB" />
-                            <Text style={[styles.selfieTipsListText, { color: isDark ? '#CBD5E1' : '#334155' }]}>{t('selfie_tip_4', 'Keep your face within the frame')}</Text>
+                          <View style={[styles.selfieTipsListItem, { marginBottom: selectByDevice({ small: 4, medium: 6, large: 8 }) }]}>
+                            <Ionicons name="checkmark-circle-outline" size={selectByDevice({ small: 12, medium: 13, large: 14 })} color="#2563EB" />
+                            <Text style={[styles.selfieTipsListText, { fontSize: selectByDevice({ small: rms(9.5), medium: rms(10.5), large: rms(11.5) }), lineHeight: selectByDevice({ small: rms(13), medium: rms(15), large: rms(16) }), color: isDark ? '#CBD5E1' : '#334155' }]}>
+                              {t('selfie_tip_4', 'Keep your face within the frame')}
+                            </Text>
                           </View>
                         </View>
                       </View>
                     </View>
                   </View>
                 ) : isVerticalLayout ? (
-                  <View style={[styles.detailedCard, { backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#F3F4F6' }]}>
-                    <View style={styles.detailedCardContent}>
-                      <Text style={[styles.detailedCardTitle, { color: colors.text }]}>
+                  <View style={[styles.detailedCard, { padding: selectByDevice({ small: 10, medium: 14, large: 16 }), borderRadius: 12, backgroundColor: isDark ? theme.colors.card : '#FFFFFF', borderColor: isDark ? '#374151' : '#F3F4F6', alignItems: 'center' }]}>
+                    <View style={[styles.detailedCardContent, { justifyContent: 'center' }]}>
+                      <Text maxFontSizeMultiplier={1.25} style={[styles.detailedCardTitle, { fontSize: selectByDevice({ small: rms(13), medium: rms(14.5), large: rms(15.5) }), color: colors.text }]}>
                         {s === 'front' ? t('upload_front_side', 'Upload Front Side') : t('upload_back_side', 'Upload Back Side')}
                       </Text>
-                      <Text style={[styles.detailedCardSubtitle, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
-                        {s === 'front' ? t('capture_front_side', 'Capture a clear photo of the\nfront side of your document.') : t('capture_back_side', 'Capture a clear photo of the\nback side of your document.')}
+                      <Text
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                        maxFontSizeMultiplier={1.2}
+                        style={[
+                          styles.detailedCardSubtitle,
+                          {
+                            fontSize: selectByDevice({ small: rms(10), medium: rms(11), large: rms(12) }),
+                            lineHeight: selectByDevice({ small: 14, medium: 16, large: 18 }),
+                            color: isDark ? '#9CA3AF' : '#6B7280',
+                            marginBottom: selectByDevice({ small: 6, medium: 8, large: 10 }),
+                          },
+                        ]}
+                      >
+                        {s === 'front' ? t('capture_front_side', 'Capture a clear photo of\nthe front side.') : t('capture_back_side', 'Capture a clear photo of\nthe back side.')}
                       </Text>
 
-                      <View style={styles.actionButtonGroup}>
+                      <View style={[styles.actionButtonGroup, { justifyContent: 'center', alignItems: 'center' }]}>
                         <TouchableOpacity
-                          style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+                          style={[
+                            styles.primaryButton,
+                            {
+                              paddingVertical: selectByDevice({ small: 6, medium: 8, large: 10 }),
+                              paddingHorizontal: selectByDevice({ small: 4, medium: 6, large: 8 }),
+                              backgroundColor: colors.primary,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            },
+                          ]}
                           onPress={() => pickImage(s, true)}
                           disabled={isSubmitting}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="camera" size={16} color="#FFF" style={{ marginRight: 4 }} />
-                          <Text style={styles.primaryButtonText} numberOfLines={1} adjustsFontSizeToFit>{t('camera', 'Camera')}</Text>
+                          <Ionicons name="camera" size={selectByDevice({ small: 14, medium: 15, large: 16 })} color="#FFF" style={{ marginRight: 4 }} />
+                          <Text
+                            style={[
+                              styles.primaryButtonText,
+                              {
+                                fontSize: selectByDevice({ small: rms(10.5), medium: rms(11.5), large: rms(12.5) }),
+                                textAlign: 'center',
+                              },
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                          >
+                            {t('camera', 'Camera')}
+                          </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={[styles.secondaryButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                          style={[
+                            styles.secondaryButton,
+                            {
+                              paddingVertical: selectByDevice({ small: 6, medium: 8, large: 10 }),
+                              paddingHorizontal: selectByDevice({ small: 4, medium: 6, large: 8 }),
+                              backgroundColor: colors.primary,
+                              borderColor: colors.primary,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            },
+                          ]}
                           onPress={() => pickImage(s, false)}
                           disabled={isSubmitting}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="image-outline" size={16} color="#FFF" style={{ marginRight: 4 }} />
-                          <Text style={[styles.secondaryButtonText, { color: '#FFF' }]} numberOfLines={1} adjustsFontSizeToFit>{t('gallery', 'Gallery')}</Text>
+                          <Ionicons name="image-outline" size={selectByDevice({ small: 14, medium: 15, large: 16 })} color="#FFF" style={{ marginRight: 4 }} />
+                          <Text
+                            style={[
+                              styles.secondaryButtonText,
+                              {
+                                fontSize: selectByDevice({ small: rms(10.5), medium: rms(11.5), large: rms(12.5) }),
+                                color: '#FFF',
+                                textAlign: 'center',
+                              },
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                          >
+                            {t('gallery', 'Gallery')}
+                          </Text>
                         </TouchableOpacity>
                       </View>
 
-                      <Text style={styles.fileInfoText}>{t('file_info_text', 'JPG, PNG or PDF • Max size 5MB')}</Text>
+                      <Text
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.75}
+                        maxFontSizeMultiplier={1.2}
+                        style={[
+                          styles.fileInfoText,
+                          {
+                            fontSize: selectByDevice({ small: rms(8.5), medium: rms(9.5), large: rms(10.5) }),
+                            color: isDark ? '#9CA3AF' : '#6B7280',
+                          },
+                        ]}
+                      >
+                        {t('file_info_text', 'JPG, PNG or PDF • Max size 5MB')}
+                      </Text>
                     </View>
 
-                    <View style={styles.detailedCardImageContainer}>
+                    <View style={[styles.detailedCardImageContainer, { width: selectByDevice({ small: cs(110), medium: cs(125), large: cs(140) }), height: selectByDevice({ small: cs(75), medium: cs(86), large: cs(96) }) }]}>
                       <View style={[styles.scannerBracket, styles.bracketTopLeft, { borderColor: colors.primary }]} />
                       <View style={[styles.scannerBracket, styles.bracketTopRight, { borderColor: colors.primary }]} />
                       <View style={[styles.scannerBracket, styles.bracketBottomLeft, { borderColor: colors.primary }]} />
                       <View style={[styles.scannerBracket, styles.bracketBottomRight, { borderColor: colors.primary }]} />
 
-                      <View style={styles.mockImageWrapper}>
+                      <View style={[styles.mockImageWrapper, { width: selectByDevice({ small: cs(95), medium: cs(106), large: cs(118) }), height: selectByDevice({ small: cs(60), medium: cs(68), large: cs(76) }) }]}>
                         {hasImage ? (
                           <>
                             <Image source={{ uri: images[s] }} style={styles.uploadedDetailedImage} />
@@ -1232,40 +1396,66 @@ const DocumentUploadScreen: React.FC<any> = ({ navigation, route }) => {
         )}
 
         {/* FOOTER SECTION */}
-        <View style={{ marginTop: 'auto' }}>
-          {/* CONTINUE */}
+        <View style={[styles.footerContainer, { marginTop: selectByDevice({ small: 14, medium: 22, large: 28 }) }]}>
           {Object.keys(images).length === side.length && (
-            <Button
-              disabled={isSubmitting}
-              onPress={handleContinue}
-              style={{ height: 48, borderRadius: 12, backgroundColor: colors.primary, borderColor: colors.primary }}
-            >
-              {isSubmitting ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <ActivityIndicator color="#fff" size="small" />
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
-                    {uploadStage === 'uploading' ? t('uploading_doc', 'Uploading...') :
-                      uploadStage === 'verifying' ? t('verifying_doc', 'Verifying document...') :
-                        uploadStage === 'saving' ? t('saving_doc', 'Saving...') : t('processing', 'Processing...')}
+            <View style={{ width: '100%' }}>
+              {docKey === 'Profile_Selfie' && (
+                <TouchableOpacity
+                  style={{ alignSelf: 'center', paddingVertical: selectByDevice({ small: 4, medium: 6, large: 8 }), marginBottom: selectByDevice({ small: 4, medium: 6, large: 8 }) }}
+                  onPress={() => chooseSource(side[0] || 'photo')}
+                  disabled={isSubmitting}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ color: colors.primary, fontSize: selectByDevice({ small: rms(12), medium: rms(13), large: rms(14) }), fontWeight: '600' }}>
+                    {t('retake_selfie', 'Retake Selfie')}
                   </Text>
-                </View>
-              ) : t('save_continue')}
-            </Button>
+                </TouchableOpacity>
+              )}
+              <Button
+                disabled={isSubmitting}
+                onPress={handleContinue}
+                style={{
+                  height: selectByDevice({ small: cs(46, 0.9, 1.1), medium: cs(50, 0.9, 1.1), large: cs(54, 0.9, 1.1) }),
+                  borderRadius: selectByDevice({ small: 12, medium: 14, large: 16 }),
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary
+                }}
+              >
+                {isSubmitting ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color="#fff" size="small" />
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>
+                      {uploadStage === 'uploading' ? t('uploading_doc', 'Uploading...') :
+                        uploadStage === 'verifying' ? t('verifying_doc', 'Verifying document...') :
+                          uploadStage === 'saving' ? t('saving_doc', 'Saving...') : t('processing', 'Processing...')}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ color: '#fff', fontSize: selectByDevice({ small: rms(14), medium: rms(15), large: rms(16) }), fontWeight: '700' }}>
+                      {t('save_continue', 'Save & Continue')}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={selectByDevice({ small: 16, medium: 18, large: 20 })} color="#FFF" />
+                  </View>
+                )}
+              </Button>
+            </View>
           )}
 
           {/* SECURITY */}
-          <View style={styles.secureRow}>
+          <View style={[styles.secureRow, { marginTop: selectByDevice({ small: 10, medium: 14, large: 18 }), marginBottom: selectByDevice({ small: 10, medium: 14, large: 18 }) }]}>
             <Ionicons
               name="shield-checkmark-outline"
-              size={16}
+              size={selectByDevice({ small: 14, medium: 16, large: 18 })}
               color={colors.text}
             />
-            <Text style={[styles.secureText, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>
+            <Text style={[styles.secureText, { color: colors.text, fontSize: selectByDevice({ small: rms(10.5), medium: rms(11), large: rms(12) }) }]} numberOfLines={1} adjustsFontSizeToFit>
               {t('docs_secure_note')}
             </Text>
           </View>
         </View>
       </ScrollView>
+      </View>
     </KeyboardAvoidingView>
 
       <ImageZoomModal
@@ -1313,8 +1503,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
     flexGrow: 1,
+    justifyContent: 'space-between',
+  },
+  footerContainer: {
+    width: '100%',
+    alignItems: 'center',
   },
   docNumberCard: {
     borderRadius: 14,
@@ -1610,13 +1804,15 @@ const styles = StyleSheet.create({
   },
   detailedCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 8,
     borderWidth: 1,
     padding: 10,
   },
   detailedCardContent: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: 8,
+    justifyContent: 'center',
   },
   detailedCardTitle: {
     fontSize: 14,
@@ -1626,12 +1822,14 @@ const styles = StyleSheet.create({
   detailedCardSubtitle: {
     fontSize: 11,
     lineHeight: 16,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   actionButtonGroup: {
     flexDirection: 'row',
     gap: 8,
     marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButton: {
     flex: 1,
@@ -1647,6 +1845,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '700',
+    textAlign: 'center',
   },
   secondaryButton: {
     flex: 1,
@@ -1662,6 +1861,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: 12,
     fontWeight: '700',
+    textAlign: 'center',
   },
   fileInfoText: {
     fontSize: 10,
@@ -1772,22 +1972,14 @@ const styles = StyleSheet.create({
   selfieDetailedContainer: {
     width: '100%',
     alignItems: 'center',
-    paddingVertical: 10,
   },
   selfieCircleWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
   },
   selfiePlaceholderCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -1801,55 +1993,39 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   selfieTitle: {
-    fontSize: 16,
     fontWeight: '700',
-    marginBottom: 4,
+    textAlign: 'center',
   },
   selfieSubtitle: {
-    fontSize: 12,
     textAlign: 'center',
-    lineHeight: 16,
-    marginBottom: 20,
   },
   selfieCaptureButtonWrapper: {
-    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selfieCaptureRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selfieCaptureButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selfieCaptureTitle: {
-    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 2,
+    textAlign: 'center',
   },
   selfieCaptureSubtitle: {
-    fontSize: 11,
-    marginBottom: 20,
+    textAlign: 'center',
   },
   selfieTipsContainer: {
     width: '100%',
-    borderRadius: 12,
-    padding: 12,
   },
   selfieTipsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
   selfieTipsTitle: {
-    fontSize: 13,
     fontWeight: '700',
     marginLeft: 6,
   },
@@ -1864,11 +2040,9 @@ const styles = StyleSheet.create({
   selfieTipsListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
   },
   selfieTipsListText: {
-    fontSize: 10,
-    marginLeft: 4,
+    marginLeft: 5,
     flexShrink: 1,
   },
 });

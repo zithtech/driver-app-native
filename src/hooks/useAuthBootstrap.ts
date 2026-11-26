@@ -15,6 +15,8 @@ export const useAuthBootstrap = () => {
     const [profileProcessed, setProfileProcessed] = useState(false);
     const [tripProcessed, setTripProcessed] = useState(false);
     const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+    const [storageChecked, setStorageChecked] = useState(false);
+    const initialBootstrapDoneRef = useRef(false);
     
     const [getTripById] = useLazyGetTripByIdQuery();
 
@@ -79,13 +81,16 @@ export const useAuthBootstrap = () => {
                 } else {
                     console.log('[AuthBootstrap] No accessToken → clearing user');
                     dispatch(clearUser());
-                    setIsBootstrapping(false);
                 }
             } catch (e) {
                 console.error('[AuthBootstrap] Storage read failed:', e);
-                if (!mountedRef.current) { return; }
-                dispatch(clearUser());
-                setIsBootstrapping(false);
+                if (mountedRef.current) {
+                    dispatch(clearUser());
+                }
+            } finally {
+                if (mountedRef.current) {
+                    setStorageChecked(true);
+                }
             }
         };
         bootstrap();
@@ -414,8 +419,27 @@ export const useAuthBootstrap = () => {
         }
     }, [profileProcessed]);
 
+    // 🛡️ Cold-start bootstrap completion guard
+    // Once cold-start bootstrap completes, isBootstrapping is NEVER set back to true at runtime.
+    useEffect(() => {
+        if (initialBootstrapDoneRef.current) return;
+        if (!minTimeElapsed || !storageChecked) return;
+
+        // If no token exists on startup after storage check, cold start bootstrap is done
+        if (!reduxToken) {
+            initialBootstrapDoneRef.current = true;
+            setIsBootstrapping(false);
+            return;
+        }
+
+        // If token exists, wait until profile and trip rehydration resolve (or their safety timeouts trigger)
+        if (profileProcessed && tripProcessed) {
+            initialBootstrapDoneRef.current = true;
+            setIsBootstrapping(false);
+        }
+    }, [minTimeElapsed, storageChecked, reduxToken, profileProcessed, tripProcessed]);
 
     return {
-        isBootstrapping: !minTimeElapsed || (!!reduxToken && !profileProcessed) || (!!reduxToken && profileProcessed && !tripProcessed),
+        isBootstrapping: !initialBootstrapDoneRef.current && isBootstrapping,
     };
 };

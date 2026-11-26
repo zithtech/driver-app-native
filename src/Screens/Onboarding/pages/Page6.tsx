@@ -127,12 +127,12 @@ const styles = StyleSheet.create({
   heroWrapper: {
     width: '100%',
     alignItems: 'center',
-    marginVertical: vS(8),
+    marginVertical: vS(4),
   },
 
   heroImage: {
     width: '100%',
-    height: vS(160),
+    height: vS(140),
   },
 
   /* TITLE */
@@ -160,11 +160,11 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    width: '48%',
+    width: '48.5%',
     backgroundColor: '#FFFFFF',
     borderRadius: mS(12),
-    paddingVertical: vS(4),
-    paddingHorizontal: hS(4),
+    paddingVertical: vS(8),
+    paddingHorizontal: hS(6),
     alignItems: 'center',
     marginBottom: vS(6),
     borderWidth: 1,
@@ -180,12 +180,12 @@ const styles = StyleSheet.create({
     fontSize: mS(12),
     color: '#111827',
     fontWeight: '700',
-    marginTop: vS(1),
+    marginTop: vS(2),
     textAlign: 'center',
   },
 
   cardSub: {
-    fontSize: mS(9),
+    fontSize: mS(9.5),
     textAlign: 'center',
     color: '#6B7280',
     marginTop: vS(1),
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     fontSize: mS(11),
     color: '#6B7280',
     textAlign: 'center',
-    marginTop: vS(12),
+    marginTop: vS(8),
     paddingHorizontal: hS(10),
     lineHeight: mS(16),
     fontStyle: 'italic',
