@@ -9,6 +9,7 @@
         "start": "react-native start",
         "bundle": "cd android && ./gradlew clean && ./gradlew generateCodegenArtifactsFromSchema && ./gradlew bundleRelease assembleRelease && cd ..",
         "apk": "cd android && ./gradlew generateCodegenArtifactsFromSchema && ./gradlew assembleRelease && cd ..",
+        "apk:arm64": "cd android && ./gradlew generateCodegenArtifactsFromSchema && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a && cd ..",
         "installApp": "adb install android/app/build/outputs/apk/release/app-release.apk",
         "test": "jest",
         "connect": "adb reverse tcp:8081 tcp:8081 && npx react-native start"

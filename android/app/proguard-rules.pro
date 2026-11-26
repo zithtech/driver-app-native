@@ -50,3 +50,29 @@
 -dontwarn com.swmansion.reanimated.**
 -dontwarn com.margelo.worklets.**
 -dontwarn com.mrousavy.camera.**
+
+# App custom native modules, services, and packages
+-keep class com.driverclient.** { *; }
+-keepclassmembers class * extends com.facebook.react.bridge.ReactContextBaseJavaModule {
+    @com.facebook.react.bridge.ReactMethod *;
+}
+
+# Agora RTC SDK
+-keep class io.agora.** { *; }
+-dontwarn io.agora.**
+
+# Razorpay Checkout
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keep class com.razorpay.** { *; }
+-dontwarn com.razorpay.**
+
+# VisionCamera Face Detector & ML Kit
+-keep class com.visioncamerafacedetector.** { *; }
+-keep class com.google.mlkit.** { *; }
+-dontwarn com.google.mlkit.**
+
+# Background Actions & Google Play Services
+-keep class com.asterinet.react.bgactions.** { *; }
+-keep class com.google.android.gms.** { *; }

@@ -1,15 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   Modal,
   Alert,
-  Dimensions,
   Platform,
   AppState,
+  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  Gesture,
+  GestureDetector,
+  TouchableOpacity as GHTouchableOpacity,
+} from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +46,12 @@ import {
   useRecordCheckpointArrivalMutation,
 } from '../../service/driverApi';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const PIP_WIDTH = 105;
+const PIP_HEIGHT = 140;
+const PIP_MIN_WIDTH = 76;
+const PIP_MIN_HEIGHT = 36;
+const PIP_EDGE_MARGIN = 12;
+const PIP_POS_STORAGE_KEY = 'PIP_CAMERA_POSITION';
 
 // Default Route Checkpoints for the Driving Test
 const MOCK_CHECKPOINTS: RouteCheckpoint[] = [
@@ -135,6 +151,107 @@ const LiveDrivingTestScreen = ({ navigation, route }: any) => {
   const iosFinalizeResolverRef = useRef<((path: string | null) => void) | null>(null);
   const recordedVideoPathRef = useRef<string | null>(null);
   const [isPipMinimized, setIsPipMinimized] = useState(false);
+
+  // Draggable Front Camera PiP Position & Bounds (UI-thread Reanimated + Gesture Handler)
+  const insets = useSafeAreaInsets();
+  const windowDims = useWindowDimensions();
+  const [containerSize, setContainerSize] = useState({
+    width: windowDims.width,
+    height: windowDims.height,
+  });
+
+  const defaultPipX = 16;
+  const defaultPipY = Math.max(insets.top + 92, 138);
+
+  const pipX = useSharedValue(defaultPipX);
+  const pipY = useSharedValue(defaultPipY);
+  const pipStartX = useSharedValue(defaultPipX);
+  const pipStartY = useSharedValue(defaultPipY);
+  const isPipDragging = useSharedValue(false);
+
+  const getPipBounds = useCallback(
+    (minimized: boolean) => {
+      const w = minimized ? PIP_MIN_WIDTH : PIP_WIDTH;
+      const h = minimized ? PIP_MIN_HEIGHT : PIP_HEIGHT;
+      const minX = PIP_EDGE_MARGIN;
+      const maxX = Math.max(minX, containerSize.width - w - PIP_EDGE_MARGIN);
+      const minY = Math.max(insets.top + 8, PIP_EDGE_MARGIN);
+      const maxY = Math.max(minY, containerSize.height - insets.bottom - h - PIP_EDGE_MARGIN);
+      return { minX, maxX, minY, maxY };
+    },
+    [containerSize.width, containerSize.height, insets.top, insets.bottom]
+  );
+
+  const pipBounds = useSharedValue(getPipBounds(false));
+
+  useEffect(() => {
+    const bounds = getPipBounds(isPipMinimized);
+    pipBounds.value = bounds;
+
+    const clampedX = Math.min(Math.max(pipX.value, bounds.minX), bounds.maxX);
+    const clampedY = Math.min(Math.max(pipY.value, bounds.minY), bounds.maxY);
+    if (clampedX !== pipX.value) {
+      pipX.value = withSpring(clampedX, { damping: 20, stiffness: 220 });
+    }
+    if (clampedY !== pipY.value) {
+      pipY.value = withSpring(clampedY, { damping: 20, stiffness: 220 });
+    }
+  }, [isPipMinimized, getPipBounds, pipBounds, pipX, pipY]);
+
+  useEffect(() => {
+    let mounted = true;
+    storage.get(PIP_POS_STORAGE_KEY).then((saved) => {
+      if (!mounted) return;
+      if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
+        const bounds = getPipBounds(isPipMinimized);
+        pipX.value = Math.min(Math.max(saved.x, bounds.minX), bounds.maxX);
+        pipY.value = Math.min(Math.max(saved.y, bounds.minY), bounds.maxY);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const persistPipPosition = useCallback((x: number, y: number) => {
+    storage.set(PIP_POS_STORAGE_KEY, { x: Math.round(x), y: Math.round(y) });
+  }, []);
+
+  const pipPanGesture = Gesture.Pan()
+    .minDistance(8)
+    .onStart(() => {
+      pipStartX.value = pipX.value;
+      pipStartY.value = pipY.value;
+      isPipDragging.value = true;
+    })
+    .onUpdate((event) => {
+      const bounds = pipBounds.value;
+      const nextX = pipStartX.value + event.translationX;
+      const nextY = pipStartY.value + event.translationY;
+      pipX.value = Math.min(Math.max(nextX, bounds.minX), bounds.maxX);
+      pipY.value = Math.min(Math.max(nextY, bounds.minY), bounds.maxY);
+    })
+    .onEnd(() => {
+      const bounds = pipBounds.value;
+      const finalX = Math.min(Math.max(pipX.value, bounds.minX), bounds.maxX);
+      const finalY = Math.min(Math.max(pipY.value, bounds.minY), bounds.maxY);
+      pipX.value = finalX;
+      pipY.value = finalY;
+      runOnJS(persistPipPosition)(finalX, finalY);
+    })
+    .onFinalize(() => {
+      isPipDragging.value = false;
+    });
+
+  const pipAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: pipX.value },
+      { translateY: pipY.value },
+      { scale: withSpring(isPipDragging.value ? 1.04 : 1, { damping: 18, stiffness: 250 }) },
+    ],
+    borderColor: isPipDragging.value ? '#3B82F6' : 'rgba(255, 255, 255, 0.28)',
+  }));
 
   // Test State
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -606,7 +723,17 @@ const LiveDrivingTestScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        if (width > 0 && height > 0) {
+          setContainerSize((prev) =>
+            prev.width === width && prev.height === height ? prev : { width, height }
+          );
+        }
+      }}
+    >
       {/* FULL-SCREEN LIVE MAP */}
       <MapView
         ref={mapRef}
@@ -803,81 +930,97 @@ const LiveDrivingTestScreen = ({ navigation, route }: any) => {
         )}
       </View>
 
-      {/* FLOATING FRONT CAMERA (CABIN VIEW) PiP */}
-      <View style={[styles.pipContainer, isPipMinimized && styles.pipContainerMinimized]}>
-        {Platform.OS === 'android' ? (
-          hasCameraPermission && DualCameraPreview ? (
-            <DualCameraPreview
-              style={isPipMinimized ? { width: 1, height: 1, opacity: 0 } : StyleSheet.absoluteFill}
+      {/* FLOATING DRAGGABLE FRONT CAMERA (CABIN VIEW) PiP */}
+      <GestureDetector gesture={pipPanGesture}>
+        <Animated.View
+          style={[
+            styles.pipContainer,
+            isPipMinimized && styles.pipContainerMinimized,
+            pipAnimatedStyle,
+          ]}
+        >
+          {Platform.OS === 'android' ? (
+            hasCameraPermission && DualCameraPreview ? (
+              <DualCameraPreview
+                style={isPipMinimized ? { width: 1, height: 1, opacity: 0 } : StyleSheet.absoluteFill}
+              />
+            ) : (
+              <View style={styles.pipFallbackBox}>
+                <Ionicons name="videocam-outline" size={22} color="#94A3B8" />
+                <Text style={styles.pipFallbackText}>
+                  {recordingError ? 'Cam Err' : 'Cabin Cam'}
+                </Text>
+              </View>
+            )
+          ) : frontDevice && hasCameraPermission ? (
+            <Camera
+              ref={frontCameraRef}
+              style={StyleSheet.absoluteFill}
+              device={frontDevice}
+              isActive={isFocused && isAppForeground}
+              video={true}
+              audio={false}
+              onInitialized={() => {
+                console.log('[LiveDrivingTest] iOS Front camera initialized');
+                startIosVideoRecording();
+              }}
+              onError={(err) => {
+                console.warn('[LiveDrivingTest] iOS Front camera error:', err);
+              }}
             />
           ) : (
             <View style={styles.pipFallbackBox}>
               <Ionicons name="videocam-outline" size={22} color="#94A3B8" />
-              <Text style={styles.pipFallbackText}>
-                {recordingError ? 'Cam Err' : 'Cabin Cam'}
+              <Text style={styles.pipFallbackText}>Cabin Cam</Text>
+            </View>
+          )}
+
+          {/* Fallback overlay if dual camera is single-rear only mode */}
+          {Platform.OS === 'android' && isRecordingVideo && !frontRecActive && !isPipMinimized && (
+            <View style={styles.pipFallbackBox} pointerEvents="none">
+              <Ionicons name="videocam-off-outline" size={20} color="#94A3B8" />
+              <Text style={styles.pipFallbackText}>Rear Mode Only</Text>
+            </View>
+          )}
+
+          {/* PiP Header Pill */}
+          <View style={styles.pipHeader}>
+            <View style={styles.pipRecPill}>
+              <View style={[styles.pipRecDot, frontRecActive && styles.pipRecDotActive]} />
+              <Text style={styles.pipRecText}>
+                {isPipMinimized
+                  ? isRecordingVideo
+                    ? 'REC'
+                    : 'CAM'
+                  : frontRecActive
+                  ? 'CABIN (REC)'
+                  : rearRecActive
+                  ? 'ROAD (REC)'
+                  : 'CABIN'}
               </Text>
             </View>
-          )
-        ) : frontDevice && hasCameraPermission ? (
-          <Camera
-            ref={frontCameraRef}
-            style={StyleSheet.absoluteFill}
-            device={frontDevice}
-            isActive={isFocused && isAppForeground}
-            video={true}
-            audio={false}
-            onInitialized={() => {
-              console.log('[LiveDrivingTest] iOS Front camera initialized');
-              startIosVideoRecording();
-            }}
-            onError={(err) => {
-              console.warn('[LiveDrivingTest] iOS Front camera error:', err);
-            }}
-          />
-        ) : (
-          <View style={styles.pipFallbackBox}>
-            <Ionicons name="videocam-outline" size={22} color="#94A3B8" />
-            <Text style={styles.pipFallbackText}>Cabin Cam</Text>
+            <GHTouchableOpacity
+              style={styles.pipMinBtn}
+              onPress={() => setIsPipMinimized((prev) => !prev)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isPipMinimized ? 'scan-outline' : 'contract-outline'}
+                size={12}
+                color="#FFF"
+              />
+            </GHTouchableOpacity>
           </View>
-        )}
 
-        {/* Fallback overlay if dual camera is single-rear only mode */}
-        {Platform.OS === 'android' && isRecordingVideo && !frontRecActive && !isPipMinimized && (
-          <View style={styles.pipFallbackBox} pointerEvents="none">
-            <Ionicons name="videocam-off-outline" size={20} color="#94A3B8" />
-            <Text style={styles.pipFallbackText}>Rear Mode Only</Text>
-          </View>
-        )}
-
-        {/* PiP Header Pill */}
-        <View style={styles.pipHeader}>
-          <View style={styles.pipRecPill}>
-            <View style={[styles.pipRecDot, frontRecActive && styles.pipRecDotActive]} />
-            <Text style={styles.pipRecText}>
-              {isPipMinimized
-                ? isRecordingVideo
-                  ? 'REC'
-                  : 'CAM'
-                : frontRecActive
-                ? 'CABIN (REC)'
-                : rearRecActive
-                ? 'ROAD (REC)'
-                : 'CABIN'}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.pipMinBtn}
-            onPress={() => setIsPipMinimized((prev) => !prev)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons
-              name={isPipMinimized ? 'scan-outline' : 'contract-outline'}
-              size={12}
-              color="#FFF"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+          {/* Subtle bottom drag handle indicator when expanded */}
+          {!isPipMinimized && (
+            <View style={styles.pipDragHandleContainer} pointerEvents="none">
+              <View style={styles.pipDragHandleBar} />
+            </View>
+          )}
+        </Animated.View>
+      </GestureDetector>
 
       {/* CENTER RIGHT: SPEEDOMETER GAUGE */}
       <View style={styles.speedometerContainer}>
@@ -969,25 +1112,39 @@ const styles = StyleSheet.create({
   },
   pipContainer: {
     position: 'absolute',
-    top: 105,
-    right: 16,
-    width: 105,
-    height: 140,
+    top: 0,
+    left: 0,
+    width: PIP_WIDTH,
+    height: PIP_HEIGHT,
     borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: '#0F172A',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    zIndex: 15,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    zIndex: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 6,
-    elevation: 8,
+    elevation: 10,
   },
   pipContainerMinimized: {
-    width: 70,
-    height: 36,
+    width: PIP_MIN_WIDTH,
+    height: PIP_MIN_HEIGHT,
+  },
+  pipDragHandleContainer: {
+    position: 'absolute',
+    bottom: 5,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  pipDragHandleBar: {
+    width: 28,
+    height: 3.5,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
   },
   pipFallbackBox: {
     flex: 1,

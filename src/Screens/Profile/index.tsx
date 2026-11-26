@@ -32,11 +32,11 @@ import { resolveImageUrl } from '../../utils/imageUtils';
 
 /* ================= BANNER LIST ================= */
 const BANNERS = [
-  require('../../assets/banners/banner2.png'),
-  require('../../assets/banners/banner1.png'),
-  require('../../assets/banners/banner3.png'),
-  require('../../assets/banners/banner4.png'),
-  require('../../assets/banners/banner5.png'),
+  require('../../assets/banners/banner2.jpg'),
+  require('../../assets/banners/banner1.jpg'),
+  require('../../assets/banners/banner3.jpg'),
+  require('../../assets/banners/banner4.jpg'),
+  require('../../assets/banners/banner5.jpg'),
 ];
 
 const ProfileScreen = ({ navigation }: any) => {

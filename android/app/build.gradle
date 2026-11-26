@@ -3,13 +3,26 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: 'com.google.gms.google-services'
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
+project.ext.vectoricons = [
+    iconFontNames: [
+        'Ionicons.ttf',
+        'MaterialCommunityIcons.ttf',
+        'Feather.ttf',
+        'MaterialIcons.ttf',
+        'FontAwesome.ttf',
+        'FontAwesome5_Solid.ttf',
+        'FontAwesome5_Regular.ttf',
+        'FontAwesome5_Brands.ttf'
+    ]
+]
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
 
 react {
     autolinkLibrariesWithApp()
 }
 
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 android {
@@ -41,18 +54,43 @@ android {
         release {
             signingConfig signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
 
-    packagingOptions {
-        pickFirst 'lib/x86/libc++_shared.so'
-        pickFirst 'lib/x86_64/libjsc.so'
-        pickFirst 'lib/arm64-v8a/libjsc.so'
-        pickFirst 'lib/arm64-v8a/libc++_shared.so'
-        pickFirst 'lib/x86_64/libc++_shared.so'
-        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+    packaging {
+        jniLibs {
+            // Compress .so files inside APK instead of storing uncompressed (AGP 8+ default)
+            useLegacyPackaging = true
+            pickFirsts += [
+                'lib/x86/libc++_shared.so',
+                'lib/x86_64/libjsc.so',
+                'lib/arm64-v8a/libjsc.so',
+                'lib/arm64-v8a/libc++_shared.so',
+                'lib/x86_64/libc++_shared.so',
+                'lib/armeabi-v7a/libc++_shared.so'
+            ]
+        }
     }
+}
+
+// Exclude unused Agora extension modules (Video KYC only uses basic 1-to-1 audio/video RTC)
+configurations.configureEach {
+    exclude group: "io.agora.rtc", module: "full-voice-drive"
+    exclude group: "io.agora.rtc", module: "clear-vision"
+    exclude group: "io.agora.rtc", module: "spatial-audio"
+    exclude group: "io.agora.rtc", module: "ains"
+    exclude group: "io.agora.rtc", module: "full-face-capture"
+    exclude group: "io.agora.rtc", module: "full-virtual-background"
+    exclude group: "io.agora.rtc", module: "aiaec"
+    exclude group: "io.agora.rtc", module: "audio-beauty"
+    exclude group: "io.agora.rtc", module: "full-content-inspect"
+    exclude group: "io.agora.rtc", module: "full-vqa"
+    exclude group: "io.agora.rtc", module: "full-video-av1-codec-enc"
+    exclude group: "io.agora.rtc", module: "full-face-detect"
+    exclude group: "io.agora.rtc", module: "screen-capture"
+    exclude group: "io.agora.rtc", module: "full-screen-sharing"
 }
 
 dependencies {
